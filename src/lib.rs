@@ -9,3 +9,5 @@ extern crate test;
 pub mod utils;
 
 pub mod affine;
+
+pub mod contrast;
