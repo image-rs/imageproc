@@ -1,0 +1,2 @@
+
+extern crate imageproc;

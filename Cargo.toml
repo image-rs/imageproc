@@ -1,0 +1,11 @@
+[package]
+name = "imageproc"
+version = "0.1.0"
+authors = ["theotherphil"]
+license = "MIT"
+description = "Image processing operations"
+readme = "README.md"
+homepage = "https://github.com/PistonDevelopers/imageproc"
+
+[dependencies]
+image = "0.3.14"
