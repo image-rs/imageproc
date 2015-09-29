@@ -36,7 +36,7 @@ pub fn equalize_histogram_mut<I: GenericImage<Pixel=Luma<u8>> + 'static>
         for x in 0..image.width() {
             let original = image.get_pixel(x, y)[0] as usize;
             let fraction = hist[original] as f32 / total;
-            let out = f32::min(255f32, 255f32 * (hist[original] as f32 / total));
+            let out = f32::min(255f32, 255f32 * fraction);
             image.put_pixel(x, y, Luma([out as u8]));
         }
     }
