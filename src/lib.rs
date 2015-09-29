@@ -2,6 +2,7 @@
 #![feature(test)]
 
 extern crate image;
+extern crate rand;
 #[cfg(test)]
 extern crate test;
 

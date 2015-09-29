@@ -1,6 +1,13 @@
 
-use image::{GenericImage,Luma};
+use image::{
+    GenericImage,
+    GrayImage,
+    ImageBuffer,
+    Luma
+};
 
+/// Returns the cumulative histogram of grayscale values in an 8bpp
+/// grayscale image
 fn cumulative_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
     (image: &I) -> [i32;256] {
 
@@ -15,6 +22,38 @@ fn cumulative_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
     }
 
     hist
+}
+
+/// Equalises the histogram of an 8bpp grayscale image in place
+/// https://en.wikipedia.org/wiki/Histogram_equalization
+pub fn equalize_histogram_mut<I: GenericImage<Pixel=Luma<u8>> + 'static>
+    (image: &mut I) {
+
+    let hist = cumulative_histogram(image);
+    let total = hist[255] as f32;
+
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            let original = image.get_pixel(x, y)[0] as usize;
+            if original != 0 {
+            println!("Original: {}", original);
+            }
+
+            let fraction = hist[original] as f32 / total;
+            let out = f32::min(255f32, 255f32 * (hist[original] as f32 / total));
+            image.put_pixel(x, y, Luma([out as u8]));
+        }
+    }
+}
+
+/// Equalises the histogram of an 8bpp grayscale image
+/// https://en.wikipedia.org/wiki/Histogram_equalization
+pub fn equalize_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
+    (image: &I) -> GrayImage {
+    let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    equalize_histogram_mut(&mut out);
+    out
 }
 
 #[cfg(test)]
