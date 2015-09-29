@@ -13,7 +13,7 @@ extern crate imageproc;
 
 use std::path::Path;
 use imageproc::utils::load_image_or_panic;
-use image::{Rgb,Luma};
+use image::{Rgb};
 
 fn compare_to_truth_rgb(
     input_path: &Path,

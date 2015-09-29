@@ -207,4 +207,17 @@ mod test {
         let translated = translate(&image, (5, 5));
         assert_pixels_eq!(translated, expected);
     }
+
+    #[bench]
+    fn bench_translate(b: &mut test::Bencher) {
+        let mut image: GrayImage = ImageBuffer::new(500, 500);
+        for pix in image.pixels_mut() {
+            *pix = Luma([15u8]);
+        }
+
+        b.iter(|| {
+            let translated = translate(&image, (30, 30));
+            test::black_box(translated);
+            });
+    }
 }
