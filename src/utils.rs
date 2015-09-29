@@ -13,8 +13,11 @@ macro_rules! assert_pixels_eq {
                 actual: {:?}, expected: {:?}", actual_dim, expected_dim)
         }
 
-        let diffs = $actual.pixels()
-            .zip($expected.pixels())
+        // Can't just call $image.pixels(), as that needn't hit the
+        // trait pixels method - ImageBuffer defines its own pixels
+        // method with a different signature
+        let diffs = ::image::GenericImage::pixels(&$actual)
+            .zip(::image::GenericImage::pixels(&$expected))
             .filter(|&(p, q)| p != q)
             .collect::<Vec<_>>();
 

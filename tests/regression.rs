@@ -24,7 +24,7 @@ fn compare_to_truth_rgb(
     let input = load_image_or_panic(&input_path).to_rgb();
     let actual = op.call((&input,));
 
-    assert_pixels_eq!(&actual, &truth);
+    assert_pixels_eq!(actual, truth);
 }
 
 fn compare_to_truth_grayscale(
@@ -36,7 +36,7 @@ fn compare_to_truth_grayscale(
     let input = load_image_or_panic(&input_path).to_luma();
     let actual = op.call((&input,));
 
-    assert_pixels_eq!(&actual, &truth);
+    assert_pixels_eq!(actual, truth);
 }
 
 fn rotate_nearest_about_center(image: &image::RgbImage) -> image::RgbImage {
