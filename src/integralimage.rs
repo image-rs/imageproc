@@ -18,6 +18,7 @@ use image::{
 /// A, B, C, D, with A at the upper left, the total pixel intensity
 /// of this rectangle is I(C) - I(B) - I(D) + I(A).
 // TODO: Support more than just 8bpp grayscale.
+// TODO: This is extremely slow. Fix that!
 pub fn integral_image<I: GenericImage<Pixel=Luma<u8>> + 'static>(image: &I)
     -> ImageBuffer<Luma<u32>, Vec<u32>> {
 
