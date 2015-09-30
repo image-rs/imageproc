@@ -12,3 +12,5 @@ pub mod utils;
 pub mod affine;
 
 pub mod contrast;
+
+pub mod integralimage;
