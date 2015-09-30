@@ -55,8 +55,18 @@ pub fn equalize_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
 #[cfg(test)]
 mod test {
 
-    use super::{cumulative_histogram};
-    use image::{GrayImage,ImageBuffer};
+    use super::{
+        cumulative_histogram,
+        equalize_histogram
+    };
+    use utils::{
+        gray_bench_image
+    };
+    use image::{
+        GrayImage,
+        ImageBuffer
+    };
+    use test;
 
     #[test]
     fn test_cumulative_histogram() {
@@ -70,5 +80,14 @@ mod test {
         assert_eq!(hist[2], 4);
         assert_eq!(hist[3], 5);
         assert!(hist.iter().skip(4).all(|x| *x == 5));
+    }
+
+    #[bench]
+    fn bench_equalize_histogram(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let equalized = equalize_histogram(&image);
+            test::black_box(equalized);
+            });
     }
 }

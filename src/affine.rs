@@ -91,6 +91,9 @@ mod test {
         rotate_nearest,
         translate
     };
+    use utils::{
+        gray_bench_image
+    };
     use image::{
         GenericImage,
         GrayImage,
@@ -210,11 +213,7 @@ mod test {
 
     #[bench]
     fn bench_translate(b: &mut test::Bencher) {
-        let mut image: GrayImage = ImageBuffer::new(500, 500);
-        for pix in image.pixels_mut() {
-            *pix = Luma([15u8]);
-        }
-
+        let image = gray_bench_image(500, 500);
         b.iter(|| {
             let translated = translate(&image, (30, 30));
             test::black_box(translated);

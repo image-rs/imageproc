@@ -56,6 +56,9 @@ mod test {
     use super::{
         integral_image
     };
+    use utils::{
+        gray_bench_image
+    };
     use image::{
         GrayImage,
         ImageBuffer,
@@ -79,14 +82,7 @@ mod test {
 
     #[bench]
     fn bench_integral_image(b: &mut test::Bencher) {
-        let mut image: GrayImage = ImageBuffer::new(500, 500);
-        for y in 0..image.height() {
-            for x in 0..image.width() {
-                let intensity = (x % 7 + y % 6) as u8;
-                image.put_pixel(x, y, Luma([intensity]));
-            }
-        }
-
+        let image = gray_bench_image(500, 500);
         b.iter(|| {
             let integral = integral_image(&image);
             test::black_box(integral);
