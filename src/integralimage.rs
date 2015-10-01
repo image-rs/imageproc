@@ -121,10 +121,43 @@ pub fn row_running_sum<I: GenericImage<Pixel=Luma<u8>> + 'static>(
     }
 }
 
+/// Computes the running sum of one column of image, padded
+/// at the top and bottom. The padding is by continuity.
+/// Takes a reference to buffer so that this can be reused
+/// for all columns in an image.
+// TODO: faster, more formats
+pub fn column_running_sum<I: GenericImage<Pixel=Luma<u8>> + 'static>(
+    image: &I, column: u32, buffer: &mut [u32], padding: u32) {
+
+    let height = image.height();
+    assert!(buffer.len() >= (height + 2 * padding) as usize,
+        format!("Buffer length {} is less than 2 * {} + {}",
+            buffer.len(), height, padding));
+
+    for y in 0..padding {
+        buffer[y as usize] = image.get_pixel(column, 0)[0] as u32;
+    }
+
+    for y in 0..height {
+        let idx = (y + padding) as usize;
+        buffer[idx] = image.get_pixel(column, y)[0] as u32;
+    }
+
+    for y in 0..padding {
+        let idx = (y + height + padding) as usize;
+        buffer[idx] = image.get_pixel(column, height - 1)[0] as u32;
+    }
+
+    for y in 1..height + 2 * padding {
+        buffer[y as usize] += buffer[(y - 1) as usize] as u32;
+    }
+}
+
 #[cfg(test)]
 mod test {
 
     use super::{
+        column_running_sum,
         integral_image,
         padded_integral_image,
         row_running_sum
@@ -198,6 +231,30 @@ mod test {
         let mut buffer = [0; 1010];
         b.iter(|| {
             row_running_sum(&image, 0, &mut buffer, 5);
+            });
+    }
+
+    #[test]
+    fn test_column_running_sum() {
+        let image: GrayImage = ImageBuffer::from_raw(2, 3, vec![
+            1u8, 4u8,
+            2u8, 5u8,
+            3u8, 6u8]).unwrap();
+
+        let expected = [1, 2, 4, 7, 10];
+
+        let mut buffer = [0; 5];
+        column_running_sum(&image, 0, &mut buffer, 1);
+
+        assert_eq!(buffer, expected);
+    }
+
+    #[bench]
+    fn bench_column_running_sum(b: &mut test::Bencher) {
+        let image = gray_bench_image(100, 1000);
+        let mut buffer = [0; 1010];
+        b.iter(|| {
+            column_running_sum(&image, 0, &mut buffer, 5);
             });
     }
 }
