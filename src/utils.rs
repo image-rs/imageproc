@@ -1,7 +1,7 @@
 
 extern crate image;
 
-/// Panics if any pixels differ between the two input images
+/// Panics if any pixels differ between the two input images.
 #[macro_export]
 macro_rules! assert_pixels_eq {
     ($actual:expr, $expected:expr) => ({
@@ -39,7 +39,7 @@ macro_rules! assert_pixels_eq {
 
 use std::path::Path;
 
-/// Loads image at given path, panicking on failure
+/// Loads image at given path, panicking on failure.
 pub fn load_image_or_panic(path: &Path) -> image::DynamicImage {
      image::open(path)
          .ok()
@@ -48,7 +48,7 @@ pub fn load_image_or_panic(path: &Path) -> image::DynamicImage {
 
 /// Gray image to use in benchmarks. This is neither noise nor
 /// similar to natural images - it's just a convenience method
-/// to produce an image that's not constant
+/// to produce an image that's not constant.
 pub fn gray_bench_image(width: u32, height: u32) -> image::GrayImage {
     let mut image = image::GrayImage::new(width, height);
     for y in 0..image.height() {
@@ -60,7 +60,7 @@ pub fn gray_bench_image(width: u32, height: u32) -> image::GrayImage {
     image
 }
 
-/// RGB image to use in benchmarks. See comment on gray_bench_image
+/// RGB image to use in benchmarks. See comment on gray_bench_image.
 pub fn rgb_bench_image(width: u32, height: u32) -> image::RgbImage {
     use std::cmp;
     let mut image = image::RgbImage::new(width, height);

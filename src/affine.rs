@@ -1,4 +1,4 @@
-//! Functions for affine transformations of images
+//! Functions for affine transformations of images.
 
 use image::{
     Pixel,

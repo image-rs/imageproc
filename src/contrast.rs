@@ -1,4 +1,4 @@
-//! Functions for manipulating the contrast of images
+//! Functions for manipulating the contrast of images.
 
 use image::{
     GenericImage,
@@ -8,7 +8,7 @@ use image::{
 };
 
 /// Returns the cumulative histogram of grayscale values in an 8bpp
-/// grayscale image
+/// grayscale image.
 fn cumulative_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
     (image: &I) -> [i32;256] {
 
@@ -26,7 +26,7 @@ fn cumulative_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
 }
 
 /// Equalises the histogram of an 8bpp grayscale image in place
-/// https://en.wikipedia.org/wiki/Histogram_equalization
+/// https://en.wikipedia.org/wiki/Histogram_equalization.
 pub fn equalize_histogram_mut<I: GenericImage<Pixel=Luma<u8>> + 'static>
     (image: &mut I) {
 

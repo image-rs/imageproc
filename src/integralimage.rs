@@ -17,7 +17,7 @@ use image::{
     ImageBuffer
 };
 
-/// Computes the integral image of an 8bpp grayscale image
+/// Computes the integral image of an 8bpp grayscale image.
 // TODO: Support more formats.
 // TODO: This is extremely slow. Fix that!
 pub fn integral_image<I: GenericImage<Pixel=Luma<u8>> + 'static>(image: &I)
@@ -89,15 +89,45 @@ pub fn padded_integral_image<I: GenericImage<Pixel=Luma<u8>> + 'static>(
     out
 }
 
+/// Computes the running sum of one row of image, padded
+/// at the beginning and end. The padding is by continuity.
+/// Takes a reference to buffer so that this can be reused
+/// for all rows in an image.
+// TODO: faster, more formats
+pub fn row_running_sum<I: GenericImage<Pixel=Luma<u8>> + 'static>(
+    image: &I, row: u32, buffer: &mut [u32], padding: u32) {
 
+    let width = image.width();
+    assert!(buffer.len() >= (width + 2 * padding) as usize,
+        format!("Buffer length {} is less than 2 * {} + {}",
+            buffer.len(), width, padding));
 
+    for x in 0..padding {
+        buffer[x as usize] = image.get_pixel(0, row)[0] as u32;
+    }
+
+    for x in 0..width {
+        let idx = (x + padding) as usize;
+        buffer[idx] = image.get_pixel(x, row)[0] as u32;
+    }
+
+    for x in 0..padding {
+        let idx = (x + width + padding) as usize;
+        buffer[idx] = image.get_pixel(width - 1, row)[0] as u32;
+    }
+
+    for x in 1..width + 2 * padding {
+        buffer[x as usize] += buffer[(x - 1) as usize] as u32;
+    }
+}
 
 #[cfg(test)]
 mod test {
 
     use super::{
         integral_image,
-        padded_integral_image
+        padded_integral_image,
+        row_running_sum
     };
     use utils::{
         gray_bench_image
@@ -123,6 +153,15 @@ mod test {
         assert_pixels_eq!(integral_image(&image), expected);
     }
 
+    #[bench]
+    fn bench_integral_image(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let integral = integral_image(&image);
+            test::black_box(integral);
+            });
+    }
+
     #[test]
     fn test_padded_integral_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
@@ -139,12 +178,26 @@ mod test {
         assert_pixels_eq!(padded_integral_image(&image, 1, 1), expected);
     }
 
+    #[test]
+    fn test_row_running_sum() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
+            1u8, 2u8, 3u8,
+            4u8, 5u8, 6u8]).unwrap();
+
+        let expected = [1, 2, 4, 7, 10];
+
+        let mut buffer = [0; 5];
+        row_running_sum(&image, 0, &mut buffer, 1);
+
+        assert_eq!(buffer, expected);
+    }
+
     #[bench]
-    fn bench_integral_image(b: &mut test::Bencher) {
-        let image = gray_bench_image(500, 500);
+    fn bench_row_running_sum(b: &mut test::Bencher) {
+        let image = gray_bench_image(1000, 1);
+        let mut buffer = [0; 1010];
         b.iter(|| {
-            let integral = integral_image(&image);
-            test::black_box(integral);
+            row_running_sum(&image, 0, &mut buffer, 5);
             });
     }
 }
