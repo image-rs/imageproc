@@ -1,3 +1,4 @@
+//! Functions for manipulating the contrast of images
 
 use image::{
     GenericImage,
