@@ -58,7 +58,7 @@ pub fn rotate_nearest<I: GenericImage + 'static>(
 
 /// Translates the input image by t. Note that image coordinates increase from
 /// top left to bottom right. Output pixels whose pre-image are not in the input
-/// image are set to the boundary pixel in the input image nearest to their pre-image
+/// image are set to the boundary pixel in the input image nearest to their pre-image.
 pub fn translate<I: GenericImage + 'static>(image: &I, t: (i32, i32))
     -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I::Pixel: 'static,
