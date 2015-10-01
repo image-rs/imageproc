@@ -14,3 +14,5 @@ pub mod affine;
 pub mod contrast;
 
 pub mod integralimage;
+
+pub mod filter;
