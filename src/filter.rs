@@ -75,6 +75,28 @@ pub fn box_filter<I: GenericImage<Pixel=Luma<u8>> + 'static>(
     out
 }
 
+/// Returns 2d correlation of view with the outer product of the 1d
+/// kernels h_filter and v_filter.
+pub fn separable_filter<I: GenericImage + 'static>(
+    image: &I, h_kernel: &[f32], v_kernel: &[f32])
+    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+    let h = horizontal_filter(image, h_kernel);
+    let v = vertical_filter(&h, v_kernel);
+    v
+}
+
+/// Returns 2d correlation of view with the outer product of the 1d
+/// kernel filter with itself
+pub fn separable_filter_equal<I: GenericImage + 'static>(
+    image: &I, kernel: &[f32])
+    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+    separable_filter(image, kernel, kernel)
+}
+
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
 pub fn horizontal_filter<I: GenericImage + 'static>(
@@ -113,10 +135,6 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
                 let p = buffer[(x + z - k/2) as usize];
                 let weight = kernel[z as usize];
                 accumulate(&mut acc, &p, weight, num_channels);
-            }
-
-            for c in acc.iter_mut() {
-                *c /= k as f32;
             }
 
             let mut out_pixel = pix;
@@ -167,10 +185,6 @@ pub fn vertical_filter<I: GenericImage + 'static>(
                 let p = buffer[(y + z - k/2) as usize];
                 let weight = kernel[z as usize];
                 accumulate(&mut acc, &p, weight, num_channels);
-            }
-
-            for c in acc.iter_mut() {
-                *c /= k as f32;
             }
 
             let mut out_pixel = pix;
@@ -227,6 +241,8 @@ mod test {
         box_filter,
         horizontal_filter,
         pad_buffer,
+        separable_filter,
+        separable_filter_equal,
         vertical_filter
     };
     use utils::{
@@ -282,6 +298,36 @@ mod test {
     }
 
     #[test]
+    fn test_separable_filter() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            1u8, 2u8, 3u8,
+            4u8, 5u8, 6u8,
+            7u8, 8u8, 9u8]).unwrap();
+
+        // Lazily copying the box_filter test case
+        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            2u8, 3u8, 3u8,
+            4u8, 5u8, 5u8,
+            6u8, 7u8, 7u8]).unwrap();
+
+        let kernel = vec![1f32/3f32; 3];
+        let filtered = separable_filter_equal(&image, &kernel);
+
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[bench]
+    fn bench_separable_filter(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        let h_kernel = vec![1f32/5f32; 5];
+        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
+        b.iter(|| {
+            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
+            test::black_box(filtered);
+            });
+    }
+
+    #[test]
     fn test_horizontal_filter() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             1u8, 4u8, 1u8,
@@ -293,7 +339,7 @@ mod test {
             5u8, 5u8, 5u8,
             2u8, 2u8, 2u8]).unwrap();
 
-        let kernel = vec![1f32, 1f32, 1f32];
+        let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
         let filtered = horizontal_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -302,7 +348,7 @@ mod test {
     #[bench]
     fn bench_horizontal_filter(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32; 5];
+        let kernel = vec![1f32/5f32; 5];
         b.iter(|| {
             let filtered = horizontal_filter(&image, &kernel);
             test::black_box(filtered);
@@ -321,7 +367,7 @@ mod test {
             2u8, 5u8, 2u8,
             2u8, 5u8, 2u8]).unwrap();
 
-        let kernel = vec![1f32, 1f32, 1f32];
+        let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
         let filtered = vertical_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -330,7 +376,7 @@ mod test {
     #[bench]
     fn bench_vertical_filter(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32; 5];
+        let kernel = vec![1f32/5f32; 5];
         b.iter(|| {
             let filtered = vertical_filter(&image, &kernel);
             test::black_box(filtered);
