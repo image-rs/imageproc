@@ -1,4 +1,5 @@
 //! Functions for filtering images.
+// TODO: unify with image::sample
 
 use image::{
     GenericImage,
@@ -111,9 +112,8 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
 
             for z in 0..k {
                 let p = buffer[(x + z - k/2) as usize];
-                for i in 0..num_channels {
-                    acc[i] += p.channels()[i].to_float() * kernel[z as usize];
-                }
+                let weight = kernel[z as usize];
+                accumulate(&mut acc, &p, weight, num_channels);
             }
 
             for c in acc.iter_mut() {
@@ -121,17 +121,28 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
             }
 
             let mut out_pixel = pix;
-
-            for i in 0..num_channels {
-                out_pixel.channels_mut()[i]
-                    = <I::Pixel as Pixel>::Subpixel::clamp(acc[i]);
-            }
+            clamp_acc(&acc, &mut out_pixel, num_channels);
 
             out.put_pixel(x - k/2, y, out_pixel);
         }
 	}
 
     out
+}
+
+fn accumulate<P>(acc: &mut [f32], pixel: &P, weight: f32, num_channels: usize)
+    where P: Pixel + 'static, <P as Pixel>::Subpixel : ToFloat {
+    for i in 0..num_channels {
+        acc[i as usize]
+            += pixel.channels()[i].to_float() * weight;
+    }
+}
+
+fn clamp_acc<P>(acc: &[f32], pixel: &mut P, num_channels: usize)
+    where P: Pixel + 'static, <P as Pixel>::Subpixel: Clamp{
+    for i in 0..num_channels {
+        pixel.channels_mut()[i] = P::Subpixel::clamp(acc[i]);
+    }
 }
 
 /// Fills the left margin entries in buffer with left_val and the
@@ -223,5 +234,15 @@ mod test {
         let filtered = horizontal_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
+    }
+
+    #[bench]
+    fn bench_horizontal_filter(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32; 5];
+        b.iter(|| {
+            let filtered = horizontal_filter(&image, &kernel);
+            test::black_box(filtered);
+            });
     }
 }
