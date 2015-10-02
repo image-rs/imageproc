@@ -84,8 +84,7 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
           <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
-    out.copy_from(image, 0, 0);
+    let mut out = copy(image);
 
     if width == 0 || height == 0 {
         return out;
@@ -130,6 +129,69 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
     out
 }
 
+///	Returns horizontal correlations between an image and a 1d kernel.
+/// Pads by continuity.
+// TODO: shares too much code with horizontal_filter
+pub fn vertical_filter<I: GenericImage + 'static>(
+    image: &I, kernel: &[f32])
+    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+
+    let (width, height) = image.dimensions();
+    let mut out = copy(image);
+
+    if width == 0 || height == 0 {
+        return out;
+    }
+
+    let pix = image.get_pixel(0, 0);
+    let num_channels = I::Pixel::channel_count() as usize;
+    let k = kernel.len() as u32;
+    let mut buffer = vec![pix; (height + k/2 + k/2) as usize];
+
+	for x in 0..width {
+        let left_pad  = image.get_pixel(x, 0);
+        let right_pad = image.get_pixel(x, height - 1);
+
+	    pad_buffer(&mut buffer, k/2, left_pad, right_pad);
+
+        for y in 0..height {
+            buffer[(y + k/2) as usize] = image.get_pixel(x, y);
+        }
+
+        for y in k/2..(height + k/2) {
+            let mut acc = vec![0f32; num_channels];
+
+            for z in 0..k {
+                let p = buffer[(y + z - k/2) as usize];
+                let weight = kernel[z as usize];
+                accumulate(&mut acc, &p, weight, num_channels);
+            }
+
+            for c in acc.iter_mut() {
+                *c /= k as f32;
+            }
+
+            let mut out_pixel = pix;
+            clamp_acc(&acc, &mut out_pixel, num_channels);
+
+            out.put_pixel(x, y - k/2, out_pixel);
+        }
+	}
+
+    out
+}
+
+pub fn copy<I: GenericImage + 'static>(image: &I)
+    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: 'static {
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    out
+}
+
 fn accumulate<P>(acc: &mut [f32], pixel: &P, weight: f32, num_channels: usize)
     where P: Pixel + 'static, <P as Pixel>::Subpixel : ToFloat {
     for i in 0..num_channels {
@@ -164,7 +226,8 @@ mod test {
     use super::{
         box_filter,
         horizontal_filter,
-        pad_buffer
+        pad_buffer,
+        vertical_filter
     };
     use utils::{
         gray_bench_image
@@ -242,6 +305,34 @@ mod test {
         let kernel = vec![1f32; 5];
         b.iter(|| {
             let filtered = horizontal_filter(&image, &kernel);
+            test::black_box(filtered);
+            });
+    }
+
+    #[test]
+    fn test_vertical_filter() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            1u8, 4u8, 1u8,
+            4u8, 7u8, 4u8,
+            1u8, 4u8, 1u8]).unwrap();
+
+        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            2u8, 5u8, 2u8,
+            2u8, 5u8, 2u8,
+            2u8, 5u8, 2u8]).unwrap();
+
+        let kernel = vec![1f32, 1f32, 1f32];
+        let filtered = vertical_filter(&image, &kernel);
+
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[bench]
+    fn bench_vertical_filter(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32; 5];
+        b.iter(|| {
+            let filtered = vertical_filter(&image, &kernel);
             test::black_box(filtered);
             });
     }
