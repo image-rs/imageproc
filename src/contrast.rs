@@ -25,8 +25,8 @@ fn cumulative_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
     hist
 }
 
-/// Equalises the histogram of an 8bpp grayscale image in place
-/// https://en.wikipedia.org/wiki/Histogram_equalization.
+/// Equalises the histogram of an 8bpp grayscale image in place.
+/// https://en.wikipedia.org/wiki/Histogram_equalization
 pub fn equalize_histogram_mut<I: GenericImage<Pixel=Luma<u8>> + 'static>
     (image: &mut I) {
 
@@ -43,7 +43,7 @@ pub fn equalize_histogram_mut<I: GenericImage<Pixel=Luma<u8>> + 'static>
     }
 }
 
-/// Equalises the histogram of an 8bpp grayscale image
+/// Equalises the histogram of an 8bpp grayscale image.
 /// https://en.wikipedia.org/wiki/Histogram_equalization
 pub fn equalize_histogram<I: GenericImage<Pixel=Luma<u8>> + 'static>
     (image: &I) -> GrayImage {

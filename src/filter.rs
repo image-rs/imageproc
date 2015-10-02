@@ -88,7 +88,7 @@ pub fn separable_filter<I: GenericImage + 'static>(
 }
 
 /// Returns 2d correlation of view with the outer product of the 1d
-/// kernel filter with itself
+/// kernel filter with itself.
 pub fn separable_filter_equal<I: GenericImage + 'static>(
     image: &I, kernel: &[f32])
     -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
