@@ -30,12 +30,10 @@ use traits::{
 // TODO: more formats!
 // TODO: number of operations is constant with kernel size,
 // TODO: but this is still _really_ slow. fix!
-pub fn box_filter<I: GenericImage<Pixel=Luma<u8>> + 'static>(
-    image: &I,
-    x_radius: u32,
-    y_radius: u32)
-    -> ImageBuffer<Luma<u8>, Vec<u8>>
-    where I::Pixel: 'static,
+pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
+        -> ImageBuffer<Luma<u8>, Vec<u8>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {
 
     let (width, height) = image.dimensions();
@@ -77,10 +75,10 @@ pub fn box_filter<I: GenericImage<Pixel=Luma<u8>> + 'static>(
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels h_filter and v_filter.
-pub fn separable_filter<I: GenericImage + 'static>(
-    image: &I, h_kernel: &[f32], v_kernel: &[f32])
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+pub fn separable_filter<I>(image: &I, h_kernel: &[f32], v_kernel: &[f32])
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
     let h = horizontal_filter(image, h_kernel);
     let v = vertical_filter(&h, v_kernel);
@@ -89,20 +87,20 @@ pub fn separable_filter<I: GenericImage + 'static>(
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernel filter with itself.
-pub fn separable_filter_equal<I: GenericImage + 'static>(
-    image: &I, kernel: &[f32])
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+pub fn separable_filter_equal<I>(image: &I, kernel: &[f32])
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
     separable_filter(image, kernel, kernel)
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
-pub fn horizontal_filter<I: GenericImage + 'static>(
-    image: &I, kernel: &[f32])
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
 
     let (width, height) = image.dimensions();
@@ -150,10 +148,11 @@ pub fn horizontal_filter<I: GenericImage + 'static>(
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
 // TODO: shares too much code with horizontal_filter
-pub fn vertical_filter<I: GenericImage + 'static>(
+pub fn vertical_filter<I>(
     image: &I, kernel: &[f32])
     -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
 
     let (width, height) = image.dimensions();
@@ -197,9 +196,9 @@ pub fn vertical_filter<I: GenericImage + 'static>(
     out
 }
 
-pub fn copy<I: GenericImage + 'static>(image: &I)
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+pub fn copy<I>(image: &I) -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);

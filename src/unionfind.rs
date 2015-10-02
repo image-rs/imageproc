@@ -91,7 +91,6 @@ impl DisjointSetForest {
     }
 }
 
-
 #[cfg(test)]
 mod test {
 

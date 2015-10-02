@@ -10,13 +10,14 @@ use image::{
 /// the nearest source pixel to the pre-image of a given output pixel.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
-pub fn rotate_nearest<I: GenericImage + 'static>(
+pub fn rotate_nearest<I>(
     image: &I,
     center: (f32, f32),
     theta: f32,
     default: I::Pixel)
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {
 
     let (width, height) = image.dimensions();
@@ -59,9 +60,10 @@ pub fn rotate_nearest<I: GenericImage + 'static>(
 /// Translates the input image by t. Note that image coordinates increase from
 /// top left to bottom right. Output pixels whose pre-image are not in the input
 /// image are set to the boundary pixel in the input image nearest to their pre-image.
-pub fn translate<I: GenericImage + 'static>(image: &I, t: (i32, i32))
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I::Pixel: 'static,
+pub fn translate<I>(image: &I, t: (i32, i32))
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {
 
     use std::cmp;
