@@ -318,7 +318,7 @@ mod test {
 
     #[bench]
     fn bench_separable_filter(b: &mut test::Bencher) {
-        let image = gray_bench_image(500, 500);
+        let image = gray_bench_image(300, 300);
         let h_kernel = vec![1f32/5f32; 5];
         let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
         b.iter(|| {

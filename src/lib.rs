@@ -19,4 +19,6 @@ pub mod integralimage;
 
 pub mod filter;
 
+pub mod unionfind;
+
 mod traits;
