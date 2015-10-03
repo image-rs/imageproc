@@ -1,4 +1,4 @@
-//! Functions for finding and labelling connected components of image.
+//! Functions for finding and labelling connected components of an image.
 
 use image::{
     GenericImage,
@@ -14,7 +14,7 @@ use std::collections::HashMap;
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Connectivity { Four, Eight }
 
-/// Returns image of the same size as the input, where each pixel
+/// Returns an image of the same size as the input, where each pixel
 /// is labelled by the connected foreground component it belongs to,
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they have value 0.
