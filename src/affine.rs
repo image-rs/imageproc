@@ -107,8 +107,8 @@ mod test {
     #[test]
     fn test_rotate_nearest_zero_radians() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8]).unwrap();
+            00, 01, 02,
+            10, 11, 12]).unwrap();
 
         let rotated = rotate_nearest(&image, (1f32, 0f32), 0f32, Luma([99u8]));
 
@@ -120,12 +120,12 @@ mod test {
         use std::f32;
 
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8]).unwrap();
+            00, 01, 02,
+            10, 11, 12]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            11u8, 01u8, 99u8,
-            12u8, 02u8, 99u8]).unwrap();
+            11, 01, 99,
+            12, 02, 99]).unwrap();
 
         let rotated
             = rotate_nearest(&image, (1f32, 0f32), f32::consts::PI / 2f32, Luma([99u8]));
@@ -138,12 +138,12 @@ mod test {
         use std::f32;
 
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8]).unwrap();
+            00, 01, 02,
+            10, 11, 12]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            12u8, 11u8, 10u8,
-            02u8, 01u8, 00u8]).unwrap();
+            12, 11, 10,
+            02, 01, 00]).unwrap();
 
         let rotated
             = rotate_nearest(&image, (1f32, 0.5f32), -f32::consts::PI, Luma([99u8]));
@@ -167,14 +167,14 @@ mod test {
     #[test]
     fn test_translate_positive_x_positive_y() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8,
-            20u8, 21u8, 22u8,]).unwrap();
+            00, 01, 02,
+            10, 11, 12,
+            20, 21, 22,]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00u8, 00u8, 01u8,
-            00u8, 00u8, 01u8,
-            10u8, 10u8, 11u8,]).unwrap();
+            00, 00, 01,
+            00, 00, 01,
+            10, 10, 11,]).unwrap();
 
         let translated = translate(&image, (1, 1));
         assert_pixels_eq!(translated, expected);
@@ -183,14 +183,14 @@ mod test {
     #[test]
     fn test_translate_positive_x_negative_y() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8,
-            20u8, 21u8, 22u8,]).unwrap();
+            00, 01, 02,
+            10, 11, 12,
+            20, 21, 22,]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            10u8, 10u8, 11u8,
-            20u8, 20u8, 21u8,
-            20u8, 20u8, 21u8,]).unwrap();
+            10, 10, 11,
+            20, 20, 21,
+            20, 20, 21,]).unwrap();
 
         let translated = translate(&image, (1, -1));
         assert_pixels_eq!(translated, expected);
@@ -199,14 +199,14 @@ mod test {
     #[test]
     fn test_translate_large_x_large_y() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00u8, 01u8, 02u8,
-            10u8, 11u8, 12u8,
-            20u8, 21u8, 22u8,]).unwrap();
+            00, 01, 02,
+            10, 11, 12,
+            20, 21, 22,]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00u8, 00u8, 00u8,
-            00u8, 00u8, 00u8,
-            00u8, 00u8, 00u8,]).unwrap();
+            00, 00, 00,
+            00, 00, 00,
+            00, 00, 00,]).unwrap();
 
         // Translating by more than the image width and height
         let translated = translate(&image, (5, 5));

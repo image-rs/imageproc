@@ -256,18 +256,18 @@ mod test {
     #[test]
     fn test_box_filter() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1u8, 2u8, 3u8,
-            4u8, 5u8, 6u8,
-            7u8, 8u8, 9u8]).unwrap();
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9]).unwrap();
 
         // For this image we get the same answer from the two 1d
         // convolutions as from doing the 2d convolution in one step
         // (but we needn't in general, as in the former case we're
         // clipping to an integer value twice).
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2u8, 3u8, 3u8,
-            4u8, 5u8, 5u8,
-            6u8, 7u8, 7u8]).unwrap();
+            2, 3, 3,
+            4, 5, 5,
+            6, 7, 7]).unwrap();
 
         assert_pixels_eq!(box_filter(&image, 1, 1), expected);
     }
@@ -299,15 +299,15 @@ mod test {
     #[test]
     fn test_separable_filter() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1u8, 2u8, 3u8,
-            4u8, 5u8, 6u8,
-            7u8, 8u8, 9u8]).unwrap();
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9]).unwrap();
 
         // Lazily copying the box_filter test case
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2u8, 3u8, 3u8,
-            4u8, 5u8, 5u8,
-            6u8, 7u8, 7u8]).unwrap();
+            2, 3, 3,
+            4, 5, 5,
+            6, 7, 7]).unwrap();
 
         let kernel = vec![1f32/3f32; 3];
         let filtered = separable_filter_equal(&image, &kernel);
@@ -329,14 +329,14 @@ mod test {
     #[test]
     fn test_horizontal_filter() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1u8, 4u8, 1u8,
-            4u8, 7u8, 4u8,
-            1u8, 4u8, 1u8]).unwrap();
+            1, 4, 1,
+            4, 7, 4,
+            1, 4, 1]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2u8, 2u8, 2u8,
-            5u8, 5u8, 5u8,
-            2u8, 2u8, 2u8]).unwrap();
+            2, 2, 2,
+            5, 5, 5,
+            2, 2, 2]).unwrap();
 
         let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
         let filtered = horizontal_filter(&image, &kernel);
@@ -357,14 +357,14 @@ mod test {
     #[test]
     fn test_vertical_filter() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1u8, 4u8, 1u8,
-            4u8, 7u8, 4u8,
-            1u8, 4u8, 1u8]).unwrap();
+            1, 4, 1,
+            4, 7, 4,
+            1, 4, 1]).unwrap();
 
         let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2u8, 5u8, 2u8,
-            2u8, 5u8, 2u8,
-            2u8, 5u8, 2u8]).unwrap();
+            2, 5, 2,
+            2, 5, 2,
+            2, 5, 2]).unwrap();
 
         let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
         let filtered = vertical_filter(&image, &kernel);

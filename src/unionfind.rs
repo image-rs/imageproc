@@ -29,7 +29,7 @@ impl DisjointSetForest {
 
     /// Returns index of the root of the tree containing i.
     /// Needs mutable reference to self for path compression.
-    fn root(&mut self, i: usize) -> usize {
+    pub fn root(&mut self, i: usize) -> usize {
         let mut j = i;
         loop {
             let p = self.parent[j];
@@ -51,9 +51,7 @@ impl DisjointSetForest {
     /// Unions the trees containing i and j.
     pub fn union(&mut self, i: usize, j: usize) {
         let p = self.root(i);
-        println!("Root of {} is {}", i, p);
         let q = self.root(j);
-        println!("Root of {} is {}", j, q);
         if self.tree_size[p] < self.tree_size[q] {
             self.parent[p] = q;
             self.tree_size[q] += self.tree_size[p];

@@ -173,13 +173,13 @@ mod test {
     #[test]
     fn test_integral_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1u8, 2u8, 3u8,
-            4u8, 5u8, 6u8]).unwrap();
+            1, 2, 3,
+            4, 5, 6]).unwrap();
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(3, 2, vec![
-            1u32,  3u32,  6u32,
-            5u32, 12u32, 21u32]).unwrap();
+            1,  3,  6,
+            5, 12, 21]).unwrap();
 
         assert_pixels_eq!(integral_image(&image), expected);
     }
@@ -196,15 +196,15 @@ mod test {
     #[test]
     fn test_padded_integral_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1u8, 2u8, 3u8,
-            4u8, 5u8, 6u8]).unwrap();
+            1, 2, 3,
+            4, 5, 6]).unwrap();
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(5, 4, vec![
-              1u32,  2u32,   4u32,   7u32,  10u32,
-              2u32,  4u32,   8u32,  14u32,  20u32,
-              6u32, 12u32,  21u32,  33u32,  45u32,
-             10u32, 20u32,  34u32,  52u32,  70u32]).unwrap();
+              1,  2,   4,   7,  10,
+              2,  4,   8,  14,  20,
+              6, 12,  21,  33,  45,
+             10, 20,  34,  52,  70]).unwrap();
 
         assert_pixels_eq!(padded_integral_image(&image, 1, 1), expected);
     }
@@ -212,8 +212,8 @@ mod test {
     #[test]
     fn test_row_running_sum() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1u8, 2u8, 3u8,
-            4u8, 5u8, 6u8]).unwrap();
+            1, 2, 3,
+            4, 5, 6]).unwrap();
 
         let expected = [1, 2, 4, 7, 10];
 
@@ -235,9 +235,9 @@ mod test {
     #[test]
     fn test_column_running_sum() {
         let image: GrayImage = ImageBuffer::from_raw(2, 3, vec![
-            1u8, 4u8,
-            2u8, 5u8,
-            3u8, 6u8]).unwrap();
+            1, 4,
+            2, 5,
+            3, 6]).unwrap();
 
         let expected = [1, 2, 4, 7, 10];
 

@@ -21,4 +21,6 @@ pub mod filter;
 
 pub mod unionfind;
 
+pub mod regionlabelling;
+
 mod traits;
