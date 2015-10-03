@@ -60,3 +60,18 @@ fn test_equalize_histogram_grayscale() {
     let tp = Path::new("./tests/data/truth/lumaphant_eq.png");
     compare_to_truth_grayscale(&ip, &tp, &imageproc::contrast::equalize_histogram);
 }
+
+fn rotate_bilinear_about_center(image: &image::RgbImage) -> image::RgbImage {
+    imageproc::affine::rotate_bilinear(
+        image,
+        (image.width() as f32/2f32, image.height() as f32/2f32),
+        std::f32::consts::PI/4f32,
+        Rgb([0u8;3]))
+}
+
+#[test]
+fn test_rotate_bilinear_rgb() {
+    let ip = Path::new("./tests/data/elephant.png");
+    let tp = Path::new("./tests/data/truth/elephant_rotate_bilinear.png");
+    compare_to_truth_rgb(&ip, &tp, &rotate_bilinear_about_center);
+}

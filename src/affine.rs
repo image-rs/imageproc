@@ -6,6 +6,11 @@ use image::{
     ImageBuffer
 };
 
+use traits::{
+    ToFloat,
+    Clamp
+};
+
 /// Rotate an image clockwise about center by theta radians by choosing
 /// the nearest source pixel to the pre-image of a given output pixel.
 /// The output image has the same dimensions as the input. Output pixels
@@ -28,12 +33,12 @@ pub fn rotate_nearest<I>(
     let center_x  = center.0;
     let center_y  = center.1;
 
-    for y in (0..height) {
+    for y in 0..height {
         let dy = y as f32 - center_y;
         let mut px = center_x + sin_theta * dy - cos_theta * center_x;
         let mut py = center_y + cos_theta * dy + sin_theta * center_x;
 
-        for x in (0..width) {
+        for x in 0..width {
 
             let rx = px.round();
             let ry = py.round();
@@ -47,6 +52,82 @@ pub fn rotate_nearest<I>(
             else {
                 let source = image.get_pixel(rx as u32, ry as u32);
                 out.put_pixel(x, y, source);
+            }
+
+            px += cos_theta;
+            py -= sin_theta;
+        }
+    }
+
+    out
+}
+
+/// Rotate an image clockwise about center by theta radians by bilinearly
+/// interpolating between the source pixels around the pre-image of each output pixel.
+/// The output image has the same dimensions as the input. Output pixels
+/// whose pre-image lies outside the input image are set to default.
+pub fn rotate_bilinear<I>(
+    image: &I,
+    center: (f32, f32),
+    theta: f32,
+    default: I::Pixel)
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+    where I: GenericImage + 'static,
+          I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+
+    let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::new(width, height);
+
+    let cos_theta = theta.cos();
+    let sin_theta = theta.sin();
+    let center_x  = center.0;
+    let center_y  = center.1;
+
+    for y in 0..height {
+        let dy = y as f32 - center_y;
+        let mut px = center_x + sin_theta * dy - cos_theta * center_x;
+        let mut py = center_y + cos_theta * dy + sin_theta * center_x;
+
+        for x in 0..width {
+            let left = px.floor();
+            let right = left + 1f32;
+            let top = py.floor();
+            let bottom = top + 1f32;
+
+            let right_weight = px - left;
+            let bottom_weight = py - top;
+
+            let x_out_of_bounds = left < 0f32 || right >= width as f32;
+            let y_out_of_bounds = top < 0f32 || bottom >= height as f32;
+
+            if x_out_of_bounds || y_out_of_bounds {
+                out.put_pixel(x, y, default);
+            }
+            else {
+
+                let mut top_left = image.get_pixel(left as u32, top as u32);
+                let top_right = image.get_pixel(right as u32, top as u32);
+
+                let mut bottom_left = image.get_pixel(left as u32, bottom as u32);
+                let bottom_right = image.get_pixel(right as u32, bottom as u32);
+
+                top_left.apply2(&top_right,
+                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
+                        (1f32 - right_weight) * u.to_float() +
+                        right_weight * v.to_float()));
+
+                bottom_left.apply2(&bottom_right,
+                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
+                        (1f32 - right_weight) * u.to_float() +
+                        right_weight * v.to_float()));
+
+                top_left.apply2(&bottom_left,
+                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
+                        (1f32 - bottom_weight) * u.to_float() +
+                        bottom_weight * v.to_float()));
+
+                out.put_pixel(x, y, top_left);
             }
 
             px += cos_theta;
@@ -90,6 +171,7 @@ pub fn translate<I>(image: &I, t: (i32, i32))
 mod test {
 
     use super::{
+        rotate_bilinear,
         rotate_nearest,
         translate
     };
@@ -160,6 +242,19 @@ mod test {
 
         b.iter(|| {
             let rotated = rotate_nearest(&image, (3f32, 3f32), 1f32, Luma([0u8]));
+            test::black_box(rotated);
+            });
+    }
+
+    #[bench]
+    fn bench_rotate_bilinear(b: &mut test::Bencher) {
+        let mut image: GrayImage = ImageBuffer::new(200, 200);
+        for pix in image.pixels_mut() {
+            *pix = Luma([15u8]);
+        }
+
+        b.iter(|| {
+            let rotated = rotate_bilinear(&image, (3f32, 3f32), 1f32, Luma([0u8]));
             test::black_box(rotated);
             });
     }

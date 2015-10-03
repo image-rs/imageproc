@@ -152,7 +152,6 @@ mod test {
         ImageBuffer,
         Luma
     };
-    use test;
 
     #[test]
     fn test_connected_components_four() {

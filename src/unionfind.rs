@@ -95,7 +95,6 @@ mod test {
     use super::{
         DisjointSetForest
     };
-    use test;
 
     #[test]
     fn test_trees() {
