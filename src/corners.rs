@@ -11,9 +11,9 @@ use std::cmp;
 /// The scores need not be comparable between different
 /// corner detectors.
 pub struct Corner {
-    x: u32,
-    y: u32,
-    score: Option<f32>
+    pub x: u32,
+    pub y: u32,
+    pub score: Option<f32>
 }
 
 impl Corner {
