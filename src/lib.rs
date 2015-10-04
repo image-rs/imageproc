@@ -25,4 +25,6 @@ pub mod regionlabelling;
 
 pub mod corners;
 
+pub mod drawing;
+
 mod traits;
