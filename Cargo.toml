@@ -10,3 +10,15 @@ homepage = "https://github.com/PistonDevelopers/imageproc"
 [dependencies]
 image = "0.3.14"
 rand = "0.3.11"
+
+[profile.release]
+opt-level = 3
+debug = true
+
+[profile.bench]
+opt-level = 3
+debug = true
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1

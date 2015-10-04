@@ -23,4 +23,6 @@ pub mod unionfind;
 
 pub mod regionlabelling;
 
+pub mod corners;
+
 mod traits;
