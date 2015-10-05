@@ -45,6 +45,37 @@ pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     corners
 }
 
+/// The score of a corner detected using the FAST12
+/// detector is the largest threshold for which this
+/// pixel is still a corner. We input the threshold at which
+/// the corner was detected as a lower bound on the search.
+/// Note that the corner check uses a strict inequality, so if
+/// the smallest intensity difference between the center pixel
+/// and a corner pixel is n then the corner will have a score of n - 1.
+pub fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
+        -> u8
+    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+
+    let mut max = 255u8;
+    let mut min = threshold;
+
+    loop {
+        if max == min {
+            return max;
+        }
+
+        let mean = ((max as u16 + min as u16) / 2u16) as u8;
+        let probe = if max == min + 1 { max } else { mean };
+
+        if is_corner_fast12(image, probe, x, y) {
+            min = probe;
+        }
+        else {
+            max = probe - 1;
+        }
+    }
+}
+
 /// Checks if the given pixel is a corner.
 fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
         -> bool
@@ -170,6 +201,7 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
 mod test {
 
     use super::{
+        corner_score_fast12,
         is_corner_fast12
     };
     use image::{
@@ -245,5 +277,23 @@ mod test {
             10, 10, 00, 00, 00, 10, 10]).unwrap();
 
         assert_eq!(is_corner_fast12(&image, 8, 1, 1), false);
+    }
+
+    #[test]
+    fn test_corner_score_fast12() {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 00, 10, 10, 10, 10, 10,
+            10, 10, 00, 00, 00, 10, 10]).unwrap();
+
+        let score = corner_score_fast12(&image, 5, 3, 3);
+        assert_eq!(score, 9);
+
+        let score = corner_score_fast12(&image, 9, 3, 3);
+        assert_eq!(score, 9);
     }
 }
