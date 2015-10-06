@@ -49,8 +49,8 @@ pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     corners
 }
 
-// /// Returns all corners which have the highest score in the
-// /// (2 * radius + 1) square block centred on them.
+/// Returns all corners which have the highest score in the
+/// (2 * radius + 1) square block centred on them.
 pub fn suppress_non_maximum(corners: &[Corner], radius: u32)
         -> Vec<Corner> {
 
