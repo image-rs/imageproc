@@ -61,10 +61,6 @@ pub fn suppress_non_maximum(corners: &[Corner], radius: u32)
         None => 0
     };
 
-    for corner in ordered_corners.iter() {
-        println!("{:?}", corner);
-    }
-
     let mut corners_by_row = vec![vec![]; (height + 1) as usize];
     for corner in ordered_corners.iter() {
         corners_by_row[corner.y as usize].push(corner);
