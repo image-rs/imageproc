@@ -10,14 +10,15 @@ use std::cmp;
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
 /// corner detectors.
+#[derive(Copy,Clone)]
 pub struct Corner {
     pub x: u32,
     pub y: u32,
-    pub score: Option<f32>
+    pub score: f32
 }
 
 impl Corner {
-    pub fn new(x: u32, y: u32, score: Option<f32>) -> Corner {
+    pub fn new(x: u32, y: u32, score: f32) -> Corner {
         Corner {x: x, y: y, score: score}
     }
 }
@@ -27,6 +28,8 @@ impl Corner {
 /// We define a point P of intensity I to be a corner if at least
 /// 12 contiguous pixels in C_P have an intensity strictly
 /// greater than I + threshold or strictly less than I - threshold.
+/// The score of a corner is the greatest threshold for which the given
+/// pixel still qualifies as a corner.
 /// https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test
 pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
@@ -37,7 +40,8 @@ pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     for y in 0..height {
         for x in 0..width {
             if is_corner_fast12(image, threshold, x, y) {
-                corners.push(Corner::new(x,y, None));
+                let score = corner_score_fast12(image, threshold, x, y);
+                corners.push(Corner::new(x,y, score as f32));
             }
         }
     }
