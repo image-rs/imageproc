@@ -107,6 +107,22 @@ impl Clamp<f32> for u16 {
     }
 }
 
+impl Clamp<f64> for u8 {
+    fn clamp(x: f64) -> u8 {
+        if x < 0f64 { return 0;}
+        if x > 255f64 { return 255; }
+        x as u8
+    }
+}
+
+impl Clamp<f64> for u16 {
+    fn clamp(x: f64) -> u16 {
+        if x < 0f64 { return 0;}
+        if x > 65535f64 { return 65535; }
+        x as u16
+    }
+}
+
 impl Clamp<i32> for u8 {
     fn clamp(x: i32) -> u8 {
         if x < 0i32 { return 0;}

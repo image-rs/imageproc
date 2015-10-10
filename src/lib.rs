@@ -31,4 +31,6 @@ pub mod corners;
 
 pub mod drawing;
 
+pub mod noise;
+
 mod traits;
