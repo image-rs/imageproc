@@ -83,15 +83,15 @@ impl HasWhite for Rgb<u8> {
     }
 }
 
-/// A type to which we can clamp an f32. Implementations
-/// are not required to handle NaNs gracefully.
+/// A type to which we can clamp a value of type T.
+/// Implementations are not required to handle NaNs gracefully.
 // TODO: Switch to using the conv crate when that lets
 // TODO: you handle this ergonomically.
-pub trait Clamp {
-    fn clamp(x: f32) -> Self;
+pub trait Clamp<T> {
+    fn clamp(x: T) -> Self;
 }
 
-impl Clamp for u8 {
+impl Clamp<f32> for u8 {
     fn clamp(x: f32) -> u8 {
         if x < 0f32 { return 0;}
         if x > 255f32 { return 255; }
@@ -99,10 +99,26 @@ impl Clamp for u8 {
     }
 }
 
-impl Clamp for u16 {
+impl Clamp<f32> for u16 {
     fn clamp(x: f32) -> u16 {
         if x < 0f32 { return 0;}
         if x > 65535f32 { return 65535; }
+        x as u16
+    }
+}
+
+impl Clamp<i32> for u8 {
+    fn clamp(x: i32) -> u8 {
+        if x < 0i32 { return 0;}
+        if x > 255i32 { return 255; }
+        x as u8
+    }
+}
+
+impl Clamp<i32> for u16 {
+    fn clamp(x: i32) -> u16 {
+        if x < 0i32 { return 0;}
+        if x > 65535i32 { return 65535; }
         x as u16
     }
 }

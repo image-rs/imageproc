@@ -26,6 +26,11 @@ use utils::{
     cast
 };
 
+use num::{
+    Num,
+    Zero
+};
+
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
 /// and height (2 * y_radius + 1) whose entries are equal and
 /// sum to one. i.e. each output pixel is the unweighted mean of
@@ -83,11 +88,12 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels h_filter and v_filter.
-pub fn separable_filter<I>(image: &I, h_kernel: &[f32], v_kernel: &[f32])
+pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          K: Num + Copy {
     let h = horizontal_filter(image, h_kernel);
     let v = vertical_filter(&h, v_kernel);
     v
@@ -95,21 +101,24 @@ pub fn separable_filter<I>(image: &I, h_kernel: &[f32], v_kernel: &[f32])
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernel filter with itself.
-pub fn separable_filter_equal<I>(image: &I, kernel: &[f32])
+pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          K: Num + Copy {
     separable_filter(image, kernel, kernel)
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
-/// Pads by continuity.
-pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
+/// Pads by continuity. Intermediate calculations are performed at
+/// type K.
+pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          K: Num + Copy {
 
     let (width, height) = image.dimensions();
     let mut out = copy(image);
@@ -129,7 +138,7 @@ pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
         }
 
         for x in k/2..(width + k/2) {
-            let mut acc = vec![0f32; num_channels];
+            let mut acc = vec![Zero::zero(); num_channels];
 
             for z in 0..k {
                 let p = buffer[(x + z - k/2) as usize];
@@ -150,12 +159,12 @@ pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
 // TODO: shares too much code with horizontal_filter
-pub fn vertical_filter<I>(
-    image: &I, kernel: &[f32])
-    -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
+        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          K: Num + Copy {
 
     let (width, height) = image.dimensions();
     let mut out = copy(image);
@@ -175,7 +184,7 @@ pub fn vertical_filter<I>(
         }
 
         for y in k/2..(height + k/2) {
-            let mut acc = vec![0f32; num_channels];
+            let mut acc = vec![Zero::zero(); num_channels];
 
             for z in 0..k {
                 let p = buffer[(y + z - k/2) as usize];
@@ -202,16 +211,19 @@ pub fn copy<I>(image: &I) -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subp
     out
 }
 
-fn accumulate<P>(acc: &mut [f32], pixel: &P, weight: f32, num_channels: usize)
+fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K, num_channels: usize)
     where P: Pixel + 'static,
-          <P as Pixel>::Subpixel : ValueInto<f32> {
+          <P as Pixel>::Subpixel : ValueInto<K>,
+          K: Num + Copy {
     for i in 0..num_channels {
-        acc[i as usize] += cast(pixel.channels()[i]) * weight;
+        acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
     }
 }
 
-fn clamp_acc<P>(acc: &[f32], pixel: &mut P, num_channels: usize)
-    where P: Pixel + 'static, <P as Pixel>::Subpixel: Clamp{
+fn clamp_acc<P, K>(acc: &[K], pixel: &mut P, num_channels: usize)
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: Clamp<K>,
+          K: Copy {
     for i in 0..num_channels {
         pixel.channels_mut()[i] = P::Subpixel::clamp(acc[i]);
     }
@@ -307,6 +319,24 @@ mod test {
             6, 7, 7]).unwrap();
 
         let kernel = vec![1f32/3f32; 3];
+        let filtered = separable_filter_equal(&image, &kernel);
+
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_separable_filter_integer_kernel() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9]).unwrap();
+
+        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            21, 27, 33,
+            39, 45, 51,
+            57, 63, 69]).unwrap();
+
+        let kernel = vec![1i32; 3];
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);

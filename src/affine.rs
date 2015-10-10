@@ -81,7 +81,7 @@ pub fn rotate_bilinear<I>(
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + 'static {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
