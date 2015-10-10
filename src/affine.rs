@@ -7,8 +7,15 @@ use image::{
 };
 
 use traits::{
-    ToFloat,
     Clamp
+};
+
+use utils::{
+    cast
+};
+
+use conv::{
+    ValueInto
 };
 
 /// Rotate an image clockwise about center by theta radians by choosing
@@ -74,7 +81,7 @@ pub fn rotate_bilinear<I>(
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
           I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -114,18 +121,18 @@ pub fn rotate_bilinear<I>(
 
                 top_left.apply2(&top_right,
                     |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - right_weight) * u.to_float() +
-                        right_weight * v.to_float()));
+                        (1f32 - right_weight) * cast(u) +
+                        right_weight * cast(v)));
 
                 bottom_left.apply2(&bottom_right,
                     |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - right_weight) * u.to_float() +
-                        right_weight * v.to_float()));
+                        (1f32 - right_weight) * cast(u) +
+                        right_weight * cast(v)));
 
                 top_left.apply2(&bottom_left,
                     |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - bottom_weight) * u.to_float() +
-                        bottom_weight * v.to_float()));
+                        (1f32 - bottom_weight) * cast(u) +
+                        bottom_weight * cast(v)));
 
                 out.put_pixel(x, y, top_left);
             }

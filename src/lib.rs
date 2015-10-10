@@ -1,6 +1,8 @@
 
 #![feature(test)]
 
+extern crate conv;
+
 extern crate image;
 
 extern crate rand;

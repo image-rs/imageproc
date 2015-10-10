@@ -15,7 +15,15 @@ use integralimage::{
 
 use traits::{
     Clamp,
-    ToFloat
+    HasBlack
+};
+
+use conv::{
+    ValueInto
+};
+
+use utils::{
+    cast
 };
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
@@ -78,8 +86,8 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
 pub fn separable_filter<I>(image: &I, h_kernel: &[f32], v_kernel: &[f32])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
     let h = horizontal_filter(image, h_kernel);
     let v = vertical_filter(&h, v_kernel);
     v
@@ -90,8 +98,8 @@ pub fn separable_filter<I>(image: &I, h_kernel: &[f32], v_kernel: &[f32])
 pub fn separable_filter_equal<I>(image: &I, kernel: &[f32])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
     separable_filter(image, kernel, kernel)
 }
 
@@ -100,21 +108,15 @@ pub fn separable_filter_equal<I>(image: &I, kernel: &[f32])
 pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
         -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
 
     let (width, height) = image.dimensions();
     let mut out = copy(image);
 
-    if width == 0 || height == 0 {
-        return out;
-    }
-
-    // TODO: Add Default instances for pixels
-    let pix = image.get_pixel(0, 0);
     let num_channels = I::Pixel::channel_count() as usize;
     let k = kernel.len() as u32;
-    let mut buffer = vec![pix; (width + k/2 + k/2) as usize];
+    let mut buffer = vec![I::Pixel::black(); (width + k/2 + k/2) as usize];
 
 	for y in 0..height {
         let left_pad  = image.get_pixel(0, y);
@@ -135,7 +137,7 @@ pub fn horizontal_filter<I>(image: &I, kernel: &[f32])
                 accumulate(&mut acc, &p, weight, num_channels);
             }
 
-            let mut out_pixel = pix;
+            let mut out_pixel = I::Pixel::black();
             clamp_acc(&acc, &mut out_pixel, num_channels);
 
             out.put_pixel(x - k/2, y, out_pixel);
@@ -152,20 +154,15 @@ pub fn vertical_filter<I>(
     image: &I, kernel: &[f32])
     -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
     where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ToFloat + Clamp + 'static {
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp + 'static {
 
     let (width, height) = image.dimensions();
     let mut out = copy(image);
 
-    if width == 0 || height == 0 {
-        return out;
-    }
-
-    let pix = image.get_pixel(0, 0);
     let num_channels = I::Pixel::channel_count() as usize;
     let k = kernel.len() as u32;
-    let mut buffer = vec![pix; (height + k/2 + k/2) as usize];
+    let mut buffer = vec![I::Pixel::black(); (height + k/2 + k/2) as usize];
 
 	for x in 0..width {
         let left_pad  = image.get_pixel(x, 0);
@@ -186,7 +183,7 @@ pub fn vertical_filter<I>(
                 accumulate(&mut acc, &p, weight, num_channels);
             }
 
-            let mut out_pixel = pix;
+            let mut out_pixel = I::Pixel::black();
             clamp_acc(&acc, &mut out_pixel, num_channels);
 
             out.put_pixel(x, y - k/2, out_pixel);
@@ -206,10 +203,10 @@ pub fn copy<I>(image: &I) -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subp
 }
 
 fn accumulate<P>(acc: &mut [f32], pixel: &P, weight: f32, num_channels: usize)
-    where P: Pixel + 'static, <P as Pixel>::Subpixel : ToFloat {
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel : ValueInto<f32> {
     for i in 0..num_channels {
-        acc[i as usize]
-            += pixel.channels()[i].to_float() * weight;
+        acc[i as usize] += cast(pixel.channels()[i]) * weight;
     }
 }
 

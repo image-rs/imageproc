@@ -1,6 +1,10 @@
 
 extern crate image;
 
+use conv::{
+    ValueInto
+};
+
 /// Panics if any pixels differ between the two input images.
 #[macro_export]
 macro_rules! assert_pixels_eq {
@@ -73,4 +77,12 @@ pub fn rgb_bench_image(width: u32, height: u32) -> image::RgbImage {
         }
     }
     image
+}
+
+/// Helper for a conversion that we know can't fail.
+pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {
+    match x.value_into() {
+        Ok(y) => y,
+        Err(_) => panic!("Failed to convert"),
+    }
 }
