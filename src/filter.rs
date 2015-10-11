@@ -23,7 +23,8 @@ use conv::{
 };
 
 use utils::{
-    cast
+    cast,
+    VecBuffer
 };
 
 use num::{
@@ -44,7 +45,7 @@ use num::{
 // TODO: number of operations is constant with kernel size,
 // TODO: but this is still _really_ slow. fix!
 pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
-        -> ImageBuffer<Luma<u8>, Vec<u8>>
+        -> VecBuffer<Luma<u8>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static,
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {
@@ -89,7 +90,7 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels h_filter and v_filter.
 pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
@@ -102,7 +103,7 @@ pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernel filter with itself.
 pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
@@ -114,7 +115,7 @@ pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
 pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
@@ -160,7 +161,7 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
 /// Pads by continuity.
 // TODO: shares too much code with horizontal_filter
 pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
@@ -202,7 +203,7 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
     out
 }
 
-pub fn copy<I>(image: &I) -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+pub fn copy<I>(image: &I) -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {

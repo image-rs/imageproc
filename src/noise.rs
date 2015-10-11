@@ -28,13 +28,14 @@ use conv::{
 };
 
 use utils::{
-    cast
+    cast,
+    VecBuffer
 };
 
 /// Adds independent additive Gaussian noise to all channels
 /// of an image, with the given mean and standard deviation.
 pub fn gaussian_noise<I>(image: &I, mean: f64, stddev: f64, seed: usize)
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64> + 'static {
@@ -77,7 +78,7 @@ pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
 /// Converts pixels to black or white at the given rate. Black and
 /// white occur with equal probability.
 pub fn salt_and_pepper_noise<I>(image: &I, rate: f64, seed: usize)
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: HasBlack + HasWhite + 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {

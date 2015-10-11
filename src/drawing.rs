@@ -6,6 +6,10 @@ use image::{
     ImageBuffer
 };
 
+use utils::{
+    VecBuffer
+};
+
 /// Draws a colored cross on an image in place.
 /// If (x, y) is within the image bounds then as much of the cross
 /// is drawn as will fit. If (x, y) is outside the image bounds then
@@ -39,7 +43,7 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32)
 /// is drawn as will fit. If (x, y) is outside the image bounds then
 /// we draw nothing.
 pub fn draw_cross<I>(image: &I, color: I::Pixel, x: u32, y: u32)
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
+        -> VecBuffer<I::Pixel>
     where I: GenericImage + 'static,
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: 'static {

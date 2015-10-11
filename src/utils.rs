@@ -5,6 +5,11 @@ use conv::{
     ValueInto
 };
 
+use image::{
+    ImageBuffer,
+    Pixel
+};
+
 /// Panics if any pixels differ between the two input images.
 #[macro_export]
 macro_rules! assert_pixels_eq {
@@ -86,3 +91,10 @@ pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {
         Err(_) => panic!("Failed to convert"),
     }
 }
+
+/// An ImageBuffer containing Pixels of type P with storage
+/// Vec<P::Subpixel>.
+// TODO: This produces a compiler warning about trait bounds
+// TODO: not being enforced in type definitions. In this case
+// TODO: they are. Can we get rid of the warning?
+pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;

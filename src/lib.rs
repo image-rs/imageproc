@@ -1,6 +1,9 @@
 
 #![feature(test)]
 
+#[cfg(test)]
+extern crate test;
+
 extern crate conv;
 
 extern crate image;
@@ -8,9 +11,6 @@ extern crate image;
 extern crate num;
 
 extern crate rand;
-
-#[cfg(test)]
-extern crate test;
 
 #[macro_use]
 pub mod utils;

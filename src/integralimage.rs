@@ -17,10 +17,14 @@ use image::{
     ImageBuffer
 };
 
+use utils::{
+    VecBuffer
+};
+
 /// Computes the integral image of an 8bpp grayscale image.
 // TODO: Support more formats.
 // TODO: This is extremely slow. Fix that!
-pub fn integral_image<I>(image: &I) -> ImageBuffer<Luma<u32>, Vec<u32>>
+pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
     padded_integral_image(image, 0, 0)
 }
@@ -31,7 +35,7 @@ pub fn integral_image<I>(image: &I) -> ImageBuffer<Luma<u32>, Vec<u32>>
 /// Returned image has width image.width() + 2 * x_padding
 /// and height image.height() + 2 * y_padding.
 pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
-        -> ImageBuffer<Luma<u32>, Vec<u32>>
+        -> VecBuffer<Luma<u32>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
     let (in_width, in_height) = image.dimensions();

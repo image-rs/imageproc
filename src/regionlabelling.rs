@@ -6,6 +6,10 @@ use image::{
     Luma
 };
 
+use utils::{
+    VecBuffer
+};
+
 use unionfind::DisjointSetForest;
 
 use std::cmp;
@@ -19,7 +23,7 @@ pub enum Connectivity { Four, Eight }
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they have value 0.
 pub fn connected_components<I>(image: &I, conn: Connectivity)
-        -> ImageBuffer<Luma<u32>, Vec<u32>>
+        -> VecBuffer<Luma<u32>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
     let (width, height) = image.dimensions();
