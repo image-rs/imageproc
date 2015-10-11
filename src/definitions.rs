@@ -1,17 +1,25 @@
-//! Traits that I can't find elsewhere.
+//! Trait definitions and type aliases.
 
 use image::{
     Rgb,
     Rgba,
     Luma,
     Pixel,
-    Primitive
+    Primitive,
+    ImageBuffer
 };
 
 use std::{
     u8,
     u16
 };
+
+/// An ImageBuffer containing Pixels of type P with storage
+/// Vec<P::Subpixel>.
+// TODO: This produces a compiler warning about trait bounds
+// TODO: not being enforced in type definitions. In this case
+// TODO: they are. Can we get rid of the warning?
+pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
 
 /// Used to name the type we get by replacing
 /// the channel type of a given Pixel type.

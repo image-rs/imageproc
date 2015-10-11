@@ -6,14 +6,14 @@ use image::{
     ImageBuffer
 };
 
-use traits::{
+use definitions::{
     Clamp,
-    HasBlack
+    HasBlack,
+    VecBuffer
 };
 
-use utils::{
-    cast,
-    VecBuffer
+use math::{
+    cast
 };
 
 use conv::{

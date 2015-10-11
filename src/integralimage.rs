@@ -17,7 +17,7 @@ use image::{
     ImageBuffer
 };
 
-use utils::{
+use definitions::{
     VecBuffer
 };
 

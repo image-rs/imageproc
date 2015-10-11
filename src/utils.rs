@@ -1,14 +1,7 @@
 
 extern crate image;
 
-use conv::{
-    ValueInto
-};
-
-use image::{
-    ImageBuffer,
-    Pixel
-};
+use std::path::Path;
 
 /// Panics if any pixels differ between the two input images.
 #[macro_export]
@@ -46,8 +39,6 @@ macro_rules! assert_pixels_eq {
      })
 }
 
-use std::path::Path;
-
 /// Loads image at given path, panicking on failure.
 pub fn load_image_or_panic(path: &Path) -> image::DynamicImage {
      image::open(path)
@@ -83,18 +74,3 @@ pub fn rgb_bench_image(width: u32, height: u32) -> image::RgbImage {
     }
     image
 }
-
-/// Helper for a conversion that we know can't fail.
-pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {
-    match x.value_into() {
-        Ok(y) => y,
-        Err(_) => panic!("Failed to convert"),
-    }
-}
-
-/// An ImageBuffer containing Pixels of type P with storage
-/// Vec<P::Subpixel>.
-// TODO: This produces a compiler warning about trait bounds
-// TODO: not being enforced in type definitions. In this case
-// TODO: they are. Can we get rid of the warning?
-pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;

@@ -6,7 +6,7 @@ use image::{
     Luma
 };
 
-use utils::{
+use definitions::{
     VecBuffer
 };
 
