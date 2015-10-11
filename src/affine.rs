@@ -7,7 +7,8 @@ use image::{
 };
 
 use traits::{
-    Clamp
+    Clamp,
+    HasBlack
 };
 
 use utils::{
@@ -19,11 +20,64 @@ use conv::{
     ValueInto
 };
 
-/// Rotate an image clockwise about center by theta radians by choosing
-/// the nearest source pixel to the pre-image of a given output pixel.
+/// How to handle pixels whose pre-image lies between input pixels.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Interpolation {
+    /// Choose the nearest pixel to the pre-image of the
+    /// output pixel.
+    Nearest,
+    /// Bilinearly interpolate between the four pixels
+    /// closest to the pre-image of the output pixel.
+    Bilinear
+}
+
+/// Rotate an image clockwise about provided center by theta radians.
+/// The output image has the same dimensions as the input. Output pixels
+/// whose pre-image lies outside the input image are black.
+pub fn rotate<I>(image: &I, center: (f32, f32), theta: f32, interpolation: Interpolation)
+        -> VecBuffer<I::Pixel>
+        where I: GenericImage,
+              I::Pixel: HasBlack + 'static,
+              <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> {
+
+    rotate_with_default(image, center, theta, <I::Pixel as HasBlack>::black(), interpolation)
+}
+
+/// Rotate an image clockwise about its center by theta radians.
+/// The output image has the same dimensions as the input. Output pixels
+/// whose pre-image lies outside the input image are black.
+pub fn rotate_about_center<I>(image: &I, theta: f32, interpolation: Interpolation)
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> {
+
+    let center =
+        (image.width() as f32 / 2f32, image.height() as f32 / 2f32);
+
+    rotate(image, center, theta, interpolation)
+}
+
+/// Rotate an image clockwise about provided center by theta radians.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
-pub fn rotate_nearest<I>(
+pub fn rotate_with_default<I>(
+    image: &I,
+    center: (f32, f32),
+    theta: f32,
+    default: I::Pixel,
+    interpolation: Interpolation) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: HasBlack + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> {
+
+    match interpolation {
+        Interpolation::Nearest => rotate_nearest(image, center, theta, default),
+        Interpolation::Bilinear => rotate_bilinear(image, center, theta, default)
+    }
+}
+
+fn rotate_nearest<I>(
     image: &I,
     center: (f32, f32),
     theta: f32,
@@ -67,11 +121,7 @@ pub fn rotate_nearest<I>(
     out
 }
 
-/// Rotate an image clockwise about center by theta radians by bilinearly
-/// interpolating between the source pixels around the pre-image of each output pixel.
-/// The output image has the same dimensions as the input. Output pixels
-/// whose pre-image lies outside the input image are set to default.
-pub fn rotate_bilinear<I>(
+fn rotate_bilinear<I>(
     image: &I,
     center: (f32, f32),
     theta: f32,

@@ -12,8 +12,15 @@ extern crate test;
 extern crate imageproc;
 
 use std::path::Path;
-use imageproc::utils::load_image_or_panic;
-use image::{Rgb};
+
+use imageproc::utils::{
+    load_image_or_panic
+};
+
+use imageproc::affine::{
+    Interpolation,
+    rotate_about_center
+};
 
 fn compare_to_truth_rgb(
     input_path: &Path,
@@ -40,11 +47,7 @@ fn compare_to_truth_grayscale(
 }
 
 fn rotate_nearest_about_center(image: &image::RgbImage) -> image::RgbImage {
-    imageproc::affine::rotate_nearest(
-        image,
-        (image.width() as f32/2f32, image.height() as f32/2f32),
-        std::f32::consts::PI/4f32,
-        Rgb([0u8;3]))
+    rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
 }
 
 #[test]
@@ -62,11 +65,7 @@ fn test_equalize_histogram_grayscale() {
 }
 
 fn rotate_bilinear_about_center(image: &image::RgbImage) -> image::RgbImage {
-    imageproc::affine::rotate_bilinear(
-        image,
-        (image.width() as f32/2f32, image.height() as f32/2f32),
-        std::f32::consts::PI/4f32,
-        Rgb([0u8;3]))
+    rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
 }
 
 #[test]
