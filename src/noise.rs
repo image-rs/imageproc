@@ -17,19 +17,19 @@ use rand::distributions::{
     Range
 };
 
-use traits::{
+use definitions::{
     Clamp,
     HasBlack,
-    HasWhite
+    HasWhite,
+    VecBuffer
 };
 
 use conv::{
     ValueInto
 };
 
-use utils::{
-    cast,
-    VecBuffer
+use math::{
+    cast
 };
 
 /// Adds independent additive Gaussian noise to all channels

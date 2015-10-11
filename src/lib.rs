@@ -33,4 +33,6 @@ pub mod drawing;
 
 pub mod noise;
 
-mod traits;
+pub mod math;
+
+mod definitions;

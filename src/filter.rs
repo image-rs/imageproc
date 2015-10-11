@@ -13,18 +13,18 @@ use integralimage::{
     row_running_sum
 };
 
-use traits::{
+use definitions::{
     Clamp,
-    HasBlack
+    HasBlack,
+    VecBuffer
 };
 
 use conv::{
     ValueInto
 };
 
-use utils::{
-    cast,
-    VecBuffer
+use math::{
+    cast
 };
 
 use num::{
