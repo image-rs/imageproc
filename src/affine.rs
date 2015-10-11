@@ -159,29 +159,14 @@ fn rotate_bilinear<I>(
                 out.put_pixel(x, y, default);
             }
             else {
+                let sum = interpolate(
+                    image.get_pixel(left as u32, top as u32),
+                    image.get_pixel(right as u32, top as u32),
+                    image.get_pixel(left as u32, bottom as u32),
+                    image.get_pixel(right as u32, bottom as u32),
+                    right_weight, bottom_weight);
 
-                let mut top_left = image.get_pixel(left as u32, top as u32);
-                let top_right = image.get_pixel(right as u32, top as u32);
-
-                let mut bottom_left = image.get_pixel(left as u32, bottom as u32);
-                let bottom_right = image.get_pixel(right as u32, bottom as u32);
-
-                top_left.apply2(&top_right,
-                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - right_weight) * cast(u) +
-                        right_weight * cast(v)));
-
-                bottom_left.apply2(&bottom_right,
-                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - right_weight) * cast(u) +
-                        right_weight * cast(v)));
-
-                top_left.apply2(&bottom_left,
-                    |u, v| <I::Pixel as Pixel>::Subpixel::clamp(
-                        (1f32 - bottom_weight) * cast(u) +
-                        bottom_weight * cast(v)));
-
-                out.put_pixel(x, y, top_left);
+                out.put_pixel(x, y, sum);
             }
 
             px += cos_theta;
@@ -190,6 +175,29 @@ fn rotate_bilinear<I>(
     }
 
     out
+}
+
+fn interpolate<P>(
+    top_left: P,
+    top_right: P,
+    bottom_left: P,
+    bottom_right: P,
+    right_weight: f32,
+    bottom_weight: f32) -> P
+    where P: Pixel,
+          P::Subpixel: ValueInto<f32> + Clamp<f32> {
+
+    let top = top_left.map2(&top_right,
+       |u, v| P::Subpixel::clamp(
+           (1f32 - right_weight) * cast(u) + right_weight * cast(v)));
+
+    let bottom = bottom_left.map2(&bottom_right,
+        |u, v| P::Subpixel::clamp(
+            (1f32 - right_weight) * cast(u) + right_weight * cast(v)));
+
+    top.map2(&bottom,
+        |u, v| P::Subpixel::clamp(
+             (1f32 - bottom_weight) * cast(u) + bottom_weight * cast(v)))
 }
 
 /// Translates the input image by t. Note that image coordinates increase from
