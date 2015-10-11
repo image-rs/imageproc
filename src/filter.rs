@@ -23,7 +23,8 @@ use conv::{
 };
 
 use utils::{
-    cast
+    cast,
+    VecBuffer
 };
 
 use num::{
@@ -44,10 +45,8 @@ use num::{
 // TODO: number of operations is constant with kernel size,
 // TODO: but this is still _really_ slow. fix!
 pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
-        -> ImageBuffer<Luma<u8>, Vec<u8>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+        -> VecBuffer<Luma<u8>>
+    where I: GenericImage<Pixel=Luma<u8>>{
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -89,10 +88,10 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels h_filter and v_filter.
 pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I: GenericImage + 'static,
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> ,
           K: Num + Copy {
     let h = horizontal_filter(image, h_kernel);
     let v = vertical_filter(&h, v_kernel);
@@ -102,10 +101,10 @@ pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernel filter with itself.
 pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I: GenericImage + 'static,
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
     separable_filter(image, kernel, kernel)
 }
@@ -114,10 +113,10 @@ pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
 pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I: GenericImage + 'static,
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
 
     let (width, height) = image.dimensions();
@@ -160,10 +159,10 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
 /// Pads by continuity.
 // TODO: shares too much code with horizontal_filter
 pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
-        -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I: GenericImage + 'static,
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage,
           I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K> + 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
 
     let (width, height) = image.dimensions();
@@ -202,27 +201,22 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
     out
 }
 
-pub fn copy<I>(image: &I) -> ImageBuffer<I::Pixel, Vec<<I::Pixel as Pixel>::Subpixel>>
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+pub fn copy<I>(image: &I) -> VecBuffer<I::Pixel>
+    where I: GenericImage, I::Pixel: 'static {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     out
 }
 
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K, num_channels: usize)
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel : ValueInto<K>,
-          K: Num + Copy {
+    where P: Pixel, <P as Pixel>::Subpixel : ValueInto<K>, K: Num + Copy {
     for i in 0..num_channels {
         acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
     }
 }
 
 fn clamp_acc<P, K>(acc: &[K], pixel: &mut P, num_channels: usize)
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: Clamp<K>,
+    where P: Pixel, <P as Pixel>::Subpixel: Clamp<K>,
           K: Copy {
     for i in 0..num_channels {
         pixel.channels_mut()[i] = P::Subpixel::clamp(acc[i]);

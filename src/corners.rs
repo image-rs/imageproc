@@ -32,7 +32,7 @@ impl Corner {
 /// pixel still qualifies as a corner.
 /// https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test
 pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let (width, height) = image.dimensions();
     let mut corners = vec![];
@@ -118,7 +118,7 @@ pub fn suppress_non_maximum(corners: &[Corner], radius: u32)
 /// and a corner pixel is n then the corner will have a score of n - 1.
 fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
         -> u8
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let mut max = 255u8;
     let mut min = threshold;
@@ -143,7 +143,7 @@ fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
 /// Checks if the given pixel is a corner.
 fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
         -> bool
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let (width, height) = image.dimensions();
 

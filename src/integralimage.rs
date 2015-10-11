@@ -17,11 +17,15 @@ use image::{
     ImageBuffer
 };
 
+use utils::{
+    VecBuffer
+};
+
 /// Computes the integral image of an 8bpp grayscale image.
 // TODO: Support more formats.
 // TODO: This is extremely slow. Fix that!
-pub fn integral_image<I>(image: &I) -> ImageBuffer<Luma<u32>, Vec<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
+    where I: GenericImage<Pixel=Luma<u8>> {
     padded_integral_image(image, 0, 0)
 }
 
@@ -31,8 +35,8 @@ pub fn integral_image<I>(image: &I) -> ImageBuffer<Luma<u32>, Vec<u32>>
 /// Returned image has width image.width() + 2 * x_padding
 /// and height image.height() + 2 * y_padding.
 pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
-        -> ImageBuffer<Luma<u32>, Vec<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+        -> VecBuffer<Luma<u32>>
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let (in_width, in_height) = image.dimensions();
     let out_width = in_width + 2 * x_padding;
@@ -93,7 +97,7 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
 /// for all rows in an image.
 // TODO: faster, more formats
 pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let width = image.width();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
@@ -125,7 +129,7 @@ pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
 /// for all columns in an image.
 // TODO: faster, more formats
 pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding: u32)
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let height = image.height();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
