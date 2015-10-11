@@ -36,9 +36,9 @@ use utils::{
 /// of an image, with the given mean and standard deviation.
 pub fn gaussian_noise<I>(image: &I, mean: f64, stddev: f64, seed: usize)
         -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
+    where I: GenericImage,
           I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64> + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64> {
 
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -49,9 +49,8 @@ pub fn gaussian_noise<I>(image: &I, mean: f64, stddev: f64, seed: usize)
 /// Adds independent additive Gaussian noise to all channels
 /// of an image in place, with the given mean and standard deviation.
 pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64> + 'static {
+    where I: GenericImage,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64> {
 
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
@@ -79,9 +78,7 @@ pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
 /// white occur with equal probability.
 pub fn salt_and_pepper_noise<I>(image: &I, rate: f64, seed: usize)
         -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
-          I::Pixel: HasBlack + HasWhite + 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage, I::Pixel: HasBlack + HasWhite + 'static {
 
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -92,9 +89,7 @@ pub fn salt_and_pepper_noise<I>(image: &I, rate: f64, seed: usize)
 /// Converts pixels to black or white in place at the given rate. Black and
 /// white occur with equal probability.
 pub fn salt_and_pepper_noise_mut<I>(image: &mut I, rate: f64, seed: usize)
-    where I: GenericImage + 'static,
-          I::Pixel: HasBlack + HasWhite + 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage, I::Pixel: HasBlack + HasWhite {
 
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);

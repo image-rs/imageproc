@@ -15,9 +15,7 @@ use utils::{
 /// is drawn as will fit. If (x, y) is outside the image bounds then
 /// we draw nothing.
 pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32)
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage {
 
     let (width, height) = image.dimensions();
     if x >= width || y >= height {
@@ -44,9 +42,7 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32)
 /// we draw nothing.
 pub fn draw_cross<I>(image: &I, color: I::Pixel, x: u32, y: u32)
         -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage, I::Pixel: 'static {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     draw_cross_mut(&mut out, color, x, y);

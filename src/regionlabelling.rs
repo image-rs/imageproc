@@ -24,7 +24,7 @@ pub enum Connectivity { Four, Eight }
 /// to the background if and only if they have value 0.
 pub fn connected_components<I>(image: &I, conn: Connectivity)
         -> VecBuffer<Luma<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);

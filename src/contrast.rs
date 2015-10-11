@@ -10,7 +10,7 @@ use image::{
 /// Returns the cumulative histogram of grayscale values in an 8bpp
 /// grayscale image.
 fn cumulative_histogram<I>(image: &I) -> [i32;256]
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let mut hist = [0i32;256];
 
@@ -28,7 +28,7 @@ fn cumulative_histogram<I>(image: &I) -> [i32;256]
 /// Equalises the histogram of an 8bpp grayscale image in place.
 /// https://en.wikipedia.org/wiki/Histogram_equalization
 pub fn equalize_histogram_mut<I>(image: &mut I)
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let hist = cumulative_histogram(image);
     let total = hist[255] as f32;
@@ -46,7 +46,7 @@ pub fn equalize_histogram_mut<I>(image: &mut I)
 /// Equalises the histogram of an 8bpp grayscale image.
 /// https://en.wikipedia.org/wiki/Histogram_equalization
 pub fn equalize_histogram<I>(image: &I) -> GrayImage
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
+    where I: GenericImage<Pixel=Luma<u8>> {
 
     let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);

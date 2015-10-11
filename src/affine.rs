@@ -28,9 +28,7 @@ pub fn rotate_nearest<I>(
     center: (f32, f32),
     theta: f32,
     default: I::Pixel) -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage, I::Pixel: 'static {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -78,9 +76,9 @@ pub fn rotate_bilinear<I>(
     center: (f32, f32),
     theta: f32,
     default: I::Pixel) -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
+    where I: GenericImage,
           I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + 'static {
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -148,9 +146,7 @@ pub fn rotate_bilinear<I>(
 /// top left to bottom right. Output pixels whose pre-image are not in the input
 /// image are set to the boundary pixel in the input image nearest to their pre-image.
 pub fn translate<I>(image: &I, t: (i32, i32)) -> VecBuffer<I::Pixel>
-    where I: GenericImage + 'static,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: 'static {
+    where I: GenericImage, I::Pixel: 'static {
 
     use std::cmp;
 
