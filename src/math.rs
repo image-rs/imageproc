@@ -8,12 +8,15 @@ use num::{
     Zero
 };
 
+pub use nalgebra::{
+    Mat2,
+    Vec2
+};
+
 use nalgebra::{
     Eye,
     inv,
-    Inv,
-    Mat2,
-    Vec2
+    Inv
 };
 
 /// Helper for a conversion that we know can't fail.
