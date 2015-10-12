@@ -8,6 +8,9 @@ extern crate conv;
 
 extern crate image;
 
+#[macro_use]
+extern crate nalgebra;
+
 extern crate num;
 
 extern crate rand;

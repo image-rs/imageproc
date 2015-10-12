@@ -1,3 +1,5 @@
+//! Functions for computing integral images and running sums
+//! of rows and columns. 
 //! I is the integral image of an image F if I(x, y) is the
 //! sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
 //! in the integral image contains the sum of the pixel intensities

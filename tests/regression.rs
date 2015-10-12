@@ -74,3 +74,45 @@ fn test_rotate_bilinear_rgb() {
     let tp = Path::new("./tests/data/truth/elephant_rotate_bilinear.png");
     compare_to_truth_rgb(&ip, &tp, &rotate_bilinear_about_center);
 }
+
+fn affine_nearest(image: &image::RgbImage) -> image::RgbImage {
+    let root_two_inv = 1f32/2f32.sqrt();
+    let trans = imageproc::math::Affine2::new(
+        imageproc::math::Mat2::new(
+            root_two_inv, -root_two_inv,
+            root_two_inv, root_two_inv) * 2f32,
+        imageproc::math::Vec2::new(50f32, -70f32)
+    );
+
+    imageproc::affine::affine(
+        image, trans,
+        imageproc::affine::Interpolation::Nearest).unwrap()
+}
+
+#[test]
+fn test_affine_nearest_rgb() {
+    let ip = Path::new("./tests/data/elephant.png");
+    let tp = Path::new("./tests/data/truth/elephant_affine_nearest.png");
+    compare_to_truth_rgb(&ip, &tp, &affine_nearest);
+}
+
+fn affine_bilinear(image: &image::RgbImage) -> image::RgbImage {
+    let root_two_inv = 1f32/2f32.sqrt();
+    let trans = imageproc::math::Affine2::new(
+        imageproc::math::Mat2::new(
+            root_two_inv, -root_two_inv,
+            root_two_inv, root_two_inv) * 2f32,
+        imageproc::math::Vec2::new(50f32, -70f32)
+    );
+
+    imageproc::affine::affine(
+        image, trans,
+        imageproc::affine::Interpolation::Bilinear).unwrap()
+}
+
+#[test]
+fn test_affine_bilinear_rgb() {
+    let ip = Path::new("./tests/data/elephant.png");
+    let tp = Path::new("./tests/data/truth/elephant_affine_bilinear.png");
+    compare_to_truth_rgb(&ip, &tp, &affine_bilinear);
+}

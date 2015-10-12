@@ -10,8 +10,9 @@ homepage = "https://github.com/PistonDevelopers/imageproc"
 [dependencies]
 conv = "0.2.1"
 image = "0.3.14"
-rand = "0.3.11"
+nalgebra = "0.3.0"
 num = "0.1.27"
+rand = "0.3.11"
 
 [profile.release]
 opt-level = 3
