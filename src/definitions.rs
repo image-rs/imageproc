@@ -23,9 +23,11 @@ pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
 
 /// Used to name the type we get by replacing
 /// the channel type of a given Pixel type.
-pub trait WithChannel<C>: Pixel {
-    type Pixel;
+pub trait WithChannel<C: Primitive>: Pixel {
+    type Pixel: Pixel<Subpixel=C> + 'static;
 }
+
+pub type ChannelMap<Pix, Sub> = <Pix as WithChannel<Sub>>::Pixel;
 
 impl<T, U> WithChannel<U> for Rgb<T>
     where T: Primitive + 'static,
@@ -144,6 +146,14 @@ impl Clamp<i32> for u16 {
         if x < 0i32 { return 0;}
         if x > 65535i32 { return 65535; }
         x as u16
+    }
+}
+
+impl Clamp<i32> for i16 {
+    fn clamp(x: i32) -> i16 {
+        if x < -32768i32 { return -32768i16;}
+        if x > 32767i32 { return 32767i16; }
+        x as i16
     }
 }
 

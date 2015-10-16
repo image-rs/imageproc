@@ -5,7 +5,8 @@ use image::{
     GenericImage,
     ImageBuffer,
     Luma,
-    Pixel
+    Pixel,
+    Primitive
 };
 
 use integralimage::{
@@ -16,21 +17,19 @@ use integralimage::{
 use definitions::{
     Clamp,
     HasBlack,
-    VecBuffer
-};
-
-use conv::{
-    ValueInto
-};
-
-use math::{
-    cast
+    VecBuffer,
+    WithChannel,
+    ChannelMap
 };
 
 use num::{
     Num,
     Zero
 };
+
+use conv::ValueInto;
+use math::cast;
+use std::cmp;
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
 /// and height (2 * y_radius + 1) whose entries are equal and
@@ -98,7 +97,7 @@ pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
     v
 }
 
-/// Returns 2d correlation of view with the outer product of the 1d
+/// Returns 2d correlation of an image with the outer product of the 1d
 /// kernel filter with itself.
 pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
         -> VecBuffer<I::Pixel>
@@ -107,6 +106,51 @@ pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
     separable_filter(image, kernel, kernel)
+}
+
+/// Returns 2d correlation of an image with a 3x3 kernel. Intermediate calculations are
+/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+// TODO: factor out the accumulation code from this, horizontal_filter and vertical_filter
+pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P, S>>
+    where I: GenericImage<Pixel=P>,
+          P::Subpixel: ValueInto<K>,
+          S: Clamp<K> + Primitive + 'static,
+          P: WithChannel<S> + 'static,
+          K: Num + Copy {
+
+    let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::<ChannelMap<P, S>>::new(width, height);
+    let num_channels = I::Pixel::channel_count() as usize;
+
+    // TODO: Should we handle images with height or width < 2? Feels clunky to return Results
+    // TODO: everywhere. Could just document as requirement and leave it at that.
+    for y in 0..height {
+        let y_prev = cmp::max(1, y) - 1;
+        let y_next = cmp::min(height - 2, y) + 1;
+
+        for x in 0..width {
+            let x_prev = cmp::max(1, x) - 1;
+            let x_next = cmp::min(width - 2, x) + 1;
+
+            let mut acc = vec![Zero::zero(); num_channels];
+            accumulate(&mut acc, &image.get_pixel(x_prev, y_prev), kernel[0], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x,      y_prev), kernel[1], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_next, y_prev), kernel[2], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_prev, y     ), kernel[3], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x     , y     ), kernel[4], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_next, y     ), kernel[5], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_prev, y_next), kernel[6], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x     , y_next), kernel[7], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_next, y_next), kernel[8], num_channels);
+
+            clamp_acc(
+                &acc,
+                out.get_pixel_mut(x, y).channels_mut(),
+                num_channels);
+        }
+    }
+
+    out
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
@@ -145,10 +189,10 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
                 accumulate(&mut acc, &p, weight, num_channels);
             }
 
-            let mut out_pixel = I::Pixel::black();
-            clamp_acc(&acc, &mut out_pixel, num_channels);
-
-            out.put_pixel(x - k/2, y, out_pixel);
+            clamp_acc(
+                &acc,
+                out.get_pixel_mut(x - k/2, y).channels_mut(),
+                num_channels);
         }
 	}
 
@@ -191,10 +235,10 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
                 accumulate(&mut acc, &p, weight, num_channels);
             }
 
-            let mut out_pixel = I::Pixel::black();
-            clamp_acc(&acc, &mut out_pixel, num_channels);
-
-            out.put_pixel(x, y - k/2, out_pixel);
+            clamp_acc(
+                &acc,
+                out.get_pixel_mut(x, y - k/2).channels_mut(),
+                num_channels);
         }
 	}
 
@@ -215,11 +259,11 @@ fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K, num_channels: usize)
     }
 }
 
-fn clamp_acc<P, K>(acc: &[K], pixel: &mut P, num_channels: usize)
-    where P: Pixel, <P as Pixel>::Subpixel: Clamp<K>,
+fn clamp_acc<C, K>(acc: &[K], channels: &mut [C], num_channels: usize)
+    where C: Clamp<K>,
           K: Copy {
     for i in 0..num_channels {
-        pixel.channels_mut()[i] = P::Subpixel::clamp(acc[i]);
+        channels[i] = C::clamp(acc[i]);
     }
 }
 
@@ -241,6 +285,7 @@ mod test {
 
     use super::{
         box_filter,
+        filter3x3,
         horizontal_filter,
         pad_buffer,
         separable_filter,
@@ -252,7 +297,9 @@ mod test {
     };
     use image::{
         GrayImage,
-        ImageBuffer
+        ImageBuffer,
+        Luma,
+        Pixel
     };
     use test;
 
@@ -399,6 +446,42 @@ mod test {
         let kernel = vec![1f32/5f32; 5];
         b.iter(|| {
             let filtered = vertical_filter(&image, &kernel);
+            test::black_box(filtered);
+            });
+    }
+
+    #[test]
+    fn test_filter3x3_with_results_outside_input_channel_range() {
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1];
+
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            3, 2, 1,
+            6, 5, 4,
+            9, 8, 7]).unwrap();
+
+        let expected = ImageBuffer::from_raw(3, 3, vec![
+            -4i16, -8i16, -4i16,
+            -4i16, -8i16, -4i16,
+            -4i16, -8i16, -4i16]).unwrap();
+
+        let filtered = filter3x3(&image, &kernel);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[bench]
+    fn bench_filter3x3_i32_filter(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1];
+
+        b.iter(|| {
+            let filtered: ImageBuffer<Luma<i16>, Vec<i16>>
+                = filter3x3::<_, _, _, i16>(&image, &kernel);
             test::black_box(filtered);
             });
     }
