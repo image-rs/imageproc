@@ -1,5 +1,5 @@
 //! Compares results of image processing functions to existing "truth" images.
-//! All test images are taken from the caltech256 dataset
+//! All test images are taken from the caltech256 dataset.
 //! http://authors.library.caltech.edu/7694/
 
 #![feature(core)]
@@ -115,4 +115,20 @@ fn test_affine_bilinear_rgb() {
     let ip = Path::new("./tests/data/elephant.png");
     let tp = Path::new("./tests/data/truth/elephant_affine_bilinear.png");
     compare_to_truth_rgb(&ip, &tp, &affine_bilinear);
+}
+
+fn sobel_gradients(image: &image::GrayImage) -> image::GrayImage {
+    use imageproc::definitions::Clamp;
+    use imageproc::gradients;
+    use imageproc::filter;
+    filter::map_subpixels(
+        &gradients::sobel_gradients(image),
+        |x| u8::clamp(x))
+}
+
+#[test]
+fn test_sobel_gradients() {
+    let ip = Path::new("./tests/data/elephant.png");
+    let tp = Path::new("./tests/data/truth/elephant_gradients.png");
+    compare_to_truth_grayscale(&ip, &tp, &sobel_gradients);
 }
