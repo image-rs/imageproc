@@ -107,6 +107,7 @@ pub trait Clamp<T> {
 }
 
 /// Creates an implementation of Clamp<To> for type From.
+// TODO: improve performance
 macro_rules! implement_clamp {
     ($from:ty, $to:ty) => (
         impl Clamp<$from> for $to {
@@ -124,6 +125,7 @@ implement_clamp!(f64, u16);
 implement_clamp!(i32, u8);
 implement_clamp!(i32, u16);
 implement_clamp!(i32, i16);
+implement_clamp!(u16, u8);
 
 /// Clamp a value from a type with larger range to one with
 /// a smaller range. Deliberately not exported - should be used
