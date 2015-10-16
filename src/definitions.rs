@@ -8,10 +8,17 @@ use image::{
     Primitive,
     ImageBuffer
 };
-
+use num::{
+    Bounded,
+    NumCast
+};
 use std::{
     u8,
     u16
+};
+
+use std::cmp::Ordering::{
+    Equal, Greater, Less
 };
 
 /// An ImageBuffer containing Pixels of type P with storage
@@ -95,65 +102,54 @@ impl HasWhite for Rgb<u8> {
 
 /// A type to which we can clamp a value of type T.
 /// Implementations are not required to handle NaNs gracefully.
-// TODO: Switch to using the conv crate when that lets
-// TODO: you handle this ergonomically.
 pub trait Clamp<T> {
     fn clamp(x: T) -> Self;
 }
 
-impl Clamp<f32> for u8 {
-    fn clamp(x: f32) -> u8 {
-        if x < 0f32 { return 0;}
-        if x > 255f32 { return 255; }
-        x as u8
+/// Creates an implementation of Clamp<To> for type From.
+macro_rules! implement_clamp {
+    ($from:ty, $to:ty) => (
+        impl Clamp<$from> for $to {
+            fn clamp(x: $from) -> $to {
+                clamp_impl(x)
+            }
+        }
+    )
+}
+
+implement_clamp!(f32, u8);
+implement_clamp!(f32, u16);
+implement_clamp!(f64, u8);
+implement_clamp!(f64, u16);
+implement_clamp!(i32, u8);
+implement_clamp!(i32, u16);
+implement_clamp!(i32, i16);
+
+/// Clamp a value from a type with larger range to one with
+/// a smaller range. Deliberately not exported - should be used
+/// via the Clamp trait.
+fn clamp_impl<From: NumCast + PartialOrd, To: NumCast + Bounded>(x: From) -> To {
+    let to_max = <From as NumCast>::from(To::max_value()).unwrap();
+    let to_min = <From as NumCast>::from(To::min_value()).unwrap();
+    let clamped = partial_max(partial_min(x, to_max).unwrap(), to_min).unwrap();
+    To::from(clamped).unwrap()
+}
+
+/// Copied from std::cmp as it's now deprecated.
+fn partial_max<T: PartialOrd>(v1: T, v2: T) -> Option<T> {
+    match v1.partial_cmp(&v2) {
+        Some(Equal) | Some(Less) => Some(v2),
+        Some(Greater) => Some(v1),
+        None => None
     }
 }
 
-impl Clamp<f32> for u16 {
-    fn clamp(x: f32) -> u16 {
-        if x < 0f32 { return 0;}
-        if x > 65535f32 { return 65535; }
-        x as u16
-    }
-}
-
-impl Clamp<f64> for u8 {
-    fn clamp(x: f64) -> u8 {
-        if x < 0f64 { return 0;}
-        if x > 255f64 { return 255; }
-        x as u8
-    }
-}
-
-impl Clamp<f64> for u16 {
-    fn clamp(x: f64) -> u16 {
-        if x < 0f64 { return 0;}
-        if x > 65535f64 { return 65535; }
-        x as u16
-    }
-}
-
-impl Clamp<i32> for u8 {
-    fn clamp(x: i32) -> u8 {
-        if x < 0i32 { return 0;}
-        if x > 255i32 { return 255; }
-        x as u8
-    }
-}
-
-impl Clamp<i32> for u16 {
-    fn clamp(x: i32) -> u16 {
-        if x < 0i32 { return 0;}
-        if x > 65535i32 { return 65535; }
-        x as u16
-    }
-}
-
-impl Clamp<i32> for i16 {
-    fn clamp(x: i32) -> i16 {
-        if x < -32768i32 { return -32768i16;}
-        if x > 32767i32 { return 32767i16; }
-        x as i16
+/// Copied from std::cmp as it's now deprecated.
+fn partial_min<T: PartialOrd>(v1: T, v2: T) -> Option<T> {
+    match v1.partial_cmp(&v2) {
+        Some(Less) | Some(Equal) => Some(v1),
+        Some(Greater) => Some(v2),
+        None => None
     }
 }
 
@@ -163,7 +159,7 @@ mod test {
     use super::Clamp;
 
     #[test]
-    fn test_clamp_u8() {
+    fn test_clamp_f32_u8() {
         let t: u8 = Clamp::clamp(255f32);
         assert_eq!(t, 255u8);
         let u: u8 = Clamp::clamp(300f32);
@@ -175,7 +171,7 @@ mod test {
     }
 
     #[test]
-    fn test_clamp_u16() {
+    fn test_clamp_f32_u16() {
         let t: u16 = Clamp::clamp(65535f32);
         assert_eq!(t, 65535u16);
         let u: u16 = Clamp::clamp(300000f32);
