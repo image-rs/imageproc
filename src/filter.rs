@@ -133,20 +133,17 @@ pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P,
             let x_next = cmp::min(width - 2, x) + 1;
 
             let mut acc = vec![Zero::zero(); num_channels];
-            accumulate(&mut acc, &image.get_pixel(x_prev, y_prev), kernel[0], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x,      y_prev), kernel[1], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x_next, y_prev), kernel[2], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x_prev, y     ), kernel[3], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x     , y     ), kernel[4], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x_next, y     ), kernel[5], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x_prev, y_next), kernel[6], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x     , y_next), kernel[7], num_channels);
-            accumulate(&mut acc, &image.get_pixel(x_next, y_next), kernel[8], num_channels);
+            accumulate(&mut acc, &image.get_pixel(x_prev, y_prev), kernel[0]);
+            accumulate(&mut acc, &image.get_pixel(x,      y_prev), kernel[1]);
+            accumulate(&mut acc, &image.get_pixel(x_next, y_prev), kernel[2]);
+            accumulate(&mut acc, &image.get_pixel(x_prev, y     ), kernel[3]);
+            accumulate(&mut acc, &image.get_pixel(x     , y     ), kernel[4]);
+            accumulate(&mut acc, &image.get_pixel(x_next, y     ), kernel[5]);
+            accumulate(&mut acc, &image.get_pixel(x_prev, y_next), kernel[6]);
+            accumulate(&mut acc, &image.get_pixel(x     , y_next), kernel[7]);
+            accumulate(&mut acc, &image.get_pixel(x_next, y_next), kernel[8]);
 
-            clamp_acc(
-                &acc,
-                out.get_pixel_mut(x, y).channels_mut(),
-                num_channels);
+            clamp_acc(&acc, out.get_pixel_mut(x, y).channels_mut());
         }
     }
 
@@ -186,13 +183,10 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
             for z in 0..k {
                 let p = buffer[(x + z - k/2) as usize];
                 let weight = kernel[z as usize];
-                accumulate(&mut acc, &p, weight, num_channels);
+                accumulate(&mut acc, &p, weight);
             }
 
-            clamp_acc(
-                &acc,
-                out.get_pixel_mut(x - k/2, y).channels_mut(),
-                num_channels);
+            clamp_acc(&acc, out.get_pixel_mut(x - k/2, y).channels_mut());
         }
 	}
 
@@ -232,13 +226,10 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
             for z in 0..k {
                 let p = buffer[(y + z - k/2) as usize];
                 let weight = kernel[z as usize];
-                accumulate(&mut acc, &p, weight, num_channels);
+                accumulate(&mut acc, &p, weight);
             }
 
-            clamp_acc(
-                &acc,
-                out.get_pixel_mut(x, y - k/2).channels_mut(),
-                num_channels);
+            clamp_acc(&acc, out.get_pixel_mut(x, y - k/2).channels_mut());
         }
 	}
 
@@ -252,17 +243,17 @@ pub fn copy<I>(image: &I) -> VecBuffer<I::Pixel>
     out
 }
 
-fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K, num_channels: usize)
+fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
     where P: Pixel, <P as Pixel>::Subpixel : ValueInto<K>, K: Num + Copy {
-    for i in 0..num_channels {
+    for i in 0..(P::channel_count() as usize) {
         acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
     }
 }
 
-fn clamp_acc<C, K>(acc: &[K], channels: &mut [C], num_channels: usize)
+fn clamp_acc<C, K>(acc: &[K], channels: &mut [C])
     where C: Clamp<K>,
           K: Copy {
-    for i in 0..num_channels {
+    for i in 0..acc.len() {
         channels[i] = C::clamp(acc[i]);
     }
 }
