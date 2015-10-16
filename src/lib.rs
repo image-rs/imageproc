@@ -20,6 +20,7 @@ pub mod definitions;
 pub mod drawing;
 pub mod filter;
 pub mod gradients;
+pub mod hog;
 pub mod integralimage;
 pub mod math;
 pub mod noise;
