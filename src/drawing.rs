@@ -49,6 +49,35 @@ pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32)
     out
 }
 
+/// Draws as much of the line segment between start and end as lies inside the image bounds.
+pub fn draw_line_segment<I>(image: &I, start: (i32, i32), end: (i32, i32), color: I::Pixel)
+        -> VecBuffer<I::Pixel>
+    where I: GenericImage, I::Pixel: 'static{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_line_segment_mut(&mut out, start, end, color);
+    out
+}
+
+/// Draws as much of the line segment between start and end as lies inside the image bounds.
+// TODO: crop line to intersection with image before drawing. Use Bresenham line.
+pub fn draw_line_segment_mut<I>(image: &mut I, start: (i32, i32), end: (i32, i32), color: I::Pixel)
+    where I: GenericImage, I::Pixel: 'static{
+
+    let (width, height) = image.dimensions();
+    let diff_y = (end.1 - start.1) as f32;
+    let diff_x = (end.0 - start.0) as f32;
+
+    for step in 0..1000 {
+        let x = start.0 + ((diff_x * step as f32) / 1000f32) as i32;
+        let y = start.1 + ((diff_y * step as f32) / 1000f32) as i32;
+
+        if x >= 0 && x < width as i32 && y >= 0 && y < height as i32 {
+            image.put_pixel(x as u32, y as u32, color);
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 

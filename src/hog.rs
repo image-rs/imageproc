@@ -3,6 +3,7 @@
 
 use image::{
 	GenericImage,
+	ImageBuffer,
 	Luma
 };
 use gradients::{
@@ -12,6 +13,10 @@ use gradients::{
 use multiarray::{
 	Array3d,
 	View3d
+};
+use definitions::{
+	Clamp,
+	VecBuffer
 };
 use math::l2_norm;
 use std::f32;
@@ -48,7 +53,7 @@ impl HogOptions {
 /// image dimensions. Validation must occur when instances of this struct
 /// are created - functions receiving a spec will assume that it is valid.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct HogSpec {
+pub struct HogSpec {
 	/// Original options.
 	options: HogOptions,
 	/// Number of non-overlapping cells required to cover the image's width.
@@ -63,7 +68,7 @@ struct HogSpec {
 
 impl HogSpec {
 	/// Returns None if image dimensions aren't compatible with the provided options.
-	fn from_options(width: u32, height: u32, options: HogOptions) -> Option<HogSpec> {
+	pub fn from_options(width: u32, height: u32, options: HogOptions) -> Option<HogSpec> {
 		let w = width as usize;
 		let h = height as usize;
 		let divides_evenly = |n, q| n % q == 0;
@@ -97,7 +102,7 @@ impl HogSpec {
 	}
 
 	/// Dimensions of a grid of cell histograms, viewed as a 3d array.
-	/// Innermost dimension is orientation bin, horizontal cell location,
+	/// Innermost dimension is orientation bin, then horizontal cell location,
 	/// then vertical cell location.
 	fn cell_grid_lengths(&self) -> [usize; 3] {
 		[self.options.orientations, self.cells_wide, self.cells_high]
@@ -178,7 +183,7 @@ fn hog_impl<I>(image: &I, spec: HogSpec) -> Vec<f32>
 
 /// Computes orientation histograms for each cell of an image. Assumes that
 /// the provided dimensions are valid.
-fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
+pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
     let (width, height) = image.dimensions();
@@ -190,6 +195,7 @@ fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 	let interval = orientation_bin_width(spec.options);
 
 	for y in 0..height {
+		let mut grid_view = grid.view_mut();
 		let y_inter = Interpolation::from_position(y as f32 / cell_side);
 
 		for x in 0..width {
@@ -198,23 +204,27 @@ fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 			let h = horizontal.get_pixel(x, y)[0] as f32;
 			let v = vertical.get_pixel(x, y)[0] as f32;
 			let m = (h.powi(2) + v.powi(2)).sqrt();
-			let d = v.atan2(h);
+			let mut d = v.atan2(h);
+			if d < 0f32 {
+				d = d + 2f32 * f32::consts::PI;
+			}
 
 			let o_inter
 				= Interpolation::from_position_wrapping(d / interval, spec.options.orientations);
 
 			for iy in 0..2usize {
+				let py = y_inter.indices[iy];
+
 				for ix in 0..2usize {
+					let px = x_inter.indices[ix];
+
 					for io in 0..2usize {
-						if contains_outer(&grid.view_mut(), ix, iy) {
+						let po = o_inter.indices[io];
+						if contains_outer(&grid_view, px, py) {
 							let wy = y_inter.weights[iy];
 							let wx = x_inter.weights[ix];
 							let wo = o_inter.weights[io];
-							let py = y_inter.indices[iy];
-							let px = x_inter.indices[ix];
-							let po = o_inter.indices[io];
 							let up = wy * wx * wo * m / cell_area;
-							let mut grid_view = grid.view_mut();
 							let current = *grid_view.at_mut([po, px, py]);
 						 	*grid_view.at_mut([po, px, py]) = current + up;
 						}
@@ -229,7 +239,7 @@ fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 
 /// True if the given outer two indices into a view are within bounds.
 fn contains_outer<T>(view: &View3d<T>, u: usize, v: usize) -> bool {
-	u >= view.lengths[1] || v >= view.lengths[2]
+	u < view.lengths[1] && v < view.lengths[2]
 }
 
 /// Width of an orientation histogram bin in radians.
@@ -267,6 +277,93 @@ impl Interpolation {
 			weights: [1f32 - fraction, fraction]
 		}
 	}
+}
+
+/// Draws a ray from the center of an image, in a direction theta radians
+/// clockwise from the y axis (recall that image coordinates increase from
+/// top left to bottom right).
+pub fn draw_ray<I>(image: &I, theta: f32, color: I::Pixel)
+		-> VecBuffer<I::Pixel>
+	where I: GenericImage, I::Pixel: 'static {
+	let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_ray_mut(&mut out, theta, color);
+    out
+}
+
+/// Draws a ray from the center of an image in place, in a direction theta radians
+/// clockwise from the y axis (recall that image coordinates increase from
+/// top left to bottom right).
+pub fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
+    where I: GenericImage, I::Pixel: 'static {
+
+	use std::cmp;
+	use drawing::draw_line_segment_mut;
+
+	let (width, height) = image.dimensions();
+	let scale = cmp::max(width, height) as f32 / 2f32;
+	let start_x = (width / 2) as i32;
+	let start_y = (height / 2) as i32;
+	let start = (start_x, start_y);
+	let x_step = -(scale * theta.sin()) as i32;
+	let y_step = (scale * theta.cos()) as i32;
+	let end = (start_x + x_step, start_y + y_step);
+
+	draw_line_segment_mut(image, start, end, color);
+}
+
+/// Visualises a histogram of edge orientation strengths as a collection of rays
+/// emanating from the centre of a square image. The intensity of each ray is
+/// proportional to the value of the bucket centred on its direction.
+pub fn star(side_length: u32, hist: &[f32], signed: bool) -> VecBuffer<Luma<u8>> {
+	let mut out = ImageBuffer::new(side_length, side_length);
+	draw_star_mut(&mut out, hist, signed);
+	out
+}
+
+/// Draws a visualisation of a histogram of edge orientation strengths as a collection of rays
+/// emanating from the centre of a square image. The intensity of each ray is
+/// proportional to the value of the bucket centred on its direction.
+pub fn draw_star_mut<I>(image: &mut I, hist: &[f32], signed: bool)
+	where I: GenericImage<Pixel=Luma<u8>> {
+	let orientations = hist.len() as f32;
+	for bucket in 0..hist.len() {
+		if signed {
+			let dir = (2f32 * f32::consts::PI * bucket as f32) / orientations;
+			let intensity = u8::clamp(hist[bucket]);
+			draw_ray_mut(image, dir, Luma([intensity]));
+		}
+		else {
+			let dir = (f32::consts::PI * bucket as f32) / orientations;
+			let intensity = u8::clamp(hist[bucket]);
+			draw_ray_mut(image, dir, Luma([intensity]));
+			draw_ray_mut(image, dir + f32::consts::PI, Luma([intensity]));
+		}
+	}
+}
+
+/// Visualises an array of orientation histograms.
+/// The dimensions of the provided Array3d are orientation bucket,
+/// horizontal location of the cell, then vertical location of the cell.
+/// Note that we ignore block-level aggregation or normalisation here.
+/// Each rendered star has side length star_side, so the image will have
+/// width grid.lengths[1] * star_side and height grid.lengths[2] * star_side.
+pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> VecBuffer<Luma<u8>> {
+	let width = grid.lengths[1] as u32 * star_side;
+	let height = grid.lengths[2] as u32 * star_side;
+	let mut out = ImageBuffer::new(width, height);
+
+	for y in 0..grid.lengths[2] {
+		let y_window = y as u32 * star_side;
+		for x in 0..grid.lengths[1] {
+			let x_window = x as u32 * star_side;
+			let mut window = out.sub_image(x_window, y_window, star_side, star_side);
+			let hist = grid.inner_slice(x, y);
+			draw_star_mut(&mut window, hist, signed);
+		}
+	}
+
+	out
 }
 
 #[cfg(test)]
