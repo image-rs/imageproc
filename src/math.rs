@@ -16,6 +16,7 @@ use nalgebra::{
     Inv
 };
 
+// L2 norm of a vector.
 pub fn l2_norm(xs: &[f32]) -> f32 {
     xs.iter().fold(0f32, |acc, x| acc + x * x).sqrt()
 }
