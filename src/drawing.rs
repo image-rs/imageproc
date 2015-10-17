@@ -10,37 +10,37 @@ use definitions::{
     VecBuffer
 };
 
-/// Draws a colored cross on an image in place.
-/// If (x, y) is within the image bounds then as much of the cross
-/// is drawn as will fit. If (x, y) is outside the image bounds then
-/// we draw nothing.
-pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32)
+/// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
+pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
     where I: GenericImage {
 
     let (width, height) = image.dimensions();
-    if x >= width || y >= height {
-        return;
-    }
-    if y > 0 {
-        image.put_pixel(x, y - 1, color);
-    }
-    if x > 0 {
-        image.put_pixel(x - 1, y, color);
-    }
-    image.put_pixel(x, y, color);
-    if x + 1 < width {
-        image.put_pixel(x + 1, y, color);
-    }
-    if y + 1 < height {
-        image.put_pixel(x, y + 1, color);
+    let idx = |x, y| (3 * (y + 1) + x + 1) as usize;
+    let stencil = [0u8, 1u8, 0u8,
+                   1u8, 1u8, 1u8,
+                   0u8, 1u8, 0u8];
+
+    for sy in -1..2 {
+        let iy = y + sy;
+        if iy < 0 || iy >= height as i32 {
+            continue;
+        }
+
+        for sx in -1..2 {
+            let ix = x + sx;
+            if ix < 0 || ix >= width as i32 {
+                continue;
+            }
+
+            if stencil[idx(sx, sy)] == 1u8 {
+                image.put_pixel(ix as u32, iy as u32, color);
+            }
+        }
     }
 }
 
-/// Draws a colored cross on an image.
-/// If (x, y) is within the image bounds then as much of the cross
-/// is drawn as will fit. If (x, y) is outside the image bounds then
-/// we draw nothing.
-pub fn draw_cross<I>(image: &I, color: I::Pixel, x: u32, y: u32)
+/// Draws a colored cross on an image. Handles coordinates outside image bounds.
+pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32)
         -> VecBuffer<I::Pixel>
     where I: GenericImage, I::Pixel: 'static {
     let mut out = ImageBuffer::new(image.width(), image.height());
@@ -165,7 +165,14 @@ mod test {
             1, 1, 1, 1, 1,
             1, 1, 1, 1, 1]).unwrap();
 
-        assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 0, 5), image);
+        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            2, 1, 1, 1, 1]).unwrap();
+
+        assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 0, 5), expected);
     }
 
     #[test]
@@ -177,6 +184,13 @@ mod test {
             1, 1, 1, 1, 1,
             1, 1, 1, 1, 1]).unwrap();
 
-        assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 5, 0), image);
+        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1, 1, 1, 1, 2,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]).unwrap();
+
+        assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 5, 0), expected);
     }
 }
