@@ -2,93 +2,81 @@
 
 use num::Zero;
 
-/// A mutable slice together with 3 dimensions.
-pub trait Mut3d<T> {
-    fn data_mut(&mut self) -> &mut [T];
-    fn dimensions(&self) -> Dim3;
-}
-
-/// Dimensions of a 3d array.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Dim3 {
-    /// Length of the innermost, i.e. fastest-varying, dimension.
-    pub len_0: usize,
-    /// Length of the middle dimension.
-    pub len_1: usize,
-    /// Length of the outermost dimension.
-    pub len_2: usize
-}
-
-impl Dim3 {
-    pub fn new(len_0: usize, len_1: usize, len_2: usize) -> Dim3 {
-        Dim3 { len_0: len_0, len_1: len_1, len_2: len_2}
-    }
-}
-
-pub fn element_at_mut<V, T>(view: &mut V, x0: usize, x1: usize, x2: usize) -> &mut T
-    where V: Mut3d<T> {
-    let d = view.dimensions();
-    let idx = x2 * d.len_1 * d.len_0 + x1 * d.len_0 + x0;
-    &mut view.data_mut()[idx]
-}
-
-pub fn inner_dimension_slice<V, T>(view: &mut V, x1: usize, x2: usize) -> &mut [T]
-    where V: Mut3d<T> {
-    let d = view.dimensions();
-    let idx = x2 * d.len_1 * d.len_0 + x1 * d.len_0;
-    &mut view.data_mut()[idx..idx + d.len_0]
-}
-
 /// A 3d array that owns its data.
 pub struct Array3d<T> {
     pub data: Vec<T>,
-    pub dim: Dim3
+    /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
+    pub lengths: [usize; 3]
 }
 
 /// A view into a 3d array.
 pub struct View3d<'a, T: 'a> {
+    /// THe underlying data.
 	pub data: &'a mut [T],
-    pub dim: Dim3
-}
-
-// TODO: the two impls are identical. This is stupid
-impl<T> Mut3d<T> for Array3d<T> {
-    fn data_mut(&mut self) -> &mut [T] {
-        &mut self.data
-    }
-
-    fn dimensions(&self) -> Dim3 {
-        self.dim
-    }
-}
-
-impl<'a, T> Mut3d<T> for View3d<'a, T> {
-    fn data_mut(&mut self) -> &mut [T] {
-        &mut self.data
-    }
-
-    fn dimensions(&self) -> Dim3 {
-        self.dim
-    }
+    /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
+    pub lengths: [usize; 3]
 }
 
 impl<T: Zero + Clone> Array3d<T> {
     /// Allocates a new Array3d with the given dimensions.
-	pub fn new(len_0: usize, len_1: usize, len_2: usize) -> Array3d<T> {
-		let data = vec![Zero::zero(); len_0 * len_1 * len_2];
-		Array3d {
-			data: data,
-			dim: Dim3::new(len_0, len_1, len_2)
-		}
+	pub fn new(lengths: [usize; 3]) -> Array3d<T> {
+		let data = vec![Zero::zero(); data_length(lengths)];
+		Array3d { data: data, lengths: lengths }
 	}
+
+    /// Provides a 3d view of the data.
+    pub fn view_mut(&mut self) -> View3d<T> {
+        View3d::from_raw(&mut self.data, self.lengths)
+    }
 }
 
-impl<'a, T: Clone> View3d<'a, T> {
+impl<'a, T> View3d<'a, T> {
+
 	/// Constructs index from existing data and the lengths of the desired dimensions.
-    pub fn from_raw(data: &'a mut [T], len_0: usize, len_1: usize, len_2: usize) -> View3d<'a, T> {
-        View3d {
-            data: data,
-            dim: Dim3::new(len_0, len_1, len_2)
-        }
+    pub fn from_raw(data: &'a mut [T], lengths: [usize; 3]) -> View3d<'a, T> {
+        View3d { data: data, lengths: lengths }
     }
+
+    /// Immutable access to the raw data.
+    pub fn data(&self) -> &[T] {
+        &self.data
+    }
+
+    /// Mutable access to the raw data.
+    pub fn data_mut(&mut self) -> &mut [T] {
+        &mut self.data
+    }
+
+    /// An immutable reference from a 3d index.
+    pub fn at(&self, indices: [usize; 3]) -> &T {
+        &self.data[self.offset(indices)]
+    }
+
+    /// A mutable reference from a 3d index.
+    pub fn at_mut(&mut self, indices: [usize; 3]) -> &mut T {
+        &mut self.data[self.offset(indices)]
+    }
+
+    /// All entries with the given outer dimensions. As the first dimension
+    /// is fastest varying, this is a contiguous slice.
+    pub fn inner_slice(&self, x1: usize, x2: usize) -> &[T] {
+        let offset = self.offset([0, x1, x2]);
+        & self.data[offset..offset + self.lengths[0]]
+    }
+
+    /// All entries with the given outer dimensions. As the first dimension
+    /// is fastest varying, this is a contiguous slice.
+    pub fn inner_slice_mut(&mut self, x1: usize, x2: usize) -> &mut [T] {
+        let offset = self.offset([0, x1, x2]);
+        &mut self.data[offset..offset + self.lengths[0]]
+    }
+
+    fn offset(&self, indices: [usize; 3]) -> usize {
+        indices[2] * self.lengths[1] * self.lengths[0] + indices[1] * self.lengths[0] + indices[0]
+    }
+}
+
+/// Length of array needed for the given dimensions.
+fn data_length(lengths: [usize; 3]) -> usize {
+    lengths[0] * lengths[1] * lengths[2]
 }
