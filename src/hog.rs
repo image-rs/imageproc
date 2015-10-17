@@ -23,28 +23,28 @@ use std::f32;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct HogOptions {
 	/// Number of gradient orientation bins.
-	pub orientations: u32,
+	pub orientations: usize,
 
 	/// Whether gradients in opposite directions
 	/// are treated as equal.
     pub signed: bool,
 
 	/// Width and height of cell in pixels.
-	pub cell_side: u32,
+	pub cell_side: usize,
 
 	/// Width and height of block in cells.
-	pub block_side: u32,
+	pub block_side: usize,
 
 	/// Offset of the start of one block from the next in cells.
-	pub block_stride: u32
+	pub block_stride: usize
 
 	// TODO: choice of normalisation - for now we just scale
     // TODO: to unit L2 norm
 }
 
 impl HogOptions {
-    pub fn new(orientations: u32, signed: bool, cell_side: u32,
-        block_side: u32, block_stride: u32) -> HogOptions {
+    pub fn new(orientations: usize, signed: bool, cell_side: usize,
+        block_side: usize, block_stride: usize) -> HogOptions {
 
         HogOptions {
             orientations: orientations,
@@ -60,29 +60,35 @@ impl HogOptions {
 /// of block descriptors, each of size block_descriptor_size.
 pub struct HogDimensions {
 	/// Size of the descriptor for a single block.
-	pub block_descriptor_size: u32,
-	/// Number of (possibly overlapping) blocks used to tile the image width.
-	pub blocks_wide: u32,
-	/// Number of (possibly overlapping) blocks used to tile the image height.
-	pub blocks_high: u32
+	pub block_descriptor_size: usize,
+	/// Number of (possibly overlapping) blocks required to tile the image width.
+	pub blocks_wide: usize,
+	/// Number of (possibly overlapping) blocks required to tile the image height.
+	pub blocks_high: usize,
+	/// Number of non-overlapping cells required to tile the image width.
+	pub cells_wide: usize,
+	/// Number of non-overlapping cells required to tile the image height.
+	pub cells_high: usize
 }
 
 impl HogDimensions {
 	/// Size of a block descriptor using the given options, and number of blocks required
 	/// to tile an image of given width and height.
 	pub fn from_options(width: u32, height: u32, options: HogOptions) -> HogDimensions {
-		let cells_wide = width / options.cell_side;
-		let cells_high = height / options.cell_side;
+		let cells_wide = width as usize/ options.cell_side;
+		let cells_high = height as usize/ options.cell_side;
 		HogDimensions {
 			block_descriptor_size: options.orientations * options.block_side.pow(2),
 			blocks_wide: num_blocks(cells_wide, options.block_side, options.block_stride),
-			blocks_high: num_blocks(cells_high, options.block_side, options.block_stride)
+			blocks_high: num_blocks(cells_high, options.block_side, options.block_stride),
+			cells_wide: cells_wide,
+			cells_high: cells_high
 		}
 	}
 
 	/// The total size in floats of the HoG descriptor with these dimensions.
-	pub fn descriptor_length(&self) -> u32 {
-		self.block_descriptor_size * self.blocks_wide * self.blocks_high
+	pub fn descriptor_length(&self) -> usize {
+		self.blocks_wide * self.blocks_high * self.block_descriptor_size
 	}
 }
 
@@ -100,36 +106,31 @@ pub fn hog<I>(image: &I, options: HogOptions) -> Option<Vec<f32>>
 	};
 
 	let (width, height) = image.dimensions();
-	let dimensions = HogDimensions::from_options(width, height, options);
-	let cells_wide = width / options.cell_side;
-	let cells_high = height / options.cell_side;
+	let hog_dim = HogDimensions::from_options(width, height, options);
 	let mut descriptor = Array3d::new(
-		dimensions.block_descriptor_size as usize,
-		dimensions.blocks_wide as usize,
-		dimensions.blocks_high as usize);
+		hog_dim.block_descriptor_size,
+		hog_dim.blocks_wide,
+		hog_dim.blocks_high);
 
-	for by in 0..dimensions.blocks_high {
-		for bx in 0..dimensions.blocks_wide {
-			let mut block_data = inner_dimension_slice(&mut descriptor, bx as usize, by as usize);
-			let mut block = View3d::from_raw(
-				&mut block_data,
-				options.orientations as usize,
-				cells_wide as usize,
-				cells_high as usize);
+	for by in 0..hog_dim.blocks_high {
+		for bx in 0..hog_dim.blocks_wide {
+			let mut block_data = inner_dimension_slice(&mut descriptor, bx, by);
+			let mut block = View3d::from_raw(&mut block_data, options.orientations,
+				hog_dim.cells_wide, hog_dim.cells_high);
 
 			for iy in 0..options.block_side {
 				let cy = by * options.block_stride + iy;
 
 				for ix in 0..options.block_side {
 					let cx = bx * options.block_stride + ix;
-					let mut slice = inner_dimension_slice(&mut block, ix as usize, iy as usize);
-					let hist = inner_dimension_slice(&mut grid, cx as usize, cy as usize);
+					let mut slice = inner_dimension_slice(&mut block, ix, iy);
+					let hist = inner_dimension_slice(&mut grid, cx, cy);
 					for dir in 0..options.orientations {
-						slice[dir as usize] = hist[dir as usize];
+						slice[dir] = hist[dir];
 					}
 					let norm = l2_norm(slice);
 					for dir in 0..options.orientations {
-						slice[dir as usize] /= norm;
+						slice[dir] /= norm;
 					}
 				}
 			}
@@ -150,10 +151,8 @@ fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<Array3d<f32>>
         return None;
     }
 
-	let cells_wide = width / options.cell_side;
-	let cells_high = height / options.cell_side;
-	let mut grid = Array3d::new(
-		options.orientations as usize, cells_wide as usize, cells_high as usize);
+	let dimensions = HogDimensions::from_options(width, height, options);
+	let mut grid = Array3d::new(options.orientations, dimensions.cells_wide, dimensions.cells_high);
 	let grid_dim = grid.dimensions();
 
 	let horizontal = horizontal_sobel(image);
@@ -187,9 +186,9 @@ fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<Array3d<f32>>
 						let wy = y_inter.weights[iy];
 						let wx = x_inter.weights[ix];
 						let wo = o_inter.weights[io];
-						let py = y_inter.indices[iy] as usize;
-						let px = x_inter.indices[ix] as usize;
-						let po = o_inter.indices[io] as usize;
+						let py = y_inter.indices[iy];
+						let px = x_inter.indices[ix];
+						let po = o_inter.indices[io];
 						let up = wy * wx * wo * m / cell_area;
 						let current = *element_at_mut(&mut grid, po, px, py);
 					 	*element_at_mut(&mut grid, po, px, py) = current + up;
@@ -204,7 +203,7 @@ fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<Array3d<f32>>
 
 /// Indices and weights for an interpolated value.
 struct Interpolation {
-	indices: [u32; 2],
+	indices: [usize; 2],
 	weights: [f32; 2]
 }
 
@@ -213,21 +212,21 @@ impl Interpolation {
 	fn from_position(pos: f32) -> Interpolation {
 		let fraction = pos - pos.floor();
 		Interpolation {
-			indices: [pos as u32, pos as u32 + 1],
+			indices: [pos as usize, pos as usize + 1],
 			weights: [1f32 - fraction, fraction]
 		}
 	}
 
 	/// Interpolates between two indices, wrapping the right index.
 	/// Assumes that the left index is within bounds.
-	fn from_position_wrapping(pos: f32, length: u32) -> Interpolation {
-		let mut right = (pos as u32) + 1;
+	fn from_position_wrapping(pos: f32, length: usize) -> Interpolation {
+		let mut right = (pos as usize) + 1;
 		if right >= length {
 			right = 0;
 		}
 		let fraction = pos - pos.floor();
 		Interpolation {
-			indices: [pos as u32, right],
+			indices: [pos as usize, right],
 			weights: [1f32 - fraction, fraction]
 		}
 	}
@@ -236,7 +235,7 @@ impl Interpolation {
 /// Number of blocks required to cover num_cells cells when each block is
 /// block_side long and blocks are staggered by block_stride. Assumes that
 /// options are compatible (see is_valid_size function).
-fn num_blocks(num_cells: u32, block_side: u32, block_stride: u32) -> u32
+fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 {
 	(num_cells + block_stride - block_side) / block_stride
 }
@@ -245,16 +244,16 @@ fn num_blocks(num_cells: u32, block_side: u32, block_stride: u32) -> u32
 /// cells and blocks of the size and stride specified in options.
 fn is_valid_size(width: u32, height: u32, options: HogOptions) -> bool {
 
-    if width % options.cell_side != 0 {
+    if width as usize % options.cell_side != 0 {
         return false;
     }
-    if height % options.cell_side != 0 {
+    if height as usize % options.cell_side != 0 {
         return false;
     }
-    if (width - options.block_side) % options.block_stride != 0 {
+    if (width as usize - options.block_side) % options.block_stride != 0 {
         return false;
     }
-    if (height - options.block_side) % options.block_stride != 0 {
+    if (height as usize - options.block_side) % options.block_stride != 0 {
         return false;
     }
     true
