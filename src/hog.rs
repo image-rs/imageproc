@@ -118,7 +118,7 @@ impl HogSpec {
 
 /// Number of blocks required to cover num_cells cells when each block is
 /// block_side long and blocks are staggered by block_stride. Assumes that
-/// options are compatible (see is_valid_size function).
+/// options are compatible.
 fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 {
 	(num_cells + block_stride - block_side) / block_stride
