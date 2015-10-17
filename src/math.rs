@@ -3,21 +3,22 @@
 use conv::{
     ValueInto
 };
-
 use num::{
     Zero
 };
-
 pub use nalgebra::{
     Mat2,
     Vec2
 };
-
 use nalgebra::{
     Eye,
     inv,
     Inv
 };
+
+pub fn l2_norm(xs: &[f32]) -> f32 {
+    xs.iter().fold(0f32, |acc, x| acc + x * x).sqrt()
+}
 
 /// Helper for a conversion that we know can't fail.
 pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {

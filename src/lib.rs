@@ -23,6 +23,7 @@ pub mod gradients;
 pub mod hog;
 pub mod integralimage;
 pub mod math;
+pub mod multiarray;
 pub mod noise;
 pub mod regionlabelling;
 pub mod unionfind;

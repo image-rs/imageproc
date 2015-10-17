@@ -9,9 +9,14 @@ use gradients::{
 	horizontal_sobel,
 	vertical_sobel
 };
-use num::{
-	Zero
+use multiarray::{
+	Array3d,
+	element_at_mut,
+	inner_dimension_slice,
+	Mut3d,
+	View3d
 };
+use math::l2_norm;
 use std::f32;
 
 /// Parameters for HoG descriptors.
@@ -50,28 +55,94 @@ impl HogOptions {
     }
 }
 
-/// Returns the total size in floats of the HoG descriptor for an
-/// image of given width and height using these options.
-pub fn hog_size(width: u32, height: u32, options: HogOptions) -> u32
-{
+/// Dimensions of a HoG descriptor. The descriptor for the whole
+/// image is the concatenation of a blocks_wide * blocks_high grid
+/// of block descriptors, each of size block_descriptor_size.
+pub struct HogDimensions {
+	/// Size of the descriptor for a single block.
+	pub block_descriptor_size: u32,
+	/// Number of (possibly overlapping) blocks used to tile the image width.
+	pub blocks_wide: u32,
+	/// Number of (possibly overlapping) blocks used to tile the image height.
+	pub blocks_high: u32
+}
+
+impl HogDimensions {
+	/// Size of a block descriptor using the given options, and number of blocks required
+	/// to tile an image of given width and height.
+	pub fn from_options(width: u32, height: u32, options: HogOptions) -> HogDimensions {
+		let cells_wide = width / options.cell_side;
+		let cells_high = height / options.cell_side;
+		HogDimensions {
+			block_descriptor_size: options.orientations * options.block_side.pow(2),
+			blocks_wide: num_blocks(cells_wide, options.block_side, options.block_stride),
+			blocks_high: num_blocks(cells_high, options.block_side, options.block_stride)
+		}
+	}
+
+	/// The total size in floats of the HoG descriptor with these dimensions.
+	pub fn descriptor_length(&self) -> u32 {
+		self.block_descriptor_size * self.blocks_wide * self.blocks_high
+	}
+}
+
+/// Computes the HoG descriptor of an image, or None if the provided
+/// options are incompatible with the image size.
+// TODO: produce a helpful error message if the options are invalid
+// TODO: support color images by taking the channel with maximum gradient at each point
+pub fn hog<I>(image: &I, options: HogOptions) -> Option<Vec<f32>>
+	where I: GenericImage<Pixel=Luma<u8>> + 'static {
+
+	let mut grid: Array3d<f32>;
+	match cell_histograms(image, options) {
+		None => return None,
+		Some(array) => grid = array
+	};
+
+	let (width, height) = image.dimensions();
+	let dimensions = HogDimensions::from_options(width, height, options);
 	let cells_wide = width / options.cell_side;
 	let cells_high = height / options.cell_side;
-	let blocks_wide = num_blocks(cells_wide, options.block_side, options.block_stride);
-	let blocks_high = num_blocks(cells_high, options.block_side, options.block_stride);
-	options.orientations * blocks_high * blocks_wide * options.block_side.pow(2)
-}
+	let mut descriptor = Array3d::new(
+		dimensions.block_descriptor_size as usize,
+		dimensions.blocks_wide as usize,
+		dimensions.blocks_high as usize);
 
-// One function to get the dim, another to produce size from a dim
-struct HogDim {
-	cells_wide: u32,
-	cells_high: u32
-}
+	for by in 0..dimensions.blocks_high {
+		for bx in 0..dimensions.blocks_wide {
+			let mut block_data = inner_dimension_slice(&mut descriptor, bx as usize, by as usize);
+			let mut block = View3d::from_raw(
+				&mut block_data,
+				options.orientations as usize,
+				cells_wide as usize,
+				cells_high as usize);
 
+			for iy in 0..options.block_side {
+				let cy = by * options.block_stride + iy;
+
+				for ix in 0..options.block_side {
+					let cx = bx * options.block_stride + ix;
+					let mut slice = inner_dimension_slice(&mut block, ix as usize, iy as usize);
+					let hist = inner_dimension_slice(&mut grid, cx as usize, cy as usize);
+					for dir in 0..options.orientations {
+						slice[dir as usize] = hist[dir as usize];
+					}
+					let norm = l2_norm(slice);
+					for dir in 0..options.orientations {
+						slice[dir as usize] /= norm;
+					}
+				}
+			}
+		}
+	}
+
+	Some(descriptor.data)
+}
 
 /// Computes orientation histograms for each cell of an image, or none if the
 /// image dimensions are incompatible with the provided options.
 // TODO: produce a helpful error message if the options are invalid
-fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<HistGrid>
+fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<Array3d<f32>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
     let (width, height) = image.dimensions();
@@ -81,7 +152,9 @@ fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<HistGrid>
 
 	let cells_wide = width / options.cell_side;
 	let cells_high = height / options.cell_side;
-	let mut grid = Array3d::new(options.orientations, cells_wide, cells_high);
+	let mut grid = Array3d::new(
+		options.orientations as usize, cells_wide as usize, cells_high as usize);
+	let grid_dim = grid.dimensions();
 
 	let horizontal = horizontal_sobel(image);
 	let vertical = vertical_sobel(image);
@@ -107,16 +180,19 @@ fn cell_histograms<I>(image: &I, options: HogOptions) -> Option<HistGrid>
 			for iy in 0..2usize {
 				for ix in 0..2usize {
 					for io in 0..2usize {
-						if within_bounds(&grid, ix as u32, iy as u32) {
-							let wy = y_inter.weights[iy];
-							let wx = x_inter.weights[ix];
-							let wo = o_inter.weights[io];
-							let py = y_inter.indices[iy];
-							let px = x_inter.indices[ix];
-							let po = o_inter.indices[io];
-							let up = wy * wx * wo * m / cell_area;
-						 	*grid.at(po, px, py) = *grid.at(po, px, py) + up;
+						if ix >= grid_dim.len_1 || iy >= grid_dim.len_2 {
+							continue;
 						}
+
+						let wy = y_inter.weights[iy];
+						let wx = x_inter.weights[ix];
+						let wo = o_inter.weights[io];
+						let py = y_inter.indices[iy] as usize;
+						let px = x_inter.indices[ix] as usize;
+						let po = o_inter.indices[io] as usize;
+						let up = wy * wx * wo * m / cell_area;
+						let current = *element_at_mut(&mut grid, po, px, py);
+					 	*element_at_mut(&mut grid, po, px, py) = current + up;
 					}
 				}
 			}
@@ -157,37 +233,6 @@ impl Interpolation {
 	}
 }
 
-type HistGrid = Array3d<f32>;
-
-fn within_bounds(grid: &HistGrid, x: u32, y: u32) -> bool {
-	x < grid.y_len && y < grid.z_len
-}
-
-/// A dense 3d array. x is the fastest varying coordinate, y
-/// the next fastest.
-pub struct Array3d<T> {
-    data: Vec<T>,
-	pub x_len: u32,
-    pub y_len: u32,
-    pub z_len: u32
-}
-
-impl<T: Zero + Clone> Array3d<T> {
-    pub fn new(x_len: u32, y_len: u32, z_len: u32) -> Array3d<T> {
-        Array3d {
-            data: vec![Zero::zero(); (x_len * y_len * z_len) as usize],
-            x_len: x_len,
-            y_len: y_len,
-			z_len: z_len
-        }
-    }
-
-	pub fn at(&mut self, x: u32, y: u32, z: u32) -> &mut T {
-		let idx = z * self.y_len * self.x_len + y * self.x_len + x;
-		&mut self.data[idx as usize]
-	}
-}
-
 /// Number of blocks required to cover num_cells cells when each block is
 /// block_side long and blocks are staggered by block_stride. Assumes that
 /// options are compatible (see is_valid_size function).
@@ -220,7 +265,7 @@ mod test {
 
     use super::{
         HogOptions,
-        hog_size,
+        HogDimensions,
         num_blocks
     };
 
@@ -245,9 +290,15 @@ mod test {
     }
 
     #[test]
-    fn test_hog_size() {
-        assert_eq!(hog_size(40, 40, HogOptions::new(8, true, 5, 2, 1)), 1568);
-        assert_eq!(hog_size(40, 40, HogOptions::new(9, true, 4, 2, 1)), 2916);
-        assert_eq!(hog_size(40, 40, HogOptions::new(8, true, 4, 2, 1)), 2592);
+    fn test_hog_dimensions() {
+        assert_eq!(
+			HogDimensions::from_options(40, 40, HogOptions::new(8, true, 5, 2, 1))
+				.descriptor_length(), 1568);
+        assert_eq!(
+			HogDimensions::from_options(40, 40, HogOptions::new(9, true, 4, 2, 1))
+				.descriptor_length(), 2916);
+        assert_eq!(
+			HogDimensions::from_options(40, 40, HogOptions::new(8, true, 4, 2, 1))
+				.descriptor_length(), 2592);
     }
 }
