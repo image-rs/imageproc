@@ -23,14 +23,22 @@ impl Corner {
     }
 }
 
-/// Finds corners using FAST-12 features. Given a point P, define
-/// C_P to be the 16-pixel Bresenham circle of radius 3 centred at P.
-/// We define a point P of intensity I to be a corner if at least
-/// 12 contiguous pixels in C_P have an intensity strictly
-/// greater than I + threshold or strictly less than I - threshold.
-/// The score of a corner is the greatest threshold for which the given
-/// pixel still qualifies as a corner.
-/// https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test
+/// Variants of the FAST corner detector. These classify a point based
+/// on its intensity relative to the 16 pixels in the Bresenham circle
+/// of radius 3 around it. A point P with intensity I is detected as a
+/// corner if a long enough contiguous section of this circle either
+/// all have intensity greater than I + t or all have intensity less than
+/// I - t, for some user-provided threshold t. The score of a corner is
+/// the greatest threshold for which the given pixel still qualifies as
+/// a corner. https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test
+pub enum Fast {
+    /// Corners require a section of length as least nine.
+    Nine,
+    /// Corners require a section of length as least twelve.
+    Twelve
+}
+
+/// Finds corners using FAST-12 features. See comment on Fast enum.
 pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     where I: GenericImage<Pixel=Luma<u8>> {
 
@@ -40,7 +48,26 @@ pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
     for y in 0..height {
         for x in 0..width {
             if is_corner_fast12(image, threshold, x, y) {
-                let score = corner_score_fast12(image, threshold, x, y);
+                let score = fast_corner_score(image, threshold, x, y, Fast::Twelve);
+                corners.push(Corner::new(x,y, score as f32));
+            }
+        }
+    }
+
+    corners
+}
+
+/// Finds corners using FAST-9 features. See comment on Fast enum.
+pub fn corners_fast9<I>(image: &I, threshold: u8) -> Vec<Corner>
+    where I: GenericImage<Pixel=Luma<u8>> {
+
+    let (width, height) = image.dimensions();
+    let mut corners = vec![];
+
+    for y in 0..height {
+        for x in 0..width {
+            if is_corner_fast9(image, threshold, x, y) {
+                let score = fast_corner_score(image, threshold, x, y, Fast::Nine);
                 corners.push(Corner::new(x,y, score as f32));
             }
         }
@@ -116,8 +143,7 @@ pub fn suppress_non_maximum(corners: &[Corner], radius: u32)
 /// Note that the corner check uses a strict inequality, so if
 /// the smallest intensity difference between the center pixel
 /// and a corner pixel is n then the corner will have a score of n - 1.
-fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
-        -> u8
+pub fn fast_corner_score<I>(image: &I, threshold: u8, x: u32, y: u32, variant: Fast) -> u8
     where I: GenericImage<Pixel=Luma<u8>> {
 
     let mut max = 255u8;
@@ -131,7 +157,12 @@ fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
         let mean = ((max as u16 + min as u16) / 2u16) as u8;
         let probe = if max == min + 1 { max } else { mean };
 
-        if is_corner_fast12(image, probe, x, y) {
+        let is_corner = match variant {
+            Fast::Nine => is_corner_fast9(image, probe, x, y),
+            Fast::Twelve => is_corner_fast12(image, probe, x, y),
+        };
+
+        if is_corner {
             min = probe;
         }
         else {
@@ -140,13 +171,23 @@ fn corner_score_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
     }
 }
 
-/// Checks if the given pixel is a corner.
-fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
-        -> bool
+// Note [FAST circle labels]
+//
+//          15 00 01
+//       14          02
+//     13              03
+//     12       p      04
+//     11              05
+//       10          06
+//          09 08 07
+
+/// Checks if the given pixel is a corner according to the FAST9 detector.
+/// The current implementation is extremely inefficient.
+// TODO: Make this much faster!
+fn is_corner_fast9<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
     where I: GenericImage<Pixel=Luma<u8>> {
 
     let (width, height) = image.dimensions();
-
     if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
         return false;
     }
@@ -155,10 +196,64 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
     let low_thresh: i16  = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
-    // Circle pixels are labelled clockwise, starting at 0 directly above
-    // the center, and finishing at 15, three pixels above and one to
-    // the left of the center
+    // See Note [FAST circle labels]
+    let p0  = image.get_pixel(x, y - 3)[0] as i16;
+    let p8  = image.get_pixel(x, y + 3)[0] as i16;
+    let p4  = image.get_pixel(x + 3, y)[0] as i16;
+    let p12 = image.get_pixel(x - 3, y)[0] as i16;
 
+    let above = (p0  > high_thresh && p4  > high_thresh) ||
+                (p4  > high_thresh && p8  > high_thresh) ||
+                (p8  > high_thresh && p12 > high_thresh) ||
+                (p12 > high_thresh && p0  > high_thresh);
+
+    let below = (p0  < low_thresh && p4  < low_thresh) ||
+                (p4  < low_thresh && p8  < low_thresh) ||
+                (p8  < low_thresh && p12 < low_thresh) ||
+                (p12 < low_thresh && p0  < low_thresh);
+
+    if !above && !below {
+        return false;
+    }
+
+    let mut pixels = [0i16; 16];
+
+    pixels[0]  = p0;
+    pixels[1]  = image.get_pixel(x + 1, y - 3)[0] as i16;
+    pixels[2]  = image.get_pixel(x + 2, y - 2)[0] as i16;
+    pixels[3]  = image.get_pixel(x + 3, y - 1)[0] as i16;
+    pixels[4]  = p4;
+    pixels[5]  = image.get_pixel(x + 3, y + 1)[0] as i16;
+    pixels[6]  = image.get_pixel(x + 2, y + 2)[0] as i16;
+    pixels[7]  = image.get_pixel(x + 1, y + 3)[0] as i16;
+    pixels[8]  = p8;
+    pixels[9]  = image.get_pixel(x - 1, y + 3)[0] as i16;
+    pixels[10] = image.get_pixel(x - 2, y + 2)[0] as i16;
+    pixels[11] = image.get_pixel(x - 3, y + 1)[0] as i16;
+    pixels[12] = p12;
+    pixels[13] = image.get_pixel(x - 3, y - 1)[0] as i16;
+    pixels[14] = image.get_pixel(x - 2, y - 2)[0] as i16;
+    pixels[15] = image.get_pixel(x - 1, y - 3)[0] as i16;
+
+    // above and below could both be true
+    (above && has_bright_span(&pixels, 9, high_thresh)) ||
+    (below && has_dark_span(&pixels, 9, low_thresh))
+}
+
+/// Checks if the given pixel is a corner according to the FAST12 detector.
+fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
+    where I: GenericImage<Pixel=Luma<u8>> {
+
+    let (width, height) = image.dimensions();
+    if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
+        return false;
+    }
+
+    let c = image.get_pixel(x, y)[0];
+    let low_thresh: i16  = c as i16 - threshold as i16;
+    let high_thresh: i16 = c as i16 + threshold as i16;
+
+    // See Note [FAST circle labels]
     let p0 = image.get_pixel(x, y - 3)[0] as i16;
     let p8 = image.get_pixel(x, y + 3)[0] as i16;
 
@@ -204,57 +299,71 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32)
     pixels[14] = image.get_pixel(x - 2, y - 2)[0] as i16;
     pixels[15] = image.get_pixel(x - 1, y - 3)[0] as i16;
 
-
+    // Exactly one of above or below is true
     if above {
-        for i in 0..15 {
-            let mut is_corner = true;
-            let end   = i + 12;
-            let upper = cmp::min(end, 16);
-            let wrap  = if end > 16 { end - 16 } else { 0 };
-
-            for j in i..upper {
-                if pixels[j] <= high_thresh {
-                    is_corner = false;
-                    break;
-                }
-            }
-            if is_corner {
-                for j in 0..wrap {
-                    if pixels[j] <= high_thresh {
-                        is_corner = false;
-                        break;
-                    }
-                }
-            }
-            if is_corner {
-                return true;
-            }
-        }
+        has_bright_span(&pixels, 12, high_thresh)
     }
     else {
-        for i in 0..15 {
-            let mut is_corner = true;
-            let end   = i + 12;
-            let upper = cmp::min(end, 16);
-            let wrap  = if end > 16 { end - 16 } else { 0 };
+        has_dark_span(&pixels, 12, low_thresh)
+    }
+}
 
-            for j in i..upper {
-                if pixels[j] >= low_thresh {
+/// True if the circle has a contiguous section of at least the given length, all
+/// of whose pixels have intensities strictly greater than the threshold.
+fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
+    for i in 0..15 {
+        let mut is_corner = true;
+        let end   = i + length;
+        let upper = cmp::min(end, 16);
+        let wrap  = if end > 16 { end - 16 } else { 0 };
+
+        for j in i..upper {
+            if circle[j] <= threshold {
+                is_corner = false;
+                break;
+            }
+        }
+        if is_corner {
+            for j in 0..wrap {
+                if circle[j] <= threshold {
                     is_corner = false;
                     break;
                 }
             }
-            if is_corner {
-                for j in 0..wrap {
-                    if pixels[j] >= low_thresh {
-                        is_corner = false;
-                        break;
-                    }
+        }
+        if is_corner {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// True if the circle has a contiguous section of at least the given length, all
+/// of whose pixels have intensities strictly less than the threshold.
+fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
+    for i in 0..15 {
+        let mut is_corner = true;
+        let end   = i + length;
+        let upper = cmp::min(end, 16);
+        let wrap  = if end > 16 { end - 16 } else { 0 };
+
+        for j in i..upper {
+            if circle[j] >= threshold {
+                is_corner = false;
+                break;
+            }
+        }
+        if is_corner {
+            for j in 0..wrap {
+                if circle[j] >= threshold {
+                    is_corner = false;
+                    break;
                 }
             }
-            if is_corner {
-                return true;
-            }
+        }
+        if is_corner {
+            return true;
         }
     }
 
@@ -266,9 +375,11 @@ mod test {
 
     use super::{
         Corner,
-        corner_score_fast12,
+        fast_corner_score,
+        is_corner_fast9,
         is_corner_fast12,
-        suppress_non_maximum
+        suppress_non_maximum,
+        Fast
     };
     use image::{
         GrayImage,
@@ -346,7 +457,7 @@ mod test {
     }
 
     #[test]
-    fn test_corner_score_fast12() {
+    fn test_fast_corner_score_12() {
         let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
             10, 10, 00, 00, 00, 10, 10,
             10, 00, 10, 10, 10, 00, 10,
@@ -356,10 +467,71 @@ mod test {
             10, 00, 10, 10, 10, 10, 10,
             10, 10, 00, 00, 00, 10, 10]).unwrap();
 
-        let score = corner_score_fast12(&image, 5, 3, 3);
+        let score = fast_corner_score(&image, 5, 3, 3, Fast::Twelve);
         assert_eq!(score, 9);
 
-        let score = corner_score_fast12(&image, 9, 3, 3);
+        let score = fast_corner_score(&image, 9, 3, 3, Fast::Twelve);
+        assert_eq!(score, 9);
+    }
+
+    #[test]
+    fn test_is_corner_fast9_9_contiguous_darker_pixels() {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 00, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 10]).unwrap();
+
+        assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
+    }
+
+    #[test]
+    fn test_is_corner_fast9_9_contiguous_lighter_pixels() {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            00, 00, 10, 10, 10, 00, 00,
+            00, 10, 00, 00, 00, 10, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            00, 10, 00, 00, 00, 00, 00,
+            00, 00, 00, 00, 00, 00, 00]).unwrap();
+
+        assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
+    }
+
+    #[test]
+    fn test_is_corner_fast9_12_noncontiguous() {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 00,
+            10, 00, 10, 10, 10, 10, 10,
+            10, 10, 00, 00, 00, 10, 10]).unwrap();
+
+        assert_eq!(is_corner_fast9(&image, 8, 3, 3), false);
+    }
+
+    #[test]
+    fn test_corner_score_fast9() {
+        // 8 pixels with an intensity diff of 20, then 1 with a diff of 10
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 20, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 10]).unwrap();
+
+        let score = fast_corner_score(&image, 5, 3, 3, Fast::Nine);
+        assert_eq!(score, 9);
+
+        let score = fast_corner_score(&image, 9, 3, 3, Fast::Nine);
         assert_eq!(score, 9);
     }
 
