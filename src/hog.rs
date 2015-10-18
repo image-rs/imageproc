@@ -249,12 +249,19 @@ fn orientation_bin_width(options: HogOptions) -> f32 {
 }
 
 /// Indices and weights for an interpolated value.
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Interpolation {
 	indices: [usize; 2],
 	weights: [f32; 2]
 }
 
 impl Interpolation {
+
+	/// Creates new interpolation with provided indices and weights.
+	fn new (indices: [usize; 2], weights: [f32; 2]) -> Interpolation {
+		Interpolation { indices: indices, weights: weights }
+	}
+
 	/// Interpolates between two indices, without wrapping.
 	fn from_position(pos: f32) -> Interpolation {
 		let fraction = pos - pos.floor();
@@ -372,6 +379,7 @@ mod test {
     use super::{
         HogOptions,
         HogSpec,
+		Interpolation,
         num_blocks
     };
 
@@ -407,4 +415,24 @@ mod test {
 			HogSpec::from_options(40, 40, HogOptions::new(8, true, 4, 2, 1))
 				.unwrap().descriptor_length(), 2592);
     }
+
+	#[test]
+	fn test_interpolation_from_position() {
+		assert_eq!(Interpolation::from_position(10f32),
+			Interpolation::new([10, 11], [1f32, 0f32]));
+		assert_eq!(Interpolation::from_position(10.25f32),
+			Interpolation::new([10, 11], [0.75f32, 0.25f32]));
+	}
+
+	#[test]
+	fn test_interpolation_from_position_wrapping() {
+		assert_eq!(Interpolation::from_position_wrapping(10f32, 11),
+			Interpolation::new([10, 0], [1f32, 0f32]));
+		assert_eq!(Interpolation::from_position_wrapping(10.25f32, 11),
+			Interpolation::new([10, 0], [0.75f32, 0.25f32]));
+		assert_eq!(Interpolation::from_position_wrapping(10f32, 12),
+			Interpolation::new([10, 11], [1f32, 0f32]));
+		assert_eq!(Interpolation::from_position_wrapping(10.25f32, 12),
+			Interpolation::new([10, 11], [0.75f32, 0.25f32]));
+	}
 }
