@@ -1,5 +1,5 @@
 //! Histogram of oriented gradients and helpers for visualizing them.
-//! http://lear.inrialpes.fr/people/triggs/pubs/Dalal-cvpr05.pdf
+//! https://en.wikipedia.org/wiki/Histogram_of_oriented_gradients
 
 use image::{
 	GenericImage,
@@ -115,6 +115,13 @@ impl HogSpec {
 		[self.block_descriptor_length(), self.blocks_wide, self.blocks_high]
 	}
 
+	/// Dimensions of a single block descriptor, viewed as a 3d array.
+	/// Innermost dimension is histogram bin, then horizontal cell location, then
+	/// vertical cell location.
+	fn block_internal_lengths(&self) -> [usize; 3] {
+		[self.options.orientations, self.options.block_side, self.options.block_side]
+	}
+
 	/// Area of an image cell in pixels.
 	fn cell_area(&self) -> usize {
 		self.options.cell_side * self.options.cell_side
@@ -135,43 +142,51 @@ fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 // TODO: support color images by taking the channel with maximum gradient at each point
 pub fn hog<I>(image: &I, options: HogOptions) -> Option<Vec<f32>>
 	where I: GenericImage<Pixel=Luma<u8>> + 'static {
-	let hog_spec: HogSpec;
+
 	match HogSpec::from_options(image.width(), image.height(), options) {
 		None => return None,
-		Some(spec) => hog_spec = spec
+		Some(spec) => {
+			let mut grid: Array3d<f32> = cell_histograms(image, spec);
+			let grid_view = grid.view_mut();
+			let descriptor = hog_descriptor_from_hist_grid(grid_view, spec);
+			return Some(descriptor);
+		}
 	}
-	Some(hog_impl(image, hog_spec))
 }
 
-/// Computes the HoG descriptor of an image. Assumes that the provided dimensions are valid.
-fn hog_impl<I>(image: &I, spec: HogSpec) -> Vec<f32>
-	where I: GenericImage<Pixel=Luma<u8>> + 'static {
+/// Computes the HoG descriptor of an image. Assumes that the spec and grid
+/// dimensions are consistent.
+fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
 
-	let mut grid: Array3d<f32> = cell_histograms(image, spec);
 	let mut descriptor = Array3d::new(spec.block_grid_lengths());
+	{
+		let mut block_view = descriptor.view_mut();
 
-	for by in 0..spec.blocks_high {
-		for bx in 0..spec.blocks_wide {
-			let mut block_view = descriptor.view_mut();
-			let mut block_data = block_view.inner_slice_mut(bx, by);
-			let mut block = View3d::from_raw(&mut block_data, spec.cell_grid_lengths());
+		for by in 0..spec.blocks_high {
+			for bx in 0..spec.blocks_wide {
 
-			for iy in 0..spec.options.block_side {
-				let cy = by * spec.options.block_stride + iy;
+				let mut block_data = block_view.inner_slice_mut(bx, by);
+				let mut block = View3d::from_raw(&mut block_data, spec.block_internal_lengths());
 
-				for ix in 0..spec.options.block_side {
-					let cx = bx * spec.options.block_stride + ix;
-					let mut slice = block.inner_slice_mut(ix, iy);
-					let hist_view = grid.view_mut();
-					let hist = hist_view.inner_slice(cx, cy);
-
-					// TODO: do this faster
-					for dir in 0..spec.options.orientations {
-						slice[dir] = hist[dir];
+				for iy in 0..spec.options.block_side {
+					let cy = by * spec.options.block_stride + iy;
+					for ix in 0..spec.options.block_side {
+						let cx = bx * spec.options.block_stride + ix;
+						let mut slice = block.inner_slice_mut(ix, iy);
+						let hist = grid.inner_slice(cx, cy);
+						copy(hist, slice);
 					}
-					let norm = l2_norm(slice);
-					for dir in 0..spec.options.orientations {
-						slice[dir] /= norm;
+				}
+			}
+		}
+
+		for by in 0..spec.blocks_high {
+			for bx in 0..spec.blocks_wide {
+				let norm = block_norm(&block_view, bx, by);
+				if norm > 0f32 {
+					let mut block_mut = block_view.inner_slice_mut(bx, by);
+					for i in 0..block_mut.len() {
+							block_mut[i] /= norm;
 					}
 				}
 			}
@@ -179,6 +194,19 @@ fn hog_impl<I>(image: &I, spec: HogSpec) -> Vec<f32>
 	}
 
 	descriptor.data
+}
+
+/// L2 norm of the block descriptor at given location within an image descriptor.
+fn block_norm(view: &View3d<f32>, bx: usize, by: usize) -> f32 {
+	let block_data = view.inner_slice(bx, by);
+	l2_norm(block_data)
+}
+
+// TODO: more general, more efficient slice copying and mapping
+fn copy<T: Copy>(from: &[T], to: &mut[T]) {
+	for i in 0..to.len() {
+		to[i] = from[i];
+	}
 }
 
 /// Computes orientation histograms for each cell of an image. Assumes that
@@ -265,10 +293,7 @@ impl Interpolation {
 	/// Interpolates between two indices, without wrapping.
 	fn from_position(pos: f32) -> Interpolation {
 		let fraction = pos - pos.floor();
-		Interpolation {
-			indices: [pos as usize, pos as usize + 1],
-			weights: [1f32 - fraction, fraction]
-		}
+		Self::new([pos as usize, pos as usize + 1], [1f32 - fraction, fraction])
 	}
 
 	/// Interpolates between two indices, wrapping the right index.
@@ -279,10 +304,7 @@ impl Interpolation {
 			right = 0;
 		}
 		let fraction = pos - pos.floor();
-		Interpolation {
-			indices: [pos as usize, right],
-			weights: [1f32 - fraction, fraction]
-		}
+		Self::new([pos as usize, right], [1f32 - fraction, fraction])
 	}
 }
 
@@ -377,11 +399,16 @@ pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Vec
 mod test {
 
     use super::{
+		copy,
+		hog_descriptor_from_hist_grid,
         HogOptions,
         HogSpec,
 		Interpolation,
         num_blocks
     };
+	use multiarray::{
+		Array3d
+	};
 
     #[test]
     fn test_num_blocks() {
@@ -434,5 +461,64 @@ mod test {
 			Interpolation::new([10, 11], [1f32, 0f32]));
 		assert_eq!(Interpolation::from_position_wrapping(10.25f32, 12),
 			Interpolation::new([10, 11], [0.75f32, 0.25f32]));
+	}
+
+	#[test]
+	fn test_hog_descriptor_from_hist_grid() {
+
+		// A grid of cells 3 wide and 2 high. Each cell contains a histogram of 2 items.
+		// There are two blocks, the left covering the leftmost 2x2 region, and the
+		// right covering the rightmost 2x2 region. These regions overlap by one cell column.
+		// There's no significance to the contents of the histograms used here, we're
+		// just checking that the values are binned and normalised correctly.
+
+		let opts = HogOptions::new(2, true, 5, 2, 1);
+		let spec = HogSpec::from_options(15, 10, opts).unwrap();
+
+		let mut grid = Array3d::<f32>::new([2, 3, 2]);
+		let mut view = grid.view_mut();
+
+		{
+			let mut tl = view.inner_slice_mut(0, 0);
+			copy(&[1f32, 3f32, 2f32], tl);
+		}
+		{
+			let mut tm = view.inner_slice_mut(1, 0);
+			copy(&[2f32, 3f32, 5f32], tm);
+		}
+		{
+			let mut tr = view.inner_slice_mut(2, 0);
+			copy(&[0f32, 1f32, 0f32], tr);
+		}
+		{
+			let mut bl = view.inner_slice_mut(0, 1);
+			copy(&[5f32, 0f32, 7f32], bl);
+		}
+		{
+			let mut bm = view.inner_slice_mut(1, 1);
+			copy(&[3f32, 7f32, 9f32], bm);
+		}
+		{
+			let mut br = view.inner_slice_mut(2, 1);
+			copy(&[6f32, 1f32, 4f32], br);
+		}
+
+		let descriptor = hog_descriptor_from_hist_grid(view, spec);
+		assert_eq!(descriptor.len(), 16);
+
+		let counts = [1, 3, 2, 3, 5, 0, 3, 7, 2, 3, 0, 1, 3, 7, 6, 1];
+		let mut expected = [0f32; 16];
+
+		let left_norm = 106f32.sqrt();
+		let right_norm = 109f32.sqrt();
+
+		for i in 0..8 {
+			expected[i] = counts[i] as f32 / left_norm;
+		}
+		for i in 8..16 {
+			expected[i] = counts[i] as f32 / right_norm;
+		}
+
+		assert_eq!(descriptor, expected);
 	}
 }
