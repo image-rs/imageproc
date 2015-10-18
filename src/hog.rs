@@ -91,14 +91,14 @@ impl HogSpec {
 		})
 	}
 
+	/// The total size in floats of the HoG descriptor with these dimensions.
+	pub fn descriptor_length(&self) -> usize {
+		self.blocks_wide * self.blocks_high * self.block_descriptor_length()
+	}
+
 	/// The size in floats of the descriptor for a single block.
 	fn block_descriptor_length(&self) -> usize {
 		self.options.orientations * self.options.block_side.pow(2)
-	}
-
-	/// The total size in floats of the HoG descriptor with these dimensions.
-	fn descriptor_length(&self) -> usize {
-		self.blocks_wide * self.blocks_high * self.block_descriptor_length()
 	}
 
 	/// Dimensions of a grid of cell histograms, viewed as a 3d array.
@@ -302,11 +302,11 @@ pub fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
 
 	let (width, height) = image.dimensions();
 	let scale = cmp::max(width, height) as f32 / 2f32;
-	let start_x = (width / 2) as i32;
-	let start_y = (height / 2) as i32;
+	let start_x = (width / 2) as f32;
+	let start_y = (height / 2) as f32;
 	let start = (start_x, start_y);
-	let x_step = -(scale * theta.sin()) as i32;
-	let y_step = (scale * theta.cos()) as i32;
+	let x_step = -scale * theta.sin();
+	let y_step = scale * theta.cos();
 	let end = (start_x + x_step, start_y + y_step);
 
 	draw_line_segment_mut(image, start, end, color);
