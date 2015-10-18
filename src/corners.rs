@@ -23,14 +23,14 @@ impl Corner {
     }
 }
 
-/// Variants of the FAST corner detector. These classify a point based
-/// on its intensity relative to the 16 pixels in the Bresenham circle
-/// of radius 3 around it. A point P with intensity I is detected as a
-/// corner if a long enough contiguous section of this circle either
+/// Variants of the [FAST](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test)
+/// corner detector. These classify a point based on its intensity relative to the 16 pixels
+/// in the Bresenham circle of radius 3 around it. A point P with intensity I is detected as a
+/// corner if all pixels in a sufficiently long contiguous section of this circle either
 /// all have intensity greater than I + t or all have intensity less than
 /// I - t, for some user-provided threshold t. The score of a corner is
 /// the greatest threshold for which the given pixel still qualifies as
-/// a corner. https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test
+/// a corner.
 pub enum Fast {
     /// Corners require a section of length as least nine.
     Nine,
@@ -136,7 +136,7 @@ pub fn suppress_non_maximum(corners: &[Corner], radius: u32)
     max_corners
 }
 
-/// The score of a corner detected using the FAST12
+/// The score of a corner detected using the FAST
 /// detector is the largest threshold for which this
 /// pixel is still a corner. We input the threshold at which
 /// the corner was detected as a lower bound on the search.

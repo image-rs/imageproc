@@ -1,5 +1,5 @@
-//! Histogram of oriented gradients and helpers for visualizing them.
-//! https://en.wikipedia.org/wiki/Histogram_of_oriented_gradients
+//! [HoG features](https://en.wikipedia.org/wiki/Histogram_of_oriented_gradients)
+//! and helpers for visualizing them.
 
 use image::{
 	GenericImage,
@@ -308,69 +308,6 @@ impl Interpolation {
 	}
 }
 
-/// Draws a ray from the center of an image, in a direction theta radians
-/// clockwise from the y axis (recall that image coordinates increase from
-/// top left to bottom right).
-pub fn draw_ray<I>(image: &I, theta: f32, color: I::Pixel)
-		-> VecBuffer<I::Pixel>
-	where I: GenericImage, I::Pixel: 'static {
-	let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
-    draw_ray_mut(&mut out, theta, color);
-    out
-}
-
-/// Draws a ray from the center of an image in place, in a direction theta radians
-/// clockwise from the y axis (recall that image coordinates increase from
-/// top left to bottom right).
-pub fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
-    where I: GenericImage, I::Pixel: 'static {
-
-	use std::cmp;
-	use drawing::draw_line_segment_mut;
-
-	let (width, height) = image.dimensions();
-	let scale = cmp::max(width, height) as f32 / 2f32;
-	let start_x = (width / 2) as f32;
-	let start_y = (height / 2) as f32;
-	let start = (start_x, start_y);
-	let x_step = -scale * theta.sin();
-	let y_step = scale * theta.cos();
-	let end = (start_x + x_step, start_y + y_step);
-
-	draw_line_segment_mut(image, start, end, color);
-}
-
-/// Visualises a histogram of edge orientation strengths as a collection of rays
-/// emanating from the centre of a square image. The intensity of each ray is
-/// proportional to the value of the bucket centred on its direction.
-pub fn star(side_length: u32, hist: &[f32], signed: bool) -> VecBuffer<Luma<u8>> {
-	let mut out = ImageBuffer::new(side_length, side_length);
-	draw_star_mut(&mut out, hist, signed);
-	out
-}
-
-/// Draws a visualisation of a histogram of edge orientation strengths as a collection of rays
-/// emanating from the centre of a square image. The intensity of each ray is
-/// proportional to the value of the bucket centred on its direction.
-pub fn draw_star_mut<I>(image: &mut I, hist: &[f32], signed: bool)
-	where I: GenericImage<Pixel=Luma<u8>> {
-	let orientations = hist.len() as f32;
-	for bucket in 0..hist.len() {
-		if signed {
-			let dir = (2f32 * f32::consts::PI * bucket as f32) / orientations;
-			let intensity = u8::clamp(hist[bucket]);
-			draw_ray_mut(image, dir, Luma([intensity]));
-		}
-		else {
-			let dir = (f32::consts::PI * bucket as f32) / orientations;
-			let intensity = u8::clamp(hist[bucket]);
-			draw_ray_mut(image, dir, Luma([intensity]));
-			draw_ray_mut(image, dir + f32::consts::PI, Luma([intensity]));
-		}
-	}
-}
-
 /// Visualises an array of orientation histograms.
 /// The dimensions of the provided Array3d are orientation bucket,
 /// horizontal location of the cell, then vertical location of the cell.
@@ -393,6 +330,48 @@ pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Vec
 	}
 
 	out
+}
+
+/// Draws a ray from the center of an image in place, in a direction theta radians
+/// clockwise from the y axis (recall that image coordinates increase from
+/// top left to bottom right).
+fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
+    where I: GenericImage, I::Pixel: 'static {
+
+	use std::cmp;
+	use drawing::draw_line_segment_mut;
+
+	let (width, height) = image.dimensions();
+	let scale = cmp::max(width, height) as f32 / 2f32;
+	let start_x = (width / 2) as f32;
+	let start_y = (height / 2) as f32;
+	let start = (start_x, start_y);
+	let x_step = -scale * theta.sin();
+	let y_step = scale * theta.cos();
+	let end = (start_x + x_step, start_y + y_step);
+
+	draw_line_segment_mut(image, start, end, color);
+}
+
+/// Draws a visualisation of a histogram of edge orientation strengths as a collection of rays
+/// emanating from the centre of a square image. The intensity of each ray is
+/// proportional to the value of the bucket centred on its direction.
+fn draw_star_mut<I>(image: &mut I, hist: &[f32], signed: bool)
+	where I: GenericImage<Pixel=Luma<u8>> {
+	let orientations = hist.len() as f32;
+	for bucket in 0..hist.len() {
+		if signed {
+			let dir = (2f32 * f32::consts::PI * bucket as f32) / orientations;
+			let intensity = u8::clamp(hist[bucket]);
+			draw_ray_mut(image, dir, Luma([intensity]));
+		}
+		else {
+			let dir = (f32::consts::PI * bucket as f32) / orientations;
+			let intensity = u8::clamp(hist[bucket]);
+			draw_ray_mut(image, dir, Luma([intensity]));
+			draw_ray_mut(image, dir + f32::consts::PI, Luma([intensity]));
+		}
+	}
 }
 
 #[cfg(test)]
