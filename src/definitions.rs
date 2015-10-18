@@ -106,7 +106,7 @@ pub trait Clamp<T> {
     fn clamp(x: T) -> Self;
 }
 
-/// Creates an implementation of Clamp<To> for type From.
+/// Creates an implementation of Clamp<From> for type To.
 // TODO: improve performance
 macro_rules! implement_clamp {
     ($from:ty, $to:ty) => (
