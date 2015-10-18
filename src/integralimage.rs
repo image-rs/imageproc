@@ -1,15 +1,5 @@
-//! Functions for computing integral images and running sums
-//! of rows and columns. 
-//! I is the integral image of an image F if I(x, y) is the
-//! sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
-//! in the integral image contains the sum of the pixel intensities
-//! of all input pixels that are above it and to its left.
-//! The integral image has the helpful property that it lets us
-//! compute the sum of pixel intensities from any rectangular region
-//! in the input image in constant time.
-//! Specifically, given a rectangle in F with clockwise corners
-//! A, B, C, D, with A at the upper left, the total pixel intensity
-//! of this rectangle is I(C) - I(B) - I(D) + I(A).
+//! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
+//! and running sums of rows and columns.
 
 extern crate image;
 
@@ -24,6 +14,16 @@ use definitions::{
 };
 
 /// Computes the integral image of an 8bpp grayscale image.
+/// I is the integral image of an image F if I(x, y) is the
+/// sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
+/// in the integral image contains the sum of the pixel intensities
+/// of all input pixels that are above it and to its left.
+/// The integral image has the helpful property that it lets us
+/// compute the sum of pixel intensities from any rectangular region
+/// in the input image in constant time.
+/// Specifically, given a rectangle in F with clockwise corners
+/// A, B, C, D, with A at the upper left, the total pixel intensity
+/// of this rectangle is I(C) - I(B) - I(D) + I(A).
 // TODO: Support more formats.
 // TODO: This is extremely slow. Fix that!
 pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
