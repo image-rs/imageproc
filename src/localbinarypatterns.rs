@@ -4,6 +4,7 @@ use image::{
     GenericImage,
     Luma
 };
+use std::cmp;
 
 /// Computes the basic local binary pattern of a pixel, or None
 /// if it's too close to the image boundary.
@@ -58,11 +59,21 @@ pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
 // TODO: add lookup tables from pattern to pattern class, one just assigning
 // TODO: the least circular shift and the other lumping all non-uniform patterns together
 
+/// Returns the minimum value over all rotations of a byte.
+pub fn min_shift(byte: u8) -> u8 {
+    let mut min = byte;
+    for i in 1..8 {
+        min = cmp::min(min, byte.rotate_right(i));
+    }
+    min
+}
+
 #[cfg(test)]
 mod test {
 
     use super::{
-        local_binary_pattern
+        local_binary_pattern,
+        min_shift
     };
     use image::{
         GenericImage,
@@ -84,5 +95,11 @@ mod test {
         let pattern = local_binary_pattern(&image, 1, 1).unwrap();
 
         assert_eq!(pattern, expected);
+    }
+
+    #[test]
+    fn test_min_shift() {
+        let byte = 0b10110100;
+        assert_eq!(min_shift(byte), 0b00101101);
     }
 }
