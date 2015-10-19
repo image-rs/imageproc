@@ -22,6 +22,7 @@ pub mod filter;
 pub mod gradients;
 pub mod hog;
 pub mod integralimage;
+pub mod localbinarypatterns;
 pub mod math;
 pub mod multiarray;
 pub mod noise;
