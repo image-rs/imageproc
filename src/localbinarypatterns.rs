@@ -68,8 +68,13 @@ pub fn min_shift(byte: u8) -> u8 {
     min
 }
 
+/// Number of bit transitions in a byte, counting the last and final bits as adjacent.
+pub fn count_transitions(byte: u8) -> u32 {
+    (byte ^ byte.rotate_right(1)).count_ones()
+}
+
 /// Lookup table for the least value of all rotations of a byte.
-let static MIN_SHIFT: [u8; 256] = [
+pub static MIN_SHIFT: [u8; 256] = [
 0,   // 0
 1,   // 1
 1,   // 2
@@ -332,6 +337,7 @@ let static MIN_SHIFT: [u8; 256] = [
 mod test {
 
     use super::{
+        count_transitions,
         local_binary_pattern,
         min_shift
     };
@@ -361,5 +367,17 @@ mod test {
     fn test_min_shift() {
         let byte = 0b10110100;
         assert_eq!(min_shift(byte), 0b00101101);
+    }
+
+    #[test]
+    fn test_count_transitons() {
+        let a = 0b11110000;
+        assert_eq!(count_transitions(a), 2);
+        let b = 0b00000000;
+        assert_eq!(count_transitions(b), 0);
+        let c = 0b10011001;
+        assert_eq!(count_transitions(c), 3);
+        let d = 0b1011001;
+        assert_eq!(count_transitions(d), 4);
     }
 }
