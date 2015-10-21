@@ -15,6 +15,9 @@ use unionfind::DisjointSetForest;
 use std::cmp;
 use std::collections::HashMap;
 
+/// Whether we consider the NW, NE, SW, and SE neighbors of
+/// a pixel to be connected to it, or just its N, S, E, and W
+/// neighbors.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Connectivity { Four, Eight }
 
