@@ -10,7 +10,9 @@ use image::{
 
 /// Returns the Otsu threshold level of an 8bpp image.
 /// This threshold will optimally binarize an image that
-/// meets certain criteria.
+/// contains two classes of pixels which have distributions
+/// with equal variances. For details see:
+/// Xu, X., et al. Pattern recognition letters 32.7 (2011)
 pub fn otsu_level<I>(image: &I) -> u8
     where I: GenericImage<Pixel=Luma<u8>> {
     let hist = histogram(image);
@@ -29,8 +31,8 @@ pub fn otsu_level<I>(image: &I) -> u8
     }
 
     let mut sigma_max:f64 = -1.0;
-    let mut otsu:f64 = 0.0;
-    let mut otsu2:f64 = 0.0;
+    let mut otsu = 0f64;
+    let mut otsu2 = 0f64;
 
     for i in 0..levels {
         meanc[i] /= pixel_count;
@@ -57,16 +59,11 @@ pub fn otsu_level<I>(image: &I) -> u8
 /// obtained by applying the given image
 pub fn threshold<I>(image: &I, thresh: u8) -> GrayImage
     where I: GenericImage<Pixel=Luma<u8>> {
+
     let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
-     for y in 0..image.height() {
-            for x in 0..image.width() {
-                if image.get_pixel(x, y)[0] as u8 <= thresh {
-                    out.put_pixel(x, y, Luma([0 as u8]));
-                } else {
-                    out.put_pixel(x, y, Luma([255 as u8]));
-                }
-            }
-        }
+    out.copy_from(image, 0, 0);
+    threshold_mut(&mut out, thresh);
+
     out
 }
 
@@ -77,9 +74,9 @@ pub fn threshold_mut<I>(image: &mut I, thresh: u8)
      for y in 0..image.height() {
             for x in 0..image.width() {
                 if image.get_pixel(x, y)[0] as u8 <= thresh {
-                    image.put_pixel(x, y, Luma([0 as u8]));
+                    image.put_pixel(x, y, Luma([0]));
                 } else {
-                    image.put_pixel(x, y, Luma([255 as u8]));
+                    image.put_pixel(x, y, Luma([255]));
                 }
             }
         }
@@ -199,26 +196,20 @@ mod test {
     }
     #[test]
     fn test_threshold(){
-        let before: GrayImage = ImageBuffer::from_raw(26, 1, 
+        let original: GrayImage = ImageBuffer::from_raw(26, 1, 
             vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8, 
                 80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8, 
                 150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,  
                 220u8,  230u8,  240u8,  250u8]).unwrap();
-        let after: GrayImage = ImageBuffer::from_raw(26, 1, 
+        let expected: GrayImage = ImageBuffer::from_raw(26, 1, 
             vec![0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 
                 0u8, 0u8, 0u8, 0u8, 0u8, 255u8, 255u8, 
                 255u8, 255u8, 255u8, 255u8, 255u8, 255u8,  255u8,  
                 255u8,  255u8,  255u8,  255u8]).unwrap();
 
-        let test = threshold(&before, 125u8);
+        let actual = threshold(&original, 125u8);
 
-        for y in 0..after.height() {
-            for x in 0..after.width() {
-                let check = after.get_pixel(x, y)[0] as usize;
-                let test_pixel = test.get_pixel(x, y)[0] as usize;
-                assert_eq!(test_pixel, check);
-            }
-        }
+        assert_pixels_eq!(expected, actual);
     }
 
     #[bench]
