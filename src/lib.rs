@@ -5,6 +5,7 @@
 extern crate test;
 extern crate conv;
 extern crate image;
+extern crate itertools;
 
 #[macro_use]
 extern crate nalgebra;
@@ -20,6 +21,7 @@ pub mod definitions;
 pub mod drawing;
 pub mod filter;
 pub mod gradients;
+pub mod haar;
 pub mod hog;
 pub mod integralimage;
 pub mod localbinarypatterns;

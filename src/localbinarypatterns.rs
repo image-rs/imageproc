@@ -70,7 +70,7 @@ pub fn count_transitions(byte: u8) -> u32 {
     (byte ^ byte.rotate_right(1)).count_ones()
 }
 
-/// Maps uniform bytes (i.e. those with at most two bits transitions) to their
+/// Maps uniform bytes (i.e. those with at most two bit transitions) to their
 /// least circular shifts, and non-uniform bytes to 10101010 (an arbitrarily chosen
 /// non-uniform representative).
 pub static UNIFORM_REPRESENTATIVE_2: [u8; 256] = [
