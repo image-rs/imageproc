@@ -1,6 +1,5 @@
 //! Functions for manipulating the contrast of images.
 
-
 use image::{
     GenericImage,
     GrayImage,
@@ -21,65 +20,66 @@ pub fn otsu_level<I>(image: &I) -> u8
     let mut meanc = [0.0f64; 256];
     let mut pixel_count = hist[0] as f64;
 
-
     histc[0] = hist[0];
 
     for i in 1..levels {
         pixel_count += hist[i] as f64;
         histc[i] = histc[i-1] + hist[i];
-        meanc[i] = meanc[i-1] + (hist[i] as f64)*(i as f64);
+        meanc[i] = meanc[i-1] + (hist[i] as f64) * (i as f64);
     }
 
-    let mut sigma_max:f64 = -1.0;
+    let mut sigma_max = -1f64;
     let mut otsu = 0f64;
     let mut otsu2 = 0f64;
 
     for i in 0..levels {
         meanc[i] /= pixel_count;
 
-        let p0 = (histc[i] as f64)/pixel_count;
-        let p1 = 1.0f64 - p0;
-        let mu0 = meanc[i]/p0;
-        let mu1 = (meanc[levels-1]/pixel_count - meanc[i])/p1;
+        let p0 = (histc[i] as f64) / pixel_count;
+        let p1 = 1f64 - p0;
+        let mu0 = meanc[i] / p0;
+        let mu1 = (meanc[levels - 1] / pixel_count - meanc[i]) / p1;
 
-        let sigma = p0*p1*(mu0-mu1).powi(2);
+        let sigma = p0 * p1 * (mu0 - mu1).powi(2);
         if sigma >= sigma_max {
             if sigma > sigma_max {
                 otsu = i as f64;
                 sigma_max = sigma;
-            } else {
+            }
+            else {
                 otsu2 = i as f64;
             }
         }
     }
-    ( (otsu + otsu2) / 2.0 ).ceil() as u8
+    ((otsu + otsu2) / 2.0).ceil() as u8
 }
 
 /// Returns a binarized image from an input 8bpp grayscale image
-/// obtained by applying the given image
+/// obtained by applying the given threshold.
 pub fn threshold<I>(image: &I, thresh: u8) -> GrayImage
     where I: GenericImage<Pixel=Luma<u8>> {
 
     let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     threshold_mut(&mut out, thresh);
-
     out
 }
 
 /// Mutates given image to form a binarized version produced by applying
-/// the given threshold
+/// the given threshold.
 pub fn threshold_mut<I>(image: &mut I, thresh: u8)
-    where I: GenericImage<Pixel=Luma<u8>>  {
-     for y in 0..image.height() {
-            for x in 0..image.width() {
-                if image.get_pixel(x, y)[0] as u8 <= thresh {
-                    image.put_pixel(x, y, Luma([0]));
-                } else {
-                    image.put_pixel(x, y, Luma([255]));
-                }
+    where I: GenericImage<Pixel=Luma<u8>> {
+
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            if image.get_pixel(x, y)[0] as u8 <= thresh {
+                image.put_pixel(x, y, Luma([0]));
+            }
+            else {
+                image.put_pixel(x, y, Luma([255]));
             }
         }
+    }
 }
 
 /// Returns the histogram of grayscale values in an 8pp
@@ -186,25 +186,25 @@ mod test {
     }
     #[test]
     fn test_otsu_level(){
-        let image: GrayImage = ImageBuffer::from_raw(26, 1, 
-            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8, 
-                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8, 
-                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,  
+        let image: GrayImage = ImageBuffer::from_raw(26, 1,
+            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
+                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
+                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,
                 220u8,  230u8,  240u8,  250u8]).unwrap();
         let level = otsu_level(&image);
         assert_eq!(level, 125);
     }
     #[test]
     fn test_threshold(){
-        let original: GrayImage = ImageBuffer::from_raw(26, 1, 
-            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8, 
-                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8, 
-                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,  
+        let original: GrayImage = ImageBuffer::from_raw(26, 1,
+            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
+                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
+                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,
                 220u8,  230u8,  240u8,  250u8]).unwrap();
-        let expected: GrayImage = ImageBuffer::from_raw(26, 1, 
-            vec![0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 
-                0u8, 0u8, 0u8, 0u8, 0u8, 255u8, 255u8, 
-                255u8, 255u8, 255u8, 255u8, 255u8, 255u8,  255u8,  
+        let expected: GrayImage = ImageBuffer::from_raw(26, 1,
+            vec![0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+                0u8, 0u8, 0u8, 0u8, 0u8, 255u8, 255u8,
+                255u8, 255u8, 255u8, 255u8, 255u8, 255u8,  255u8,
                 255u8,  255u8,  255u8,  255u8]).unwrap();
 
         let actual = threshold(&original, 125u8);
