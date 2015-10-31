@@ -8,6 +8,11 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::ops::Mul;
 
+/// Whether the top left region in a Haar filter is counted
+/// with positive or negative sign.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Sign { Positive, Negative }
+
 /// A Haar filter whose value on an integral image is the weighted sum
 /// of the values of the integral image at the given points.
 // TODO: these structs are pretty big. Look into instead just storing
@@ -20,127 +25,7 @@ pub struct HaarFilter {
     count: usize
 }
 
-/// Whether the top left region in a Haar filter is counted
-/// with positive or negative sign.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Sign { Positive, Negative }
-
 impl HaarFilter {
-
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B   C
-    ///       +   -
-    ///     D   E   F
-    /// </pre>
-    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2 and D.y = A.y + dy.
-    /// Given an integral image I, the value of this feature is
-    /// sign * (I(A) - 2I(B) + I(C) - I(D) + 2I(E) - I(F)).
-    pub fn two_region_horizontal(top: u32, left: u32, dx1: u32, dx2: u32, dy: u32, sign: Sign)
-        -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top, left,       dx1, dy),
-            eval_points(top, left + dx1, dx2, dy)]) * multiplier(sign)
-    }
-
-    /// If Sign is Positive then returns the following Haar feature.
-    /// <pre>
-    ///     A   B
-    ///       +
-    ///     C   D
-    ///       -
-    ///     E   F
-    /// </pre>
-    /// If Sign is Negative then the + and - signs are reversed.
-    /// The distance between A and B is dx, between A and C is dy1,
-    /// and between C and E is dy2.
-    ///
-    /// Given an integral image I, the value of this feature is
-    /// I(A) - I(B) - 2I(C) + 2I(D) + I(E) - I(F) multipled by sign.
-    pub fn two_region_vertical(top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, sign: Sign)
-        -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,       left, dx, dy1),
-            eval_points(top + dy1, left, dx, dy2)]) * multiplier(sign)
-    }
-
-    /// If Sign is Positive then returns the following Haar feature.
-    /// <pre>
-    ///     A   B   C   D
-    ///       +   -   +
-    ///     E   F   G   H
-    /// </pre>
-    /// If Sign is Negative then the + and - signs are reversed.
-    /// The distance between A and B is dx1, between B and C is dx2, between
-    /// C and D is dx3, and between A and E is dy.
-    ///
-    /// Given an integral image I, the value of this feature is
-    /// I(A) - 2I(B) + 2I(C) - I(D) - I(E) + 2I(F) - 2I(G) + I(H) multipled by sign.
-    pub fn three_region_horizontal(
-        top: u32, left: u32, dx1: u32, dx2: u32, dx3: u32, dy: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top, left,             dx1, dy),
-            eval_points(top, left + dx1,       dx2, dy),
-            eval_points(top, left + dx1 + dx2, dx3, dy),
-            ]) * multiplier(sign)
-    }
-
-    /// If Sign is Positive then returns the following Haar feature.
-    /// <pre>
-    ///     A   B
-    ///       +
-    ///     C   D
-    ///       -
-    ///     E   F
-    ///       +
-    ///     G   H
-    /// </pre>
-    /// If Sign is Negative then the + and - signs are reversed.
-    /// The distance between A and B is dx, between A and C is dy1, between
-    /// C and E is dy2, and between E and G is dy3.
-    ///
-    /// Given an integral image I, the value of this feature is
-    /// I(A) - I(B) - 2I(C) + 2I(D) + 2I(E) - 2I(F) - I(G) + I(H) multiplied by sign.
-    pub fn three_region_vertical(
-        top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, dy3: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,             left, dx, dy1),
-            eval_points(top + dy1,       left, dx, dy2),
-            eval_points(top + dy1 + dy2, left, dx, dy3),
-            ]) * multiplier(sign)
-    }
-
-    /// If Sign is Positive then returns the following Haar feature.
-    /// <pre>
-    ///     A   B   C
-    ///       +   -
-    ///     D   E   F
-    ///       -   +
-    ///     G   H   I
-    /// </pre>
-    /// If Sign is Negative then the + and - signs are reversed.
-    /// The distance between A and B is dx1, between B and C is dx1, between
-    /// A and D is dy1, and between D and G is dy2.
-    ///
-    /// Given an integral image I, the value of this feature is
-    /// I(A) - 2I(B) + I(C) - 2I(D) + 4I(E) - 2I(F) + I(G) - 2I(H) + I(I) multiplied by sign.
-    pub fn four_region(
-        top: u32, left: u32, dx1: u32, dx2: u32, dy1: u32, dy2: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,       left,       dx1, dy1),
-            eval_points(top,       left + dx1, dx2, dy1),
-            eval_points(top + dy1, left,       dx1, dy2),
-            eval_points(top + dy1, left + dx1, dx2, dy2),
-            ]) * multiplier(sign)
-    }
 
     /// Evaluates the Haar filter on an integral image.
     pub fn evaluate<I>(&self, integral: &I ) -> i32
@@ -152,6 +37,99 @@ impl HaarFilter {
             sum += p as i32 * self.weights[i] as i32;
         }
         sum
+    }
+
+    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
+    /// <pre>
+    ///     A   B   C
+    ///       +   -
+    ///     D   E   F
+    /// </pre>
+    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, and D.y = A.y + dy.
+    pub fn two_region_horizontal(top: u32, left: u32, dx1: u32, dx2: u32, dy: u32, sign: Sign)
+        -> HaarFilter {
+
+        combine_alternating(&[
+            eval_points(top, left,       dx1, dy),
+            eval_points(top, left + dx1, dx2, dy)]) * multiplier(sign)
+    }
+
+    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
+    /// <pre>
+    ///     A   B
+    ///       +
+    ///     C   D
+    ///       -
+    ///     E   F
+    /// </pre>
+    /// A = (top, left), B.x = left + dx, C.y = top + dy1, and E.y = C.y + dy2.
+    pub fn two_region_vertical(top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, sign: Sign)
+        -> HaarFilter {
+
+        combine_alternating(&[
+            eval_points(top,       left, dx, dy1),
+            eval_points(top + dy1, left, dx, dy2)]) * multiplier(sign)
+    }
+
+    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
+    /// <pre>
+    ///     A   B   C   D
+    ///       +   -   +
+    ///     E   F   G   H
+    /// </pre>
+    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, D.x = C.x + dx3, and E.y = top + dy.
+    pub fn three_region_horizontal(
+        top: u32, left: u32, dx1: u32, dx2: u32, dx3: u32, dy: u32, sign: Sign)
+            -> HaarFilter {
+
+        combine_alternating(&[
+            eval_points(top, left,             dx1, dy),
+            eval_points(top, left + dx1,       dx2, dy),
+            eval_points(top, left + dx1 + dx2, dx3, dy),
+            ]) * multiplier(sign)
+    }
+
+    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
+    /// <pre>
+    ///     A   B
+    ///       +
+    ///     C   D
+    ///       -
+    ///     E   F
+    ///       +
+    ///     G   H
+    /// </pre>
+    /// A = (top, left), B.x = left + dx, C.y = top + dy1, E.y = C.y + dy2, and G.y = E.y + dy3.
+    pub fn three_region_vertical(
+        top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, dy3: u32, sign: Sign)
+            -> HaarFilter {
+
+        combine_alternating(&[
+            eval_points(top,             left, dx, dy1),
+            eval_points(top + dy1,       left, dx, dy2),
+            eval_points(top + dy1 + dy2, left, dx, dy3),
+            ]) * multiplier(sign)
+    }
+
+    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
+    /// <pre>
+    ///     A   B   C
+    ///       +   -
+    ///     D   E   F
+    ///       -   +
+    ///     G   H   I
+    /// </pre>
+    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, D.y = top + dy1, and G.y = D.y + dy2.
+    pub fn four_region(
+        top: u32, left: u32, dx1: u32, dx2: u32, dy1: u32, dy2: u32, sign: Sign)
+            -> HaarFilter {
+
+        combine_alternating(&[
+            eval_points(top,       left,       dx1, dy1),
+            eval_points(top,       left + dx1, dx2, dy1),
+            eval_points(top + dy1, left,       dx1, dy2),
+            eval_points(top + dy1, left + dx1, dx2, dy2),
+            ]) * multiplier(sign)
     }
 }
 
