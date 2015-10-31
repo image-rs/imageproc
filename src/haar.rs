@@ -286,7 +286,6 @@ mod test {
         // A   B   C
         //   +   -
         // D   E   F
-        // I(A) - 2I(B) + I(C) - I(D) + 2I(E) - I(F)
         let image = ImageBuffer::from_raw(5, 5, vec![
             1u8,     2u8, 3u8,     4u8,     5u8,
                  /***+++++++++*****-----***/
@@ -304,5 +303,36 @@ mod test {
         let value = filter.evaluate(&integral);
 
         assert_eq!(value, 19i32);
+    }
+
+    #[test]
+    fn test_three_region_vertical() {
+        // Three region vertically aligned filter:
+        // A   B
+        //   +
+        // C   D
+        //   -
+        // E   F
+        //   +
+        // G   H
+        let image = ImageBuffer::from_raw(5, 5, vec![
+        /*****************/
+        /*-*/1u8, 2u8,/*-*/ 3u8, 4u8, 5u8,
+        /*****************/
+        /*+*/6u8, 7u8,/*+*/ 8u8, 9u8, 0u8,
+        /*+*/9u8, 8u8,/*+*/ 7u8, 6u8, 5u8,
+        /*****************/
+        /*-*/4u8, 3u8,/*-*/ 2u8, 1u8, 0u8,
+        /*****************/
+             6u8, 5u8,      4u8, 2u8, 1u8]).unwrap();
+
+        let integral = integral_image(&image);
+
+        let filter = HaarFilter::three_region_vertical(
+            0, 0, 2u32, 1u32, 2u32, 1u32, Sign::Negative);
+
+        let value = filter.evaluate(&integral);
+
+        assert_eq!(value, 20i32);
     }
 }
