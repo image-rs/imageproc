@@ -127,8 +127,8 @@ impl HaarFilter {
         combine_alternating(&[
             eval_points(top,       left,       dx1, dy1),
             eval_points(top,       left + dx1, dx2, dy1),
-            eval_points(top + dy1, left,       dx1, dy2),
             eval_points(top + dy1, left + dx1, dx2, dy2),
+            eval_points(top + dy1, left,       dx1, dy2),
             ]) * multiplier(sign)
     }
 }
@@ -251,12 +251,6 @@ mod test {
 
     #[test]
     fn test_combine_alternating() {
-        // Three region horizontally aligned filter:
-        // A   B   C   D
-        //   +   -   +
-        // E   F   G   H
-        // I(A) - 2I(B) + 2I(C) - I(D) - I(E) + 2I(F) - 2I(G) + I(H).
-
         let a = (0, 0);
         let b = (1, 0);
         let c = (2, 0);
@@ -296,13 +290,8 @@ mod test {
             6u8, 5u8, 4u8, 2u8, 1u8]).unwrap();
 
         let integral = integral_image(&image);
-
-        let filter = HaarFilter::two_region_horizontal(
-            1, 1, 2u32, 1u32, 3u32, Sign::Positive);
-
-        let value = filter.evaluate(&integral);
-
-        assert_eq!(value, 19i32);
+        let filter = HaarFilter::two_region_horizontal(1, 1, 2, 1, 3, Sign::Positive);
+        assert_eq!(filter.evaluate(&integral), 19i32);
     }
 
     #[test]
@@ -327,12 +316,31 @@ mod test {
              6u8, 5u8,      4u8, 2u8, 1u8]).unwrap();
 
         let integral = integral_image(&image);
+        let filter = HaarFilter::three_region_vertical(0, 0, 2, 1, 2, 1, Sign::Negative);
+        assert_eq!(filter.evaluate(&integral), 20i32);
+    }
 
-        let filter = HaarFilter::three_region_vertical(
-            0, 0, 2u32, 1u32, 2u32, 1u32, Sign::Negative);
+    #[test]
+    fn test_four_region() {
+        // Four region filter:
+        // A   B   C
+        //   +   -
+        // D   E   F
+        //   -   +
+        // G   H   I
+        let image = ImageBuffer::from_raw(5, 5, vec![
+        1u8,    2u8, 3u8,     4u8,     5u8,
+            /************************/
+        6u8,/**/7u8, 8u8,/**/ 9u8,/**/ 0u8,
+            /************************/
+        9u8,/**/8u8, 7u8,/**/ 6u8,/**/ 5u8,
+        4u8,/**/3u8, 2u8,/**/ 1u8,/**/ 0u8,
+            /************************/
+        6u8,    5u8, 4u8,     2u8,     1u8]).unwrap();
 
-        let value = filter.evaluate(&integral);
+        let integral = integral_image(&image);
+        let filter = HaarFilter::four_region(1, 1, 2, 1, 1, 2, Sign::Positive);
 
-        assert_eq!(value, 20i32);
+        assert_eq!(filter.evaluate(&integral), -7i32);
     }
 }
