@@ -1,19 +1,14 @@
 //! Helpers for drawing basic shapes on images.
 
-use image::{
-    Pixel,
-    GenericImage,
-    ImageBuffer
-};
-use definitions::{
-    VecBuffer
-};
+use image::{Pixel, GenericImage, ImageBuffer};
+use definitions::VecBuffer;
 use std::mem::swap;
 
 /// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
+#[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
-    where I: GenericImage {
-
+    where I: GenericImage
+{
     let (width, height) = image.dimensions();
     let idx = |x, y| (3 * (y + 1) + x + 1) as usize;
     let stencil = [0u8, 1u8, 0u8,
@@ -40,9 +35,10 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
 }
 
 /// Draws a colored cross on an image. Handles coordinates outside image bounds.
-pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32)
-        -> VecBuffer<I::Pixel>
-    where I: GenericImage, I::Pixel: 'static {
+pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     draw_cross_mut(&mut out, color, x, y);
@@ -50,9 +46,14 @@ pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32)
 }
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
-pub fn draw_line_segment<I>(image: &I, start: (f32, f32), end: (f32, f32), color: I::Pixel)
-        -> VecBuffer<I::Pixel>
-    where I: GenericImage, I::Pixel: 'static{
+pub fn draw_line_segment<I>(image: &I,
+                            start: (f32, f32),
+                            end: (f32, f32),
+                            color: I::Pixel)
+                            -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     draw_line_segment_mut(&mut out, start, end, color);
@@ -61,8 +62,9 @@ pub fn draw_line_segment<I>(image: &I, start: (f32, f32), end: (f32, f32), color
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
 pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32), color: I::Pixel)
-    where I: GenericImage, I::Pixel: 'static{
-
+    where I: GenericImage,
+          I::Pixel: 'static
+{
     let (width, height) = image.dimensions();
     let in_bounds = |x, y| x >= 0 && x < width as i32 && y >= 0 && y < height as i32;
 
@@ -85,14 +87,13 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
     let dy = (y1 - y0).abs();
     let mut error = dx / 2f32;
 
-    let y_step = if y0 < y1 {1f32} else {-1f32};
+    let y_step = if y0 < y1 { 1f32 } else { -1f32 };
     let mut y = y0 as i32;
 
     for x in x0 as i32..(x1 + 1f32) as i32 {
         if is_steep && in_bounds(y, x) {
             image.put_pixel(y as u32, x as u32, color);
-        }
-        else if in_bounds(x, y) {
+        } else if in_bounds(x, y) {
             image.put_pixel(x as u32, y as u32, color);
         }
         error -= dy;
@@ -106,17 +107,11 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
 #[cfg(test)]
 mod test {
 
-    use super::{
-      draw_cross,
-      draw_line_segment
-    };
-    use image::{
-      GrayImage,
-      ImageBuffer,
-      Luma
-    };
+    use super::{draw_cross, draw_line_segment};
+    use image::{GrayImage, ImageBuffer, Luma};
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_inside_bounds() {
       let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
           1, 1, 1, 1, 1,
@@ -136,6 +131,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_left() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -155,6 +151,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_right() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -174,6 +171,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_bottom() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -193,6 +191,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_top() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -212,6 +211,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_outside_bottom() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -231,6 +231,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_outside_right() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -250,15 +251,16 @@ mod test {
     }
 
 
-    // Octants for line directions:
-    //
-    //   \ 5 | 6 /
-    //   4 \ | / 7
-    //   ---   ---
-    //   3 / | \ 0
-    //   / 2 | 1 \
+// Octants for line directions:
+//
+//   \ 5 | 6 /
+//   4 \ | / 7
+//   ---   ---
+//   3 / | \ 0
+//   / 2 | 1 \
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_horizontal() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -282,6 +284,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct0_and_oct4() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -305,6 +308,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_diagonal() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -328,6 +332,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct1_and_oct5() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -351,6 +356,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_vertical() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -374,6 +380,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct2_and_oct6() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -397,6 +404,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct3_and_oct7() {
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
