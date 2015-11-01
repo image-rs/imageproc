@@ -313,8 +313,7 @@ mod test {
     use image::{
         GrayImage,
         ImageBuffer,
-        Luma,
-        Pixel
+        Luma
     };
     use test;
 
