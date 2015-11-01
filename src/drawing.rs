@@ -123,9 +123,9 @@ pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
           I::Pixel: 'static
 {
     let left = rect.left() as f32;
-    let right = (rect.left() + rect.width() as i32) as f32 - 1f32;
+    let right = rect.right() as f32;
     let top = rect.top() as f32;
-    let bottom = (rect.top() + rect.height() as i32) as f32 - 1f32;
+    let bottom = rect.bottom() as f32;
 
     draw_line_segment_mut(image, (left, top), (right, top), color);
     draw_line_segment_mut(image, (left, bottom), (right, bottom), color);
@@ -133,10 +133,38 @@ pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
     draw_line_segment_mut(image, (right, top), (right, bottom), color);
 }
 
+/// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
+pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_filled_rect_mut(&mut out, rect, color);
+    out
+}
+
+/// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
+pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
+    where I: GenericImage,
+    I::Pixel: 'static
+{
+    let image_bounds = Rect::at(0, 0).of_size(image.width(), image.height());
+    if let Some(intersection) = image_bounds.intersect(rect) {
+        for dy in 0..intersection.height() {
+            for dx in 0..intersection.width() {
+                let x = intersection.left() as u32 + dx;
+                let y = intersection.top() as u32 + dy;
+                image.put_pixel(x, y, color);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
-    use super::{draw_cross, draw_line_segment, draw_hollow_rect};
+    use super::{draw_cross, draw_line_segment, draw_filled_rect, draw_hollow_rect};
     use rect::Rect;
     use image::{GrayImage, ImageBuffer, Luma};
 
@@ -469,12 +497,33 @@ mod test {
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 4, 4, 4,
+            1, 1, 4, 1, 4,
+            1, 1, 4, 4, 4]).unwrap();
+
+        let actual = draw_hollow_rect(&image, Rect::at(2, 2).of_size(3, 3), Luma([4u8]));
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_draw_filled_rect() {
+        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]).unwrap();
+
+        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1, 1, 1, 1, 1,
             1, 4, 4, 4, 1,
-            1, 4, 1, 4, 1,
+            1, 4, 4, 4, 1,
             1, 4, 4, 4, 1,
             1, 1, 1, 1, 1]).unwrap();
 
-        let actual = draw_hollow_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
+        let actual = draw_filled_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
         assert_pixels_eq!(actual, expected);
     }
 }
