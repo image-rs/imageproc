@@ -1,4 +1,4 @@
-//! Utils to test with testing and debugging.
+//! Utils for testing and debugging.
 
 use image::{
     DynamicImage,
