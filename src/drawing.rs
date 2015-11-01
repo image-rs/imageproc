@@ -123,7 +123,7 @@ pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
           I::Pixel: 'static
 {
     let left = rect.left() as f32;
-    let right = rect.height() as f32;
+    let right = rect.right() as f32;
     let top = rect.top() as f32;
     let bottom = rect.bottom() as f32;
 
@@ -497,12 +497,12 @@ mod test {
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
-            1, 4, 4, 4, 1,
-            1, 4, 1, 4, 1,
-            1, 4, 4, 4, 1,
-            1, 1, 1, 1, 1]).unwrap();
+            1, 1, 1, 1, 1,
+            1, 1, 4, 4, 4,
+            1, 1, 4, 1, 4,
+            1, 1, 4, 4, 4]).unwrap();
 
-        let actual = draw_hollow_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
+        let actual = draw_hollow_rect(&image, Rect::at(2, 2).of_size(3, 3), Luma([4u8]));
         assert_pixels_eq!(actual, expected);
     }
 
