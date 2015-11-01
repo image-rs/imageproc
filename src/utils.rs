@@ -63,6 +63,7 @@ macro_rules! assert_pixels_eq_within {
     })
 }
 
+/// Panics if image dimensions do not match.
 #[macro_export]
 macro_rules! assert_dimensions_match {
     ($actual:expr, $expected:expr) => ({
