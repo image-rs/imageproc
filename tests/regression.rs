@@ -34,6 +34,19 @@ fn compare_to_truth_rgb(
     assert_pixels_eq!(actual, truth);
 }
 
+fn compare_to_truth_rgb_with_tolerance(
+    input_path: &Path,
+    truth_path: &Path,
+    op: &Fn(&image::RgbImage) -> image::RgbImage,
+    tolerance: u8) {
+
+    let truth = load_image_or_panic(&truth_path).to_rgb();
+    let input = load_image_or_panic(&input_path).to_rgb();
+    let actual = op.call((&input,));
+
+    assert_pixels_eq_within!(actual, truth, tolerance);
+}
+
 fn compare_to_truth_grayscale(
     input_path: &Path,
     truth_path: &Path,
@@ -72,7 +85,7 @@ fn rotate_bilinear_about_center(image: &image::RgbImage) -> image::RgbImage {
 fn test_rotate_bilinear_rgb() {
     let ip = Path::new("./tests/data/elephant.png");
     let tp = Path::new("./tests/data/truth/elephant_rotate_bilinear.png");
-    compare_to_truth_rgb(&ip, &tp, &rotate_bilinear_about_center);
+    compare_to_truth_rgb_with_tolerance(&ip, &tp, &rotate_bilinear_about_center, 1);
 }
 
 fn affine_nearest(image: &image::RgbImage) -> image::RgbImage {
