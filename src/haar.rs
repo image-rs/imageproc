@@ -26,7 +26,6 @@ pub struct HaarFilter {
 }
 
 impl HaarFilter {
-
     /// Evaluates the Haar filter on an integral image.
     pub fn evaluate<I>(&self, integral: &I ) -> i32
         where I: GenericImage<Pixel=Luma<u32>> {
@@ -37,6 +36,58 @@ impl HaarFilter {
             sum += p as i32 * self.weights[i] as i32;
         }
         sum
+    }
+
+    /// Returns a vector of all valid Haar filters for an image with given width and height.
+    pub fn enumerate(width: u32, height: u32) -> Vec<HaarFilter> {
+        let mut positive_features = Vec::new();
+
+        for y0 in 0..height {
+            for x0 in 0..width {
+                for h0 in 1..(height - y0) + 1 {
+                    for w0 in 1..(width - x0) + 1 {
+                        for w1 in 1..(width - x0 - w0) + 1 {
+                            positive_features.push(
+                                HaarFilter::two_region_horizontal(
+                                    y0, x0, w0, w1, h0, Sign::Positive));
+
+                            for w2 in 1..(width - x0 - w0 - w1) + 1 {
+                                positive_features.push(
+                                    HaarFilter::three_region_horizontal(
+                                        y0, x0, w0, w1, w2, h0, Sign::Positive));
+                            }
+
+                            for h1 in 1..(height - y0 - h0) + 1 {
+                                positive_features.push(
+                                    HaarFilter::four_region(
+                                        y0, x0, w0, w1, h0, h1, Sign::Positive));
+                            }
+                        }
+
+                        for h1 in 1..(height - y0 - h0) + 1 {
+                            positive_features.push(
+                                HaarFilter::two_region_vertical(
+                                    y0, x0, w0, h0, h1, Sign::Positive));
+
+                            for h2 in 1..(height - y0 - h0 - h1) + 1{
+                                positive_features.push(
+                                    HaarFilter::three_region_vertical(
+                                        y0, x0, w0, h0, h1, h2, Sign::Positive));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut features = Vec::new();
+
+        for feature in positive_features {
+            features.push(feature);
+            features.push(feature * -1i8);
+        }
+
+        features
     }
 
     /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
@@ -342,5 +393,15 @@ mod test {
         let filter = HaarFilter::four_region(1, 1, 2, 1, 1, 2, Sign::Positive);
 
         assert_eq!(filter.evaluate(&integral), -7i32);
+    }
+
+    #[test]
+    fn test_enumerate() {
+        assert_eq!(HaarFilter::enumerate(1, 1).len(), 0);
+        assert_eq!(HaarFilter::enumerate(1, 2).len(), 2);
+        assert_eq!(HaarFilter::enumerate(2, 1).len(), 2);
+        assert_eq!(HaarFilter::enumerate(3, 1).len(), 10);
+        assert_eq!(HaarFilter::enumerate(1, 3).len(), 10);
+        assert_eq!(HaarFilter::enumerate(2, 2).len(), 14);
     }
 }
