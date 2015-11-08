@@ -22,7 +22,7 @@ pub enum Interpolation {
 /// Applies an affine transformation to an image, or None if the provided
 /// transformation is not invertible.
 /// The output image has the same dimensions as the input. Output pixels
-/// whose pre-image lies outside the input image are set to default.
+/// whose pre-image lies outside the input image are set to black.
 pub fn affine<I>(image: &I,
                  affine: Affine2,
                  interpolation: Interpolation)
@@ -37,7 +37,7 @@ pub fn affine<I>(image: &I,
 /// Applies an affine transformation to an image, or None if the provided
 /// transformation is not invertible.
 /// The output image has the same dimensions as the input. Output pixels
-/// whose pre-image lies outside the input image are black.
+/// whose pre-image lies outside the input image are set to default.
 pub fn affine_with_default<I>(image: &I,
                               affine: Affine2,
                               default: I::Pixel,

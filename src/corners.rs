@@ -1,4 +1,4 @@
-//! Functions for corner point detection, also known as interest points.
+//! Functions for detecting corners, also known as interest points.
 
 use image::{
     GenericImage,
