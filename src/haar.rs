@@ -289,6 +289,7 @@ mod test {
 
     use super::{
         combine_alternating,
+        enumerate_haar_filters,
         EvalPoints,
         HaarFilter,
         Sign
