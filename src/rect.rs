@@ -11,6 +11,11 @@ pub struct Rect {
     height: u32,
 }
 
+/// A geometrical representation of a set of 2D points with coordinate type T.
+pub trait Region<T> {
+    fn contains(&self, x: T, y: T) -> bool;
+}
+
 impl Rect {
     /// Reduces possibility of confusing coordinates and dimensions
     /// when specifying rects.
@@ -68,6 +73,20 @@ impl Rect {
     }
 }
 
+impl Region<i32> for Rect {
+    fn contains(&self, x: i32, y: i32) -> bool {
+        return self.left <= x && x <= self.right() &&
+               self.top <= y && y <= self.bottom();
+    }
+}
+
+impl Region<f32> for Rect {
+    fn contains(&self, x: f32, y: f32) -> bool {
+        return self.left as f32 <= x && x <= self.right() as f32 &&
+               self.top as f32 <= y && y <= self.bottom() as f32;
+    }
+}
+
 /// Position of the top left of a rectangle.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct RectPosition {
@@ -92,7 +111,9 @@ impl RectPosition {
 
 #[cfg(test)]
 mod test {
-    use super::Rect;
+    use super::{
+        Rect, Region
+    };
 
     #[test]
     #[should_panic]
@@ -113,5 +134,21 @@ mod test {
         let s = Rect::at(1, 4).of_size(10, 12);
         let i = Rect::at(1, 4).of_size(4, 1);
         assert_eq!(r.intersect(s), Some(i));
+    }
+
+    #[test]
+    fn test_contains_i32() {
+        let r = Rect::at(5, 5).of_size(6, 6);
+        assert!(r.contains(5, 5));
+        assert!(r.contains(10, 10));
+        assert!(!r.contains(10, 11));
+        assert!(!r.contains(11, 10));
+    }
+
+    #[test]
+    fn test_contains_f32() {
+        let r = Rect::at(5, 5).of_size(6, 6);
+        assert!(r.contains(5f32, 5f32));
+        assert!(!r.contains(10.1f32, 10f32));
     }
 }
