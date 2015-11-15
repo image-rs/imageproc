@@ -1,9 +1,7 @@
 //! Functions for creating and evaluating [Haar-like features](https://en.wikipedia.org/wiki/Haar-like_features).
 
-use image::{
-    GenericImage,
-    Luma
-};
+use definitions::{HasBlack,HasWhite,VecBuffer};
+use image::{GenericImage,ImageBuffer,Luma};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ops::Mul;
@@ -284,17 +282,57 @@ fn multiplier(sign: Sign) -> i8 {
     if sign == Sign::Positive {1} else {-1}
 }
 
+/// Draws the given Haar filter on an image, drawing pixels
+/// with a positive sign white and those with a negative sign black.
+pub fn draw_haar_filter<I>(image: &I, filter: HaarFilter) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: HasBlack + HasWhite + 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_haar_filter_mut(&mut out, filter);
+    out
+}
+
+/// Draws the given Haar filter on an image in place, drawing pixels
+/// with a positive sign white and those with a negative sign black.
+pub fn draw_haar_filter_mut<I>(image: &mut I, filter: HaarFilter)
+    where I: GenericImage,
+          I::Pixel: HasBlack + HasWhite
+{
+    let (width, height) = image.dimensions();
+    for y in 0..height {
+        for x in 0..width {
+            let mut weight = 0;
+            for i in 0..filter.count {
+                if y <= filter.points[2 * i + 1] && x <= filter.points[2 * i] {
+                    weight += filter.weights[i];
+                }
+            }
+            assert!(weight == 0 || weight == 1 || weight == -1);
+            if weight > 0 {
+                image.put_pixel(x, y, I::Pixel::white());
+            }
+            if weight < 0 {
+                image.put_pixel(x, y, I::Pixel::black());
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
     use super::{
         combine_alternating,
+        draw_haar_filter,
         enumerate_haar_filters,
         EvalPoints,
         HaarFilter,
         Sign
     };
     use image::{
+        GrayImage,
         ImageBuffer
     };
     use integralimage::{
@@ -339,7 +377,7 @@ mod test {
             9u8, /**/8u8, 7u8,/**/ 6u8, /**/5u8,
             4u8, /**/3u8, 2u8,/**/ 1u8, /**/0u8,
                  /***+++++++++*****-----***/
-            6u8, 5u8, 4u8, 2u8, 1u8]).unwrap();
+            6u8,     5u8, 4u8,     2u8,     1u8]).unwrap();
 
         let integral = integral_image(&image);
         let filter = HaarFilter::two_region_horizontal(1, 1, 2, 1, 3, Sign::Positive);
@@ -404,5 +442,69 @@ mod test {
         assert_eq!(enumerate_haar_filters(3, 1).len(), 10);
         assert_eq!(enumerate_haar_filters(1, 3).len(), 10);
         assert_eq!(enumerate_haar_filters(2, 2).len(), 14);
+    }
+
+    #[test]
+    fn test_draw_haar_filter_two_region_horizontal() {
+        // Two region horizontally aligned filter:
+        // A   B   C
+        //   +   -
+        // D   E   F
+        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1u8,     2u8, 3u8,     4u8,     5u8,
+                 /***+++++++++*****-----***/
+            6u8, /**/7u8, 8u8,/**/ 9u8, /**/0u8,
+            9u8, /**/8u8, 7u8,/**/ 6u8, /**/5u8,
+            4u8, /**/3u8, 2u8,/**/ 1u8, /**/0u8,
+                 /***+++++++++*****-----***/
+            6u8,     5u8, 4u8,     2u8,     1u8]).unwrap();
+
+        let filter = HaarFilter::two_region_horizontal(1, 1, 2, 1, 3, Sign::Positive);
+        let actual = draw_haar_filter(&image, filter);
+
+        let expected = ImageBuffer::from_raw(5, 5, vec![
+            1u8,     2u8,  3u8,        4u8,     5u8,
+                 /***+++++++++++++*****-----***/
+            6u8, /**/255u8, 255u8,/**/ 0u8, /**/0u8,
+            9u8, /**/255u8, 255u8,/**/ 0u8, /**/5u8,
+            4u8, /**/255u8, 255u8,/**/ 0u8, /**/0u8,
+                 /***+++++++++++++*****-----***/
+            6u8,     5u8,   4u8,       2u8,     1u8]).unwrap();
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_draw_haar_filter_four_region() {
+        // Four region filter:
+        // A   B   C
+        //   +   -
+        // D   E   F
+        //   -   +
+        // G   H   I
+        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+        1u8,    2u8, 3u8,     4u8,     5u8,
+            /************************/
+        6u8,/**/7u8, 8u8,/**/ 9u8,/**/ 0u8,
+            /************************/
+        9u8,/**/8u8, 7u8,/**/ 6u8,/**/ 5u8,
+        4u8,/**/3u8, 2u8,/**/ 1u8,/**/ 0u8,
+            /************************/
+        6u8,    5u8, 4u8,     2u8,     1u8]).unwrap();
+
+        let filter = HaarFilter::four_region(1, 1, 2, 1, 1, 2, Sign::Positive);
+        let actual = draw_haar_filter(&image, filter);
+
+        let expected = ImageBuffer::from_raw(5, 5, vec![
+        1u8,    2u8,   3u8,       4u8,       5u8,
+            /******************************/
+        6u8,/**/255u8, 255u8,/**/ 0u8,  /**/ 0u8,
+            /******************************/
+        9u8,/**/0u8,   0u8,  /**/ 255u8,/**/ 5u8,
+        4u8,/**/0u8,   0u8,  /**/ 255u8,/**/ 0u8,
+            /******************************/
+        6u8,    5u8,   4u8,       2u8,     1u8]).unwrap();
+
+        assert_pixels_eq!(actual, expected);
     }
 }
