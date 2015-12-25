@@ -145,3 +145,16 @@ fn test_sobel_gradients() {
     let tp = Path::new("./tests/data/truth/elephant_gradients.png");
     compare_to_truth_grayscale(&ip, &tp, &sobel_gradients);
 }
+
+fn match_to_zebra_histogram(image: &image::GrayImage) -> image::GrayImage {
+    let zebra_path = Path::new("./tests/data/zebra.png");
+    let zebra = load_image_or_panic(&zebra_path).to_luma();
+    imageproc::contrast::match_histogram(image, &zebra)
+}
+
+#[test]
+fn test_match_histograms() {
+    let ip = Path::new("./tests/data/elephant.png");
+    let tp = Path::new("./tests/data/truth/elephant_matched.png");
+    compare_to_truth_grayscale(&ip, &tp, &match_to_zebra_histogram);
+}

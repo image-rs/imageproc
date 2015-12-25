@@ -90,7 +90,6 @@ pub fn histogram<I>(image: &I) -> [i32; 256]
     hist
 }
 
-
 /// Returns the cumulative histogram of grayscale values in an 8bpp
 /// grayscale image.
 pub fn cumulative_histogram<I>(image: &I) -> [i32; 256]
@@ -134,16 +133,90 @@ pub fn equalize_histogram<I>(image: &I) -> GrayImage
     out
 }
 
+/// Adjusts contrast of an 8bpp grayscale image in place so that its
+/// histogram is as close as possible to that of the target image.
+pub fn match_histogram_mut<I, J>(image: &mut I, target: &J)
+    where I : GenericImage<Pixel = Luma<u8>>,
+          J : GenericImage<Pixel = Luma<u8>>
+{
+    let image_histc = cumulative_histogram(image);
+    let target_histc = cumulative_histogram(target);
+    let lut = histogram_lut(&image_histc, &target_histc);
+
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            let pix = image.get_pixel(x, y)[0] as usize;
+            image.put_pixel(x, y, Luma([lut[pix] as u8]));
+        }
+    }
+}
+
+/// Adjusts contrast of an 8bpp grayscale image so that its
+/// histogram is as close as possible to that of the target image.
+pub fn match_histogram<I, J>(image: &I, target: &J) -> GrayImage
+    where I : GenericImage<Pixel = Luma<u8>>,
+          J : GenericImage<Pixel = Luma<u8>>
+{
+    let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    match_histogram_mut(&mut out, target);
+    out
+}
+
+/// l = histogram_lut(s, t) is chosen so that target_histc[l[i]] / sum(target_histc)
+/// is as close as possible to source_histc[i] / sum(source_histc).
+fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize; 256] {
+    let source_total = source_histc[255] as f32;
+    let target_total = target_histc[255] as f32;
+
+    let mut lut = [0usize; 256];
+    let mut y = 0usize;
+    let mut prev_target_fraction = 0f32;
+
+    for s in 0..256 {
+        let source_fraction = source_histc[s] as f32 / source_total;
+        let mut target_fraction = target_histc[y] as f32 / target_total;
+
+        while source_fraction > target_fraction && y < 255 {
+            y = y + 1;
+            prev_target_fraction = target_fraction;
+            target_fraction = target_histc[y] as f32 / target_total;
+        }
+
+        if y == 0 {
+            lut[s] = y;
+        }
+        else {
+            let prev_dist = f32::abs(prev_target_fraction - source_fraction);
+            let dist = f32::abs(target_fraction - source_fraction);
+            if prev_dist < dist {
+                lut[s] = y - 1;
+            }
+            else {
+                lut[s] = y;
+            }
+        }
+    }
+
+    lut
+}
+
 #[cfg(test)]
 mod test {
 
-    use super::{cumulative_histogram, equalize_histogram, histogram, otsu_level, threshold};
+    use super::{
+        cumulative_histogram,
+        equalize_histogram,
+        histogram,
+        histogram_lut,
+        otsu_level,
+        threshold};
     use utils::gray_bench_image;
     use image::{GrayImage, ImageBuffer};
     use test;
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)] 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_cumulative_histogram() {
         let image: GrayImage = ImageBuffer::from_raw(5, 1, vec![
             1u8, 2u8, 3u8, 2u8, 1u8]).unwrap();
@@ -159,7 +232,7 @@ mod test {
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_histogram(){
+    fn test_histogram() {
         let image: GrayImage = ImageBuffer::from_raw(5, 1, vec![
             1u8, 2u8, 3u8, 2u8, 1u8]).unwrap();
 
@@ -170,9 +243,62 @@ mod test {
         assert_eq!(hist[2], 2);
         assert_eq!(hist[3], 1);
     }
+
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_otsu_level(){
+    fn test_histogram_lut_source_and_target_equal() {
+        let mut histc = [0i32; 256];
+        for i in 1..histc.len() {
+            histc[i] = 2 * i as i32;
+        }
+
+        let lut = histogram_lut(&histc, &histc);
+        let expected = (0..256).collect::<Vec<_>>();
+
+        assert_eq!(&lut[0..256], &expected[0..256]);
+    }
+
+    #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_histogram_lut_gradient_to_step_contrast() {
+        let mut grad_histc = [0i32; 256];
+        for i in 0..grad_histc.len() {
+            grad_histc[i] = i as i32;
+        }
+
+        let mut step_histc = [0i32; 256];
+        for i in 30..130 {
+            step_histc[i] = 100;
+        }
+        for i in 130..256 {
+            step_histc[i] = 200;
+        }
+
+        let lut = histogram_lut(&grad_histc, &step_histc);
+        let mut expected = [0usize; 256];
+
+        // No black pixels in either image
+        expected[0] = 0;
+
+        for i in 1..64 {
+            expected[i] = 29;
+        }
+        for i in 64..128 {
+            expected[i] = 30;
+        }
+        for i in 128..192 {
+            expected[i] = 129;
+        }
+        for i in 192..256 {
+            expected[i] = 130;
+        }
+
+        assert_eq!(&lut[0..256], &expected[0..256]);
+    }
+
+    #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_otsu_level() {
         let image: GrayImage = ImageBuffer::from_raw(26, 1,
             vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
                 80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
@@ -181,9 +307,10 @@ mod test {
         let level = otsu_level(&image);
         assert_eq!(level, 125);
     }
+
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_threshold(){
+    fn test_threshold() {
         let original: GrayImage = ImageBuffer::from_raw(26, 1,
             vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
                 80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
