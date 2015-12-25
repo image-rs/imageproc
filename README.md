@@ -30,4 +30,3 @@ All pull requests are welcome. Some specific areas that would be great to get so
 * APIs - are the current APIs hard to use or inconsistent? Some open questions: Should we return Result types more often? How should functions indicate acceptable input image dimensions? Should we use enum arguments or have lots of similarly named functions? What's the best way to get concise code while still allowing control over allocations?
 * Documentation - particularly more example code showing what's currently possible. Pretty pictures in this README.
 * Feature requests - are there any functions you'd like to see added? Is the library currently unsuitable for your use case for some reason?
-* User feedback - have you tried using the library for something? Were you successful? If not then what were the problems you faced?
