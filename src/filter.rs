@@ -39,7 +39,7 @@ pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
           F: Fn(P::Subpixel) -> S {
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::<ChannelMap<P, S>>::new(width, height);
+    let mut out = ImageBuffer::<ChannelMap<P, S>, Vec<S>>::new(width, height);
 
     for y in 0..height {
         for x in 0..width {
@@ -142,7 +142,7 @@ pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P,
           K: Num + Copy {
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::<ChannelMap<P, S>>::new(width, height);
+    let mut out = ImageBuffer::<ChannelMap<P, S>, Vec<S>>::new(width, height);
     let num_channels = I::Pixel::channel_count() as usize;
 
     // TODO: Should we handle images with height or width < 2? Feels clunky to return Results
