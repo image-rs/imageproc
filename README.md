@@ -24,6 +24,7 @@ Full blown computer vision applications (e.g. face recognition or image registra
 
 All pull requests are welcome. Some specific areas that would be great to get some help with are:
 
+* New features! If you're planning on adding some new functions or modules, please create an issue with a name along the lines of "Add <feature name>" and assign it to yourself (or comment on the issue that you're planning on doing it). This way we'll not have multiple people working on the same functionality.
 * Performance - profiling current code, documenting or fixing performance problems, adding benchmarks, comparisons to other libraries.
 * Testing - more unit tests and regression tests. It would be nice to get some property-based testing, and make it easy to add more.
 * APIs - are the current APIs hard to use or inconsistent? Some open questions: Should we return Result types more often? How should functions indicate acceptable input image dimensions? Should we use enum arguments or have lots of similarly named functions? What's the best way to get concise code while still allowing control over allocations?
