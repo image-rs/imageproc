@@ -5,6 +5,7 @@
 #![feature(core)]
 #![feature(test)]
 #![feature(unboxed_closures)]
+#![feature(fn_traits)]
 
 extern crate image;
 extern crate test;

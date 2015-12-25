@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/PistonDevelopers/imageproc"
 
 [dependencies]
-conv = "0.2.1"
+conv = "0.3.1"
 image = "0.3.14"
 itertools = "0.4.2"
 nalgebra = "0.3.0"
