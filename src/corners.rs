@@ -5,8 +5,6 @@ use image::{
     Luma
 };
 
-use std::cmp;
-
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
 /// corner detectors.
@@ -311,63 +309,41 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly greater than the threshold.
 fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    for i in 0..15 {
-        let mut is_corner = true;
-        let end   = i + length;
-        let upper = cmp::min(end, 16);
-        let wrap  = if end > 16 { end - 16 } else { 0 };
-
-        for j in i..upper {
-            if circle[j] <= threshold {
-                is_corner = false;
-                break;
+    let mut nb_ok = 0;
+    let mut nb_ok_start = None;
+    
+    for c in circle.iter() {
+        if *c > threshold {
+            nb_ok += 1;
+            if nb_ok == length { return true; }
+        } else {
+            if nb_ok_start.is_none() {
+                nb_ok_start = Some(nb_ok);
             }
-        }
-        if is_corner {
-            for j in 0..wrap {
-                if circle[j] <= threshold {
-                    is_corner = false;
-                    break;
-                }
-            }
-        }
-        if is_corner {
-            return true;
+            nb_ok = 0;
         }
     }
-
-    false
+    nb_ok + nb_ok_start.unwrap() >= length
 }
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly less than the threshold.
 fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    for i in 0..15 {
-        let mut is_corner = true;
-        let end   = i + length;
-        let upper = cmp::min(end, 16);
-        let wrap  = if end > 16 { end - 16 } else { 0 };
-
-        for j in i..upper {
-            if circle[j] >= threshold {
-                is_corner = false;
-                break;
+    let mut nb_ok = 0;
+    let mut nb_ok_start = None;
+    
+    for c in circle.iter() {
+        if *c < threshold {
+            nb_ok += 1;
+            if nb_ok == length { return true; }
+        } else {
+            if nb_ok_start.is_none() {
+                nb_ok_start = Some(nb_ok);
             }
-        }
-        if is_corner {
-            for j in 0..wrap {
-                if circle[j] >= threshold {
-                    is_corner = false;
-                    break;
-                }
-            }
-        }
-        if is_corner {
-            return true;
+            nb_ok = 0;
         }
     }
-
-    false
+    nb_ok + nb_ok_start.unwrap() >= length
 }
 
 #[cfg(test)]
@@ -385,6 +361,7 @@ mod test {
         GrayImage,
         ImageBuffer
     };
+    use test::Bencher;
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
@@ -500,6 +477,20 @@ mod test {
             00, 00, 00, 00, 00, 00, 00]).unwrap();
 
         assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
+    }
+
+    #[bench]
+    fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            00, 00, 10, 10, 10, 00, 00,
+            00, 10, 00, 00, 00, 10, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            10, 00, 00, 00, 00, 00, 00,
+            00, 10, 00, 00, 00, 00, 00,
+            00, 00, 00, 00, 00, 00, 00]).unwrap();
+	
+	b.iter(|| is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[test]
