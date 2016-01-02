@@ -100,6 +100,17 @@ impl HasWhite for Rgb<u8> {
     }
 }
 
+/// Something with a 2d position.
+pub trait Position {
+    fn x(&self) -> u32;
+    fn y(&self) -> u32;
+}
+
+/// Something with a score.
+pub trait Score {
+    fn score(&self) -> f32;
+}
+
 /// A type to which we can clamp a value of type T.
 /// Implementations are not required to handle NaNs gracefully.
 pub trait Clamp<T> {

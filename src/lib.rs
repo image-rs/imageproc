@@ -30,4 +30,5 @@ pub mod multiarray;
 pub mod noise;
 pub mod rect;
 pub mod regionlabelling;
+pub mod suppress;
 pub mod unionfind;
