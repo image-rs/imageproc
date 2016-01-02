@@ -1,6 +1,6 @@
 //! Helpers for drawing basic shapes on images.
 
-use image::{Pixel, GenericImage, ImageBuffer};
+use image::{GenericImage, ImageBuffer};
 use definitions::VecBuffer;
 use rect::Rect;
 use std::mem::swap;

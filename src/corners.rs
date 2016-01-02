@@ -311,7 +311,7 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
     let mut nb_ok = 0;
     let mut nb_ok_start = None;
-    
+
     for c in circle.iter() {
         if *c > threshold {
             nb_ok += 1;
@@ -323,6 +323,7 @@ fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
             nb_ok = 0;
         }
     }
+
     nb_ok + nb_ok_start.unwrap() >= length
 }
 
@@ -331,7 +332,7 @@ fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
 fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
     let mut nb_ok = 0;
     let mut nb_ok_start = None;
-    
+
     for c in circle.iter() {
         if *c < threshold {
             nb_ok += 1;
@@ -343,6 +344,7 @@ fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
             nb_ok = 0;
         }
     }
+
     nb_ok + nb_ok_start.unwrap() >= length
 }
 
@@ -489,8 +491,8 @@ mod test {
             10, 00, 00, 00, 00, 00, 00,
             00, 10, 00, 00, 00, 00, 00,
             00, 00, 00, 00, 00, 00, 00]).unwrap();
-	
-	b.iter(|| is_corner_fast9(&image, 8, 3, 3));
+
+        b.iter(|| is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[test]
@@ -549,5 +551,26 @@ mod test {
 
         let max = suppress_non_maximum(&corners, 3);
         assert_eq!(max, expected);
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum(b: &mut Bencher) {
+        let mut corners = vec![];
+        // Large contiguous block
+        for x in 0..50 {
+            for y in 0..50 {
+                let score = (x * y) % 15;
+                corners.push(Corner::new(x, y, score as f32));
+            }
+        }
+
+        // Isolated values
+        for x in 0..50 {
+            for y in 0..50 {
+                corners.push(Corner::new(10 * x + 110, 10 * y + 110, 50f32));
+            }
+        }
+
+        b.iter(|| suppress_non_maximum(&corners, 15));
     }
 }
