@@ -269,8 +269,11 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly greater than the threshold.
-fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    let mut nb_ok = 0;
+fn has_bright_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
+
+    if length > 16 { return false; }
+
+    let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
 
     for c in circle.iter() {
@@ -290,8 +293,11 @@ fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly less than the threshold.
-fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    let mut nb_ok = 0;
+fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
+    
+    if length > 16 { return false; }
+
+    let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
 
     for c in circle.iter() {
