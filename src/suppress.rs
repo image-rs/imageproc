@@ -260,7 +260,7 @@ mod test {
 
     #[bench]
     fn bench_suppress_non_maximum_noise(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 40);
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 7));
     }
