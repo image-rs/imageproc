@@ -95,7 +95,7 @@ pub struct RectPosition {
 }
 
 impl RectPosition {
-    /// Construct a rectangle form a position and size. Width and height
+    /// Construct a rectangle from a position and size. Width and height
     /// are required to be strictly positive.
     pub fn of_size(self, width: u32, height: u32) -> Rect {
         assert!(width > 0, "width must be strictly positive");
