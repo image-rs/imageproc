@@ -275,6 +275,7 @@ fn has_bright_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
 
     let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
+    let mut nb_ko = 16 - length;
 
     for c in circle.iter() {
         if *c > threshold {
@@ -285,6 +286,8 @@ fn has_bright_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
                 nb_ok_start = Some(nb_ok);
             }
             nb_ok = 0;
+	    nb_ko -= 1;
+	    if nb_ko == 0 { return false; }
         }
     }
 
@@ -299,6 +302,7 @@ fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
 
     let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
+    let mut nb_ko = 16 - length;
 
     for c in circle.iter() {
         if *c < threshold {
@@ -309,6 +313,8 @@ fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
                 nb_ok_start = Some(nb_ok);
             }
             nb_ok = 0;
+	    nb_ko -= 1;
+	    if nb_ko == 0 { return false; }
         }
     }
 
@@ -385,6 +391,20 @@ mod test {
             10, 10, 00, 00, 00, 10, 10]).unwrap();
 
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), false);
+    }
+
+    #[bench]
+    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 00,
+            10, 00, 10, 10, 10, 10, 10,
+            10, 10, 00, 00, 00, 10, 10]).unwrap();
+
+	b.iter(||is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
