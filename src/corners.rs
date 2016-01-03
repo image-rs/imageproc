@@ -269,33 +269,28 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly greater than the threshold.
-fn has_bright_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    let mut nb_ok = 0;
-    let mut nb_ok_start = None;
-
-    for c in circle.iter() {
-        if *c > threshold {
-            nb_ok += 1;
-            if nb_ok == length { return true; }
-        } else {
-            if nb_ok_start.is_none() {
-                nb_ok_start = Some(nb_ok);
-            }
-            nb_ok = 0;
-        }
-    }
-
-    nb_ok + nb_ok_start.unwrap() >= length
+fn has_bright_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
+    search_span(circle, length, |c| *c > threshold)
 }
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly less than the threshold.
-fn has_dark_span(circle: &[i16; 16], length: usize, threshold: i16) -> bool {
-    let mut nb_ok = 0;
+fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
+    search_span(circle, length, |c| *c < threshold)   
+}
+
+/// True if the circle has a contiguous section of at least the given length, all
+/// of whose pixels match f condition.
+fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool 
+    where F: Fn(&i16) -> bool {
+    
+    if length > 16 { return false; }
+
+    let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
 
     for c in circle.iter() {
-        if *c < threshold {
+        if f(c) {
             nb_ok += 1;
             if nb_ok == length { return true; }
         } else {
@@ -339,6 +334,7 @@ mod test {
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
     }
 
+
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels_large_threshold() {
         let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
@@ -379,6 +375,20 @@ mod test {
             10, 10, 00, 00, 00, 10, 10]).unwrap();
 
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), false);
+    }
+
+    #[bench]
+    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
+        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
+            10, 10, 00, 00, 00, 10, 10,
+            10, 00, 10, 10, 10, 00, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            00, 10, 10, 10, 10, 10, 10,
+            10, 10, 10, 10, 10, 10, 00,
+            10, 00, 10, 10, 10, 10, 10,
+            10, 10, 00, 00, 00, 10, 10]).unwrap();
+
+	b.iter(||is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
