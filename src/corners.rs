@@ -276,14 +276,14 @@ fn has_bright_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels have intensities strictly less than the threshold.
 fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
-    search_span(circle, length, |c| *c < threshold)   
+    search_span(circle, length, |c| *c < threshold)
 }
 
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels match f condition.
-fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool 
+fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool
     where F: Fn(&i16) -> bool {
-    
+
     if length > 16 { return false; }
 
     let mut nb_ok = 0u8;
@@ -308,7 +308,6 @@ fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool
 mod test {
 
     use super::{
-        Corner,
         fast_corner_score,
         is_corner_fast9,
         is_corner_fast12,
