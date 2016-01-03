@@ -179,6 +179,7 @@ fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
     (dims.0 as u32, dims.1 as u32)
 }
 
+/// Wrapper for RgbImage to allow us to write an Arbitrary instance.
 pub struct RgbTestImage(RgbImage);
 
 impl Clone for RgbTestImage {
