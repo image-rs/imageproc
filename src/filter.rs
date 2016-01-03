@@ -14,12 +14,15 @@ use integralimage::{
     row_running_sum
 };
 
+use map::{
+    WithChannel,
+    ChannelMap
+};
+
 use definitions::{
     Clamp,
     HasBlack,
-    VecBuffer,
-    WithChannel,
-    ChannelMap
+    VecBuffer
 };
 
 use num::{
@@ -30,29 +33,6 @@ use num::{
 use conv::ValueInto;
 use math::cast;
 use std::cmp;
-
-/// Applies f to each subpixel of the input image.
-pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
-    where I: GenericImage<Pixel=P>,
-          P: WithChannel<S> + 'static,
-          S: Primitive + 'static,
-          F: Fn(P::Subpixel) -> S {
-
-    let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::<ChannelMap<P, S>, Vec<S>>::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            let mut out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for c in 0..P::channel_count() {
-                out_channels[c as usize]
-                    = f(image.get_pixel(x, y).channels()[c as usize]);
-            }
-        }
-    }
-
-    out
-}
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
 /// and height (2 * y_radius + 1) whose entries are equal and
@@ -304,8 +284,7 @@ mod test {
         pad_buffer,
         separable_filter,
         separable_filter_equal,
-        vertical_filter,
-        map_subpixels
+        vertical_filter
     };
     use utils::{
         gray_bench_image
@@ -498,19 +477,5 @@ mod test {
                 = filter3x3::<_, _, _, i16>(&image, &kernel);
             test::black_box(filtered);
             });
-    }
-
-    #[test]
-    fn test_map_subpixels() {
-        let image: GrayImage = ImageBuffer::from_raw(2, 2, vec![
-            1, 2,
-            3, 4]).unwrap();
-
-        let expected = ImageBuffer::from_raw(2, 2, vec![
-            -2i16, -4i16,
-            -6i16, -8i16]).unwrap();
-
-        let mapped = map_subpixels(&image, |x| -2 * (x as i16));
-        assert_pixels_eq!(mapped, expected);
     }
 }

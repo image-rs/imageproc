@@ -2,10 +2,8 @@
 
 use image::{
     Rgb,
-    Rgba,
     Luma,
     Pixel,
-    Primitive,
     ImageBuffer
 };
 use num::{
@@ -27,32 +25,6 @@ use std::cmp::Ordering::{
 // TODO: not being enforced in type definitions. In this case
 // TODO: they are. Can we get rid of the warning?
 pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
-
-/// The type obtained by replacing the channel type of a given Pixel type.
-pub trait WithChannel<C: Primitive>: Pixel {
-    type Pixel: Pixel<Subpixel=C> + 'static;
-}
-
-/// Alias to make uses of WithChannel less syntactically noisy.
-pub type ChannelMap<Pix, Sub> = <Pix as WithChannel<Sub>>::Pixel;
-
-impl<T, U> WithChannel<U> for Rgb<T>
-    where T: Primitive + 'static,
-          U: Primitive + 'static {
-    type Pixel = Rgb<U>;
-}
-
-impl<T, U> WithChannel<U> for Rgba<T>
-    where T: Primitive + 'static,
-          U: Primitive + 'static {
-    type Pixel = Rgba<U>;
-}
-
-impl<T, U> WithChannel<U> for Luma<T>
-    where T: Primitive + 'static,
-          U: Primitive + 'static {
-    type Pixel = Luma<U>;
-}
 
 /// Pixels which have a named Black value.
 pub trait HasBlack {

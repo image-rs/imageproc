@@ -134,8 +134,7 @@ fn test_affine_bilinear_rgb() {
 fn sobel_gradients(image: &image::GrayImage) -> image::GrayImage {
     use imageproc::definitions::Clamp;
     use imageproc::gradients;
-    use imageproc::filter;
-    filter::map_subpixels(
+    imageproc::map::map_subpixels(
         &gradients::sobel_gradients(image),
         |x| u8::clamp(x))
 }
