@@ -11,6 +11,11 @@ use image::{
     RgbImage
 };
 
+use quickcheck::{
+    Arbitrary,
+    Gen
+};
+
 use std::fmt::Debug;
 use std::path::Path;
 
@@ -142,6 +147,62 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
         }
     }
     image
+}
+
+/// Wrapper for GrayImage to allow us to write an Arbitrary instance.
+pub struct GrayTestImage(GrayImage);
+
+impl Clone for GrayTestImage {
+    fn clone(&self) -> Self {
+        let mut out = GrayImage::new(self.0.width(), self.0.height());
+        out.copy_from(&self.0, 0, 0);
+        GrayTestImage(out)
+    }
+}
+
+impl Arbitrary for GrayTestImage {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let (width, height) = small_image_dimensions(g);
+        let mut image = GrayImage::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let val: u8 = g.gen();
+                image.put_pixel(x, y, Luma([val]));
+            }
+        }
+        GrayTestImage(image)
+    }
+}
+
+fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
+    let dims: (u8, u8) = Arbitrary::arbitrary(g);
+    (dims.0 as u32, dims.1 as u32)
+}
+
+pub struct RgbTestImage(RgbImage);
+
+impl Clone for RgbTestImage {
+    fn clone(&self) -> Self {
+        let mut out = RgbImage::new(self.0.width(), self.0.height());
+        out.copy_from(&self.0, 0, 0);
+        RgbTestImage(out)
+    }
+}
+
+impl Arbitrary for RgbTestImage {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let (width, height) = small_image_dimensions(g);
+        let mut image = RgbImage::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let red: u8 = g.gen();
+                let green: u8 = g.gen();
+                let blue: u8 = g.gen();
+                image.put_pixel(x, y, Rgb([red, green, blue]));
+            }
+        }
+        RgbTestImage(image)
+    }
 }
 
 #[cfg(test)]

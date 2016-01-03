@@ -10,6 +10,7 @@ extern crate itertools;
 #[macro_use]
 extern crate nalgebra;
 extern crate num;
+extern crate quickcheck;
 extern crate rand;
 
 #[macro_use]
