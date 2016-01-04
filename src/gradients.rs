@@ -29,19 +29,46 @@ static HORIZONTAL_SOBEL: [i32; 9] = [
 /// Convolves with the horizontal Sobel kernel to detect horizontal
 /// edges in an image.
 pub fn horizontal_sobel<I>(image: &I) -> VecBuffer<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
     filter3x3(image, &HORIZONTAL_SOBEL)
 }
 
 /// Convolves with the vertical Sobel kernel to detect vertical
 /// edges in an image.
 pub fn vertical_sobel<I>(image: &I) -> VecBuffer<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
     filter3x3(image, &VERTICAL_SOBEL)
 }
 
+/// Prewitt filter for vertical edges.
+static VERTICAL_PREWITT: [i32; 9] = [
+    -1, 0, 1,
+    -1, 0, 1,
+    -1, 0, 1];
+
+/// Prewitt filter for horizontal edges.
+static HORIZONTAL_PREWITT: [i32; 9] = [
+    -1, -1, -1,
+     0,  0,  0,
+     1,  1,  1];
+
+/// Convolves with the horizontal Prewitt kernel to detect horizontal
+/// edges in an image.
+pub fn horizontal_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
+    filter3x3(image, &HORIZONTAL_PREWITT)
+}
+
+/// Convolves with the vertical Prewitt kernel to detect vertical
+/// edges in an image.
+pub fn vertical_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
+    filter3x3(image, &VERTICAL_PREWITT)
+}
 /// Returns the magnitudes of gradients in an image.
 // TODO: Returns directions as well as magnitudes.
 // TODO: Support filtering with allocating a fresh image - filtering functions could
@@ -73,7 +100,9 @@ mod test {
 
     use super::{
         horizontal_sobel,
-        vertical_sobel
+        vertical_sobel,
+        horizontal_prewitt,
+        vertical_prewitt
     };
 
     use image::{
@@ -83,12 +112,13 @@ mod test {
     };
 
     #[test]
-    fn test_sobel_constant_image() {
-
+    fn test_gradients_constant_image() {
         let image = ImageBuffer::from_fn(5, 5, |_, _| Luma([15u8]));
         let expected = ImageBuffer::from_fn(5, 5, |_, _| Luma([0i16]));
         assert_pixels_eq!(horizontal_sobel(&image), expected);
         assert_pixels_eq!(vertical_sobel(&image), expected);
+        assert_pixels_eq!(horizontal_prewitt(&image), expected);
+        assert_pixels_eq!(vertical_prewitt(&image), expected);
     }
 
     #[test]
@@ -120,6 +150,38 @@ mod test {
             -4i16, -4i16, -4i16]).unwrap();
 
         let filtered = horizontal_sobel(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_vertical_prewitt_gradient_image() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            3, 2, 1,
+            6, 5, 4,
+            9, 8, 7]).unwrap();
+
+        let expected = ImageBuffer::from_raw(3, 3, vec![
+            -4i16, -8i16, -4i16,
+            -4i16, -8i16, -4i16,
+            -4i16, -8i16, -4i16]).unwrap();
+
+        let filtered = vertical_prewitt(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_horizontal_prewitt_gradient_image() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            3, 6, 9,
+            2, 5, 8,
+            1, 4, 7]).unwrap();
+
+        let expected = ImageBuffer::from_raw(3, 3, vec![
+            -4i16, -4i16, -4i16,
+            -8i16, -8i16, -8i16,
+            -4i16, -4i16, -4i16]).unwrap();
+
+        let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
     }
 }
