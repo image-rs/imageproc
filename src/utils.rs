@@ -1,13 +1,12 @@
 //! Utils for testing and debugging.
 
 use image::{
+    ImageBuffer,
     DynamicImage,
     GenericImage,
     GrayImage,
-    Luma,
     open,
     Pixel,
-    Rgb,
     RgbImage
 };
 
@@ -124,29 +123,31 @@ pub fn load_image_or_panic(path: &Path) -> DynamicImage {
 /// similar to natural images - it's just a convenience method
 /// to produce an image that's not constant.
 pub fn gray_bench_image(width: u32, height: u32) -> GrayImage {
-    let mut image = GrayImage::new(width, height);
-    for y in 0..image.height() {
-        for x in 0..image.width() {
+    let mut out = Vec::with_capacity((width * height) as usize);
+    for y in 0..height {
+        for x in 0..width {
             let intensity = (x % 7 + y % 6) as u8;
-            image.put_pixel(x, y, Luma([intensity]));
+            out.push(intensity);
         }
     }
-    image
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 /// RGB image to use in benchmarks. See comment on gray_bench_image.
 pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
     use std::cmp;
-    let mut image = RgbImage::new(width, height);
-    for y in 0..image.height() {
-        for x in 0..image.width() {
+    let mut out = Vec::with_capacity((width * height * 3) as usize);
+    for y in 0..height {
+        for x in 0..width {
             let r = (x % 7 + y % 6) as u8;
             let g = 255u8 - r;
             let b = cmp::min(r, g);
-            image.put_pixel(x, y, Rgb([r, g, b]));
+            out.push(r);
+            out.push(g);
+            out.push(b);
         }
     }
-    image
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 /// Wrapper for GrayImage to allow us to write an Arbitrary instance.
@@ -156,14 +157,14 @@ pub struct GrayTestImage(GrayImage);
 impl Arbitrary for GrayTestImage {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let (width, height) = small_image_dimensions(g);
-        let mut image = GrayImage::new(width, height);
-        for y in 0..height {
-            for x in 0..width {
+        let mut out = Vec::with_capacity((width * height * 3) as usize);
+        for _ in 0..height {
+            for _ in 0..width {
                 let val: u8 = g.gen();
-                image.put_pixel(x, y, Luma([val]));
+                out.push(val);
             }
         }
-        GrayTestImage(image)
+        GrayTestImage(ImageBuffer::from_raw(width, height, out).unwrap())
     }
 }
 
@@ -179,16 +180,18 @@ pub struct RgbTestImage(RgbImage);
 impl Arbitrary for RgbTestImage {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let (width, height) = small_image_dimensions(g);
-        let mut image = RgbImage::new(width, height);
-        for y in 0..height {
-            for x in 0..width {
+        let mut out = Vec::with_capacity((width * height * 3) as usize);
+        for _ in 0..height {
+            for _ in 0..width {
                 let red: u8 = g.gen();
                 let green: u8 = g.gen();
                 let blue: u8 = g.gen();
-                image.put_pixel(x, y, Rgb([red, green, blue]));
+                out.push(red);
+                out.push(green);
+                out.push(blue);
             }
         }
-        RgbTestImage(image)
+        RgbTestImage(ImageBuffer::from_raw(width, height, out).unwrap())
     }
 }
 

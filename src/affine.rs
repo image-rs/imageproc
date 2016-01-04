@@ -54,7 +54,8 @@ pub fn affine_with_default<I>(image: &I,
     }
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let no_channel = I::Pixel::channel_count() as u32;
+    let mut out = Vec::with_capacity((width * height * no_channel) as usize);
 
     for y in 0..height {
         for x in 0..width {
@@ -72,11 +73,13 @@ pub fn affine_with_default<I>(image: &I,
                 }
             };
 
-            out.put_pixel(x, y, pix);
+            for c in pix.channels() {
+                out.push(*c);
+            }
         }
     }
 
-    Some(out)
+    Some(ImageBuffer::from_raw(width, height, out).unwrap())
 }
 
 /// Rotate an image clockwise about provided center by theta radians.
@@ -141,7 +144,8 @@ fn rotate_nearest<I>(image: &I,
           I::Pixel: 'static
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let no_channel = I::Pixel::channel_count() as u32;
+    let mut out = Vec::with_capacity((width * height * no_channel) as usize);
 
     let cos_theta = theta.cos();
     let sin_theta = theta.sin();
@@ -153,17 +157,19 @@ fn rotate_nearest<I>(image: &I,
         let mut px = center_x + sin_theta * dy - cos_theta * center_x;
         let mut py = center_y + cos_theta * dy + sin_theta * center_x;
 
-        for x in 0..width {
+        for _ in 0..width {
 
             let pix = nearest(image, px, py, width, height, default);
-            out.put_pixel(x, y, pix);
+            for c in pix.channels() {
+                out.push(*c);
+            }
 
             px += cos_theta;
             py -= sin_theta;
         }
     }
 
-    out
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 fn rotate_bilinear<I>(image: &I,
@@ -176,7 +182,8 @@ fn rotate_bilinear<I>(image: &I,
           <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let no_channel = I::Pixel::channel_count() as u32;
+    let mut out = Vec::with_capacity((width * height * no_channel) as usize);
 
     let cos_theta = theta.cos();
     let sin_theta = theta.sin();
@@ -188,17 +195,19 @@ fn rotate_bilinear<I>(image: &I,
         let mut px = center_x + sin_theta * dy - cos_theta * center_x;
         let mut py = center_y + cos_theta * dy + sin_theta * center_x;
 
-        for x in 0..width {
+        for _ in 0..width {
 
             let pix = interpolate(image, px, py, width, height, default);
-            out.put_pixel(x, y, pix);
+            for c in pix.channels() {
+                out.push(*c);
+            }
 
             px += cos_theta;
             py -= sin_theta;
         }
     }
 
-    out
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 /// Translates the input image by t. Note that image coordinates increase from
@@ -213,21 +222,24 @@ pub fn translate<I>(image: &I, t: (i32, i32)) -> VecBuffer<I::Pixel>
     use std::cmp;
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let no_channel = I::Pixel::channel_count() as u32;
+    let mut out = Vec::with_capacity((width * height * no_channel) as usize);
 
-    let w = width as i32;
-    let h = height as i32;
+    let w = (width - 1) as i32;
+    let h = (height - 1) as i32;
 
-    for y in 0..out.height() {
-        for x in 0..out.width() {
-            let x_in = cmp::max(0, cmp::min(x as i32 - t.0, w - 1));
-            let y_in = cmp::max(0, cmp::min(y as i32 - t.1, h - 1));
+    for y in 0..height {
+        for x in 0..width {
+            let x_in = cmp::max(0, cmp::min(x as i32 - t.0, w));
+            let y_in = cmp::max(0, cmp::min(y as i32 - t.1, h));
             let p = image.get_pixel(x_in as u32, y_in as u32);
-            out.put_pixel(x, y, p);
+            for c in p.channels() {
+                out.push(*c);
+            }
         }
     }
 
-    out
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 fn blend<P>(top_left: P,
