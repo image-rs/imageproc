@@ -150,15 +150,8 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
 }
 
 /// Wrapper for GrayImage to allow us to write an Arbitrary instance.
+#[derive(Clone)]
 pub struct GrayTestImage(GrayImage);
-
-impl Clone for GrayTestImage {
-    fn clone(&self) -> Self {
-        let mut out = GrayImage::new(self.0.width(), self.0.height());
-        out.copy_from(&self.0, 0, 0);
-        GrayTestImage(out)
-    }
-}
 
 impl Arbitrary for GrayTestImage {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -180,15 +173,8 @@ fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
 }
 
 /// Wrapper for RgbImage to allow us to write an Arbitrary instance.
+#[derive(Clone)]
 pub struct RgbTestImage(RgbImage);
-
-impl Clone for RgbTestImage {
-    fn clone(&self) -> Self {
-        let mut out = RgbImage::new(self.0.width(), self.0.height());
-        out.copy_from(&self.0, 0, 0);
-        RgbTestImage(out)
-    }
-}
 
 impl Arbitrary for RgbTestImage {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
