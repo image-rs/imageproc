@@ -44,8 +44,7 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
     let out_width = in_width + 2 * x_padding;
     let out_height = in_height + 2 * y_padding;
 
-    let mut out: ImageBuffer<Luma<u32>, Vec<u32>>
-        = ImageBuffer::new(out_width, out_height);
+    let mut out = Vec::with_capacity((out_width * out_height) as usize);
 
     for y in 0..out_height {
         for x in 0..out_width {
@@ -72,9 +71,11 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
             }
 
             let p = image.get_pixel(x_in, y_in);
-            out.put_pixel(x, y, Luma([p[0] as u32]));
+            out.push(p[0] as u32);
         }
     }
+
+    let mut out = ImageBuffer::<Luma<u32>, Vec<u32>>::from_raw(out_width, out_height, out).unwrap();
 
     for x in 1..out_width {
         (*out.get_pixel_mut(x, 0))[0] += out.get_pixel(x - 1, 0)[0];

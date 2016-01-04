@@ -65,6 +65,19 @@ pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
     out
 }
 
+/// Applies f to each subpixel of the input image.
+pub fn map_subpixels_vec<P, F, S>(image: &VecBuffer<P>, f: F) -> VecBuffer<ChannelMap<P, S>>
+    where P: WithChannel<S> + 'static,
+          S: Primitive + 'static,
+          F: Fn(P::Subpixel) -> S
+{
+    let mut out = Vec::with_capacity(image.len());
+    out.extend(image.iter().map(|c| f(*c)));
+
+    let (width, height) = image.dimensions();
+    ImageBuffer::from_raw(width, height, out).unwrap()
+}
+
 /// Applies f to the color of each pixel in the input image.
 pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
     where I: GenericImage<Pixel=P>,
@@ -72,17 +85,7 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
           Q: Pixel + 'static,
           F: Fn(P) -> Q
 {
-    let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            let pix = image.get_pixel(x, y);
-            out.put_pixel(x, y, f(pix));
-        }
-    }
-
-    out
+    map_pixels(image, |_, _, p| f(p))
 }
 
 /// Applies f to each pixel in the input image.
@@ -93,16 +96,19 @@ pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
           F: Fn(u32, u32, P) -> Q
 {
     let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
+    let no_channel = Q::channel_count() as u32;
+    let mut out = Vec::with_capacity((width * height * no_channel) as usize);
 
     for y in 0..height {
         for x in 0..width {
-            let pix = image.get_pixel(x, y);
-            out.put_pixel(x, y, f(x, y, pix));
+            let pix = f(x, y, image.get_pixel(x, y));
+            for c in pix.channels().into_iter() {
+                out.push(*c);
+            }
         }
     }
 
-    out
+    ImageBuffer::from_raw(width, height, out).unwrap()
 }
 
 macro_rules! implement_channel_extraction {
@@ -139,6 +145,7 @@ mod test {
         map_colors,
         map_pixels,
         map_subpixels,
+        map_subpixels_vec,
         red_channel,
         green_channel,
         blue_channel,
@@ -152,6 +159,7 @@ mod test {
         Rgb,
         RgbImage
     };
+    use test::Bencher;
 
     #[test]
     fn test_map_subpixels() {
@@ -164,6 +172,20 @@ mod test {
             -6i16, -8i16]).unwrap();
 
         let mapped = map_subpixels(&image, |x| -2 * (x as i16));
+        assert_pixels_eq!(mapped, expected);
+    }
+    
+    #[test]
+    fn test_map_subpixels_vec() {
+        let image: GrayImage = ImageBuffer::from_raw(2, 2, vec![
+            1, 2,
+            3, 4]).unwrap();
+
+        let expected = ImageBuffer::from_raw(2, 2, vec![
+            -2i16, -4i16,
+            -6i16, -8i16]).unwrap();
+
+        let mapped = map_subpixels_vec(&image, |x| -2 * (x as i16));
         assert_pixels_eq!(mapped, expected);
     }
 
