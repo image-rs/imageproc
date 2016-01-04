@@ -161,9 +161,9 @@ mod test {
             9, 8, 7]).unwrap();
 
         let expected = ImageBuffer::from_raw(3, 3, vec![
-            -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16]).unwrap();
+            -3i16, -6i16, -3i16,
+            -3i16, -6i16, -3i16,
+            -3i16, -6i16, -3i16]).unwrap();
 
         let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
@@ -177,9 +177,9 @@ mod test {
             1, 4, 7]).unwrap();
 
         let expected = ImageBuffer::from_raw(3, 3, vec![
-            -4i16, -4i16, -4i16,
-            -8i16, -8i16, -8i16,
-            -4i16, -4i16, -4i16]).unwrap();
+            -3i16, -3i16, -3i16,
+            -6i16, -6i16, -6i16,
+            -3i16, -3i16, -3i16]).unwrap();
 
         let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
