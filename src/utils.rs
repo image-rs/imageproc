@@ -1,12 +1,18 @@
 //! Utils for testing and debugging.
 
+use definitions::{
+    VecBuffer
+};
+
 use image::{
     DynamicImage,
     GenericImage,
     GrayImage,
+    ImageBuffer,
     Luma,
     open,
     Pixel,
+    Primitive,
     Rgb,
     RgbImage
 };
@@ -16,7 +22,11 @@ use quickcheck::{
     Gen
 };
 
-use std::fmt::Debug;
+use rand::{
+    Rand
+};
+
+use std::fmt;
 use std::path::Path;
 
 /// Panics if any pixels differ between the two input images.
@@ -102,7 +112,7 @@ pub fn pixel_diffs<I, F>(left: &I, right: &I, is_diff: F)
 /// Gives a summary description of a list of pixel diffs for use in error messages.
 pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
     where I: Iterator<Item=(P, P)>,
-          P: Debug {
+          P: fmt::Debug {
 
     let mut err = "pixels do not match. ".to_string();
     err.push_str(&(diffs
@@ -149,46 +159,101 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
     image
 }
 
-/// Wrapper for GrayImage to allow us to write an Arbitrary instance.
+/// Wrapper for image buffers to allow us to write an Arbitrary instance.
 #[derive(Clone)]
-pub struct GrayTestImage(GrayImage);
+pub struct TestBuffer<T: Pixel>(pub VecBuffer<T>);
 
-impl Arbitrary for GrayTestImage {
+impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
+    where <T as Pixel>::Subpixel: Send
+{
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let (width, height) = small_image_dimensions(g);
-        let mut image = GrayImage::new(width, height);
+        let mut image = ImageBuffer::new(width, height);
         for y in 0..height {
             for x in 0..width {
-                let val: u8 = g.gen();
-                image.put_pixel(x, y, Luma([val]));
+                let pix: T = ArbitraryPixel::arbitrary(g);
+                image.put_pixel(x, y, pix);
             }
         }
-        GrayTestImage(image)
+        TestBuffer(image)
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item=TestBuffer<T>>> {
+        Box::new(shrink(&self.0).map(|x| TestBuffer(x)))
+    }
+}
+
+/// Workaround for not being able to define Arbitrary instances for pixel types
+/// defines in other modules.
+pub trait ArbitraryPixel {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self;
+}
+
+fn shrink<I>(image: &I) -> Box<Iterator<Item=VecBuffer<I::Pixel>>>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut subs = vec![];
+
+    let w = image.width();
+    let h = image.height();
+
+    if w > 0 {
+        let left = copy_sub(image, 0, 0, w - 1, h);
+        subs.push(left);
+        let right = copy_sub(image, 1, 0, w - 1, h);
+        subs.push(right);
+    }
+    if h > 0 {
+        let top = copy_sub(image, 0, 0, w, h - 1);
+        subs.push(top);
+        let bottom = copy_sub(image, 0, 1, w, h - 1);
+        subs.push(bottom);
+    }
+
+    Box::new(subs.into_iter())
+}
+
+fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(width, height);
+    for dy in 0..height {
+        let oy = y + dy;
+        for dx in 0..width {
+            let ox = x + dx;
+            out.put_pixel(dx, dy, image.get_pixel(ox, oy));
+        }
+    }
+    out
+}
+
+impl<T: fmt::Debug + Pixel + 'static> fmt::Debug for TestBuffer<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "width: {}, height: {}, data: {:?}",
+            self.0.width(), self.0.height(), self.0.enumerate_pixels().collect::<Vec<_>>())
     }
 }
 
 fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
     let dims: (u8, u8) = Arbitrary::arbitrary(g);
-    (dims.0 as u32, dims.1 as u32)
+    ((dims.0 % 10) as u32, (dims.1 % 10) as u32)
 }
 
-/// Wrapper for RgbImage to allow us to write an Arbitrary instance.
-#[derive(Clone)]
-pub struct RgbTestImage(RgbImage);
-
-impl Arbitrary for RgbTestImage {
+impl<T: Rand + Send + Primitive> ArbitraryPixel for Rgb<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let (width, height) = small_image_dimensions(g);
-        let mut image = RgbImage::new(width, height);
-        for y in 0..height {
-            for x in 0..width {
-                let red: u8 = g.gen();
-                let green: u8 = g.gen();
-                let blue: u8 = g.gen();
-                image.put_pixel(x, y, Rgb([red, green, blue]));
-            }
-        }
-        RgbTestImage(image)
+        let red: T = g.gen();
+        let green: T = g.gen();
+        let blue: T = g.gen();
+        Rgb([red, green, blue])
+    }
+}
+
+impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let val: T = g.gen();
+        Luma([val])
     }
 }
 
