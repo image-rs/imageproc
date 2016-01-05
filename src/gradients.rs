@@ -69,16 +69,30 @@ pub fn vertical_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
 {
     filter3x3(image, &VERTICAL_PREWITT)
 }
-/// Returns the magnitudes of gradients in an image.
+/// Returns the magnitudes of gradients in an image using Sobel filters.
+pub fn sobel_gradients<I>(image: &I) -> VecBuffer<Luma<u16>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
+    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL)
+}
+
+/// Returns the magnitudes of gradients in an image using Prewitt filters.
+pub fn prewitt_gradients<I>(image: &I) -> VecBuffer<Luma<u16>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
+    gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT)
+}
+
 // TODO: Returns directions as well as magnitudes.
-// TODO: Support filtering with allocating a fresh image - filtering functions could
+// TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-pub fn sobel_gradients<I>(image: &I) -> VecBuffer<Luma<u16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
-    let horizontal = horizontal_sobel(image);
-    let vertical = vertical_sobel(image);
+fn gradients<I>(image: &I, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9])
+    -> VecBuffer<Luma<u16>>
+    where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
+    let horizontal: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, horizontal_kernel);
+    let vertical: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, vertical_kernel);
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
