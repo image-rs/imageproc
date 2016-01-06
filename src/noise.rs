@@ -59,7 +59,7 @@ pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
 
     for y in 0..image.height() {
         for x in 0..image.width() {
-            let mut pix = image.get_pixel(x, y);
+            let mut pix = unsafe { image.unsafe_get_pixel(x, y) };
             let num_channels = I::Pixel::channel_count() as usize;
 
             for c in 0..num_channels {
@@ -69,7 +69,7 @@ pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
                     = <I::Pixel as Pixel>::Subpixel::clamp(channel + noise);
             }
 
-            image.put_pixel(x, y, pix);
+            unsafe { image.unsafe_put_pixel(x, y, pix) };
         }
     }
 }
@@ -103,11 +103,13 @@ pub fn salt_and_pepper_noise_mut<I>(image: &mut I, rate: f64, seed: usize)
                 continue;
             }
 
-            if uniform.ind_sample(&mut rng) >= 0.5 {
-                image.put_pixel(x, y, I::Pixel::white());
-            }
-            else {
-                image.put_pixel(x, y, I::Pixel::black());
+            unsafe {
+                if uniform.ind_sample(&mut rng) >= 0.5 {
+                    image.unsafe_put_pixel(x, y, I::Pixel::white());
+                }
+                else {
+                    image.unsafe_put_pixel(x, y, I::Pixel::black());
+                }
             }
         }
     }

@@ -151,15 +151,15 @@ fn is_corner_fast9<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
         return false;
     }
 
-    let c = image.get_pixel(x, y)[0];
+    let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
     let low_thresh: i16  = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
-    let p0  = image.get_pixel(x, y - 3)[0] as i16;
-    let p8  = image.get_pixel(x, y + 3)[0] as i16;
-    let p4  = image.get_pixel(x + 3, y)[0] as i16;
-    let p12 = image.get_pixel(x - 3, y)[0] as i16;
+    let p0 = unsafe { image.unsafe_get_pixel(x, y - 3)[0] as i16 };
+    let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
+    let p4  = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
+    let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
 
     let above = (p0  > high_thresh && p4  > high_thresh) ||
                 (p4  > high_thresh && p8  > high_thresh) ||
@@ -175,24 +175,7 @@ fn is_corner_fast9<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
         return false;
     }
 
-    let mut pixels = [0i16; 16];
-
-    pixels[0]  = p0;
-    pixels[1]  = image.get_pixel(x + 1, y - 3)[0] as i16;
-    pixels[2]  = image.get_pixel(x + 2, y - 2)[0] as i16;
-    pixels[3]  = image.get_pixel(x + 3, y - 1)[0] as i16;
-    pixels[4]  = p4;
-    pixels[5]  = image.get_pixel(x + 3, y + 1)[0] as i16;
-    pixels[6]  = image.get_pixel(x + 2, y + 2)[0] as i16;
-    pixels[7]  = image.get_pixel(x + 1, y + 3)[0] as i16;
-    pixels[8]  = p8;
-    pixels[9]  = image.get_pixel(x - 1, y + 3)[0] as i16;
-    pixels[10] = image.get_pixel(x - 2, y + 2)[0] as i16;
-    pixels[11] = image.get_pixel(x - 3, y + 1)[0] as i16;
-    pixels[12] = p12;
-    pixels[13] = image.get_pixel(x - 3, y - 1)[0] as i16;
-    pixels[14] = image.get_pixel(x - 2, y - 2)[0] as i16;
-    pixels[15] = image.get_pixel(x - 1, y - 3)[0] as i16;
+    let pixels = unsafe { get_circle(image, x, y, p0, p4, p8, p12) };
 
     // above and below could both be true
     (above && has_bright_span(&pixels, 9, high_thresh)) ||
@@ -208,13 +191,13 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
         return false;
     }
 
-    let c = image.get_pixel(x, y)[0];
+    let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
     let low_thresh: i16  = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
-    let p0 = image.get_pixel(x, y - 3)[0] as i16;
-    let p8 = image.get_pixel(x, y + 3)[0] as i16;
+    let p0 = unsafe { image.unsafe_get_pixel(x, y - 3)[0] as i16 };
+    let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
 
     let mut above = p0 > high_thresh && p8 > high_thresh;
     let mut below = p0 < low_thresh  && p8 < low_thresh;
@@ -223,8 +206,8 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
         return false;
     }
 
-    let p4  = image.get_pixel(x + 3, y)[0] as i16;
-    let p12 = image.get_pixel(x - 3, y)[0] as i16;
+    let p4  = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
+    let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
 
     above = above && ((p4 > high_thresh) || (p12 > high_thresh));
     below = below && ((p4 < low_thresh)  || (p12 < low_thresh));
@@ -239,24 +222,7 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
     // TODO: need to distinguish between GenericImages and ImageBuffers.
     // TODO: We can also reduce the number of checks we do below.
 
-    let mut pixels = [0i16; 16];
-
-    pixels[0]  = p0;
-    pixels[1]  = image.get_pixel(x + 1, y - 3)[0] as i16;
-    pixels[2]  = image.get_pixel(x + 2, y - 2)[0] as i16;
-    pixels[3]  = image.get_pixel(x + 3, y - 1)[0] as i16;
-    pixels[4]  = p4;
-    pixels[5]  = image.get_pixel(x + 3, y + 1)[0] as i16;
-    pixels[6]  = image.get_pixel(x + 2, y + 2)[0] as i16;
-    pixels[7]  = image.get_pixel(x + 1, y + 3)[0] as i16;
-    pixels[8]  = p8;
-    pixels[9]  = image.get_pixel(x - 1, y + 3)[0] as i16;
-    pixels[10] = image.get_pixel(x - 2, y + 2)[0] as i16;
-    pixels[11] = image.get_pixel(x - 3, y + 1)[0] as i16;
-    pixels[12] = p12;
-    pixels[13] = image.get_pixel(x - 3, y - 1)[0] as i16;
-    pixels[14] = image.get_pixel(x - 2, y - 2)[0] as i16;
-    pixels[15] = image.get_pixel(x - 1, y - 3)[0] as i16;
+    let pixels = unsafe { get_circle(image, x, y, p0, p4, p8, p12) };
 
     // Exactly one of above or below is true
     if above {
@@ -265,6 +231,31 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
     else {
         has_dark_span(&pixels, 12, low_thresh)
     }
+}
+
+#[inline]
+unsafe fn get_circle<I>(image: &I, x: u32, y: u32, 
+                        p0: i16, p4: i16, p8: i16, p12: i16) -> [i16; 16]
+    where I: GenericImage<Pixel=Luma<u8>>
+{
+    [
+        p0,
+        image.unsafe_get_pixel(x + 1, y - 3)[0] as i16,
+        image.unsafe_get_pixel(x + 2, y - 2)[0] as i16,
+        image.unsafe_get_pixel(x + 3, y - 1)[0] as i16,
+        p4,
+        image.unsafe_get_pixel(x + 3, y + 1)[0] as i16,
+        image.unsafe_get_pixel(x + 2, y + 2)[0] as i16,
+        image.unsafe_get_pixel(x + 1, y + 3)[0] as i16,
+        p8,
+        image.unsafe_get_pixel(x - 1, y + 3)[0] as i16,
+        image.unsafe_get_pixel(x - 2, y + 2)[0] as i16,
+        image.unsafe_get_pixel(x - 3, y + 1)[0] as i16,
+        p12,
+        image.unsafe_get_pixel(x - 3, y - 1)[0] as i16,
+        image.unsafe_get_pixel(x - 2, y - 2)[0] as i16,
+        image.unsafe_get_pixel(x - 1, y - 3)[0] as i16,
+    ]
 }
 
 /// True if the circle has a contiguous section of at least the given length, all

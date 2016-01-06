@@ -85,10 +85,12 @@ pub fn sobel_gradients<I>(image: &I) -> VecBuffer<Luma<u16>>
 
     for y in 0..height {
         for x in 0..width {
-            let h = horizontal.get_pixel(x, y)[0] as f32;
-            let v = vertical.get_pixel(x, y)[0] as f32;
-            let m = (h.powi(2) + v.powi(2)).sqrt() as u16;
-            out.put_pixel(x, y, Luma([m]));
+            unsafe {
+                let h = horizontal.unsafe_get_pixel(x, y)[0] as f32;
+                let v = vertical.unsafe_get_pixel(x, y)[0] as f32;
+                let m = (h.powi(2) + v.powi(2)).sqrt() as u16;
+                out.unsafe_put_pixel(x, y, Luma([m]));
+            }
         }
     }
 

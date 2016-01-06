@@ -30,7 +30,8 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
             }
 
             if stencil[idx(sx, sy)] == 1u8 {
-                image.put_pixel(ix as u32, iy as u32, color);
+                // bound checks already done
+                unsafe { image.unsafe_put_pixel(ix as u32, iy as u32, color); }
             }
         }
     }
@@ -93,10 +94,12 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
     let mut y = y0 as i32;
 
     for x in x0 as i32..(x1 + 1f32) as i32 {
-        if is_steep && in_bounds(y, x) {
-            image.put_pixel(y as u32, x as u32, color);
-        } else if in_bounds(x, y) {
-            image.put_pixel(x as u32, y as u32, color);
+        unsafe {
+            if is_steep && in_bounds(y, x) {
+                image.unsafe_put_pixel(y as u32, x as u32, color);
+            } else if in_bounds(x, y) {
+                image.unsafe_put_pixel(x as u32, y as u32, color);
+            }
         }
         error -= dy;
         if error < 0f32 {
@@ -155,7 +158,7 @@ pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
             for dx in 0..intersection.width() {
                 let x = intersection.left() as u32 + dx;
                 let y = intersection.top() as u32 + dy;
-                image.put_pixel(x, y, color);
+                unsafe { image.unsafe_put_pixel(x, y, color); }
             }
         }
     }

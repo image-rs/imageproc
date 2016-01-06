@@ -67,10 +67,12 @@ pub fn threshold_mut<I>(image: &mut I, thresh: u8)
 {
     for y in 0..image.height() {
         for x in 0..image.width() {
-            if image.get_pixel(x, y)[0] as u8 <= thresh {
-                image.put_pixel(x, y, Luma([0]));
-            } else {
-                image.put_pixel(x, y, Luma([255]));
+            unsafe {
+                if image.unsafe_get_pixel(x, y)[0] as u8 <= thresh {
+                    image.unsafe_put_pixel(x, y, Luma([0]));
+                } else {
+                    image.unsafe_put_pixel(x, y, Luma([255]));
+                }
             }
         }
     }
@@ -114,10 +116,10 @@ pub fn equalize_histogram_mut<I>(image: &mut I)
 
     for y in 0..image.height() {
         for x in 0..image.width() {
-            let original = image.get_pixel(x, y)[0] as usize;
+            let original = unsafe { image.unsafe_get_pixel(x, y)[0] as usize };
             let fraction = hist[original] as f32 / total;
             let out = f32::min(255f32, 255f32 * fraction);
-            image.put_pixel(x, y, Luma([out as u8]));
+            unsafe { image.unsafe_put_pixel(x, y, Luma([out as u8])); }
         }
     }
 }
@@ -145,8 +147,10 @@ pub fn match_histogram_mut<I, J>(image: &mut I, target: &J)
 
     for y in 0..image.height() {
         for x in 0..image.width() {
-            let pix = image.get_pixel(x, y)[0] as usize;
-            image.put_pixel(x, y, Luma([lut[pix] as u8]));
+            unsafe {
+                let pix = image.unsafe_get_pixel(x, y)[0] as usize;
+                image.unsafe_put_pixel(x, y, Luma([lut[pix] as u8]));
+            }
         }
     }
 }

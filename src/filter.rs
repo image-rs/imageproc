@@ -60,14 +60,14 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
     for y in 0..height {
         row_running_sum(image, y, &mut row_buffer, x_radius);
         let val = row_buffer[(2 * x_radius) as usize]/kernel_width;
-        out.put_pixel(0, y, Luma([val as u8]));
+        unsafe { out.unsafe_put_pixel(0, y, Luma([val as u8])); }
         for x in 1..width {
             // TODO: This way we pay rounding errors for each of the
             // TODO: x and y convolutions. Is there a better way?
             let u = (x + 2 * x_radius) as usize;
             let l = (x - 1) as usize;
             let val = (row_buffer[u] - row_buffer[l])/kernel_width;
-            out.put_pixel(x, y, Luma([val as u8]));
+            unsafe { out.unsafe_put_pixel(x, y, Luma([val as u8])); }
         }
     }
 
@@ -75,12 +75,12 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
     for x in 0..width {
         column_running_sum(&out, x, &mut col_buffer, y_radius);
         let val = col_buffer[(2 * y_radius) as usize]/kernel_height;
-        out.put_pixel(x, 0, Luma([val as u8]));
+        unsafe { out.unsafe_put_pixel(x, 0, Luma([val as u8])); }
         for y in 1..height {
             let u = (y + 2 * y_radius) as usize;
             let l = (y - 1) as usize;
             let val = (col_buffer[u] - col_buffer[l])/kernel_height;
-            out.put_pixel(x, y, Luma([val as u8]));
+            unsafe { out.unsafe_put_pixel(x, y, Luma([val as u8])); }
         }
     }
 
@@ -136,15 +136,20 @@ pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P,
             let x_next = cmp::min(width - 2, x) + 1;
 
             let mut acc = vec![Zero::zero(); num_channels];
-            accumulate(&mut acc, &image.get_pixel(x_prev, y_prev), kernel[0]);
-            accumulate(&mut acc, &image.get_pixel(x,      y_prev), kernel[1]);
-            accumulate(&mut acc, &image.get_pixel(x_next, y_prev), kernel[2]);
-            accumulate(&mut acc, &image.get_pixel(x_prev, y     ), kernel[3]);
-            accumulate(&mut acc, &image.get_pixel(x     , y     ), kernel[4]);
-            accumulate(&mut acc, &image.get_pixel(x_next, y     ), kernel[5]);
-            accumulate(&mut acc, &image.get_pixel(x_prev, y_next), kernel[6]);
-            accumulate(&mut acc, &image.get_pixel(x     , y_next), kernel[7]);
-            accumulate(&mut acc, &image.get_pixel(x_next, y_next), kernel[8]);
+            let pixels = unsafe {
+                [&image.unsafe_get_pixel(x_prev, y_prev),
+                 &image.unsafe_get_pixel(x     , y_prev),
+                 &image.unsafe_get_pixel(x_next, y_prev),
+                 &image.unsafe_get_pixel(x_prev, y     ),
+                 &image.unsafe_get_pixel(x     , y     ),
+                 &image.unsafe_get_pixel(x_next, y     ),
+                 &image.unsafe_get_pixel(x_prev, y_next),
+                 &image.unsafe_get_pixel(x     , y_next),
+                 &image.unsafe_get_pixel(x_next, y_next),]
+            };
+            for i in 0..9 {
+                accumulate(&mut acc, pixels[i], kernel[i]);
+            }
 
             clamp_acc(&acc, out.get_pixel_mut(x, y).channels_mut());
         }
@@ -171,13 +176,14 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
     let mut buffer = vec![I::Pixel::black(); (width + k/2 + k/2) as usize];
 
 	for y in 0..height {
-        let left_pad  = image.get_pixel(0, y);
-        let right_pad = image.get_pixel(width - 1, y);
+        let (left_pad, right_pad)  = unsafe {
+            (image.unsafe_get_pixel(0, y), image.unsafe_get_pixel(width - 1, y))
+        };
 
 	    pad_buffer(&mut buffer, k/2, left_pad, right_pad);
 
         for x in 0..width {
-            buffer[(x + k/2) as usize] = image.get_pixel(x, y);
+            buffer[(x + k/2) as usize] = unsafe { image.unsafe_get_pixel(x, y) };
         }
 
         for x in k/2..(width + k/2) {
@@ -214,13 +220,14 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
     let mut buffer = vec![I::Pixel::black(); (height + k/2 + k/2) as usize];
 
 	for x in 0..width {
-        let left_pad  = image.get_pixel(x, 0);
-        let right_pad = image.get_pixel(x, height - 1);
+        let (left_pad, right_pad)  = unsafe {
+            (image.unsafe_get_pixel(x, 0), image.unsafe_get_pixel(x, height - 1))
+        };
 
 	    pad_buffer(&mut buffer, k/2, left_pad, right_pad);
 
         for y in 0..height {
-            buffer[(y + k/2) as usize] = image.get_pixel(x, y);
+            buffer[(y + k/2) as usize] = unsafe { image.unsafe_get_pixel(x, y) };
         }
 
         for y in k/2..(height + k/2) {

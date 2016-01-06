@@ -49,7 +49,7 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
 
         for x in 0..width {
 
-            let current = image.get_pixel(x, y);
+            let current = unsafe { image.unsafe_get_pixel(x, y) };
             if current == background {
                 continue;
             }
@@ -58,9 +58,9 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
 
             if x > 0 {
                 // West
-                let pixel = image.get_pixel(x - 1, y);
+                let pixel = unsafe { image.unsafe_get_pixel(x - 1, y) };
                 if pixel == current {
-                    let label = out.get_pixel(x - 1, y)[0];
+                    let label = unsafe { out.unsafe_get_pixel(x - 1, y)[0] };
                     adj_labels[num_adj] = label;
                     num_adj += 1;
                 }
@@ -68,9 +68,9 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
 
             if y > 0 {
                 // North
-                let pixel = image.get_pixel(x, y - 1);
+                let pixel = unsafe { image.unsafe_get_pixel(x, y - 1) };
                 if pixel == current {
-                    let label = out.get_pixel(x, y - 1)[0];
+                    let label = unsafe { out.unsafe_get_pixel(x, y - 1)[0] };
                     adj_labels[num_adj] = label;
                     num_adj += 1;
                 }
@@ -78,18 +78,18 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
                 if conn == Connectivity::Eight {
                     if x > 0 {
                         // North West
-                        let pixel = image.get_pixel(x - 1, y - 1);
+                        let pixel = unsafe { image.unsafe_get_pixel(x - 1, y - 1) };
                         if pixel == current {
-                            let label = out.get_pixel(x - 1, y - 1)[0];
+                            let label = unsafe { out.unsafe_get_pixel(x - 1, y - 1)[0] };
                             adj_labels[num_adj] = label;
                             num_adj += 1;
                         }
                     }
                     if x < width - 1 {
                         // North East
-                        let pixel = image.get_pixel(x + 1, y - 1);
+                        let pixel = unsafe { image.unsafe_get_pixel(x + 1, y - 1) };
                         if pixel == current {
-                            let label = out.get_pixel(x + 1, y - 1)[0];
+                            let label = unsafe { out.unsafe_get_pixel(x + 1, y - 1)[0] };
                             adj_labels[num_adj] = label;
                             num_adj += 1;
                         }
@@ -98,7 +98,7 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
             }
 
             if num_adj == 0 {
-                out.put_pixel(x, y, Luma([next_label]));
+                unsafe { out.unsafe_put_pixel(x, y, Luma([next_label])); }
                 next_label += 1;
             }
             else {
@@ -106,7 +106,7 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
                 for n in 0..num_adj {
                     min_label = cmp::min(min_label, adj_labels[n]);
                 }
-                out.put_pixel(x, y, Luma([min_label]));
+                unsafe { out.unsafe_put_pixel(x, y, Luma([min_label])); }
                 for n in 0..num_adj {
                     forest.union(min_label as usize, adj_labels[n] as usize);
                 }
@@ -120,11 +120,13 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
 
     for y in 0..height {
         for x in 0..width {
-            if image.get_pixel(x, y) == background {
-                continue;
-            }
+            let label = unsafe {
+                if image.unsafe_get_pixel(x, y) == background {
+                    continue;
+                }
+                out.unsafe_get_pixel(x, y)[0]
+            };
 
-            let label = out.get_pixel(x, y)[0];
             let root = forest.root(label as usize);
 
             match root_idx.get(&root).map(|x| *x) {
@@ -134,7 +136,7 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
                 None => {
                     let idx = root_name;
                     root_idx.insert(root, idx);
-                    out.put_pixel(x, y, Luma([idx as u32]));
+                    unsafe { out.unsafe_put_pixel(x, y, Luma([idx as u32])); }
                     root_name += 1;
                 }
             }
