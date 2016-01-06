@@ -65,14 +65,13 @@ pub fn affine_with_default<I>(image: &I,
 
             let pix = match interpolation {
                 Interpolation::Nearest => {
-                    nearest(image, px, py, width, height, default)
+                    nearest(image, px, py, default)
                 }
                 Interpolation::Bilinear => {
-                    interpolate(image, px, py, width, height, default)
+                    interpolate(image, px, py, default)
                 }
             };
-
-            out.put_pixel(x, y, pix);
+            unsafe { out.unsafe_put_pixel(x, y, pix); }
         }
     }
 
@@ -155,8 +154,10 @@ fn rotate_nearest<I>(image: &I,
 
         for x in 0..width {
 
-            let pix = nearest(image, px, py, width, height, default);
-            out.put_pixel(x, y, pix);
+            unsafe {
+                let pix = nearest(image, px, py, default);
+                out.unsafe_put_pixel(x, y, pix);
+            }
 
             px += cos_theta;
             py -= sin_theta;
@@ -190,8 +191,8 @@ fn rotate_bilinear<I>(image: &I,
 
         for x in 0..width {
 
-            let pix = interpolate(image, px, py, width, height, default);
-            out.put_pixel(x, y, pix);
+            let pix = interpolate(image, px, py, default);
+            unsafe { out.unsafe_put_pixel(x, y, pix); }
 
             px += cos_theta;
             py -= sin_theta;
@@ -218,12 +219,15 @@ pub fn translate<I>(image: &I, t: (i32, i32)) -> VecBuffer<I::Pixel>
     let w = width as i32;
     let h = height as i32;
 
-    for y in 0..out.height() {
-        for x in 0..out.width() {
+    for y in 0..height {
+        for x in 0..width {
             let x_in = cmp::max(0, cmp::min(x as i32 - t.0, w - 1));
             let y_in = cmp::max(0, cmp::min(y as i32 - t.1, h - 1));
-            let p = image.get_pixel(x_in as u32, y_in as u32);
-            out.put_pixel(x, y, p);
+            // (x_in, y_in) and (x, y) are guaranteed to be in bounds
+            unsafe {
+                let p = image.unsafe_get_pixel(x_in as u32, y_in as u32);
+                out.unsafe_put_pixel(x, y, p);
+            }
         }
     }
 
@@ -252,7 +256,7 @@ fn blend<P>(top_left: P,
              |u, v| P::Subpixel::clamp((1f32 - bottom_weight) * cast(u) + bottom_weight * cast(v)))
 }
 
-fn interpolate<I>(image: &I, x: f32, y: f32, width: u32, height: u32, default: I::Pixel) -> I::Pixel
+fn interpolate<I>(image: &I, x: f32, y: f32, default: I::Pixel) -> I::Pixel
     where I: GenericImage,
           <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
@@ -264,39 +268,34 @@ fn interpolate<I>(image: &I, x: f32, y: f32, width: u32, height: u32, default: I
     let right_weight = x - left;
     let bottom_weight = y - top;
 
-    let x_out_of_bounds = left < 0f32 || right >= width as f32;
-    let y_out_of_bounds = top < 0f32 || bottom >= height as f32;
-
-    if x_out_of_bounds || y_out_of_bounds {
-        return default;
+    // default if out of bound
+    let (width, height) = image.dimensions();
+    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
+        default
     } else {
-        return blend(image.get_pixel(left as u32, top as u32),
-                     image.get_pixel(right as u32, top as u32),
-                     image.get_pixel(left as u32, bottom as u32),
-                     image.get_pixel(right as u32, bottom as u32),
-                     right_weight,
-                     bottom_weight);
+        let (tl, tr, bl, br) = unsafe {
+            (image.unsafe_get_pixel(left as u32, top as u32),
+             image.unsafe_get_pixel(right as u32, top as u32),
+             image.unsafe_get_pixel(left as u32, bottom as u32),
+             image.unsafe_get_pixel(right as u32, bottom as u32),)
+        };
+        blend(tl, tr, bl, br, right_weight, bottom_weight)
     }
 }
 
-fn nearest<I>(image: &I, x: f32, y: f32, width: u32, height: u32, default: I::Pixel) -> I::Pixel
+fn nearest<I>(image: &I, x: f32, y: f32, default: I::Pixel) -> I::Pixel
     where I: GenericImage
 {
     let rx = x.round();
     let ry = y.round();
 
-    if out_of_bounds(rx, ry, width, height) {
-        return default;
+    // default if out of bound
+    let (width, height) = image.dimensions();
+    if rx < 0f32 || rx >= width as f32 || ry < 0f32 || ry >= height as f32 {
+        default
     } else {
-        let source = image.get_pixel(rx as u32, ry as u32);
-        return source;
+        unsafe { image.unsafe_get_pixel(rx as u32, ry as u32) }
     }
-}
-
-fn out_of_bounds(x: f32, y: f32, width: u32, height: u32) -> bool {
-    let x_out_of_bounds = x < 0f32 || x >= width as f32;
-    let y_out_of_bounds = y < 0f32 || y >= height as f32;
-    x_out_of_bounds || y_out_of_bounds
 }
 
 #[cfg(test)]

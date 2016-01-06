@@ -17,7 +17,9 @@ pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
     }
 
     // TODO: It might be better to make this function private, and
-    // TODO: require the caller to only provide valid x and y coordinates.
+    // TODO: require the caller to only provide valid x and y coordinates
+    // TODO: the function may probably need to be unsafe then to leverage
+    // TODO: on `unsafe_get_pixel`
     if x == 0 || x >= width - 1 || y == 0 || y >= height - 1 {
         return None;
     }
@@ -28,7 +30,6 @@ pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
     // TODO: for images whose pixels are stored in contiguous rows/columns.
     let mut pattern = 0u8;
 
-    let center = image.get_pixel(x, y)[0];
 
     // The sampled pixels have the following labels.
     //
@@ -38,16 +39,19 @@ pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
     //
     // The nth bit of a pattern is 1 if the pixel p
     // is strictly brighter than the neighbor in position n.
-    let neighbors = [
-        image.get_pixel(x    , y - 1)[0],
-        image.get_pixel(x + 1, y - 1)[0],
-        image.get_pixel(x + 1, y    )[0],
-        image.get_pixel(x + 1, y + 1)[0],
-        image.get_pixel(x    , y + 1)[0],
-        image.get_pixel(x - 1, y + 1)[0],
-        image.get_pixel(x - 1, y    )[0],
-        image.get_pixel(x - 1, y - 1)[0]
-    ];
+    let (center, neighbors) = unsafe {
+        (image.unsafe_get_pixel(x, y)[0],
+         [
+             image.unsafe_get_pixel(x    , y - 1)[0],
+             image.unsafe_get_pixel(x + 1, y - 1)[0],
+             image.unsafe_get_pixel(x + 1, y    )[0],
+             image.unsafe_get_pixel(x + 1, y + 1)[0],
+             image.unsafe_get_pixel(x    , y + 1)[0],
+             image.unsafe_get_pixel(x - 1, y + 1)[0],
+             image.unsafe_get_pixel(x - 1, y    )[0],
+             image.unsafe_get_pixel(x - 1, y - 1)[0]
+         ])
+    };
 
     for i in 0..8 {
         pattern |= (1 & (neighbors[i] < center) as u8) << i;

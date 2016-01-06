@@ -310,11 +310,13 @@ pub fn draw_haar_filter_mut<I>(image: &mut I, filter: HaarFilter)
                 }
             }
             assert!(weight == 0 || weight == 1 || weight == -1);
-            if weight > 0 {
-                image.put_pixel(x, y, I::Pixel::white());
-            }
-            if weight < 0 {
-                image.put_pixel(x, y, I::Pixel::black());
+            unsafe {
+                if weight > 0 {
+                    image.unsafe_put_pixel(x, y, I::Pixel::white());
+                }
+                if weight < 0 {
+                    image.unsafe_put_pixel(x, y, I::Pixel::black());
+                }
             }
         }
     }

@@ -1,5 +1,7 @@
 //! Functions for suppressing non-maximal values.
 
+use std::cmp;
+
 use definitions::{
     Position,
     Score
@@ -23,31 +25,19 @@ pub fn suppress_non_maximum_mut<I, C>(image: &mut I, radius: u32)
     let irad = radius as i32;
 
     for y in 0..height {
-        for x in 0..width {
-            let intensity = image.get_pixel(x, y)[0];
-            let mut is_max = true;
+        'test: for x in 0..width {
+            let intensity = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
-            for dy in -irad..irad {
-                let py = (y as i32) + dy;
-                if py < 0 || py >= height as i32 {
-                    continue;
-                }
-                for dx in -irad..irad {
-                    let px = (x as i32) + dx;
-                    if px < 0 || px >= width as i32 {
-                        continue;
-                    }
-
-                    let v = image.get_pixel(px as u32, py as u32)[0];
+            // if any pixel in the box has a higer intensity, don't modify the pixel
+            for py in cmp::max(0, y as i32 - irad)..cmp::min(y as i32 + irad, height as i32) {
+                for px in cmp::max(0, x as i32 - irad)..cmp::min(x as i32 + irad, width as i32) {
+                    let v = unsafe { image.unsafe_get_pixel(px as u32, py as u32)[0] };
                     if v > intensity ||
                        (v == intensity && (px as u32, py as u32) < (x, y)){
-                        is_max = false;
-                        break;
+                        unsafe { image.unsafe_put_pixel(x, y, Luma([C::zero()])) };
+                        continue 'test;
                     }
                 }
-            }
-            if !is_max {
-                image.put_pixel(x, y, Luma([C::zero()]));
             }
         }
     }
