@@ -6,17 +6,10 @@ use image::{
     Pixel,
     ImageBuffer
 };
-use num::{
-    Bounded,
-    NumCast
-};
 use std::{
     u8,
-    u16
-};
-
-use std::cmp::Ordering::{
-    Equal, Greater, Less
+    u16,
+    i16
 };
 
 /// An ImageBuffer containing Pixels of type P with storage
@@ -36,41 +29,24 @@ pub trait HasWhite {
     fn white() -> Self;
 }
 
-impl HasBlack for Luma<u8> {
-    fn black() -> Self {
-        Luma([0u8])
-    }
-}
+macro_rules! impl_black_white {
+    ($for_:ty, $min:expr, $max:expr) => (
+        impl HasBlack for $for_ {
+            fn black() -> Self {
+                $min
+            }
+        }
 
-impl HasWhite for Luma<u8> {
-    fn white() -> Self {
-        Luma([u8::MAX])
-    }
+        impl HasWhite for $for_ {
+            fn white() -> Self {
+                $max
+            }
+        }
+    )
 }
-
-impl HasBlack for Luma<u16> {
-    fn black() -> Self {
-        Luma([0u16])
-    }
-}
-
-impl HasWhite for Luma<u16> {
-    fn white() -> Self {
-        Luma([u16::MAX])
-    }
-}
-
-impl HasBlack for Rgb<u8> {
-    fn black() -> Self {
-        Rgb([0u8; 3])
-    }
-}
-
-impl HasWhite for Rgb<u8> {
-    fn white() -> Self {
-        Rgb([u8::MAX; 3])
-    }
-}
+impl_black_white!(Luma<u8>, Luma([u8::MIN]), Luma([u8::MAX]));
+impl_black_white!(Luma<u16>, Luma([u16::MIN]), Luma([u16::MAX]));
+impl_black_white!(Rgb<u8>, Rgb([u8::MIN; 3]), Rgb([u8::MAX; 3]));
 
 /// Something with a 2d position.
 pub trait Position {
@@ -90,53 +66,32 @@ pub trait Clamp<T> {
 }
 
 /// Creates an implementation of Clamp<From> for type To.
-// TODO: improve performance
 macro_rules! implement_clamp {
-    ($from:ty, $to:ty) => (
+    ($from:ty, $to:ty, $min:expr, $max:expr, $min_from:expr, $max_from:expr) => (
         impl Clamp<$from> for $to {
             fn clamp(x: $from) -> $to {
-                clamp_impl(x)
+                if x < $max_from as $from {
+                    if x > $min_from as $from {
+                        x as $to
+                    } else {
+                        $min
+                    }
+                } else {
+                    $max
+                }
             }
         }
     )
 }
 
-implement_clamp!(f32, u8);
-implement_clamp!(f32, u16);
-implement_clamp!(f64, u8);
-implement_clamp!(f64, u16);
-implement_clamp!(i32, u8);
-implement_clamp!(i32, u16);
-implement_clamp!(i32, i16);
-implement_clamp!(u16, u8);
-
-/// Clamp a value from a type with larger range to one with
-/// a smaller range. Deliberately not exported - should be used
-/// via the Clamp trait.
-fn clamp_impl<From: NumCast + PartialOrd, To: NumCast + Bounded>(x: From) -> To {
-    let to_max = <From as NumCast>::from(To::max_value()).unwrap();
-    let to_min = <From as NumCast>::from(To::min_value()).unwrap();
-    let clamped = partial_max(partial_min(x, to_max).unwrap(), to_min).unwrap();
-    To::from(clamped).unwrap()
-}
-
-/// Copied from std::cmp as it's now deprecated.
-fn partial_max<T: PartialOrd>(v1: T, v2: T) -> Option<T> {
-    match v1.partial_cmp(&v2) {
-        Some(Equal) | Some(Less) => Some(v2),
-        Some(Greater) => Some(v1),
-        None => None
-    }
-}
-
-/// Copied from std::cmp as it's now deprecated.
-fn partial_min<T: PartialOrd>(v1: T, v2: T) -> Option<T> {
-    match v1.partial_cmp(&v2) {
-        Some(Less) | Some(Equal) => Some(v1),
-        Some(Greater) => Some(v2),
-        None => None
-    }
-}
+implement_clamp!(f32, u8, u8::MIN, u8::MAX, u8::MIN as f32, u8::MAX as f32);
+implement_clamp!(f32, u16, u16::MIN, u16::MAX, u16::MIN as f32, u16::MAX as f32);
+implement_clamp!(f64, u8, u8::MIN, u8::MAX, u8::MIN as f64, u8::MAX as f64);
+implement_clamp!(f64, u16, u16::MIN, u16::MAX, u16::MIN as f64, u16::MAX as f64);
+implement_clamp!(i32, u8, u8::MIN, u8::MAX, u8::MIN as i32, u8::MAX as i32);
+implement_clamp!(i32, u16, u16::MIN, u16::MAX, u16::MIN as i32, u16::MAX as i32);
+implement_clamp!(i32, i16, i16::MIN, i16::MAX, i16::MIN as i32, i16::MAX as i32);
+implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 
 #[cfg(test)]
 mod test {
