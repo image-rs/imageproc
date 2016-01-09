@@ -13,46 +13,39 @@ use image::{
     Luma,
     Primitive};
 
-/// Zeroes all pixels which do not have the greatest intensity in the
-/// (2 * radius + 1) square block centred on them. Ties are resolved lexicographically.
+/// Returned image has zeroes for all inputs pixels which do not have the greatest
+/// intensity in the (2 * radius + 1) square block centred on them.
+/// Ties are resolved lexicographically.
 // TODO: Implement a more efficient version.
 // TODO: e.g. https://www.vision.ee.ethz.ch/en/publications/papers/proceedings/eth_biwi_00446.pdf
-pub fn suppress_non_maximum_mut<I, C>(image: &mut I, radius: u32)
+pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
     where I: GenericImage<Pixel = Luma<C>>,
           C: Primitive + Ord + 'static
 {
     let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::new(width, height);
+    out.copy_from(image, 0, 0);
+
     let irad = radius as i32;
 
     for y in 0..height {
         'test: for x in 0..width {
             let intensity = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
-            // if any pixel in the box has a higer intensity, don't modify the pixel
+            // If any pixel in the box has a higher intensity, don't modify the pixel
             for py in cmp::max(0, y as i32 - irad)..cmp::min(y as i32 + irad, height as i32) {
                 for px in cmp::max(0, x as i32 - irad)..cmp::min(x as i32 + irad, width as i32) {
                     let v = unsafe { image.unsafe_get_pixel(px as u32, py as u32)[0] };
                     if v > intensity ||
                        (v == intensity && (px as u32, py as u32) < (x, y)){
-                        unsafe { image.unsafe_put_pixel(x, y, Luma([C::zero()])) };
+                        unsafe { out.unsafe_put_pixel(x, y, Luma([C::zero()])) };
                         continue 'test;
                     }
                 }
             }
         }
     }
-}
 
-/// Returned image has zeroes for all inputs pixels which do not have the greatest
-/// intensity in the (2 * radius + 1) square block centred on them.
-/// Ties are resolved lexicographically.
-pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
-    where I: GenericImage<Pixel = Luma<C>>,
-          C: Primitive + Ord + 'static
-{
-    let mut out: ImageBuffer<Luma<C>, Vec<C>> = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
-    suppress_non_maximum_mut(&mut out, radius);
     out
 }
 
@@ -118,7 +111,6 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
 
 #[cfg(test)]
 mod test {
-
     use super::{
         local_maxima,
         suppress_non_maximum
@@ -128,13 +120,18 @@ mod test {
         Score
     };
     use image::{
+        GenericImage,
         GrayImage,
         ImageBuffer,
-        Luma
+        Luma,
+        Primitive
     };
     use noise::{
         gaussian_noise_mut
     };
+    use std::cmp;
+    use quickcheck::quickcheck;
+    use utils::GrayTestImage;
     use test::Bencher;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
@@ -253,5 +250,64 @@ mod test {
         let mut img: GrayImage = ImageBuffer::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 7));
+    }
+
+    /// Reference implementation of suppress_non_maximum. Used to validate
+    /// the (presumably faster) actual implementation.
+    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32)
+        -> ImageBuffer<Luma<C>, Vec<C>>
+        where I: GenericImage<Pixel = Luma<C>>,
+              C: Primitive + Ord + 'static
+    {
+        let (width, height) = image.dimensions();
+        let mut out = ImageBuffer::new(width, height);
+        out.copy_from(image, 0, 0);
+
+        let iradius = radius as i32;
+        let iheight = height as i32;
+        let iwidth = width as i32;
+
+        // We update zero values from out as we go, so to check intensities
+        // we need to read values from the input image.
+        for y in 0..height {
+           for x in 0..width {
+               let intensity = image.get_pixel(x, y)[0];
+               let mut is_max = true;
+
+               let y_lower = cmp::max(0, y as i32 - iradius);
+               let y_upper = cmp::min(y as i32 + iradius, iheight);
+               let x_lower = cmp::max(0, x as i32 - iradius);
+               let x_upper = cmp::min(x as i32 + iradius, iwidth);
+
+               for py in y_lower..y_upper {
+                   for px in x_lower..x_upper {
+                           let v = image.get_pixel(px as u32, py as u32)[0];
+                           // Handle intensity tiebreaks lexicographically
+                           let candidate_is_lexically_earlier = (px as u32, py as u32) < (x, y);
+                           if v > intensity || (v == intensity && candidate_is_lexically_earlier) {
+                               is_max = false;
+                               break;
+                           }
+                   }
+               }
+
+               if !is_max {
+                   out.put_pixel(x, y, Luma([C::zero()]));
+               }
+           }
+        }
+
+        out
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_matches_reference_implementation() {
+
+        fn prop(image: GrayTestImage) -> bool {
+            let expected = suppress_non_maximum_reference(&image.0, 3);
+            let actual = suppress_non_maximum(&image.0, 3);
+            actual.pixels().eq(expected.pixels())
+        }
+        quickcheck(prop as fn(GrayTestImage) -> bool);
     }
 }
