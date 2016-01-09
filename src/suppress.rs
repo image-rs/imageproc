@@ -27,6 +27,13 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
         return out;
     }
 
+    // We divide the image into a grid of blocks of size r * r. We find the maximum
+    // value in each block, and then test whether this is in fact the maximum value
+    // in the (2r + 1) * (2r + 1) block centered on it. Any pixel that's not maximal
+    // within its r * r grid cell can't be a local maximum so we need only perform
+    // the (2r + 1) * (2r + 1) search once per r * r grid cell (as opposed to once
+    // per pixel in the naive implementation of this algorithm).
+
     for y in (0..height).step_by(radius + 1) {
         for x in (0..width).step_by(radius + 1) {
             let mut best_x = x;
@@ -48,30 +55,24 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
                 }
             }
 
-            let mut failed = false;
+            let x0 = if radius >= best_x {0} else { best_x - radius };
+            let x1 = x;
+            let x2 = cmp::min(width, x + radius + 1);
+            let x3 = cmp::min(width, best_x + radius + 1);
 
-            let y_lower = if radius >= best_y {0} else { best_y - radius };
-            let x_lower = if radius >= best_x {0} else { best_x - radius };
+            let y0 = if radius >= best_y {0} else { best_y - radius };
+            let y1 = y;
+            let y2 = cmp::min(height, y + radius + 1);;
+            let y3 = cmp::min(height, best_y + radius + 1);
 
-            // After finding a candidate for a maximum in this r * r block,
-            // we need to test that it's also a maximum in the (2r + 1) * (2r + 1)
-            // block centred on it.
-            // TODO: The larger block we check here includes pixels we've already
-            // TODO: checked. Just adding an "if candidate in smaller block then continue"
-            // TODO: doesn't improve performance. However, splitting this loop into
-            // TODO: one loop per region of larger block - smaller block should be faster.
-            for cy in y_lower..cmp::min(height, best_y + radius + 1) {
-                for cx in x_lower..cmp::min(width, best_x + radius + 1) {
-                    let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
-                    if ci < mi || (cx, cy) == (best_x, best_y) {
-                        continue;
-                    }
-                    if ci > mi || (cx, cy) < (best_x, best_y) {
-                        failed = true;
-                        break;
-                    }
-                }
-            }
+            // Above initial r * r block
+            let mut failed = contains_greater_value(image, best_x, best_y, mi, y0, y1, x0, x3);
+            // Left of initial r * r block
+            failed |= contains_greater_value(image, best_x, best_y, mi, y1, y2, x0, x1);
+            // Right of initial r * r block
+            failed |= contains_greater_value(image, best_x, best_y, mi, y1, y2, x2, x3);
+            // Below initial r * r block
+            failed |= contains_greater_value(image, best_x, best_y, mi, y2, y3, x0, x3);
 
             if !failed {
                 unsafe { out.unsafe_put_pixel(best_x, best_y, Luma([mi])) };
@@ -82,6 +83,31 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
     out
 }
 
+/// Returns true if the given block contains a larger value than
+/// the input, or contains an equal value with lexicographically
+/// lesser coordinates.
+#[inline(always)]
+fn contains_greater_value<I, C>(
+    image: &I,
+    x: u32, y: u32, v: C,
+    y_lower: u32, y_upper: u32,
+    x_lower: u32, x_upper: u32) -> bool
+    where I: GenericImage<Pixel = Luma<C>>,
+          C: Primitive + Ord + 'static
+{
+    for cy in y_lower..y_upper {
+        for cx in x_lower..x_upper {
+            let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
+            if ci < v {
+                continue;
+            }
+            if ci > v || (cx, cy) < (x, y) {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 /// Returns all items which have the highest score in the
 /// (2 * radius + 1) square block centred on them. Ties are resolved lexicographically.
