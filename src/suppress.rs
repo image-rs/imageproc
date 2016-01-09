@@ -11,43 +11,77 @@ use image::{
     GenericImage,
     ImageBuffer,
     Luma,
-    Primitive};
+    Primitive
+};
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
 /// Ties are resolved lexicographically.
-// TODO: Implement a more efficient version.
-// TODO: e.g. https://www.vision.ee.ethz.ch/en/publications/papers/proceedings/eth_biwi_00446.pdf
 pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
     where I: GenericImage<Pixel = Luma<C>>,
           C: Primitive + Ord + 'static
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
-    out.copy_from(image, 0, 0);
+    let mut out: ImageBuffer<Luma<C>, Vec<C>> = ImageBuffer::new(width, height);
+    if width == 0 || height == 0 {
+        return out;
+    }
 
-    let irad = radius as i32;
+    for y in (0..height).step_by(radius + 1) {
+        for x in (0..width).step_by(radius + 1) {
+            let mut best_x = x;
+            let mut best_y = y;
+            let mut mi = image.get_pixel(x, y)[0];
 
-    for y in 0..height {
-        'test: for x in 0..width {
-            let intensity = unsafe { image.unsafe_get_pixel(x, y)[0] };
-
-            // If any pixel in the box has a higher intensity, don't modify the pixel
-            for py in cmp::max(0, y as i32 - irad)..cmp::min(y as i32 + irad + 1, height as i32) {
-                for px in cmp::max(0, x as i32 - irad)..cmp::min(x as i32 + irad + 1, width as i32) {
-                    let v = unsafe { image.unsafe_get_pixel(px as u32, py as u32)[0] };
-                    if v > intensity ||
-                       (v == intensity && (px as u32, py as u32) < (x, y)){
-                        unsafe { out.unsafe_put_pixel(x, y, Luma([C::zero()])) };
-                        continue 'test;
+            // These mins are necessary for when radius > min(width, height)
+            for cy in y..cmp::min(height, y + radius + 1) {
+                for cx in x..cmp::min(width, x + radius + 1) {
+                    let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
+                    if ci < mi {
+                        continue;
+                    }
+                    if ci > mi || (cx, cy) < (best_x, best_y) {
+                        best_x = cx;
+                        best_y = cy;
+                        mi = ci;
                     }
                 }
+            }
+
+            let mut failed = false;
+
+            let y_lower = if radius >= best_y {0} else { best_y - radius };
+            let x_lower = if radius >= best_x {0} else { best_x - radius };
+
+            // After finding a candidate for a maximum in this r * r block,
+            // we need to test that it's also a maximum in the (2r + 1) * (2r + 1)
+            // block centred on it.
+            // TODO: The larger block we check here includes pixels we've already
+            // TODO: checked. Just adding an "if candidate in smaller block then continue"
+            // TODO: doesn't improve performance. However, splitting this loop into
+            // TODO: one loop per region of larger block - smaller block should be faster.
+            for cy in y_lower..cmp::min(height, best_y + radius + 1) {
+                for cx in x_lower..cmp::min(width, best_x + radius + 1) {
+                    let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
+                    if ci < mi || (cx, cy) == (best_x, best_y) {
+                        continue;
+                    }
+                    if ci > mi || (cx, cy) < (best_x, best_y) {
+                        failed = true;
+                        break;
+                    }
+                }
+            }
+
+            if !failed {
+                unsafe { out.unsafe_put_pixel(best_x, best_y, Luma([mi])) };
             }
         }
     }
 
     out
 }
+
 
 /// Returns all items which have the highest score in the
 /// (2 * radius + 1) square block centred on them. Ties are resolved lexicographically.
@@ -229,6 +263,19 @@ mod test {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[test]
+    fn test_suppress_non_maximum_handles_radius_greater_than_image_side() {
+        // Don't care about output pixels, just want to make sure that
+        // we don't go out of bounds when radius exceeds width or height.
+        let image = GrayImage::new(7, 3);
+        let r = suppress_non_maximum(&image, 5);
+        let image = GrayImage::new(3, 7);
+        let s = suppress_non_maximum(&image, 5);
+        // Use r and s to silence warnings about unused variables.
+        assert!(r.width() == 7);
+        assert!(s.width() == 3);
+    }
+
     #[bench]
     fn bench_suppress_non_maximum_increasing_gradient(b: &mut Bencher) {
         // Increasing gradient in both directions. This can be a worst-case for
@@ -248,10 +295,24 @@ mod test {
     }
 
     #[bench]
-    fn bench_suppress_non_maximum_noise(b: &mut Bencher) {
+    fn bench_suppress_non_maximum_noise_7(b: &mut Bencher) {
         let mut img: GrayImage = ImageBuffer::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 7));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_noise_3(b: &mut Bencher) {
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
+        b.iter(|| suppress_non_maximum(&img, 3));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_noise_1(b: &mut Bencher) {
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
+        b.iter(|| suppress_non_maximum(&img, 1));
     }
 
     /// Reference implementation of suppress_non_maximum. Used to validate
@@ -304,7 +365,6 @@ mod test {
 
     #[test]
     fn test_suppress_non_maximum_matches_reference_implementation() {
-
         fn prop(image: GrayTestImage) -> bool {
             let expected = suppress_non_maximum_reference(&image.0, 3);
             let actual = suppress_non_maximum(&image.0, 3);

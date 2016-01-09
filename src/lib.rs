@@ -1,5 +1,6 @@
 
 #![feature(test)]
+#![feature(step_by)]
 
 #[cfg(test)]
 extern crate test;
