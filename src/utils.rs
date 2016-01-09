@@ -163,6 +163,12 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
 #[derive(Clone)]
 pub struct TestBuffer<T: Pixel>(pub VecBuffer<T>);
 
+/// 8bpp grayscale TestBuffer.
+pub type GrayTestImage = TestBuffer<Luma<u8>>;
+
+/// 24bpp RGB TestBuffer.
+pub type RgbTestImage = TestBuffer<Rgb<u8>>;
+
 impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
     where <T as Pixel>::Subpixel: Send
 {
