@@ -52,6 +52,9 @@ impl DisjointSetForest {
     pub fn union(&mut self, i: usize, j: usize) {
         let p = self.root(i);
         let q = self.root(j);
+        if p == q {
+            return;
+        }
         if self.tree_size[p] < self.tree_size[q] {
             self.parent[p] = q;
             self.tree_size[q] += self.tree_size[p];
