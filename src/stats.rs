@@ -12,9 +12,9 @@ use math::cast;
 use conv::ValueInto;
 
 /// Returns the square root of the mean of the squares of differences
-/// between all subpixels in left and right. If you do not want to consider
-/// all image channels then you should first change image format to remove
-/// the irrelevant channels.
+/// between all subpixels in left and right. All channels are considered
+/// equally. If you do not want this (e.g. if using RGBA) then change
+/// image formats first.
 pub fn root_mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
     where I: GenericImage<Pixel=P>,
           J: GenericImage<Pixel=P>,
