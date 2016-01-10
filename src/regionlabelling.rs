@@ -201,6 +201,8 @@ mod test {
         assert_pixels_eq!(labelled, expected);
     }
 
+    // One huge component with eight-way connectivity, loads of
+    // isolated components with four-way conectivity.
     fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 { return Luma([255u8]); }
@@ -216,11 +218,28 @@ mod test {
         assert_eq!(max_component, Some(1u32));
     }
 
+    #[test]
+    fn test_connected_components_four_chessboard() {
+        let image = chessboard(30, 30);
+        let components = connected_components(&image, Four);
+        let max_component = components.pixels().map(|p| p[0]).max();
+        assert_eq!(max_component, Some(450u32));
+    }
+
     #[bench]
     fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
         let image = chessboard(300, 300);
         b.iter(|| {
             let components = connected_components(&image, Eight);
+            test::black_box(components);
+            });
+    }
+
+    #[bench]
+    fn bench_connected_components_four_chessboard(b: &mut test::Bencher) {
+        let image = chessboard(300, 300);
+        b.iter(|| {
+            let components = connected_components(&image, Four);
             test::black_box(components);
             });
     }
