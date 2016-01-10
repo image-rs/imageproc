@@ -86,6 +86,7 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
     out
 }
 
+/// A 2D kernel, used to filter images via convolution.
 pub struct Kernel<'a, K: 'a> {
     data: &'a [K],
     width: u32,
@@ -105,7 +106,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         }
     }
 
-    /// Returns 2d correlation of an image. Intermediate calculations are performed 
+    /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
     pub fn filter<I, F, Q>(&self, image: &I, mut f: F) -> VecBuffer<Q>
         where I: GenericImage,
@@ -124,10 +125,10 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         for y in 0..height {
             for x in 0..width {
                 for k_y in 0..k_height {
-                    let y_p = cmp::min(height + height - 1, 
+                    let y_p = cmp::min(height + height - 1,
                                        cmp::max(height, (height + y + k_y - k_height / 2))) - height;
                     for k_x in 0..k_width {
-                        let x_p = cmp::min(width + width - 1, 
+                        let x_p = cmp::min(width + width - 1,
                                            cmp::max(width, (width + x + k_x - k_width / 2))) - width;
                         let (p, k) = unsafe {
                             (image.unsafe_get_pixel(x_p, y_p),
@@ -158,7 +159,7 @@ pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
-    
+
     let h = horizontal_filter(image, h_kernel);
     let v = vertical_filter(&h, v_kernel);
     v
