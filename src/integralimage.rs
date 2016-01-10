@@ -105,10 +105,9 @@ pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
 
     let width = image.width();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
-        format!("Buffer length {} is less than 2 * {} + {}",
-            buffer.len(), width, padding));
-    assert!(row < image.height(), format!("row out of bound: {} >= {}",
-                                          row, image.height()));
+        format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), width, padding));
+    assert!(row < image.height(),
+        format!("row out of bound: {} >= {}", row, image.height()));
 
     for x in 0..padding {
         buffer[x as usize] = unsafe { image.unsafe_get_pixel(0, row)[0] as u32 };
@@ -139,10 +138,9 @@ pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding
 
     let height = image.height();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
-        format!("Buffer length {} is less than {} + 2 * {}",
-            buffer.len(), height, padding));
-    assert!(column < image.width(), format!("column out of bound: {} >= {}",
-                                             column, image.width()));
+        format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), height, padding));
+    assert!(column < image.width(),
+        format!("column out of bound: {} >= {}", column, image.width()));
 
     for y in 0..padding {
         buffer[y as usize] = unsafe { image.unsafe_get_pixel(column, 0)[0] as u32 };
