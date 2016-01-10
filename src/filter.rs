@@ -86,6 +86,70 @@ pub fn box_filter<I>(image: &I, x_radius: u32, y_radius: u32)
     out
 }
 
+pub struct Kernel<'a, K: 'a> {
+    data: &'a [K],
+    width: u32,
+    height: u32,
+}
+
+impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
+
+    pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
+        assert!(width * height == data.len() as u32,
+            format!("Invalid kernel len: expecting {}, found {}",
+                    width * height, data.len()));
+        Kernel {
+            data: data,
+            width: width,
+            height: height,
+        }
+    }
+
+    /// Returns 2d correlation of an image. Intermediate calculations are performed 
+    /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+    pub fn filter<I, F, Q>(&self, image: &I, mut f: F) -> VecBuffer<Q>
+        where I: GenericImage,
+              <I::Pixel as Pixel>::Subpixel: ValueInto<K>,
+              Q: Pixel + 'static,
+              F: FnMut(&mut Q::Subpixel, K) -> (),
+    {
+
+        let (width, height) = image.dimensions();
+        let mut out = VecBuffer::<Q>::new(width, height);
+        let num_channels = I::Pixel::channel_count() as usize;
+        let zero = K::zero();
+        let mut acc = vec![zero; num_channels];
+        let (k_width, k_height) = (self.width, self.height);
+
+        for y in 0..height {
+            for x in 0..width {
+                for k_y in 0..k_height {
+                    let y_p = cmp::min(height + height - 1, 
+                                       cmp::max(height, (height + y + k_y - k_height / 2))) - height;
+                    for k_x in 0..k_width {
+                        let x_p = cmp::min(width + width - 1, 
+                                           cmp::max(width, (width + x + k_x - k_width / 2))) - width;
+                        let (p, k) = unsafe {
+                            (image.unsafe_get_pixel(x_p, y_p),
+                             *self.data.get_unchecked((k_y * k_width + k_x) as usize))
+                        };
+                        accumulate(&mut acc, &p, k);
+                    }
+                }
+                let out_channels = out.get_pixel_mut(x, y).channels_mut();
+                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                    f(c, a.clone());
+                    *a = zero;
+                }
+            }
+        }
+
+        out
+    }
+
+
+}
+
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels h_filter and v_filter.
 pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
@@ -111,50 +175,6 @@ pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
     separable_filter(image, kernel, kernel)
 }
 
-/// Returns 2d correlation of an image with a kernel. Intermediate calculations are
-/// performed at type K, and the results converted to pixel Q via f. Pads by continuity.
-pub fn filter_kernel<I, K, F, Q>(image: &I, kernel: &[K], 
-                                 k_width: u32, k_height: u32, mut f: F) 
-        -> VecBuffer<Q>
-    where I: GenericImage,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K>,
-          Q: Pixel + 'static,
-          F: FnMut(&mut Q::Subpixel, K) -> (),
-          K: Num + Copy {
-
-    assert!(kernel.len() as u32 >= k_width * k_height,
-            "incompatible kernel lengths".to_owned());
-
-    let (w, h) = image.dimensions();
-    let mut out = VecBuffer::<Q>::new(w, h);
-    let num_channels = I::Pixel::channel_count() as usize;
-    let zero = K::zero();
-    let mut acc = vec![zero; num_channels];
-
-    for y in 0..h {
-        for x in 0..w {
-            for k_y in 0..k_height {
-                let y_p = cmp::min(h + h - 1, cmp::max(h, (h + y + k_y - k_height / 2))) - h;
-                for k_x in 0..k_width {
-                    let x_p = cmp::min(w + w - 1, cmp::max(w, (w + x + k_x - k_width / 2))) - w;
-                    let (p, k) = unsafe {
-                        (image.unsafe_get_pixel(x_p, y_p),
-                         *kernel.get_unchecked((k_y * k_width + k_x) as usize))
-                    };
-                    accumulate(&mut acc, &p, k);
-                }
-            }
-            let out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                f(c, a.clone());
-                *a = zero;
-            }
-        }
-    }
-
-    out
-}
-
 /// Returns 2d correlation of an image with a 3x3 kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
 pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P, S>>
@@ -163,7 +183,8 @@ pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P,
           S: Clamp<K> + Primitive + 'static,
           P: WithChannel<S> + 'static,
           K: Num + Copy {
-    filter_kernel(image, kernel, 3, 3, |channel, acc| *channel = S::clamp(acc))
+    let kernel = Kernel::new(kernel, 3, 3);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
@@ -175,8 +196,9 @@ pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
-    filter_kernel(image, kernel, kernel.len() as u32, 1,
-        |channel, acc| *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
+    let kernel = Kernel::new(kernel, kernel.len() as u32, 1);
+    kernel.filter(image, |channel, acc|
+                  *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
@@ -187,8 +209,9 @@ pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
           I::Pixel: 'static,
           <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
-    filter_kernel(image, kernel, 1, kernel.len() as u32,
-        |channel, acc| *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
+    let kernel = Kernel::new(kernel, 1, kernel.len() as u32);
+    kernel.filter(image, |channel, acc|
+                  *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
 }
 
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
