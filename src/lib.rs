@@ -1,6 +1,5 @@
 
-#![feature(test)]
-#![feature(step_by)]
+#![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
 extern crate test;

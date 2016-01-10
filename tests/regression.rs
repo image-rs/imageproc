@@ -2,7 +2,6 @@
 //! All test images are taken from the caltech256 dataset.
 //! http://authors.library.caltech.edu/7694/
 
-#![feature(core)]
 #![feature(test)]
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
