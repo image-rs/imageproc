@@ -34,8 +34,8 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
     // the (2r + 1) * (2r + 1) search once per r * r grid cell (as opposed to once
     // per pixel in the naive implementation of this algorithm).
 
-    for y in (0..height).step_by(radius + 1) {
-        for x in (0..width).step_by(radius + 1) {
+    for y in step(0, height, radius + 1) {
+        for x in step(0, width, radius + 1) {
             let mut best_x = x;
             let mut best_y = y;
             let mut mi = image.get_pixel(x, y)[0];
@@ -109,6 +109,35 @@ fn contains_greater_value<I, C>(
     false
 }
 
+struct Steps {
+    current: u32,
+    max: u32,
+    step: u32
+}
+
+impl Iterator for Steps {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.max {
+            return None;
+        }
+        let r = self.current;
+        self.current += self.step;
+        Some(r)
+    }
+}
+
+/// Step with exclusive upper bound
+// TODO: Use step_by when it becomes stable.
+fn step(from: u32, to: u32, step: u32) -> Steps {
+    Steps {
+        current: from,
+        max: to,
+        step: step
+    }
+}
+
 /// Returns all items which have the highest score in the
 /// (2 * radius + 1) square block centred on them. Ties are resolved lexicographically.
 pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
@@ -173,6 +202,7 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
 mod test {
     use super::{
         local_maxima,
+        step,
         suppress_non_maximum
     };
     use definitions::{
@@ -397,5 +427,12 @@ mod test {
             actual.pixels().eq(expected.pixels())
         }
         quickcheck(prop as fn(GrayTestImage) -> bool);
+    }
+
+    #[test]
+    fn test_step() {
+        assert_eq!(step(0, 5, 4).collect::<Vec<u32>>(), vec![0, 4]);
+        assert_eq!(step(0, 4, 4).collect::<Vec<u32>>(), vec![0]);
+        assert_eq!(step(4, 4, 4).collect::<Vec<u32>>(), vec![]);
     }
 }

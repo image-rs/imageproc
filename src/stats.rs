@@ -7,7 +7,6 @@ use image::{
 };
 
 use num::Bounded;
-
 use math::cast;
 use conv::ValueInto;
 
