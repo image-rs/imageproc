@@ -139,7 +139,7 @@ pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding
 
     let height = image.height();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
-        format!("Buffer length {} is less than 2 * {} + {}",
+        format!("Buffer length {} is less than {} + 2 * {}",
             buffer.len(), height, padding));
     assert!(column < image.width(), format!("column out of bound: {} >= {}",
                                              column, image.width()));
