@@ -50,7 +50,7 @@ pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
           F: Fn(P::Subpixel) -> S
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::<ChannelMap<P, S>, Vec<S>>::new(width, height);
+    let mut out: ImageBuffer<ChannelMap<P, S>, Vec<S>> = ImageBuffer::new(width, height);
 
     for y in 0..height {
         for x in 0..width {
