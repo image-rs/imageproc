@@ -161,6 +161,7 @@ mod test {
         ImageBuffer,
         Luma
     };
+    use test;
 
     #[test]
     fn test_connected_components_four() {
@@ -200,5 +201,27 @@ mod test {
         assert_pixels_eq!(labelled, expected);
     }
 
-    // TODO: add benchmark
+    fn chessboard(width: u32, height: u32) -> GrayImage {
+        ImageBuffer::from_fn(width, height, |x, y| {
+            if (x + y) % 2 == 0 { return Luma([255u8]); }
+            else { return Luma([0u8]); }
+        })
+    }
+
+    #[test]
+    fn test_connected_components_eight_chessboard() {
+        let image = chessboard(30, 30);
+        let components = connected_components(&image, Eight);
+        let max_component = components.pixels().map(|p| p[0]).max();
+        assert_eq!(max_component, Some(1u32));
+    }
+
+    #[bench]
+    fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
+        let image = chessboard(300, 300);
+        b.iter(|| {
+            let components = connected_components(&image, Eight);
+            test::black_box(components);
+            });
+    }
 }
