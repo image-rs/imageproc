@@ -44,11 +44,6 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
 
     for y in 0..height {
         for x in 0..width {
-            out.put_pixel(x, y, Luma([0]));
-        }
-
-        for x in 0..width {
-
             let current = unsafe { image.unsafe_get_pixel(x, y) };
             if current == background {
                 continue;
