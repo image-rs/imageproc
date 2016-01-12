@@ -31,6 +31,7 @@ pub mod map;
 pub mod math;
 pub mod multiarray;
 pub mod noise;
+pub mod pixelops;
 pub mod rect;
 pub mod regionlabelling;
 pub mod suppress;
