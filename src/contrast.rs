@@ -78,7 +78,7 @@ pub fn threshold_mut<I>(image: &mut I, thresh: u8)
     }
 }
 
-/// Returns the histogram of grayscale values in an 8pp
+/// Returns the histogram of grayscale values in an 8bpp
 /// grayscale image.
 pub fn histogram<I>(image: &I) -> [i32; 256]
     where I: GenericImage<Pixel = Luma<u8>>
