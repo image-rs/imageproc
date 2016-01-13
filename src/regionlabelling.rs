@@ -10,10 +10,13 @@ use definitions::{
     VecBuffer
 };
 
-use unionfind::DisjointSetForest;
+use unionfind::{
+    DisjointSetForest
+};
 
-use std::cmp;
-use std::collections::HashMap;
+use std::{
+    cmp
+};
 
 /// Whether we consider the NW, NE, SW, and SE neighbors of
 /// a pixel to be connected to it, or just its N, S, E, and W
@@ -38,7 +41,8 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
     }
 
     let background = Luma([0u8]);
-    let mut forest = DisjointSetForest::new((width * height) as usize);
+    let image_size = (width * height) as usize;
+    let mut forest = DisjointSetForest::new(image_size);
     let mut adj_labels = [0u32; 4];
     let mut next_label = 1;
 
@@ -110,30 +114,26 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
     }
 
     // Make components start at 1
-    let mut root_name = 1;
-    let mut root_idx: HashMap<usize, usize> = HashMap::new();
+    let mut output_labels = vec![0u32; image_size];
+    let mut count = 1;
 
-    for y in 0..height {
-        for x in 0..width {
-            let label = unsafe {
-                if image.unsafe_get_pixel(x, y) == background {
-                    continue;
+    unsafe {
+        for y in 0..height {
+            for x in 0..width {
+                let label = {
+                    if image.unsafe_get_pixel(x, y) == background {
+                        continue;
+                    }
+                    out.unsafe_get_pixel(x, y)[0]
+                };
+                let root = forest.root(label as usize);
+                let mut output_label = *output_labels.get_unchecked(root);
+                if output_label < 1 {
+                    output_label = count;
+                    count += 1;
                 }
-                out.unsafe_get_pixel(x, y)[0]
-            };
-
-            let root = forest.root(label as usize);
-
-            match root_idx.get(&root).map(|x| *x) {
-                Some(idx) => {
-                    out.put_pixel(x, y, Luma([idx as u32]));
-                }
-                None => {
-                    let idx = root_name;
-                    root_idx.insert(root, idx);
-                    unsafe { out.unsafe_put_pixel(x, y, Luma([idx as u32])); }
-                    root_name += 1;
-                }
+                *output_labels.get_unchecked_mut(root) = output_label;
+                out.unsafe_put_pixel(x, y, Luma([output_label]));
             }
         }
     }
