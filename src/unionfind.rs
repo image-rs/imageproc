@@ -27,6 +27,14 @@ impl DisjointSetForest {
             tree_size: tree_size}
     }
 
+    /// Returns the number of trees in the forest.
+    pub fn num_trees(&self) -> usize {
+        self.parent
+            .iter()
+            .enumerate()
+            .fold(0, |acc, (i, p)| acc + if i == *p { 1 } else { 0 })
+    }
+
     /// Returns index of the root of the tree containing i.
     /// Needs mutable reference to self for path compression.
     pub fn root(&mut self, i: usize) -> usize {
@@ -131,6 +139,7 @@ mod test {
 
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![0, 1, 2, 3, 4, 5]);
+        assert_eq!(forest.num_trees(), 6);
 
         forest.union(0, 4);
         // 0  1  2  3  5
@@ -139,7 +148,7 @@ mod test {
 
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![0, 1, 2, 3, 0, 5]);
-
+        assert_eq!(forest.num_trees(), 5);
 
         forest.union(1, 3);
         // 0  1  2  5
@@ -148,6 +157,7 @@ mod test {
 
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![0, 1, 2, 1, 0, 5]);
+        assert_eq!(forest.num_trees(), 4);
 
         forest.union(3, 2);
         // 0    1     5
@@ -156,6 +166,7 @@ mod test {
 
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![0, 1, 1, 1, 0, 5]);
+        assert_eq!(forest.num_trees(), 3);
 
         forest.union(2, 4);
         //    1     5
@@ -166,6 +177,7 @@ mod test {
 
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![1, 1, 1, 1, 0, 5]);
+        assert_eq!(forest.num_trees(), 2);
     }
 
     // TODO: write a benchmark
