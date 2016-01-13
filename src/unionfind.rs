@@ -32,12 +32,14 @@ impl DisjointSetForest {
     pub fn root(&mut self, i: usize) -> usize {
         let mut j = i;
         loop {
-            let p = self.parent[j];
-            self.parent[j] = self.parent[p];
-            if j == p {
-                break;
+            unsafe {
+                let p = *self.parent.get_unchecked(j);
+                *self.parent.get_unchecked_mut(j) = *self.parent.get_unchecked(p);
+                if j == p {
+                    break;
+                }
+                j = p;
             }
-            j = p;
         }
         j
     }
@@ -55,13 +57,17 @@ impl DisjointSetForest {
         if p == q {
             return;
         }
-        if self.tree_size[p] < self.tree_size[q] {
-            self.parent[p] = q;
-            self.tree_size[q] += self.tree_size[p];
-        }
-        else {
-            self.parent[q] = p;
-            self.tree_size[p] += self.tree_size[q];
+        unsafe {
+            let p_size = *self.tree_size.get_unchecked(p);
+            let q_size = *self.tree_size.get_unchecked(q);
+            if p_size < q_size {
+                *self.parent.get_unchecked_mut(p) = q;
+                *self.tree_size.get_unchecked_mut(q) = p_size + q_size;
+            }
+            else {
+                *self.parent.get_unchecked_mut(q) = p;
+                *self.tree_size.get_unchecked_mut(p) = p_size + q_size;
+            }
         }
     }
 
