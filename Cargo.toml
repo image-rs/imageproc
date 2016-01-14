@@ -8,13 +8,13 @@ readme = "README.md"
 homepage = "https://github.com/PistonDevelopers/imageproc"
 
 [dependencies]
-conv = "0.3.1"
-image = "0.3.14"
-itertools = "0.4.2"
-nalgebra = "0.3.0"
-num = "0.1.27"
-quickcheck = "0.2.24"
-rand = "0.3.11"
+conv = "0.3"
+image = "0.6"
+itertools = "0.4"
+nalgebra = "0.5"
+num = "0.1"
+quickcheck = "0.2"
+rand = "0.3"
 
 [profile.release]
 opt-level = 3
