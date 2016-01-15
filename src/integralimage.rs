@@ -13,8 +13,6 @@ use definitions::{
     VecBuffer
 };
 
-use std::cmp;
-
 /// Computes the integral image of an 8bpp grayscale image.
 /// I is the integral image of an image F if I(x, y) is the
 /// sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
