@@ -45,6 +45,10 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> Ve
 
     let mut out: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(out_width, out_height);
 
+    if in_width == 0 || in_height == 0 {
+        return out;
+    }
+
     for y in 0..out_height {
         let y_in: u32;
         if y < y_padding {
@@ -169,12 +173,20 @@ mod test {
         row_running_sum
     };
     use utils::{
-        gray_bench_image
+        gray_bench_image,
+        GrayTestImage
     };
     use image::{
+        GenericImage,
         GrayImage,
         ImageBuffer,
         Luma
+    };
+    use quickcheck::{
+        quickcheck
+    };
+    use definitions::{
+        VecBuffer
     };
     use test;
 
@@ -262,5 +274,39 @@ mod test {
         b.iter(|| {
             column_running_sum(&image, 0, &mut buffer, 5);
             });
+    }
+
+    /// Simple implementation of integral_image to validate faster versions against.
+    fn integral_image_ref<I>(image: &I) -> VecBuffer<Luma<u32>>
+        where I: GenericImage<Pixel=Luma<u8>>
+    {
+        let (width, height) = image.dimensions();
+        let mut out = ImageBuffer::new(width, height);
+
+        for y in 0..height {
+            for x in 0..width {
+                let mut sum = 0u32;
+
+                for iy in 0..(y + 1) {
+                    for ix in 0..(x + 1) {
+                        sum += image.get_pixel(ix, iy)[0] as u32;
+                    }
+                }
+
+                out.put_pixel(x, y, Luma([sum]));
+            }
+        }
+
+        out
+    }
+
+    #[test]
+    fn test_integral_image_matches_reference_implementation() {
+        fn prop(image: GrayTestImage) -> bool {
+            let expected = integral_image_ref(&image.0);
+            let actual = integral_image(&image.0);
+            actual.pixels().eq(expected.pixels())
+        }
+        quickcheck(prop as fn(GrayTestImage) -> bool);
     }
 }
