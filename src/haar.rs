@@ -340,6 +340,8 @@ mod test {
     use integralimage::{
         integral_image
     };
+    use utils::gray_bench_image;
+    use test;
 
     #[test]
     fn test_combine_alternating() {
@@ -508,5 +510,20 @@ mod test {
         6u8,    5u8,   4u8,       2u8,     1u8]).unwrap();
 
         assert_pixels_eq!(actual, expected);
+    }
+
+    #[bench]
+    fn bench_evaluate_all_filters_10x10(b: &mut test::Bencher) {
+        // 163350 filters in total
+        let filters = enumerate_haar_filters(10, 10);
+        let image = gray_bench_image(10, 10);
+        let integral = integral_image(&image);
+
+        b.iter(|| {
+            for filter in filters.iter() {
+                let x = filter.evaluate(&integral);
+                test::black_box(x);
+            }
+        });
     }
 }
