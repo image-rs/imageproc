@@ -48,18 +48,18 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
         = ImageBuffer::new(out_width, out_height);
 
     for y in 0..out_height {
-        for x in 0..out_width {
+        let y_in: u32;
+        if y < y_padding {
+            y_in = 0;
+        }
+        else if y >= in_height + y_padding {
+            y_in = in_height - 1;
+        }
+        else {
+            y_in = y - y_padding;
+        }
 
-            let y_in: u32;
-            if y < y_padding {
-                y_in = 0;
-            }
-            else if y >= in_height + y_padding {
-                y_in = in_height - 1;
-            }
-            else {
-                y_in = y - y_padding;
-            }
+        for x in 0..out_width {
             let x_in: u32;
             if x < x_padding {
                 x_in = 0;
