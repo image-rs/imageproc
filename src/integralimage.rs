@@ -36,16 +36,14 @@ pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
 /// side and y_padding rows at its top and bottom.
 /// Returned image has width image.width() + 2 * x_padding
 /// and height image.height() + 2 * y_padding.
-pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32)
-        -> VecBuffer<Luma<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> VecBuffer<Luma<u32>>
+    where I: GenericImage<Pixel=Luma<u8>>
+{
     let (in_width, in_height) = image.dimensions();
     let out_width = in_width + 2 * x_padding;
     let out_height = in_height + 2 * y_padding;
 
-    let mut out: ImageBuffer<Luma<u32>, Vec<u32>>
-        = ImageBuffer::new(out_width, out_height);
+    let mut out: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(out_width, out_height);
 
     for y in 0..out_height {
         let y_in: u32;
