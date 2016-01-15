@@ -13,6 +13,8 @@ use definitions::{
     VecBuffer
 };
 
+use std::cmp;
+
 /// Computes the integral image of an 8bpp grayscale image.
 /// I is the integral image of an image F if I(x, y) is the
 /// sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
@@ -31,10 +33,9 @@ pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
     padded_integral_image(image, 0, 0)
 }
 
-/// Computes the integral image of the result of padding image
-/// with its boundary pixels for x_padding columns on either
-/// side and y_padding rows at its top and bottom.
-/// Returned image has width image.width() + 2 * x_padding
+/// Computes the integral image of the result of padding image with
+/// its boundary pixels for x_padding columns on either side and y_padding
+/// rows at its top and bottom. Returned image has width image.width() + 2 * x_padding
 /// and height image.height() + 2 * y_padding.
 pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> VecBuffer<Luma<u32>>
     where I: GenericImage<Pixel=Luma<u8>>
@@ -49,52 +50,41 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> Ve
         return out;
     }
 
-    for y in 0..out_height {
-        let y_in: u32;
-        if y < y_padding {
-            y_in = 0;
+    let mut top_sum = 0u32;
+    for x in 0..out_width {
+        let x_in = adjust_for_padding(x, x_padding, in_width);
+        unsafe {
+            top_sum += image.unsafe_get_pixel(x_in, 0)[0] as u32;
+            out.unsafe_put_pixel(x, 0, Luma([top_sum]));
         }
-        else if y >= in_height + y_padding {
-            y_in = in_height - 1;
-        }
-        else {
-            y_in = y - y_padding;
-        }
-
-        for x in 0..out_width {
-            let x_in: u32;
-            if x < x_padding {
-                x_in = 0;
-            }
-            else if x >= in_width + x_padding {
-                x_in = in_width - 1;
-            }
-            else {
-                x_in = x - x_padding;
-            }
-
-            unsafe {
-                let p = image.unsafe_get_pixel(x_in, y_in);
-                out.unsafe_put_pixel(x, y, Luma([p[0] as u32]));
-            }
-        }
-    }
-
-    for x in 1..out_width {
-        (*out.get_pixel_mut(x, 0))[0] += unsafe { out.unsafe_get_pixel(x - 1, 0)[0] };
     }
 
     for y in 1..out_height {
-        (*out.get_pixel_mut(0, y))[0] += unsafe { out.unsafe_get_pixel(0, y - 1)[0] };
+        let y_in = adjust_for_padding(y, y_padding, in_height);
+        let mut sum = 0;
 
-        for x in 1..out_width {
-            (*out.get_pixel_mut(x, y))[0] += unsafe { out.unsafe_get_pixel(x, y - 1)[0] };
-            (*out.get_pixel_mut(x, y))[0] += unsafe { out.unsafe_get_pixel(x - 1, y)[0] };
-            (*out.get_pixel_mut(x, y))[0] -= unsafe { out.unsafe_get_pixel(x - 1, y - 1)[0] };
+        for x in 0..out_width {
+            let x_in = adjust_for_padding(x, x_padding, in_width);
+
+            unsafe {
+                sum += image.unsafe_get_pixel(x_in, y_in)[0] as u32;
+                let above = out.unsafe_get_pixel(x, y - 1)[0];
+                out.unsafe_put_pixel(x, y, Luma([above + sum]))
+            }
         }
     }
 
     out
+}
+
+#[inline(always)]
+fn adjust_for_padding(out_index: u32, padding: u32, upper: u32) -> u32 {
+    if out_index < padding {
+        return 0;
+    } else if out_index >= upper + padding {
+        return upper - 1;
+    }
+    return out_index - padding;
 }
 
 /// Computes the running sum of one row of image, padded
