@@ -93,28 +93,27 @@ fn adjust_for_padding(out_index: u32, padding: u32, upper: u32) -> u32 {
 pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
     where I: GenericImage<Pixel=Luma<u8>> {
 
-    let width = image.width();
+    let (width, height) = image.dimensions();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), width, padding));
-    assert!(row < image.height(),
-        format!("row out of bound: {} >= {}", row, image.height()));
+    assert!(row < height, format!("row out of bound: {} >= {}", row, height));
 
-    for x in 0..padding {
-        buffer[x as usize] = unsafe { image.unsafe_get_pixel(0, row)[0] as u32 };
-    }
+    unsafe {
+        let mut sum = 0;
+        for x in 0..padding {
+            sum += image.unsafe_get_pixel(0, row)[0] as u32;
+            *buffer.get_unchecked_mut(x as usize) = sum;
+        }
 
-    for x in 0..width {
-        let idx = (x + padding) as usize;
-        buffer[idx] = unsafe { image.unsafe_get_pixel(x, row)[0] as u32 };
-    }
+        for x in 0..width {
+            sum += image.unsafe_get_pixel(x, row)[0] as u32;
+            *buffer.get_unchecked_mut((x + padding) as usize) = sum;
+        }
 
-    for x in 0..padding {
-        let idx = (x + width + padding) as usize;
-        buffer[idx] = unsafe { image.unsafe_get_pixel(width - 1, row)[0] as u32 };
-    }
-
-    for x in 1..width + 2 * padding {
-        buffer[x as usize] += buffer[(x - 1) as usize] as u32;
+        for x in 0..padding {
+            sum += image.unsafe_get_pixel(width - 1, row)[0] as u32;
+            *buffer.get_unchecked_mut((x + width + padding) as usize) = sum;
+        }
     }
 }
 
@@ -126,28 +125,27 @@ pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
 pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding: u32)
     where I: GenericImage<Pixel=Luma<u8>> {
 
-    let height = image.height();
+    let (width, height) = image.dimensions();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), height, padding));
-    assert!(column < image.width(),
-        format!("column out of bound: {} >= {}", column, image.width()));
+    assert!(column < width, format!("column out of bound: {} >= {}", column, width));
 
-    for y in 0..padding {
-        buffer[y as usize] = unsafe { image.unsafe_get_pixel(column, 0)[0] as u32 };
-    }
+    unsafe {
+        let mut sum = 0;
+        for y in 0..padding {
+            sum += image.unsafe_get_pixel(column, 0)[0] as u32;
+            *buffer.get_unchecked_mut(y as usize) = sum;
+        }
 
-    for y in 0..height {
-        let idx = (y + padding) as usize;
-        buffer[idx] = unsafe { image.unsafe_get_pixel(column, y)[0] as u32 };
-    }
+        for y in 0..height {
+            sum += image.unsafe_get_pixel(column, y)[0] as u32;
+            *buffer.get_unchecked_mut((y + padding) as usize) = sum;
+        }
 
-    for y in 0..padding {
-        let idx = (y + height + padding) as usize;
-        buffer[idx] = unsafe { image.unsafe_get_pixel(column, height - 1)[0] as u32 };
-    }
-
-    for y in 1..height + 2 * padding {
-        buffer[y as usize] += buffer[(y - 1) as usize] as u32;
+        for y in 0..padding {
+            sum += image.unsafe_get_pixel(column, height - 1)[0] as u32;
+            *buffer.get_unchecked_mut((y + height + padding) as usize) = sum;
+        }
     }
 }
 
