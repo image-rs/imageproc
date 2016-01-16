@@ -96,7 +96,7 @@ pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), width, padding));
-    assert!(row < height, format!("row out of bound: {} >= {}", row, height));
+    assert!(row < height, format!("row out of bounds: {} >= {}", row, height));
 
     unsafe {
         let mut sum = 0;
@@ -128,7 +128,7 @@ pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), height, padding));
-    assert!(column < width, format!("column out of bound: {} >= {}", column, width));
+    assert!(column < width, format!("column out of bounds: {} >= {}", column, width));
 
     unsafe {
         let mut sum = 0;
