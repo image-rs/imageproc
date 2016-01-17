@@ -214,7 +214,9 @@ mod test {
         histogram,
         histogram_lut,
         otsu_level,
-        threshold};
+        threshold,
+        threshold_mut,
+    };
     use utils::gray_bench_image;
     use image::{GrayImage, ImageBuffer};
     use test;
@@ -336,6 +338,23 @@ mod test {
         b.iter(|| {
             let equalized = equalize_histogram(&image);
             test::black_box(equalized);
+        });
+    }
+
+    #[bench]
+    fn bench_threshold(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let thresholded = threshold(&image, 125);
+            test::black_box(thresholded);
+        });
+    }
+    
+    #[bench]
+    fn bench_threshold_mut(b: &mut test::Bencher) {
+        let mut image = gray_bench_image(500, 500);
+        b.iter(|| {
+            test::black_box(threshold_mut(&mut image, 125));
         });
     }
 }
