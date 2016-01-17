@@ -234,13 +234,18 @@ mod test {
         vertical_filter
     };
     use utils::{
-        gray_bench_image
+        gray_bench_image,
+        rgb_bench_image
     };
     use image::{
+        GenericImage,
         GrayImage,
         ImageBuffer,
-        Luma
+        Luma,
+        Rgb
     };
+    use definitions::VecBuffer;
+    use image::imageops::blur;
     use test;
 
     #[test]
@@ -408,6 +413,41 @@ mod test {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>>
                 = filter3x3::<_, _, _, i16>(&image, &kernel);
             test::black_box(filtered);
+            });
+    }
+
+    /// Baseline implementation of Gaussian blur is that provided by image::imageops.
+    /// We can also use this to validate correctnes of any implementations we add here.
+    fn gaussian_baseline_rgb<I>(image: &I, stdev: f32) -> VecBuffer<Rgb<u8>>
+        where I: GenericImage<Pixel=Rgb<u8>> + 'static
+    {
+        blur(image, stdev)
+    }
+
+    #[bench]
+    fn bench_baseline_gaussian_stdev_1(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_baseline_rgb(&image, 1f32);
+            test::black_box(blurred);
+            });
+    }
+
+    #[bench]
+    fn bench_baseline_gaussian_stdev_3(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_baseline_rgb(&image, 3f32);
+            test::black_box(blurred);
+            });
+    }
+
+    #[bench]
+    fn bench_baseline_gaussian_stdev_10(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_baseline_rgb(&image, 10f32);
+            test::black_box(blurred);
             });
     }
 }
