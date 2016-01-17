@@ -1,6 +1,6 @@
 //! Functions for manipulating the contrast of images.
 
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use image::{GrayImage, Luma};
 use definitions::VecBuffer;
 
 /// Returns the Otsu threshold level of an 8bpp image.
@@ -8,9 +8,7 @@ use definitions::VecBuffer;
 /// contains two classes of pixels which have distributions
 /// with equal variances. For details see:
 /// Xu, X., et al. Pattern recognition letters 32.7 (2011)
-pub fn otsu_level<I>(image: &I) -> u8
-    where I: GenericImage<Pixel = Luma<u8>>
-{
+pub fn otsu_level(image: &VecBuffer<Luma<u8>>) -> u8 {
     let hist = histogram(image);
     let levels = hist.len();
     let mut histc = [0i32; 256];
@@ -68,13 +66,11 @@ pub fn threshold_mut(image: &mut VecBuffer<Luma<u8>>, thresh: u8) {
 
 /// Returns the histogram of grayscale values in an 8bpp
 /// grayscale image.
-pub fn histogram<I>(image: &I) -> [i32; 256]
-    where I: GenericImage<Pixel = Luma<u8>>
-{
+pub fn histogram(image: &VecBuffer<Luma<u8>>) -> [i32; 256] {
     let mut hist = [0i32; 256];
 
-    for pix in image.pixels() {
-        hist[pix.2[0] as usize] += 1;
+    for pix in image.iter() {
+        hist[*pix as usize] += 1;
     }
 
     hist
@@ -82,9 +78,7 @@ pub fn histogram<I>(image: &I) -> [i32; 256]
 
 /// Returns the cumulative histogram of grayscale values in an 8bpp
 /// grayscale image.
-pub fn cumulative_histogram<I>(image: &I) -> [i32; 256]
-    where I: GenericImage<Pixel = Luma<u8>>
-{
+pub fn cumulative_histogram(image: &VecBuffer<Luma<u8>>) -> [i32; 256] {
     let mut hist = histogram(image);
 
     for i in 1..hist.len() {
@@ -96,61 +90,42 @@ pub fn cumulative_histogram<I>(image: &I) -> [i32; 256]
 
 /// Equalises the histogram of an 8bpp grayscale image in place.
 /// https://en.wikipedia.org/wiki/Histogram_equalization
-pub fn equalize_histogram_mut<I>(image: &mut I)
-    where I: GenericImage<Pixel = Luma<u8>>
-{
+pub fn equalize_histogram_mut(image: &mut VecBuffer<Luma<u8>>) {
     let hist = cumulative_histogram(image);
     let total = hist[255] as f32;
 
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            let original = unsafe { image.unsafe_get_pixel(x, y)[0] as usize };
-            let fraction = hist[original] as f32 / total;
-            let out = f32::min(255f32, 255f32 * fraction);
-            unsafe { image.unsafe_put_pixel(x, y, Luma([out as u8])); }
-        }
+    for c in image.iter_mut() {
+        let fraction = hist[*c as usize] as f32 / total;
+        *c = f32::min(255f32, 255f32 * fraction) as u8;
     }
 }
 
 /// Equalises the histogram of an 8bpp grayscale image.
 /// https://en.wikipedia.org/wiki/Histogram_equalization
-pub fn equalize_histogram<I>(image: &I) -> GrayImage
-    where I: GenericImage<Pixel = Luma<u8>>
-{
-    let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+pub fn equalize_histogram(image: &VecBuffer<Luma<u8>>) -> GrayImage {
+    let mut out = image.clone();
     equalize_histogram_mut(&mut out);
     out
 }
 
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
 /// histogram is as close as possible to that of the target image.
-pub fn match_histogram_mut<I, J>(image: &mut I, target: &J)
-    where I : GenericImage<Pixel = Luma<u8>>,
-          J : GenericImage<Pixel = Luma<u8>>
-{
+pub fn match_histogram_mut(image: &mut VecBuffer<Luma<u8>>, 
+                           target: &VecBuffer<Luma<u8>>) {
     let image_histc = cumulative_histogram(image);
     let target_histc = cumulative_histogram(target);
     let lut = histogram_lut(&image_histc, &target_histc);
 
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y)[0] as usize;
-                image.unsafe_put_pixel(x, y, Luma([lut[pix] as u8]));
-            }
-        }
+    for c in image.iter_mut() {
+        *c = lut[*c as usize] as u8;
     }
 }
 
 /// Adjusts contrast of an 8bpp grayscale image so that its
 /// histogram is as close as possible to that of the target image.
-pub fn match_histogram<I, J>(image: &I, target: &J) -> GrayImage
-    where I : GenericImage<Pixel = Luma<u8>>,
-          J : GenericImage<Pixel = Luma<u8>>
-{
-    let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+pub fn match_histogram(image: &VecBuffer<Luma<u8>>, 
+                       target: &VecBuffer<Luma<u8>>) -> GrayImage {
+    let mut out = image.clone();
     match_histogram_mut(&mut out, target);
     out
 }

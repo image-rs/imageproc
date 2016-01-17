@@ -12,6 +12,7 @@ extern crate test;
 extern crate imageproc;
 
 use std::path::Path;
+use image::ImageBuffer;
 
 use imageproc::utils::{
     load_image_or_panic
