@@ -199,6 +199,7 @@ mod test {
     use super::{
         cumulative_histogram,
         equalize_histogram,
+        equalize_histogram_mut,
         histogram,
         histogram_lut,
         otsu_level,
@@ -326,6 +327,14 @@ mod test {
         b.iter(|| {
             let equalized = equalize_histogram(&image);
             test::black_box(equalized);
+        });
+    }
+
+    #[bench]
+    fn bench_equalize_histogram_mut(b: &mut test::Bencher) {
+        let mut image = gray_bench_image(500, 500);
+        b.iter(|| {
+            test::black_box(equalize_histogram_mut(&mut image));
         });
     }
 
