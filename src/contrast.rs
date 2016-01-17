@@ -1,6 +1,7 @@
 //! Functions for manipulating the contrast of images.
 
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use definitions::VecBuffer;
 
 /// Returns the Otsu threshold level of an 8bpp image.
 /// This threshold will optimally binarize an image that
@@ -51,30 +52,17 @@ pub fn otsu_level<I>(image: &I) -> u8
 
 /// Returns a binarized image from an input 8bpp grayscale image
 /// obtained by applying the given threshold.
-pub fn threshold<I>(image: &I, thresh: u8) -> GrayImage
-    where I: GenericImage<Pixel = Luma<u8>>
-{
-    let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+pub fn threshold(image: &VecBuffer<Luma<u8>>, thresh: u8) -> GrayImage {
+    let mut out = image.clone();
     threshold_mut(&mut out, thresh);
     out
 }
 
 /// Mutates given image to form a binarized version produced by applying
 /// the given threshold.
-pub fn threshold_mut<I>(image: &mut I, thresh: u8)
-    where I: GenericImage<Pixel = Luma<u8>>
-{
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            unsafe {
-                if image.unsafe_get_pixel(x, y)[0] as u8 <= thresh {
-                    image.unsafe_put_pixel(x, y, Luma([0]));
-                } else {
-                    image.unsafe_put_pixel(x, y, Luma([255]));
-                }
-            }
-        }
+pub fn threshold_mut(image: &mut VecBuffer<Luma<u8>>, thresh: u8) {
+    for c in image.iter_mut() {
+        *c = if *c as u8 <= thresh { 0 } else { 255 };
     }
 }
 
