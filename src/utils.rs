@@ -53,8 +53,8 @@ pub fn significant_pixel_diff_summary<I, J, F, P>(actual: &I,
           F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool
 {
     if actual.dimensions() != expected.dimensions() {
-        return Some("dimensions do not match. \
-            actual: {:?}, expected: {:?}", actual.dimensions(), expected.dimensions())
+        return Some(format!("dimensions do not match. \
+            actual: {:?}, expected: {:?}", actual.dimensions(), expected.dimensions()));
     }
     let diffs = pixel_diffs(actual, expected, is_significant_diff);
     if diffs.is_empty() {
