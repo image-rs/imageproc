@@ -220,8 +220,11 @@ mod test {
         gaussian_noise_mut
     };
     use std::cmp;
-    use quickcheck::quickcheck;
-    use utils::GrayTestImage;
+    use quickcheck::{
+        quickcheck,
+        TestResult
+    };
+    use utils::{GrayTestImage,pixel_diff_summary};
     use test::Bencher;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
@@ -421,12 +424,15 @@ mod test {
 
     #[test]
     fn test_suppress_non_maximum_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> bool {
+        fn prop(image: GrayTestImage) -> TestResult {
             let expected = suppress_non_maximum_reference(&image.0, 3);
             let actual = suppress_non_maximum(&image.0, 3);
-            actual.pixels().eq(expected.pixels())
+            match pixel_diff_summary(&actual, &expected) {
+                None => TestResult::passed(),
+                Some(err) => TestResult::error(err)
+            }
         }
-        quickcheck(prop as fn(GrayTestImage) -> bool);
+        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
     #[test]
