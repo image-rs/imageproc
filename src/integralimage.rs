@@ -160,7 +160,8 @@ mod test {
     };
     use utils::{
         gray_bench_image,
-        GrayTestImage
+        GrayTestImage,
+        pixel_diff_summary
     };
     use image::{
         GenericImage,
@@ -169,7 +170,8 @@ mod test {
         Luma
     };
     use quickcheck::{
-        quickcheck
+        quickcheck,
+        TestResult
     };
     use definitions::{
         VecBuffer
@@ -288,11 +290,14 @@ mod test {
 
     #[test]
     fn test_integral_image_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> bool {
+        fn prop(image: GrayTestImage) -> TestResult {
             let expected = integral_image_ref(&image.0);
             let actual = integral_image(&image.0);
-            actual.pixels().eq(expected.pixels())
+            match pixel_diff_summary(&actual, &expected) {
+                None => TestResult::passed(),
+                Some(err) => TestResult::error(err)
+            }
         }
-        quickcheck(prop as fn(GrayTestImage) -> bool);
+        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 }

@@ -29,15 +29,45 @@ use rand::{
 use std::fmt;
 use std::path::Path;
 
+/// Human readable description of some of the pixels that differ
+/// between left and right, or None if all pixels match.
+pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J)
+    -> Option<String>
+    where P: Pixel + PartialEq + fmt::Debug,
+          I: GenericImage<Pixel=P>,
+          J: GenericImage<Pixel=P>
+{
+    significant_pixel_diff_summary(actual, expected, |p, q| p != q)
+}
+
+/// Human readable description of some of the pixels that differ
+/// signifcantly (according to provided function) between left
+/// and right, or None if all pixels match.
+pub fn significant_pixel_diff_summary<I, J, F, P>(actual: &I,
+                                                  expected: &J,
+                                                  is_significant_diff: F)
+    -> Option<String>
+    where P: Pixel + fmt::Debug,
+          I: GenericImage<Pixel=P>,
+          J: GenericImage<Pixel=P>,
+          F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool
+{
+    let diffs = pixel_diffs(actual, expected, is_significant_diff);
+    if diffs.is_empty() {
+        return None;
+    }
+    Some(describe_pixel_diffs(diffs.into_iter()))
+}
+
 /// Panics if any pixels differ between the two input images.
 #[macro_export]
 macro_rules! assert_pixels_eq {
     ($actual:expr, $expected:expr) => ({
         assert_dimensions_match!($actual, $expected);
-        let diffs = $crate::utils::pixel_diffs(&$actual, &$expected, |p, q| p != q);
-        if !diffs.is_empty() {
-            panic!($crate::utils::describe_pixel_diffs(diffs.into_iter()))
-        }
+        match $crate::utils::pixel_diff_summary(&$actual, &$expected) {
+            None => {},
+            Some(err) => panic!(err)
+        };
      })
 }
 
@@ -94,26 +124,35 @@ macro_rules! assert_dimensions_match {
 }
 
 /// Lists pixels that differ between left and right images.
-pub fn pixel_diffs<I, F>(left: &I, right: &I, is_diff: F)
+pub fn pixel_diffs<I, J, F, P>(left: &I, right: &J, is_diff: F)
         -> Vec<((u32, u32, I::Pixel), (u32, u32, I::Pixel))>
-    where I: GenericImage,
-          I::Pixel: PartialEq,
-          F: Fn((u32, u32, I::Pixel), (u32, u32, I::Pixel)) -> bool {
+    where P: Pixel,
+          I: GenericImage<Pixel=P>,
+          J: GenericImage<Pixel=P>,
+          F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool
+{
+    if is_empty(left) || is_empty(right) {
+        return vec![];
+    }
 
     // Can't just call $image.pixels(), as that needn't hit the
     // trait pixels method - ImageBuffer defines its own pixels
     // method with a different signature
     GenericImage::pixels(left)
         .zip(GenericImage::pixels(right))
-        .filter(|&(p, q)| is_diff(p, q))//p != q)
+        .filter(|&(p, q)| is_diff(p, q))
         .collect::<Vec<_>>()
+}
+
+fn is_empty<I: GenericImage>(image: &I) -> bool {
+    image.width() == 0 || image.height() == 0
 }
 
 /// Gives a summary description of a list of pixel diffs for use in error messages.
 pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
     where I: Iterator<Item=(P, P)>,
-          P: fmt::Debug {
-
+          P: fmt::Debug
+{
     let mut err = "pixels do not match. ".to_string();
     err.push_str(&(diffs
         .take(5)
