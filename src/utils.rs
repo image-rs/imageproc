@@ -157,7 +157,7 @@ pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
     where I: Iterator<Item=(P, P)>,
           P: fmt::Debug
 {
-    let mut err = "pixels do not match. ".to_string();
+    let mut err = "pixels do not match. ".to_owned();
     err.push_str(&(diffs
         .take(5)
         .map(|d| format!("\nactual: {:?}, expected {:?} ", d.0, d.1))
@@ -168,9 +168,7 @@ pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
 
 /// Loads image at given path, panicking on failure.
 pub fn load_image_or_panic(path: &Path) -> DynamicImage {
-     open(path)
-         .ok()
-         .expect(&format!("Could not load image at {:?}", path))
+     open(path).expect(&format!("Could not load image at {:?}", path))
 }
 
 /// Gray image to use in benchmarks. This is neither noise nor
@@ -228,7 +226,7 @@ impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
     }
 
     fn shrink(&self) -> Box<Iterator<Item=TestBuffer<T>>> {
-        Box::new(shrink(&self.0).map(|x| TestBuffer(x)))
+        Box::new(shrink(&self.0).map(TestBuffer))
     }
 }
 

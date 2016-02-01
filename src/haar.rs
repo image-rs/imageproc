@@ -520,7 +520,7 @@ mod test {
         let integral = integral_image(&image);
 
         b.iter(|| {
-            for filter in filters.iter() {
+            for filter in &filters {
                 let x = filter.evaluate(&integral);
                 test::black_box(x);
             }

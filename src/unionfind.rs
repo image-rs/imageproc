@@ -90,7 +90,7 @@ impl DisjointSetForest {
         let mut sets: Vec<Vec<usize>> = vec![];
         for i in 0..self.count {
             let root = self.root(i);
-            match root_sets.get(&root).map(|x| *x) {
+            match root_sets.get(&root).cloned() {
                 Some(set_idx) => {
                     sets[set_idx].push(i);
                 },

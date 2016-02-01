@@ -161,8 +161,7 @@ pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
           K: Num + Copy {
 
     let h = horizontal_filter(image, h_kernel);
-    let v = vertical_filter(&h, v_kernel);
-    v
+    vertical_filter(&h, v_kernel)
 }
 
 /// Returns 2d correlation of an image with the outer product of the 1d

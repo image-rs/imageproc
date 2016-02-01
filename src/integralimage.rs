@@ -82,7 +82,7 @@ fn adjust_for_padding(out_index: u32, padding: u32, upper: u32) -> u32 {
     } else if out_index >= upper + padding {
         return upper - 1;
     }
-    return out_index - padding;
+    out_index - padding
 }
 
 /// Computes the running sum of one row of image, padded
