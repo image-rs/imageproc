@@ -144,12 +144,12 @@ pub fn hog<I>(image: &I, options: HogOptions) -> Option<Vec<f32>>
 	where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
 	match HogSpec::from_options(image.width(), image.height(), options) {
-		None => return None,
+		None => None,
 		Some(spec) => {
 			let mut grid: Array3d<f32> = cell_histograms(image, spec);
 			let grid_view = grid.view_mut();
 			let descriptor = hog_descriptor_from_hist_grid(grid_view, spec);
-			return Some(descriptor);
+			Some(descriptor)
 		}
 	}
 }
@@ -186,7 +186,7 @@ fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
 				if norm > 0f32 {
 					let mut block_mut = block_view.inner_slice_mut(bx, by);
 					for i in 0..block_mut.len() {
-							block_mut[i] /= norm;
+						block_mut[i] /= norm;
 					}
 				}
 			}
