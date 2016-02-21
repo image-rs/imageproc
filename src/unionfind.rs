@@ -109,9 +109,10 @@ impl DisjointSetForest {
 #[cfg(test)]
 mod test {
 
-    use super::{
-        DisjointSetForest
-    };
+    use super::DisjointSetForest;
+    use test;
+    use rand::{SeedableRng, StdRng};
+    use rand::distributions::{IndependentSample, Range};
 
     #[test]
     fn test_trees() {
@@ -180,5 +181,25 @@ mod test {
         assert_eq!(forest.num_trees(), 2);
     }
 
-    // TODO: write a benchmark
+    #[bench]
+    fn bench_disjoint_set_forest(b: &mut test::Bencher) {
+        let num_nodes = 500;
+        let num_edges = 20 * num_nodes;
+
+        let seed_array: &[_] = &[1usize];
+        let mut rng: StdRng = SeedableRng::from_seed(seed_array);
+        let uniform = Range::new(0, num_nodes + 1);
+
+        let mut forest = DisjointSetForest::new(num_nodes);
+        b.iter(|| {
+            let mut count = 0;
+            while count < num_edges {
+                let u = uniform.ind_sample(&mut rng);
+                let v = uniform.ind_sample(&mut rng);
+                forest.union(u, v);
+                count += 1;
+            }
+            test::black_box(forest.num_trees());
+        });
+    }
 }
