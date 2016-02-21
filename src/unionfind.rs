@@ -188,7 +188,7 @@ mod test {
 
         let seed_array: &[_] = &[1usize];
         let mut rng: StdRng = SeedableRng::from_seed(seed_array);
-        let uniform = Range::new(0, num_nodes + 1);
+        let uniform = Range::new(0, num_nodes);
 
         let mut forest = DisjointSetForest::new(num_nodes);
         b.iter(|| {
