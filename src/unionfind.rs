@@ -38,6 +38,7 @@ impl DisjointSetForest {
     /// Returns index of the root of the tree containing i.
     /// Needs mutable reference to self for path compression.
     pub fn root(&mut self, i: usize) -> usize {
+        assert!(i < self.count);
         let mut j = i;
         loop {
             unsafe {
@@ -55,11 +56,13 @@ impl DisjointSetForest {
     /// Returns true if i and j are in the same tree.
     /// Need mutable reference to self for path compression.
     pub fn find(&mut self, i: usize, j: usize) -> bool {
+        assert!(i < self.count && j < self.count);
         self.root(i) == self.root(j)
     }
 
     /// Unions the trees containing i and j.
     pub fn union(&mut self, i: usize, j: usize) {
+        assert!(i < self.count && j < self.count);
         let p = self.root(i);
         let q = self.root(j);
         if p == q {
