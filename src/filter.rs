@@ -424,6 +424,7 @@ mod test {
     }
 
     #[bench]
+    #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_1(b: &mut test::Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
@@ -433,6 +434,7 @@ mod test {
     }
 
     #[bench]
+    #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_3(b: &mut test::Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
@@ -442,6 +444,7 @@ mod test {
     }
 
     #[bench]
+    #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_10(b: &mut test::Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
