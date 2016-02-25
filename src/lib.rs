@@ -20,6 +20,7 @@ pub mod contrast;
 pub mod corners;
 pub mod definitions;
 pub mod drawing;
+pub mod edges;
 pub mod filter;
 pub mod gradients;
 pub mod haar;

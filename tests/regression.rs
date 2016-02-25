@@ -14,13 +14,15 @@ extern crate imageproc;
 use std::path::Path;
 
 use imageproc::utils::{
-    load_image_or_panic
+    load_image_or_panic,
 };
 
 use imageproc::affine::{
     Interpolation,
     rotate_about_center
 };
+
+use imageproc::edges::canny;
 
 fn compare_to_truth_rgb(
     input_path: &Path,
@@ -156,4 +158,14 @@ fn test_match_histograms() {
     let ip = Path::new("./tests/data/elephant.png");
     let tp = Path::new("./tests/data/truth/elephant_matched.png");
     compare_to_truth_grayscale(&ip, &tp, &match_to_zebra_histogram);
+}
+
+#[test]
+fn test_canny() {
+    let ip = Path::new("./tests/data/zebra.png");
+    let tp = Path::new("./tests/data/truth/zebra_canny.png");
+    let input = load_image_or_panic(&ip).to_luma();
+    let truth = load_image_or_panic(&tp).to_luma();
+    let output = canny(&input, 250.0, 300.0);
+    assert_pixels_eq!(output, truth);
 }

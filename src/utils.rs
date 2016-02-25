@@ -1,7 +1,9 @@
 //! Utils for testing and debugging.
 
 use definitions::{
-    VecBuffer
+    VecBuffer,
+    HasWhite,
+    HasBlack
 };
 
 use image::{
@@ -195,6 +197,25 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
             let g = 255u8 - r;
             let b = cmp::min(r, g);
             image.put_pixel(x, y, Rgb([r, g, b]));
+        }
+    }
+    image
+}
+
+/// Gray image to use in edge detection benchmarks.
+/// Creates a white rectangle centered in black background.
+pub fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
+    let mut image = GrayImage::new(width, height);
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            if x > 9 && x < 12 && y > 9 && y < 12 {
+                image.put_pixel(x, y, Luma::white());
+            }
+            else if x > width / 4 && x < 3 * (width/4 )&& y > height/4 && y < 3 * (height/4) {
+                image.put_pixel(x, y, Luma::white());
+            } else {
+                image.put_pixel(x, y, Luma::black());
+            }
         }
     }
     image
