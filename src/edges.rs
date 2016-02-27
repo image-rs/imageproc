@@ -31,23 +31,25 @@ pub fn canny<I>(image: &I,
     // 2. Intensity of gradients.
     let gx = horizontal_sobel(&blurred);
     let gy = vertical_sobel(&blurred);
-    let mut g = ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
+    let g = ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
         let g = (gx[(x, y)][0] as f32).hypot(gy[(x, y)][0] as f32);
         Luma { data: [g] }
     });
 
     // 3. Non-maximum-suppression (Make edges thinner)
-    non_maximum_suppression(&mut g, &gx, &gy);
+    let thinned = non_maximum_suppression(&g, &gx, &gy);
 
     // 4. Hysteresis to filter out edges based on thresholds.
-    hysteresis(&g, low_threshold, high_threshold)
+    hysteresis(&thinned, low_threshold, high_threshold)
 }
 
 /// Finds local maxima to make the edges thinner.
-fn non_maximum_suppression(g: &mut ImageBuffer<Luma<f32>, Vec<f32>>,
+fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
                            gx: &ImageBuffer<Luma<i16>, Vec<i16>>,
-                           gy: &ImageBuffer<Luma<i16>, Vec<i16>>) {
+                           gy: &ImageBuffer<Luma<i16>, Vec<i16>>)
+                           -> ImageBuffer<Luma<f32>, Vec<f32>> {
     const RADIANS_TO_DEGREES: f32 = 180f32 / f32::consts::PI;
+    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma{ data: [0.0] });
     for x in 1..g.width() - 1 {
         for y in 1..g.height() - 1 {
             let mut angle = (((gy[(x, y)][0] as f32).atan2(gx[(x, y)][0] as f32) *
@@ -83,36 +85,39 @@ fn non_maximum_suppression(g: &mut ImageBuffer<Luma<f32>, Vec<f32>>,
             let pixel = *g.get_pixel(x, y);
             // If the pixel is not a local maximum, suppress it.
             if pixel[0] < cmp1[0] || pixel[0] < cmp2[0] {
-                g.put_pixel(x, y, Luma { data: [0.0] });
+                out.put_pixel(x, y, Luma { data: [0.0] });
+            } else {
+                out.put_pixel(x, y, pixel);
             }
         }
     }
+    out
 }
 
 // Filter out edges with the thresholds.
-fn hysteresis(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
+fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
               low_thresh: f32,
               high_thresh: f32)
               -> ImageBuffer<Luma<u8>, Vec<u8>> {
     let max_brightness = Luma::white();
     let min_brightness = Luma::black();
     // Init output image as all black.
-    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), min_brightness);
-    for x in 1..g.width() - 1 {
-        for y in 1..g.height() - 1 {
-            let inp_pix = g.get_pixel(x, y);
+    let mut out = ImageBuffer::from_pixel(input.width(), input.height(), min_brightness);
+    for x in 1..input.width() - 1 {
+        for y in 1..input.height() - 1 {
+            let inp_pix = input.get_pixel(x, y);
             // Higher than high_thresh -> its definitely an edge.
             if inp_pix[0] >= high_thresh {
                 out.put_pixel(x, y, max_brightness);
             } else if inp_pix[0] >= low_thresh && inp_pix[0] < high_thresh {
                 // First, check if any neighbors from the input image are edges.
                 let in_neighbors = unsafe {
-                    [g.unsafe_get_pixel(x + 1, y),
-                     g.unsafe_get_pixel(x + 1, y + 1),
-                     g.unsafe_get_pixel(x, y + 1),
-                     g.unsafe_get_pixel(x - 1, y - 1),
-                     g.unsafe_get_pixel(x - 1, y),
-                     g.unsafe_get_pixel(x - 1, y + 1)]
+                    [input.unsafe_get_pixel(x + 1, y),
+                     input.unsafe_get_pixel(x + 1, y + 1),
+                     input.unsafe_get_pixel(x, y + 1),
+                     input.unsafe_get_pixel(x - 1, y - 1),
+                     input.unsafe_get_pixel(x - 1, y),
+                     input.unsafe_get_pixel(x - 1, y + 1)]
                 };
                 let mut edge_detected = false;
                 for neighbor in &in_neighbors {
