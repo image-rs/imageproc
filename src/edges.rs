@@ -49,9 +49,9 @@ fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
                            gy: &ImageBuffer<Luma<i16>, Vec<i16>>)
                            -> ImageBuffer<Luma<f32>, Vec<f32>> {
     const RADIANS_TO_DEGREES: f32 = 180f32 / f32::consts::PI;
-    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma{ data: [0.0] });
-    for x in 1..g.width() - 1 {
-        for y in 1..g.height() - 1 {
+    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma { data: [0.0] });
+    for y in 1..g.height() - 1 {
+        for x in 1..g.width() - 1 {
             let mut angle = (((gy[(x, y)][0] as f32).atan2(gx[(x, y)][0] as f32) *
                               RADIANS_TO_DEGREES) as i16) as f32;
             if angle < 0.0 {
@@ -74,11 +74,15 @@ fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
             let (cmp1, cmp2) = unsafe {
                 match clamped_angle {
                     0 => (g.unsafe_get_pixel(x, y - 1), g.unsafe_get_pixel(x, y + 1)),
-                    45 => (g.unsafe_get_pixel(x + 1, y + 1),
-                           g.unsafe_get_pixel(x - 1, y - 1)),
+                    45 => {
+                        (g.unsafe_get_pixel(x + 1, y + 1),
+                         g.unsafe_get_pixel(x - 1, y - 1))
+                    }
                     90 => (g.unsafe_get_pixel(x + 1, y), g.unsafe_get_pixel(x - 1, y)),
-                    135 => (g.unsafe_get_pixel(x - 1, y + 1),
-                            g.unsafe_get_pixel(x + 1, y - 1)),
+                    135 => {
+                        (g.unsafe_get_pixel(x - 1, y + 1),
+                         g.unsafe_get_pixel(x + 1, y - 1))
+                    }
                     _ => unreachable!(),
                 }
             };
@@ -94,53 +98,43 @@ fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
     out
 }
 
-// Filter out edges with the thresholds.
+/// Filter out edges with the thresholds.
+/// Non-recursive breadth-first search.
 fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
               low_thresh: f32,
               high_thresh: f32)
               -> ImageBuffer<Luma<u8>, Vec<u8>> {
+
     let max_brightness = Luma::white();
     let min_brightness = Luma::black();
     // Init output image as all black.
     let mut out = ImageBuffer::from_pixel(input.width(), input.height(), min_brightness);
-    for x in 1..input.width() - 1 {
-        for y in 1..input.height() - 1 {
-            let inp_pix = input.get_pixel(x, y);
-            // Higher than high_thresh -> its definitely an edge.
-            if inp_pix[0] >= high_thresh {
+    // Stack. Possible optimization: Use previously allocated memory, i.e. gx.
+    let mut edges = Vec::with_capacity(((input.width() * input.height()) / 2) as usize);
+    for y in 1..input.height() - 1 {
+        for x in 1..input.width() - 1 {
+            let inp_pix = *input.get_pixel(x, y);
+            let out_pix = *out.get_pixel(x, y);
+            // If the edge strength is higher than high_thresh, mark it as an edge.
+            if inp_pix[0] >= high_thresh && out_pix[0] == 0 {
                 out.put_pixel(x, y, max_brightness);
-            } else if inp_pix[0] >= low_thresh && inp_pix[0] < high_thresh {
-                // First, check if any neighbors from the input image are edges.
-                let in_neighbors = unsafe {
-                    [input.unsafe_get_pixel(x + 1, y),
-                     input.unsafe_get_pixel(x + 1, y + 1),
-                     input.unsafe_get_pixel(x, y + 1),
-                     input.unsafe_get_pixel(x - 1, y - 1),
-                     input.unsafe_get_pixel(x - 1, y),
-                     input.unsafe_get_pixel(x - 1, y + 1)]
-                };
-                let mut edge_detected = false;
-                for neighbor in &in_neighbors {
-                    if neighbor[0] >= high_thresh {
-                        out.put_pixel(x, y, max_brightness);
-                        edge_detected = true;
-                        break;
-                    }
-                }
-                // Still not sure? check if any neighbors from the output image are edges.
-                if !edge_detected {
-                    let out_neighbors = unsafe {
-                        [out.unsafe_get_pixel(x + 1, y),
-                         out.unsafe_get_pixel(x + 1, y + 1),
-                         out.unsafe_get_pixel(x, y + 1),
-                         out.unsafe_get_pixel(x - 1, y - 1),
-                         out.unsafe_get_pixel(x - 1, y),
-                         out.unsafe_get_pixel(x - 1, y + 1)]
-                    };
-                    for neighbor in &out_neighbors {
-                        if neighbor[0] == max_brightness[0] {
-                            out.put_pixel(x, y, max_brightness);
-                            break;
+                edges.push((x, y));
+                // Track neighbors until no neighbor is >= low_thresh.
+                while edges.len() > 0 {
+                    let (nx, ny) = edges.pop().unwrap();
+                    let neighbor_indices = [(nx + 1, ny),
+                                            (nx + 1, ny + 1),
+                                            (nx, ny + 1),
+                                            (nx - 1, ny - 1),
+                                            (nx - 1, ny),
+                                            (nx - 1, ny + 1)];
+
+                    for neighbor_idx in &neighbor_indices {
+                        let in_neighbor = *input.get_pixel(neighbor_idx.0, neighbor_idx.1);
+                        let out_neighbor = *out.get_pixel(neighbor_idx.0, neighbor_idx.1);
+                        if in_neighbor[0] >= low_thresh && out_neighbor[0] == 0 {
+                            out.put_pixel(neighbor_idx.0, neighbor_idx.1, max_brightness);
+                            edges.push((neighbor_idx.0, neighbor_idx.1));
                         }
                     }
                 }
