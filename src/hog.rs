@@ -168,11 +168,10 @@ fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 
 /// Computes the HoG descriptor of an image, or None if the provided
 /// options are incompatible with the image size.
-// TODO: produce a helpful error message if the options are invalid
 // TODO: support color images by taking the channel with maximum gradient at each point
 pub fn hog<I>(image: &I, options: HogOptions) -> Result<Vec<f32>, String>
-	where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
+	where I: GenericImage<Pixel=Luma<u8>> + 'static
+{
 	match HogSpec::from_options(image.width(), image.height(), options) {
 		Err(e) => Err(e),
 		Ok(spec) => {

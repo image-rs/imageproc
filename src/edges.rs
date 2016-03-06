@@ -2,9 +2,9 @@
 
 use std::f32;
 use image::{GenericImage, ImageBuffer, Luma};
-use image::imageops::blur;
 use gradients::{vertical_sobel, horizontal_sobel};
 use definitions::{HasWhite, HasBlack};
+use filter::gaussian_blur_f32;
 
 /// Runs the canny edge detection algorithm on the provided `ImageBuffer`.
 ///
@@ -28,7 +28,7 @@ pub fn canny<I>(image: &I,
     // Heavily based on the implementation proposed by wikipedia.
     // 1. Gaussian blur.
     const SIGMA: f32 = 1.4;
-    let blurred = blur(image, SIGMA);
+    let blurred = gaussian_blur_f32(image, SIGMA);
 
     // 2. Intensity of gradients.
     let gx = horizontal_sobel(&blurred);

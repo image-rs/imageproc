@@ -32,6 +32,7 @@ use num::{
 use conv::ValueInto;
 use math::cast;
 use std::cmp;
+use std::f32;
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
 /// and height (2 * y_radius + 1) whose entries are equal and
@@ -97,8 +98,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width * height == data.len() as u32,
-            format!("Invalid kernel len: expecting {}, found {}",
-                    width * height, data.len()));
+            format!("Invalid kernel len: expecting {}, found {}", width * height, data.len()));
         Kernel {
             data: data,
             width: width,
@@ -114,7 +114,6 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
               Q: Pixel + 'static,
               F: FnMut(&mut Q::Subpixel, K) -> (),
     {
-
         let (width, height) = image.dimensions();
         let mut out = VecBuffer::<Q>::new(width, height);
         let num_channels = I::Pixel::channel_count() as usize;
@@ -147,8 +146,36 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
         out
     }
+}
 
+fn gaussian(x: f32, r: f32) -> f32 {
+    ((2.0 * f32::consts::PI).sqrt() * r).recip() * (-x.powi(2) / (2.0 * r.powi(2))).exp()
+}
 
+/// Construct a one dimensional float-valued kernel for performing a Gausian blur
+/// with standard deviation sigma.
+fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
+    let kernel_radius = (2.0 * sigma).ceil() as usize;
+    let mut kernel_data = vec![0.0; 2 * kernel_radius + 1];
+    for i in 0..kernel_radius + 1 {
+        let value = gaussian(i as f32, sigma);
+        kernel_data[kernel_radius + i] = value;
+        kernel_data[kernel_radius - i] = value;
+    }
+    kernel_data
+}
+
+/// Blurs an image using a Gausian of standard deviation sigma.
+/// The kernel used has type f32 and all intermediate calculations are performed
+/// at this type.
+// TODO: Integer type kernel, approximations via repeated box filter.
+pub fn gaussian_blur_f32<I>(image: &I, sigma: f32) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+{
+    let kernel = gaussian_kernel_f32(sigma);
+    separable_filter_equal(image, &kernel)
 }
 
 /// Returns 2d correlation of view with the outer product of the 1d
@@ -227,6 +254,7 @@ mod test {
     use super::{
         box_filter,
         filter3x3,
+        gaussian_blur_f32,
         horizontal_filter,
         separable_filter,
         separable_filter_equal,
@@ -449,6 +477,33 @@ mod test {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 10f32);
+            test::black_box(blurred);
+            });
+    }
+
+    #[bench]
+    fn bench_gaussian_f32_stdev_1(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_blur_f32(&image, 1f32);
+            test::black_box(blurred);
+            });
+    }
+
+    #[bench]
+    fn bench_gaussian_f32_stdev_3(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_blur_f32(&image, 3f32);
+            test::black_box(blurred);
+            });
+    }
+
+    #[bench]
+    fn bench_gaussian_f32_stdev_10(b: &mut test::Bencher) {
+        let image = rgb_bench_image(100, 100);
+        b.iter(|| {
+            let blurred = gaussian_blur_f32(&image, 10f32);
             test::black_box(blurred);
             });
     }

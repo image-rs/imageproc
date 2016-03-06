@@ -23,6 +23,7 @@ use imageproc::affine::{
 };
 
 use imageproc::edges::canny;
+use imageproc::filter::gaussian_blur_f32;
 
 fn compare_to_truth_rgb(
     input_path: &Path,
@@ -167,5 +168,25 @@ fn test_canny() {
     let input = load_image_or_panic(&ip).to_luma();
     let truth = load_image_or_panic(&tp).to_luma();
     let output = canny(&input, 250.0, 300.0);
+    assert_pixels_eq!(output, truth);
+}
+
+#[test]
+fn test_gaussian_blur_stdev_3() {
+    let ip = Path::new("./tests/data/zebra.png");
+    let tp = Path::new("./tests/data/truth/zebra_gaussian_3.png");
+    let input = load_image_or_panic(&ip).to_luma();
+    let truth = load_image_or_panic(&tp).to_luma();
+    let output = gaussian_blur_f32(&input, 3f32);
+    assert_pixels_eq!(output, truth);
+}
+
+#[test]
+fn test_gaussian_blur_stdev_10() {
+    let ip = Path::new("./tests/data/zebra.png");
+    let tp = Path::new("./tests/data/truth/zebra_gaussian_10.png");
+    let input = load_image_or_panic(&ip).to_luma();
+    let truth = load_image_or_panic(&tp).to_luma();
+    let output = gaussian_blur_f32(&input, 10f32);
     assert_pixels_eq!(output, truth);
 }
