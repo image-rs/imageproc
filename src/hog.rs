@@ -67,28 +67,58 @@ pub struct HogSpec {
 }
 
 impl HogSpec {
+
 	/// Returns None if image dimensions aren't compatible with the provided options.
-	pub fn from_options(width: u32, height: u32, options: HogOptions) -> Option<HogSpec> {
-		let w = width as usize;
-		let h = height as usize;
-		let divides_evenly = |n, q| n % q == 0;
-
-		if !divides_evenly(w, options.cell_side) ||
-		   !divides_evenly(h, options.cell_side) ||
-		   !divides_evenly(w - options.block_side, options.block_stride) ||
-		   !divides_evenly(h - options.block_side, options.block_stride) {
-            return None;
-	   	}
-
-		let cells_wide = w / options.cell_side;
-		let cells_high = h / options.cell_side;
-		Some(HogSpec {
+	pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
+		let (cells_wide, cells_high) = try!(Self::checked_cell_dimensions(width as usize, height as usize, options));
+		let (blocks_wide, blocks_high) = try!(Self::checked_block_dimensions(cells_wide, cells_high, options));
+		Ok(HogSpec {
 			options: options,
 			cells_wide: cells_wide,
 			cells_high: cells_high,
-			blocks_wide: num_blocks(cells_wide, options.block_side, options.block_stride),
-			blocks_high: num_blocks(cells_high, options.block_side, options.block_stride)
+			blocks_wide: blocks_wide,
+			blocks_high: blocks_high
 		})
+	}
+
+	fn invalid_options_message(errors: &Vec<String>) -> String {
+		format!("Invalid HoG options: {0}", errors.join(", "))
+	}
+
+	/// Returns (cells wide, cells high), or an error message if cell side doesn't evenly divide width and height.
+	fn checked_cell_dimensions(width: usize, height: usize, options: HogOptions)
+		-> Result<(usize, usize), String> {
+			let mut errors: Vec<String> = vec![];
+			if width % options.cell_side != 0 {
+				errors.push(format!("cell side {} does not evenly divide width {}", options.cell_side, width));
+			}
+			if height % options.cell_side != 0 {
+				errors.push(format!("cell side {} does not evenly divide height {}", options.cell_side, height));
+			}
+			if errors.len() > 0 {
+				return Err(Self::invalid_options_message(&errors));
+			}
+			Ok((width / options.cell_side, height / options.cell_side))
+	}
+
+	/// Returns (blocks wide, blocks high), or an error message if the block size and stride don't evenly cover
+	/// the grid of cells.
+	fn checked_block_dimensions(cells_wide: usize, cells_high: usize, options: HogOptions)
+		-> Result<(usize, usize), String> {
+		let mut errors: Vec<String> = vec![];
+		if (cells_wide - options.block_side) % options.block_stride != 0 {
+			errors.push(format!("block stride {} does not evenly divide (cells wide {} - block side {})",
+				options.block_stride, cells_wide, options.block_side));
+		}
+		if (cells_high - options.block_side) % options.block_stride != 0 {
+			errors.push(format!("block stride {} does not evenly divide (cells high {} - block side {})",
+				options.block_stride, cells_high, options.block_side));
+		}
+		if errors.len() > 0 {
+			return Err(Self::invalid_options_message(&errors));
+		}
+		Ok((num_blocks(cells_wide, options.block_side, options.block_stride),
+			num_blocks(cells_high, options.block_side, options.block_stride)))
 	}
 
 	/// The total size in floats of the HoG descriptor with these dimensions.
@@ -140,16 +170,16 @@ fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 /// options are incompatible with the image size.
 // TODO: produce a helpful error message if the options are invalid
 // TODO: support color images by taking the channel with maximum gradient at each point
-pub fn hog<I>(image: &I, options: HogOptions) -> Option<Vec<f32>>
+pub fn hog<I>(image: &I, options: HogOptions) -> Result<Vec<f32>, String>
 	where I: GenericImage<Pixel=Luma<u8>> + 'static {
 
 	match HogSpec::from_options(image.width(), image.height(), options) {
-		None => None,
-		Some(spec) => {
+		Err(e) => Err(e),
+		Ok(spec) => {
 			let mut grid: Array3d<f32> = cell_histograms(image, spec);
 			let grid_view = grid.view_mut();
 			let descriptor = hog_descriptor_from_hist_grid(grid_view, spec);
-			Some(descriptor)
+			Ok(descriptor)
 		}
 	}
 }
@@ -379,6 +409,7 @@ mod test {
 
     use super::{
 		copy,
+		hog,
 		hog_descriptor_from_hist_grid,
         HogOptions,
         HogSpec,
@@ -388,6 +419,10 @@ mod test {
 	use multiarray::{
 		Array3d
 	};
+	use utils::{
+		gray_bench_image
+	};
+	use test;
 
     #[test]
     fn test_num_blocks() {
@@ -410,7 +445,7 @@ mod test {
     }
 
     #[test]
-    fn test_hog_spec() {
+    fn test_hog_spec_valid_options() {
         assert_eq!(
 			HogSpec::from_options(40, 40, HogOptions::new(8, true, 5, 2, 1))
 				.unwrap().descriptor_length(), 1568);
@@ -421,6 +456,20 @@ mod test {
 			HogSpec::from_options(40, 40, HogOptions::new(8, true, 4, 2, 1))
 				.unwrap().descriptor_length(), 2592);
     }
+
+	#[test]
+	fn test_hog_spec_invalid_options() {
+		let opts = HogOptions {
+				orientations: 8,
+				signed: true,
+				cell_side: 3,
+				block_side: 4,
+				block_stride: 2
+		};
+		let expected = "Invalid HoG options: block stride 2 does not evenly divide (cells wide 7 - block side 4), \
+			block stride 2 does not evenly divide (cells high 7 - block side 4)";
+		assert_eq!(HogSpec::from_options(21, 21, opts), Err(expected.to_owned()));
+	}
 
 	#[test]
 	fn test_interpolation_from_position() {
@@ -450,8 +499,14 @@ mod test {
 		// right covering the rightmost 2x2 region. These regions overlap by one cell column.
 		// There's no significance to the contents of the histograms used here, we're
 		// just checking that the values are binned and normalised correctly.
+		let opts = HogOptions {
+			orientations: 2,
+			signed: true,
+			cell_side: 5,
+			block_side: 2,
+			block_stride: 1
+		};
 
-		let opts = HogOptions::new(2, true, 5, 2, 1);
 		let spec = HogSpec::from_options(15, 10, opts).unwrap();
 
 		let mut grid = Array3d::<f32>::new([2, 3, 2]);
@@ -499,5 +554,21 @@ mod test {
 		}
 
 		assert_eq!(descriptor, expected);
+	}
+
+	#[bench]
+	fn bench_hog(b: &mut test::Bencher) {
+		let image = gray_bench_image(88, 88);
+		let opts = HogOptions {
+			orientations: 8,
+			signed: true,
+			cell_side: 8,
+			block_side: 3,
+			block_stride: 2
+		};
+		b.iter(|| {
+			let desc = hog(&image, opts);
+			test::black_box(desc.unwrap());
+			});
 	}
 }
