@@ -1,3 +1,5 @@
+//! Functions for detecting edges in images.
+
 use std::f32;
 use image::{GenericImage, ImageBuffer, Luma};
 use image::imageops::blur;
