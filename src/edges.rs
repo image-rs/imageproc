@@ -54,8 +54,9 @@ fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
     let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma { data: [0.0] });
     for y in 1..g.height() - 1 {
         for x in 1..g.width() - 1 {
-            let mut angle = (((gy[(x, y)][0] as f32).atan2(gx[(x, y)][0] as f32) *
-                              RADIANS_TO_DEGREES) as i16) as f32;
+            let x_gradient = gx[(x, y)][0] as f32;
+            let y_gradient = gy[(x, y)][0] as f32;
+            let mut angle = (y_gradient).atan2(x_gradient) * RADIANS_TO_DEGREES;
             if angle < 0.0 {
                 angle += 180.0
             }
@@ -75,12 +76,12 @@ fn non_maximum_suppression(g: &ImageBuffer<Luma<f32>, Vec<f32>>,
             // Get the two perpendicular neighbors.
             let (cmp1, cmp2) = unsafe {
                 match clamped_angle {
-                    0 => (g.unsafe_get_pixel(x, y - 1), g.unsafe_get_pixel(x, y + 1)),
+                    0 => (g.unsafe_get_pixel(x - 1, y), g.unsafe_get_pixel(x + 1, y)),
                     45 => {
                         (g.unsafe_get_pixel(x + 1, y + 1),
                          g.unsafe_get_pixel(x - 1, y - 1))
                     }
-                    90 => (g.unsafe_get_pixel(x + 1, y), g.unsafe_get_pixel(x - 1, y)),
+                    90 => (g.unsafe_get_pixel(x, y - 1), g.unsafe_get_pixel(x, y + 1)),
                     135 => {
                         (g.unsafe_get_pixel(x - 1, y + 1),
                          g.unsafe_get_pixel(x + 1, y - 1))
