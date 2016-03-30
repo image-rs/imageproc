@@ -14,20 +14,20 @@ use filter::{
     filter3x3
 };
 
-/// Sobel filter for vertical edges.
+/// Sobel filter for vertical gradients.
 static VERTICAL_SOBEL: [i32; 9] = [
-    -1, 0, 1,
-    -2, 0, 2,
-    -1, 0, 1];
-
-/// Sobel filter for horizontal edges.
-static HORIZONTAL_SOBEL: [i32; 9] = [
     -1, -2, -1,
      0,  0,  0,
      1,  2,  1];
 
+/// Sobel filter for horizontal gradients.
+static HORIZONTAL_SOBEL: [i32; 9] = [
+     -1, 0, 1,
+     -2, 0, 2,
+     -1, 0, 1];
+
 /// Convolves with the horizontal Sobel kernel to detect horizontal
-/// edges in an image.
+/// gradients in an image.
 pub fn horizontal_sobel<I>(image: &I) -> VecBuffer<Luma<i16>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static
 {
@@ -35,27 +35,27 @@ pub fn horizontal_sobel<I>(image: &I) -> VecBuffer<Luma<i16>>
 }
 
 /// Convolves with the vertical Sobel kernel to detect vertical
-/// edges in an image.
+/// gradients in an image.
 pub fn vertical_sobel<I>(image: &I) -> VecBuffer<Luma<i16>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static
 {
     filter3x3(image, &VERTICAL_SOBEL)
 }
 
-/// Prewitt filter for vertical edges.
+/// Prewitt filter for vertical gradients.
 static VERTICAL_PREWITT: [i32; 9] = [
-    -1, 0, 1,
-    -1, 0, 1,
-    -1, 0, 1];
-
-/// Prewitt filter for horizontal edges.
-static HORIZONTAL_PREWITT: [i32; 9] = [
     -1, -1, -1,
      0,  0,  0,
      1,  1,  1];
 
+/// Prewitt filter for horizontal gradients.
+static HORIZONTAL_PREWITT: [i32; 9] = [
+     -1, 0, 1,
+     -1, 0, 1,
+     -1, 0, 1];
+
 /// Convolves with the horizontal Prewitt kernel to detect horizontal
-/// edges in an image.
+/// gradients in an image.
 pub fn horizontal_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static
 {
@@ -63,12 +63,13 @@ pub fn horizontal_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
 }
 
 /// Convolves with the vertical Prewitt kernel to detect vertical
-/// edges in an image.
+/// gradients in an image.
 pub fn vertical_prewitt<I>(image: &I) -> VecBuffer<Luma<i16>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static
 {
     filter3x3(image, &VERTICAL_PREWITT)
 }
+
 /// Returns the magnitudes of gradients in an image using Sobel filters.
 pub fn sobel_gradients<I>(image: &I) -> VecBuffer<Luma<u16>>
     where I: GenericImage<Pixel=Luma<u8>> + 'static
@@ -138,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn test_vertical_sobel_gradient_image() {
+    fn test_horizontal_sobel_gradient_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             3, 2, 1,
             6, 5, 4,
@@ -149,12 +150,12 @@ mod test {
             -4i16, -8i16, -4i16,
             -4i16, -8i16, -4i16]).unwrap();
 
-        let filtered = vertical_sobel(&image);
+        let filtered = horizontal_sobel(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
     #[test]
-    fn test_horizontal_sobel_gradient_image() {
+    fn test_vertical_sobel_gradient_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             3, 6, 9,
             2, 5, 8,
@@ -165,12 +166,12 @@ mod test {
             -8i16, -8i16, -8i16,
             -4i16, -4i16, -4i16]).unwrap();
 
-        let filtered = horizontal_sobel(&image);
+        let filtered = vertical_sobel(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
     #[test]
-    fn test_vertical_prewitt_gradient_image() {
+    fn test_horizontal_prewitt_gradient_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             3, 2, 1,
             6, 5, 4,
@@ -181,12 +182,12 @@ mod test {
             -3i16, -6i16, -3i16,
             -3i16, -6i16, -3i16]).unwrap();
 
-        let filtered = vertical_prewitt(&image);
+        let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
     #[test]
-    fn test_horizontal_prewitt_gradient_image() {
+    fn test_vertical_prewitt_gradient_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             3, 6, 9,
             2, 5, 8,
@@ -197,7 +198,7 @@ mod test {
             -6i16, -6i16, -6i16,
             -3i16, -3i16, -3i16]).unwrap();
 
-        let filtered = horizontal_prewitt(&image);
+        let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
     }
 }
