@@ -250,6 +250,7 @@ pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 	let horizontal = horizontal_sobel(image);
 	let vertical = vertical_sobel(image);
 	let interval = orientation_bin_width(spec.options);
+	let range = direction_range(spec.options);
 
 	for y in 0..height {
 		let mut grid_view = grid.view_mut();
@@ -261,10 +262,14 @@ pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 			let h = horizontal.get_pixel(x, y)[0] as f32;
 			let v = vertical.get_pixel(x, y)[0] as f32;
 			let m = (h.powi(2) + v.powi(2)).sqrt();
+
 			let mut d = v.atan2(h);
 			if d < 0f32 {
-				d = d + 2f32 * f32::consts::PI;
+				d = d + range;
 			}
+			if !spec.options.signed && d >= f32::consts::PI {
+				d -= f32::consts::PI;
+		 	}
 
 			let o_inter
 				= Interpolation::from_position_wrapping(d / interval, spec.options.orientations);
@@ -301,8 +306,12 @@ fn contains_outer<T>(view: &View3d<T>, u: usize, v: usize) -> bool {
 
 /// Width of an orientation histogram bin in radians.
 fn orientation_bin_width(options: HogOptions) -> f32 {
-	let dir_range = if options.signed {2f32 * f32::consts::PI} else {f32::consts::PI};
-	dir_range / (options.orientations as f32)
+	direction_range(options) / (options.orientations as f32)
+}
+
+/// Length of the range of possible directions in radians.
+fn direction_range(options: HogOptions) -> f32 {
+	if options.signed {2f32 * f32::consts::PI} else {f32::consts::PI}
 }
 
 /// Indices and weights for an interpolated value.
@@ -420,6 +429,9 @@ mod test {
 	};
 	use utils::{
 		gray_bench_image
+	};
+	use image::{
+		ImageBuffer
 	};
 	use test;
 
@@ -553,6 +565,36 @@ mod test {
 		}
 
 		assert_eq!(descriptor, expected);
+	}
+
+	#[test]
+	fn test_direction_interpolation_within_bounds() {
+		let image = ImageBuffer::from_raw(3, 3, vec![
+			2, 1, 0,
+			2, 1, 0,
+			2, 1, 0]).unwrap();
+
+		let opts_signed = HogOptions {
+			orientations: 8,
+			signed: true,
+			cell_side: 3,
+			block_side: 1,
+			block_stride: 1
+		};
+
+		let desc_signed = hog(&image, opts_signed);
+		test::black_box(desc_signed.unwrap());
+
+		let opts_unsigned = HogOptions {
+			orientations: 8,
+			signed: false,
+			cell_side: 3,
+			block_side: 1,
+			block_stride: 1
+		};
+
+		let desc_unsigned = hog(&image, opts_unsigned);
+		test::black_box(desc_unsigned.unwrap());
 	}
 
 	#[bench]
