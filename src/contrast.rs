@@ -82,29 +82,35 @@ pub fn threshold_mut<I>(image: &mut I, thresh: u8)
 
 /// Applies an adaptive threshold to an image.
 ///
-/// This algorithms compares each pixels color with the average color of the `block_size` * `block_size`
+/// This algorithm compares each pixels color with the average color of the
 /// surrounding pixels (= the local threshold). If the pixel if above the threshold, it will have a
 /// value of 255 in the output image, otherwise 0.
+///
+/// `block_size` specifies the size of one side of the neighborhood pixel. Acceptable values are 3, 5, 7, 9 and so on.
 pub fn adaptive_threshold<I>(image: &I, block_size: u32) -> GrayImage
     where I: GenericImage<Pixel = Luma<u8>>
 {
+    assert!(block_size > 2 && block_size % 2 == 1);
     let integral = integral_image(image);
     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
     for y in 0..image.height() {
         for x in 0..image.width() {
             let current_pixel = image.get_pixel(x, y);
             // Traverse all neighbors in blocksize x blocksize
-            let (y_low, y_high) = (max(0, y as i32 - (block_size as i32)) as u32, min(image.height(), y + (block_size)));
-            let (x_low, x_high) = (max(0, x as i32 - (block_size as i32)) as u32, min(image.width(), x + (block_size)));
+            let half_side = (block_size - 1) / 2;
+            let (y_low, y_high) = (max(0, y as i32 - (half_side as i32)) as u32,
+                                   min(image.height() - 1, y + (half_side)));
+            let (x_low, x_high) = (max(0, x as i32 - (half_side as i32)) as u32,
+                                   min(image.width() - 1, x + (half_side)));
 
             // Number of pixels in the block, adjusted for edge cases.
             let w = (y_high - y_low) * (x_high - x_low);
 
             // I(A..D)
             let a = integral.get_pixel(x_low, y_low)[0] as i32;
-            let b = integral.get_pixel(x_high - 1, y_low)[0] as i32;
-            let c = integral.get_pixel(x_high - 1, y_high - 1)[0] as i32;
-            let d = integral.get_pixel(x_low, y_high - 1)[0] as i32;
+            let b = integral.get_pixel(x_high, y_low)[0] as i32;
+            let c = integral.get_pixel(x_high, y_high)[0] as i32;
+            let d = integral.get_pixel(x_low, y_high)[0] as i32;
 
             let mean = (c - b - d + a) / w as i32;
 

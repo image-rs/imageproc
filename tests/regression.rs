@@ -198,6 +198,6 @@ fn test_adaptive_threshold() {
     let tp = Path::new("./tests/data/truth/zebra_adaptive_threshold.png");
     let input = load_image_or_panic(&ip).to_luma();
     let truth = load_image_or_panic(&tp).to_luma();
-    let output = adaptive_threshold(&input, 20);
+    let output = adaptive_threshold(&input, 41);
     assert_pixels_eq!(output, truth);
 }
