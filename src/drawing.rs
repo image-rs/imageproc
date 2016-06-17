@@ -95,10 +95,14 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
 
     for x in x0 as i32..(x1 + 1f32) as i32 {
         unsafe {
-            if is_steep && in_bounds(y, x) {
-                image.unsafe_put_pixel(y as u32, x as u32, color);
-            } else if in_bounds(x, y) {
-                image.unsafe_put_pixel(x as u32, y as u32, color);
+            if is_steep {
+                if in_bounds(y, x) {
+                    image.unsafe_put_pixel(y as u32, x as u32, color);
+                }
+            } else {
+                if in_bounds(x, y) {
+                    image.unsafe_put_pixel(x as u32, y as u32, color);
+                }
             }
         }
         error -= dy;
