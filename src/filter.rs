@@ -96,6 +96,8 @@ pub struct Kernel<'a, K: 'a> {
 
 impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
+    /// Construct a kernel from a slice and its dimensions. The input slice is
+    /// in row-major form.
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width * height == data.len() as u32,
             format!("Invalid kernel len: expecting {}, found {}", width * height, data.len()));
@@ -202,7 +204,7 @@ pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
     separable_filter(image, kernel, kernel)
 }
 
-/// Returns 2d correlation of an image with a 3x3 kernel. Intermediate calculations are
+/// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
 pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> VecBuffer<ChannelMap<P, S>>
     where I: GenericImage<Pixel=P>,
