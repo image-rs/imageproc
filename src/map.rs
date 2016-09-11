@@ -14,8 +14,6 @@ use definitions::{
     VecBuffer
 };
 
-use num::Zero;
-
 /// The type obtained by replacing the channel type of a given Pixel type.
 pub trait WithChannel<C: Primitive>: Pixel {
     type Pixel: Pixel<Subpixel=C> + 'static;

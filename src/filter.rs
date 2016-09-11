@@ -25,8 +25,7 @@ use definitions::{
 };
 
 use num::{
-    Num,
-    Zero
+    Num
 };
 
 use conv::ValueInto;

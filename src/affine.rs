@@ -303,7 +303,7 @@ mod test {
 
     use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
     use utils::gray_bench_image;
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, ImageBuffer, Luma};
     use math::{Affine2, Mat2, Vec2};
     use test;
 
