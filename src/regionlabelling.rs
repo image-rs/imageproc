@@ -27,11 +27,11 @@ pub enum Connectivity { Four, Eight }
 /// Returns an image of the same size as the input, where each pixel
 /// is labelled by the connected foreground component it belongs to,
 /// or 0 if it's in the background. Input pixels are treated as belonging
-/// to the background if and only if they have value 0.
-pub fn connected_components<I>(image: &I, conn: Connectivity)
-        -> VecBuffer<Luma<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+/// to the background if and only if they are equal to the provided background pixel.
+pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pixel) -> VecBuffer<Luma<u32>>
+    where I: GenericImage,
+          I::Pixel: Eq
+{
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
 
@@ -40,7 +40,6 @@ pub fn connected_components<I>(image: &I, conn: Connectivity)
         return out;
     }
 
-    let background = Luma([0u8]);
     let image_size = (width * height) as usize;
     let mut forest = DisjointSetForest::new(image_size);
     let mut adj_labels = [0u32; 4];
@@ -151,6 +150,10 @@ mod test {
         Four,
         Eight
     };
+    use definitions::{
+        HasBlack,
+        HasWhite
+    };
     use image::{
         GrayImage,
         ImageBuffer,
@@ -173,7 +176,7 @@ mod test {
                 0, 0, 0, 0,
                 0, 0, 0, 5]).unwrap();
 
-        let labelled = connected_components(&image, Four);
+        let labelled = connected_components(&image, Four, Luma::black());
         assert_pixels_eq!(labelled, expected);
     }
 
@@ -192,7 +195,26 @@ mod test {
                 0, 0, 0, 0,
                 0, 0, 0, 3]).unwrap();
 
-        let labelled = connected_components(&image, Eight);
+        let labelled = connected_components(&image, Eight, Luma::black());
+        assert_pixels_eq!(labelled, expected);
+    }
+
+    #[test]
+    fn test_connected_components_eight_white_background() {
+        let image: GrayImage = ImageBuffer::from_raw(4, 4, vec![
+              1, 255,   2,   1,
+            255,   1,   1, 255,
+            255, 255, 255, 255,
+            255, 255, 255,   1]).unwrap();
+
+        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
+            = ImageBuffer::from_raw(4, 4, vec![
+                1, 0, 2, 1,
+                0, 1, 1, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 3]).unwrap();
+
+        let labelled = connected_components(&image, Eight, Luma::white());
         assert_pixels_eq!(labelled, expected);
     }
 
@@ -208,7 +230,7 @@ mod test {
     #[test]
     fn test_connected_components_eight_chessboard() {
         let image = chessboard(30, 30);
-        let components = connected_components(&image, Eight);
+        let components = connected_components(&image, Eight, Luma::black());
         let max_component = components.pixels().map(|p| p[0]).max();
         assert_eq!(max_component, Some(1u32));
     }
@@ -216,7 +238,7 @@ mod test {
     #[test]
     fn test_connected_components_four_chessboard() {
         let image = chessboard(30, 30);
-        let components = connected_components(&image, Four);
+        let components = connected_components(&image, Four, Luma::black());
         let max_component = components.pixels().map(|p| p[0]).max();
         assert_eq!(max_component, Some(450u32));
     }
@@ -225,7 +247,7 @@ mod test {
     fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
         let image = chessboard(300, 300);
         b.iter(|| {
-            let components = connected_components(&image, Eight);
+            let components = connected_components(&image, Eight, Luma::black());
             test::black_box(components);
             });
     }
@@ -234,7 +256,7 @@ mod test {
     fn bench_connected_components_four_chessboard(b: &mut test::Bencher) {
         let image = chessboard(300, 300);
         b.iter(|| {
-            let components = connected_components(&image, Four);
+            let components = connected_components(&image, Four, Luma::black());
             test::black_box(components);
             });
     }

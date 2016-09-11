@@ -5,7 +5,7 @@ extern crate imageproc;
 
 use std::env;
 use std::path::Path;
-use image::{open, GenericImage, ImageBuffer};
+use image::{open, ImageBuffer};
 use imageproc::hog::*;
 
 fn create_hog_image(input: &Path, signed: bool) {
