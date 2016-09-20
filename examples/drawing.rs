@@ -11,7 +11,9 @@ use imageproc::drawing::{
     draw_cross_mut,
     draw_line_segment_mut,
     draw_hollow_rect_mut,
-    draw_filled_rect_mut
+    draw_filled_rect_mut,
+    draw_hollow_circle_mut,
+    draw_filled_circle_mut
 };
 
 fn main() {
@@ -61,6 +63,20 @@ fn main() {
     draw_filled_rect_mut(&mut image, Rect::at(300, 10).of_size(20, 20), white);
     // Partially outside bounds
     draw_filled_rect_mut(&mut image, Rect::at(180, -10).of_size(30, 20), white);
+
+    // Draw a hollow circle within bounds
+    draw_hollow_circle_mut(&mut image, (100, 100), 15, white);
+    // Outside bounds
+    draw_hollow_circle_mut(&mut image, (400, 400), 20, white);
+    // Partially outside bounds
+    draw_hollow_circle_mut(&mut image, (100, 190), 20, white);
+
+    // Draw a filled circle within bounds
+    draw_filled_circle_mut(&mut image, (150, 100), 15, white);
+    // Outside bounds
+    draw_filled_circle_mut(&mut image, (450, 400), 20, white);
+    // Partially outside bounds
+    draw_filled_circle_mut(&mut image, (150, 190), 20, white);
 
     let _ = image.save(path).unwrap();
 }

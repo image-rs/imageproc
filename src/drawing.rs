@@ -154,7 +154,7 @@ pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<
 /// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
 pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
     where I: GenericImage,
-    I::Pixel: 'static
+          I::Pixel: 'static
 {
     let image_bounds = Rect::at(0, 0).of_size(image.width(), image.height());
     if let Some(intersection) = image_bounds.intersect(rect) {
@@ -165,6 +165,101 @@ pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
                 unsafe { image.unsafe_put_pixel(x, y, color); }
             }
         }
+    }
+}
+
+/// Draw as much of a circle as lies inside the image bounds.
+pub fn draw_hollow_circle<I>(image: &I,
+                             center: (i32, i32),
+                             radius: i32,
+                             color: I::Pixel) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_hollow_circle_mut(&mut out, center, radius, color);
+    out
+}
+
+/// Draw as much of a circle as lies inside the image bounds.
+pub fn draw_hollow_circle_mut<I>(image: &mut I, center: (i32, i32), radius: i32, color: I::Pixel)
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut x = radius;
+    let mut y = 0i32;
+    let mut err = 0i32;
+    let x0 = center.0;
+    let y0 = center.1;
+
+    while x >= y {
+       draw_if_in_bounds(image, x0 + x, y0 + y, color);
+       draw_if_in_bounds(image, x0 + y, y0 + x, color);
+       draw_if_in_bounds(image, x0 - y, y0 + x, color);
+       draw_if_in_bounds(image, x0 - x, y0 + y, color);
+       draw_if_in_bounds(image, x0 - x, y0 - y, color);
+       draw_if_in_bounds(image, x0 - y, y0 - x, color);
+       draw_if_in_bounds(image, x0 + y, y0 - x, color);
+       draw_if_in_bounds(image, x0 + x, y0 - y, color);
+
+       y += 1;
+       err += 1 + 2 * y;
+       if 2 * (err - x) + 1 > 0 {
+           x -= 1;
+           err += 1 - 2 * x;
+       }
+    }
+}
+
+/// Draw as much of a circle, including its contents, as lies inside the image bounds.
+pub fn draw_filled_circle_mut<I>(image: &mut I, center: (i32, i32), radius: i32, color: I::Pixel)
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut x = radius;
+    let mut y = 0i32;
+    let mut err = 0i32;
+    let x0 = center.0;
+    let y0 = center.1;
+
+    while x >= y {
+        draw_line_segment_mut(image, ((x0 - x) as f32, (y0 + y) as f32), ((x0 + x) as f32, (y0 + y) as f32), color);
+        draw_line_segment_mut(image, ((x0 - y) as f32, (y0 + x) as f32), ((x0 + y) as f32, (y0 + x) as f32), color);
+        draw_line_segment_mut(image, ((x0 - x) as f32, (y0 - y) as f32), ((x0 + x) as f32, (y0 - y) as f32), color);
+        draw_line_segment_mut(image, ((x0 - y) as f32, (y0 - x) as f32), ((x0 + y) as f32, (y0 - x) as f32), color);
+
+        y += 1;
+        err += 1 + 2 * y;
+        if 2 * (err - x) + 1 > 0 {
+            x -= 1;
+            err += 1 - 2 * x;
+        }
+    }
+}
+
+/// Draw as much of a circle and its contents as lies inside the image bounds.
+pub fn draw_filled_circle<I>(image: &I,
+                             center: (i32, i32),
+                             radius: i32,
+                             color: I::Pixel) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_filled_circle_mut(&mut out, center, radius, color);
+    out
+}
+
+// Set pixel at (x, y) to color if this point lies within image bounds,
+// otherwise do nothing.
+fn draw_if_in_bounds<I>(image: &mut I, x: i32, y: i32, color: I::Pixel)
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    if x >= 0 && x < image.width() as i32 && y >= 0 && y < image.height() as i32{
+        image.put_pixel(x as u32, y as u32, color);
     }
 }
 
