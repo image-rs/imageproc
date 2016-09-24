@@ -1,6 +1,8 @@
 //! Functions for manipulating the contrast of images.
-
+use std::cmp::{max, min};
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use definitions::{HasWhite, HasBlack};
+use integralimage::integral_image;
 
 /// Returns the Otsu threshold level of an 8bpp image.
 /// This threshold will optimally binarize an image that
@@ -78,6 +80,48 @@ pub fn threshold_mut<I>(image: &mut I, thresh: u8)
     }
 }
 
+/// Applies an adaptive threshold to an image.
+///
+/// This algorithm compares each pixels color with the average color of the
+/// surrounding pixels (= the local threshold). If the pixel if above the threshold, it will have a
+/// value of 255 in the output image, otherwise 0.
+///
+/// `block_size` specifies the size of one side of the neighborhood pixel. Acceptable values are 3, 5, 7, 9 and so on.
+pub fn adaptive_threshold<I>(image: &I, block_size: u32) -> GrayImage
+    where I: GenericImage<Pixel = Luma<u8>>
+{
+    assert!(block_size > 2 && block_size % 2 == 1);
+    let integral = integral_image(image);
+    let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            let current_pixel = image.get_pixel(x, y);
+            // Traverse all neighbors in blocksize x blocksize
+            let half_side = (block_size - 1) / 2;
+            let (y_low, y_high) = (max(0, y as i32 - (half_side as i32)) as u32,
+                                   min(image.height() - 1, y + (half_side)));
+            let (x_low, x_high) = (max(0, x as i32 - (half_side as i32)) as u32,
+                                   min(image.width() - 1, x + (half_side)));
+
+            // Number of pixels in the block, adjusted for edge cases.
+            let w = (y_high - y_low) * (x_high - x_low);
+
+            // I(A..D)
+            let a = integral.get_pixel(x_low, y_low)[0] as i32;
+            let b = integral.get_pixel(x_high, y_low)[0] as i32;
+            let c = integral.get_pixel(x_high, y_high)[0] as i32;
+            let d = integral.get_pixel(x_low, y_high)[0] as i32;
+
+            let mean = (c - b - d + a) / w as i32;
+
+            if current_pixel[0] as u32 >= mean as u32 {
+                out.put_pixel(x, y, Luma::white());
+            }
+        }
+    }
+    out
+}
+
 /// Returns the histogram of grayscale values in an 8bpp
 /// grayscale image.
 pub fn histogram<I>(image: &I) -> [i32; 256]
@@ -119,7 +163,9 @@ pub fn equalize_histogram_mut<I>(image: &mut I)
             let original = unsafe { image.unsafe_get_pixel(x, y)[0] as usize };
             let fraction = hist[original] as f32 / total;
             let out = f32::min(255f32, 255f32 * fraction);
-            unsafe { image.unsafe_put_pixel(x, y, Luma([out as u8])); }
+            unsafe {
+                image.unsafe_put_pixel(x, y, Luma([out as u8]));
+            }
         }
     }
 }
@@ -138,8 +184,8 @@ pub fn equalize_histogram<I>(image: &I) -> GrayImage
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
 /// histogram is as close as possible to that of the target image.
 pub fn match_histogram_mut<I, J>(image: &mut I, target: &J)
-    where I : GenericImage<Pixel = Luma<u8>>,
-          J : GenericImage<Pixel = Luma<u8>>
+    where I: GenericImage<Pixel = Luma<u8>>,
+          J: GenericImage<Pixel = Luma<u8>>
 {
     let image_histc = cumulative_histogram(image);
     let target_histc = cumulative_histogram(target);
@@ -158,8 +204,8 @@ pub fn match_histogram_mut<I, J>(image: &mut I, target: &J)
 /// Adjusts contrast of an 8bpp grayscale image so that its
 /// histogram is as close as possible to that of the target image.
 pub fn match_histogram<I, J>(image: &I, target: &J) -> GrayImage
-    where I : GenericImage<Pixel = Luma<u8>>,
-          J : GenericImage<Pixel = Luma<u8>>
+    where I: GenericImage<Pixel = Luma<u8>>,
+          J: GenericImage<Pixel = Luma<u8>>
 {
     let mut out: GrayImage = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -189,14 +235,12 @@ fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize
 
         if y == 0 {
             lut[s] = y;
-        }
-        else {
+        } else {
             let prev_dist = f32::abs(prev_target_fraction - source_fraction);
             let dist = f32::abs(target_fraction - source_fraction);
             if prev_dist < dist {
                 lut[s] = y - 1;
-            }
-            else {
+            } else {
                 lut[s] = y;
             }
         }
@@ -208,13 +252,8 @@ fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize
 #[cfg(test)]
 mod test {
 
-    use super::{
-        cumulative_histogram,
-        equalize_histogram,
-        histogram,
-        histogram_lut,
-        otsu_level,
-        threshold};
+    use super::{cumulative_histogram, equalize_histogram, histogram, histogram_lut, otsu_level,
+                threshold};
     use utils::gray_bench_image;
     use image::{GrayImage, ImageBuffer};
     use test;

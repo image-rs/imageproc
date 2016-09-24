@@ -22,6 +22,7 @@ use imageproc::affine::{
     rotate_about_center
 };
 
+use imageproc::contrast::adaptive_threshold;
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
 
@@ -188,5 +189,15 @@ fn test_gaussian_blur_stdev_10() {
     let input = load_image_or_panic(&ip).to_luma();
     let truth = load_image_or_panic(&tp).to_luma();
     let output = gaussian_blur_f32(&input, 10f32);
+    assert_pixels_eq!(output, truth);
+}
+
+#[test]
+fn test_adaptive_threshold() {
+    let ip = Path::new("./tests/data/zebra.png");
+    let tp = Path::new("./tests/data/truth/zebra_adaptive_threshold.png");
+    let input = load_image_or_panic(&ip).to_luma();
+    let truth = load_image_or_panic(&tp).to_luma();
+    let output = adaptive_threshold(&input, 41);
     assert_pixels_eq!(output, truth);
 }
