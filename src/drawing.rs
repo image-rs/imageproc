@@ -5,8 +5,7 @@ use definitions::VecBuffer;
 use rect::Rect;
 use std::mem::swap;
 
-/// Draws a colored cross on an image in place. Handles coordinates outside
-/// image bounds.
+/// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
     where I: GenericImage
@@ -379,6 +378,7 @@ mod test {
     };
     use rect::Rect;
     use image::{GrayImage, ImageBuffer, Luma};
+    use test;
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -688,6 +688,28 @@ mod test {
         let down_right = draw_antialiased_line_segment(&image, (3, 2), (1, 0), color, interpolate);
         assert_pixels_eq!(down_right, rotate90(&expected));
     }
+
+    macro_rules! bench_antialiased_lines {
+        ($name:ident, $start:expr, $end:expr) => {
+            #[bench]
+            fn $name(b: &mut test::Bencher) {
+                use pixelops::interpolate;
+                use super::draw_antialiased_line_segment_mut;
+
+                let mut image = GrayImage::new(500, 500);
+                let color = Luma([50u8]);
+                b.iter(|| {
+                    draw_antialiased_line_segment_mut(&mut image, $start, $end, color, interpolate);
+                    test::black_box(&image);
+                    });
+            }
+        }
+    }
+
+    bench_antialiased_lines!(bench_draw_antialiased_line_segment_horizontal, (10, 10), (450, 10));
+    bench_antialiased_lines!(bench_draw_antialiased_line_segment_vertical, (10, 10), (10, 450));
+    bench_antialiased_lines!(bench_draw_antialiased_line_segment_diagonal, (10, 10), (450, 450));
+    bench_antialiased_lines!(bench_draw_antialiased_line_segment_shallow, (10, 10), (450, 80));
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
