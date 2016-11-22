@@ -190,3 +190,53 @@ fn test_gaussian_blur_stdev_10() {
     let output = gaussian_blur_f32(&input, 10f32);
     assert_pixels_eq!(output, truth);
 }
+
+#[test]
+fn test_draw_antialiased_line_segment_rgb() {
+    const REGENERATE: bool = false;
+
+    use image::{Rgb, RgbImage};
+    use imageproc::drawing::draw_antialiased_line_segment_mut;
+    use imageproc::pixelops::interpolate;
+
+    let path = Path::new("./tests/data/antialiased_lines_rgb.png");
+
+    let white = Rgb([255, 255, 255]);
+    let blue = Rgb([0, 0, 255]);
+
+    let mut image = RgbImage::new(200, 200);
+    for y in 0..200 {
+        for x in 0..200 {
+            image.put_pixel(x, y, blue);
+        }
+    }
+
+    // Connected path:
+    //      - horizontal
+    draw_antialiased_line_segment_mut(&mut image, (20, 80), (40, 80), white, interpolate);
+    //      - shallow ascent
+    draw_antialiased_line_segment_mut(&mut image, (40, 80), (60, 70), white, interpolate);
+    //      - diagonal ascent
+    draw_antialiased_line_segment_mut(&mut image, (60, 70), (70, 70), white, interpolate);
+    //      - steep ascent
+    draw_antialiased_line_segment_mut(&mut image, (70, 70), (80, 30), white, interpolate);
+    //      - shallow descent
+    draw_antialiased_line_segment_mut(&mut image, (80, 30), (110, 45), white, interpolate);
+    //      - diagonal descent
+    draw_antialiased_line_segment_mut(&mut image, (110, 45), (130, 65), white, interpolate);
+    //      - steep descent
+    draw_antialiased_line_segment_mut(&mut image, (130, 65), (150, 110), white, interpolate);
+    //      - vertical
+    draw_antialiased_line_segment_mut(&mut image, (150, 110), (150, 140), white, interpolate);
+
+    // Isolated segment, partially outside of image bounds
+    draw_antialiased_line_segment_mut(&mut image, (150, 150), (210, 130), white, interpolate);
+
+    if REGENERATE {
+        let _ = image.save(path).unwrap();
+    }
+    else {
+        let truth = load_image_or_panic(&path).to_rgb();
+        assert_pixels_eq!(image, truth);
+    }
+}
