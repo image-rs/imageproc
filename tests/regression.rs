@@ -96,7 +96,7 @@ fn test_rotate_nearest_rgb() {
 }
 
 #[test]
-fn test_equalize_histogram_grayscale()
+fn test_equalize_histogram_grayscale() {
     use imageproc::contrast::equalize_histogram;
     compare_to_truth_grayscale("lumaphant.png", "lumaphant_eq.png", equalize_histogram);
 }
@@ -167,6 +167,12 @@ fn test_gaussian_blur_stdev_3() {
 #[test]
 fn test_gaussian_blur_stdev_10() {
     compare_to_truth_grayscale("zebra.png", "zebra_gaussian_10.png", |image| gaussian_blur_f32(image, 10f32));
+}
+
+#[test]
+fn test_adaptive_threshold() {
+    use imageproc::contrast::adaptive_threshold;
+    compare_to_truth_grayscale("zebra.png", "zebra_adaptive_threshold.png", |image| adaptive_threshold(image, 41));
 }
 
 #[test]

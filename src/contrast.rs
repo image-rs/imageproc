@@ -1,6 +1,52 @@
 //! Functions for manipulating the contrast of images.
 
+use std::cmp::{min, max};
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use definitions::{HasBlack, HasWhite};
+use integralimage::integral_image;
+
+/// Applies an adaptive threshold to an image.
+///
+/// This algorithm compares each pixels color with the average color of the
+/// surrounding pixels (= the local threshold). If the pixel if above the threshold, it will have a
+/// value of 255 in the output image, otherwise 0.
+///
+/// `block_size` specifies the size of one side of the neighborhood pixel. Acceptable values are 3, 5, 7, 9 and so on.
+pub fn adaptive_threshold<I>(image: &I, block_size: u32) -> GrayImage
+     where I: GenericImage<Pixel = Luma<u8>>
+{
+     assert!(block_size > 2 && block_size % 2 == 1);
+     let integral = integral_image(image);
+     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
+     for y in 0..image.height() {
+         for x in 0..image.width() {
+             let current_pixel = image.get_pixel(x, y);
+             // Traverse all neighbors in blocksize x blocksize
+             let half_side = (block_size - 1) / 2;
+             let (y_low, y_high) = (max(0, y as i32 - (half_side as i32)) as u32,
+                                    min(image.height() - 1, y + (half_side)));
+             let (x_low, x_high) = (max(0, x as i32 - (half_side as i32)) as u32,
+                                    min(image.width() - 1, x + (half_side)));
+
+             // Number of pixels in the block, adjusted for edge cases.
+             let w = (y_high - y_low) * (x_high - x_low);
+
+             // I(A..D)
+             let a = integral.get_pixel(x_low, y_low)[0] as i32;
+             let b = integral.get_pixel(x_high, y_low)[0] as i32;
+             let c = integral.get_pixel(x_high, y_high)[0] as i32;
+             let d = integral.get_pixel(x_low, y_high)[0] as i32;
+
+             let mean = (c - b - d + a) / w as i32;
+
+             if current_pixel[0] as u32 >= mean as u32 {
+                 out.put_pixel(x, y, Luma::white());
+             }
+         }
+     }
+     out
+}
+
 
 /// Returns the Otsu threshold level of an 8bpp image.
 /// This threshold will optimally binarize an image that
