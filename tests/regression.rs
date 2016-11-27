@@ -11,206 +11,174 @@ extern crate test;
 #[macro_use]
 extern crate imageproc;
 
+use std::ops::Deref;
 use std::path::Path;
-
-use imageproc::utils::{
-    load_image_or_panic,
-};
-
-use imageproc::affine::{
-    Interpolation,
-    rotate_about_center
-};
-
+use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, RgbImage};
+use imageproc::utils::{load_image_or_panic};
+use imageproc::affine::{affine, Interpolation, rotate_about_center};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
+use imageproc::definitions::Clamp;
+use imageproc::gradients;
+use imageproc::math::{Affine2, Mat2, Vec2};
 
-fn compare_to_truth_rgb(
-    input_path: &Path,
-    truth_path: &Path,
-    op: &Fn(&image::RgbImage) -> image::RgbImage) {
+// If set to true then all calls to any compare_to_truth function will regenerate
+// the truth image.
+const REGENERATE: bool = false;
 
-    let truth = load_image_or_panic(&truth_path).to_rgb();
-    let input = load_image_or_panic(&input_path).to_rgb();
-    let actual = op.call((&input,));
-
-    assert_pixels_eq!(actual, truth);
+/// Save an image with the given name to the truth data directory "./tests/data/truth".
+/// Used when manually (re)generating test data, e.g. when REGENERATE is set to true.
+fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
+    where P: Pixel<Subpixel=u8> + 'static, Container: Deref<Target=[u8]>
+{
+    let _ = image.save(Path::new("./tests/data/truth").join(file_name)).unwrap();
 }
 
-fn compare_to_truth_rgb_with_tolerance(
-    input_path: &Path,
-    truth_path: &Path,
-    op: &Fn(&image::RgbImage) -> image::RgbImage,
-    tolerance: u8) {
-
-    let truth = load_image_or_panic(&truth_path).to_rgb();
-    let input = load_image_or_panic(&input_path).to_rgb();
-    let actual = op.call((&input,));
-
-    assert_pixels_eq_within!(actual, truth, tolerance);
+/// Load an image with the given name from the input data directory "./tests/data/".
+/// Panics if unable to find or load an image at this path.
+fn load_input_image(file_name: &str) -> DynamicImage {
+    load_image_or_panic(Path::new("./tests/data").join(file_name))
 }
 
-fn compare_to_truth_grayscale(
-    input_path: &Path,
-    truth_path: &Path,
-    op: &Fn(&image::GrayImage) -> image::GrayImage) {
-
-    let truth = load_image_or_panic(&truth_path).to_luma();
-    let input = load_image_or_panic(&input_path).to_luma();
-    let actual = op.call((&input,));
-
-    assert_pixels_eq!(actual, truth);
+/// Load an image with the given name from the truth data directory "./tests/data/truth".
+/// Panics if unable to find or load an image at this path.
+fn load_truth_image(file_name: &str) -> DynamicImage {
+    load_image_or_panic(Path::new("./tests/data/truth").join(file_name))
 }
 
-fn rotate_nearest_about_center(image: &image::RgbImage) -> image::RgbImage {
-    rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+/// Load an input image, apply a function to it and check that the results match a 'truth' image.
+fn compare_to_truth_rgb<F>(input_file_name: &str, truth_file_name: &str, op: F)
+    where F: Fn(&RgbImage) -> RgbImage
+{
+    compare_to_truth_rgb_with_tolerance(input_file_name, truth_file_name, op, 0u8);
+}
+
+/// Load an input image, apply a function to it and check that the results
+/// match a 'truth' image to within a given per-pixel tolerance.
+fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
+    where F: Fn(&RgbImage) -> RgbImage
+{
+    let input = load_input_image(input_file_name).to_rgb();
+    let actual = op.call((&input,));
+
+    if REGENERATE {
+        save_truth_image(&actual, truth_file_name);
+    }
+    else {
+        let truth = load_truth_image(truth_file_name).to_rgb();
+        assert_pixels_eq_within!(actual, truth, tol);
+    }
+}
+
+/// Load an input image, apply a function to it and check that the results
+/// match a 'truth' image.
+fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, op: F)
+    where F: Fn(&GrayImage) -> GrayImage
+{
+    let input = load_input_image(input_file_name).to_luma();
+    let actual = op.call((&input,));
+
+    if REGENERATE {
+        save_truth_image(&actual, truth_file_name);
+    }
+    else {
+        let truth = load_truth_image(truth_file_name).to_luma();
+        assert_pixels_eq!(actual, truth);
+    }
 }
 
 #[test]
 fn test_rotate_nearest_rgb() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_rotate_nearest.png");
-    compare_to_truth_rgb(&ip, &tp, &rotate_nearest_about_center);
+    fn rotate_nearest_about_center(image: &RgbImage) -> RgbImage {
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+    }
+    compare_to_truth_rgb("elephant.png", "elephant_rotate_nearest.png", rotate_nearest_about_center);
 }
 
 #[test]
-fn test_equalize_histogram_grayscale() {
-    let ip = Path::new("./tests/data/lumaphant.png");
-    let tp = Path::new("./tests/data/truth/lumaphant_eq.png");
-    compare_to_truth_grayscale(&ip, &tp, &imageproc::contrast::equalize_histogram);
-}
-
-fn rotate_bilinear_about_center(image: &image::RgbImage) -> image::RgbImage {
-    rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+fn test_equalize_histogram_grayscale()
+    use imageproc::contrast::equalize_histogram;
+    compare_to_truth_grayscale("lumaphant.png", "lumaphant_eq.png", equalize_histogram);
 }
 
 #[test]
 fn test_rotate_bilinear_rgb() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_rotate_bilinear.png");
-    compare_to_truth_rgb_with_tolerance(&ip, &tp, &rotate_bilinear_about_center, 1);
-}
-
-fn affine_nearest(image: &image::RgbImage) -> image::RgbImage {
-    let root_two_inv = 1f32/2f32.sqrt();
-    let trans = imageproc::math::Affine2::new(
-        imageproc::math::Mat2::new(
-            root_two_inv, -root_two_inv,
-            root_two_inv, root_two_inv) * 2f32,
-        imageproc::math::Vec2::new(50f32, -70f32)
-    );
-
-    imageproc::affine::affine(
-        image, trans,
-        imageproc::affine::Interpolation::Nearest).unwrap()
+    fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+    }
+    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 1);
 }
 
 #[test]
 fn test_affine_nearest_rgb() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_affine_nearest.png");
-    compare_to_truth_rgb(&ip, &tp, &affine_nearest);
-}
-
-fn affine_bilinear(image: &image::RgbImage) -> image::RgbImage {
-    let root_two_inv = 1f32/2f32.sqrt();
-    let trans = imageproc::math::Affine2::new(
-        imageproc::math::Mat2::new(
-            root_two_inv, -root_two_inv,
-            root_two_inv, root_two_inv) * 2f32,
-        imageproc::math::Vec2::new(50f32, -70f32)
-    );
-
-    imageproc::affine::affine(
-        image, trans,
-        imageproc::affine::Interpolation::Bilinear).unwrap()
+    fn affine_nearest(image: &RgbImage) -> RgbImage {
+        let root_two_inv = 1f32/2f32.sqrt();
+        let trans = Affine2::new(
+            Mat2::new(root_two_inv, -root_two_inv,
+                      root_two_inv, root_two_inv) * 2f32,
+            Vec2::new(50f32, -70f32)
+        );
+        affine(image, trans, Interpolation::Nearest).unwrap()
+    }
+    compare_to_truth_rgb("elephant.png", "elephant_affine_nearest.png", affine_nearest);
 }
 
 #[test]
 fn test_affine_bilinear_rgb() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_affine_bilinear.png");
-    compare_to_truth_rgb(&ip, &tp, &affine_bilinear);
-}
-
-fn sobel_gradients(image: &image::GrayImage) -> image::GrayImage {
-    use imageproc::definitions::Clamp;
-    use imageproc::gradients;
-    imageproc::map::map_subpixels(
-        &gradients::sobel_gradients(image),
-        |x| u8::clamp(x))
+    fn affine_bilinear(image: &RgbImage) -> RgbImage {
+        let root_two_inv = 1f32/2f32.sqrt();
+        let trans = Affine2::new(
+            Mat2::new(root_two_inv, -root_two_inv,
+                      root_two_inv, root_two_inv) * 2f32,
+            Vec2::new(50f32, -70f32)
+        );
+        affine(image, trans, Interpolation::Bilinear).unwrap()
+    }
+    compare_to_truth_rgb("elephant.png", "elephant_affine_bilinear.png", affine_bilinear);
 }
 
 #[test]
 fn test_sobel_gradients() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_gradients.png");
-    compare_to_truth_grayscale(&ip, &tp, &sobel_gradients);
-}
-
-fn match_to_zebra_histogram(image: &image::GrayImage) -> image::GrayImage {
-    let zebra_path = Path::new("./tests/data/zebra.png");
-    let zebra = load_image_or_panic(&zebra_path).to_luma();
-    imageproc::contrast::match_histogram(image, &zebra)
+    fn sobel_gradients(image: &GrayImage) -> GrayImage {
+        imageproc::map::map_subpixels(&gradients::sobel_gradients(image), |x| u8::clamp(x))
+    }
+    compare_to_truth_grayscale("elephant.png", "elephant_gradients.png", sobel_gradients);
 }
 
 #[test]
 fn test_match_histograms() {
-    let ip = Path::new("./tests/data/elephant.png");
-    let tp = Path::new("./tests/data/truth/elephant_matched.png");
-    compare_to_truth_grayscale(&ip, &tp, &match_to_zebra_histogram);
+    fn match_to_zebra_histogram(image: &GrayImage) -> GrayImage {
+        let zebra = load_input_image("zebra.png").to_luma();
+        imageproc::contrast::match_histogram(image, &zebra)
+    }
+    compare_to_truth_grayscale("elephant.png", "elephant_matched.png", match_to_zebra_histogram);
 }
 
 #[test]
 fn test_canny() {
-    let ip = Path::new("./tests/data/zebra.png");
-    let tp = Path::new("./tests/data/truth/zebra_canny.png");
-    let input = load_image_or_panic(&ip).to_luma();
-    let truth = load_image_or_panic(&tp).to_luma();
-    let output = canny(&input, 250.0, 300.0);
-    assert_pixels_eq!(output, truth);
+    compare_to_truth_grayscale("zebra.png", "zebra_canny.png", |image| canny(image, 250.0, 300.0));
 }
 
 #[test]
 fn test_gaussian_blur_stdev_3() {
-    let ip = Path::new("./tests/data/zebra.png");
-    let tp = Path::new("./tests/data/truth/zebra_gaussian_3.png");
-    let input = load_image_or_panic(&ip).to_luma();
-    let truth = load_image_or_panic(&tp).to_luma();
-    let output = gaussian_blur_f32(&input, 3f32);
-    assert_pixels_eq!(output, truth);
+    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_3.png", |image| gaussian_blur_f32(image, 3f32));
 }
 
 #[test]
 fn test_gaussian_blur_stdev_10() {
-    let ip = Path::new("./tests/data/zebra.png");
-    let tp = Path::new("./tests/data/truth/zebra_gaussian_10.png");
-    let input = load_image_or_panic(&ip).to_luma();
-    let truth = load_image_or_panic(&tp).to_luma();
-    let output = gaussian_blur_f32(&input, 10f32);
-    assert_pixels_eq!(output, truth);
+    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_10.png", |image| gaussian_blur_f32(image, 10f32));
 }
 
 #[test]
 fn test_draw_antialiased_line_segment_rgb() {
-    const REGENERATE: bool = false;
-
-    use image::{Rgb, RgbImage};
+    use image::{Rgb};
     use imageproc::drawing::draw_antialiased_line_segment_mut;
     use imageproc::pixelops::interpolate;
 
-    let path = Path::new("./tests/data/antialiased_lines_rgb.png");
+    let blue = Rgb([0, 0, 255]);
+    let mut image = RgbImage::from_pixel(200, 200, blue);
 
     let white = Rgb([255, 255, 255]);
-    let blue = Rgb([0, 0, 255]);
-
-    let mut image = RgbImage::new(200, 200);
-    for y in 0..200 {
-        for x in 0..200 {
-            image.put_pixel(x, y, blue);
-        }
-    }
-
     // Connected path:
     //      - horizontal
     draw_antialiased_line_segment_mut(&mut image, (20, 80), (40, 80), white, interpolate);
@@ -233,10 +201,10 @@ fn test_draw_antialiased_line_segment_rgb() {
     draw_antialiased_line_segment_mut(&mut image, (150, 150), (210, 130), white, interpolate);
 
     if REGENERATE {
-        let _ = image.save(path).unwrap();
+        save_truth_image(&image, "antialiased_lines_rgb.png");
     }
     else {
-        let truth = load_image_or_panic(&path).to_rgb();
+        let truth = load_truth_image("antialiased_lines_rgb.png").to_rgb();
         assert_pixels_eq!(image, truth);
     }
 }

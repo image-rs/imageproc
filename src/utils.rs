@@ -169,8 +169,8 @@ pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
 }
 
 /// Loads image at given path, panicking on failure.
-pub fn load_image_or_panic(path: &Path) -> DynamicImage {
-     open(path).expect(&format!("Could not load image at {:?}", path))
+pub fn load_image_or_panic<P: AsRef<Path> + fmt::Debug>(path: P) -> DynamicImage {
+     open(path.as_ref()).expect(&format!("Could not load image at {:?}", path.as_ref()))
 }
 
 /// Gray image to use in benchmarks. This is neither noise nor

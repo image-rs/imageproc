@@ -1,20 +1,9 @@
 //! Assorted mathematical helper functions.
 
-use conv::{
-    ValueInto
-};
-use num::{
-    Zero
-};
-pub use nalgebra::{
-    Mat2,
-    Vec2
-};
-use nalgebra::{
-    Eye,
-    inv,
-    Inv
-};
+use conv::ValueInto;
+use num::Zero;
+pub use nalgebra::{Mat2, Vec2};
+use nalgebra::{Eye, Inv};
 
 // L2 norm of a vector.
 pub fn l2_norm(xs: &[f32]) -> f32 {
