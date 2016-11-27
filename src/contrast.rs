@@ -1,6 +1,41 @@
 //! Functions for manipulating the contrast of images.
 
+use std::cmp::{min, max};
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use definitions::{HasBlack, HasWhite};
+use integralimage::{integral_image, sum_image_pixels};
+
+/// Applies an adaptive threshold to an image.
+///
+/// This algorithm compares each pixel's brightness with the average brightness of the pixels
+/// in the (2 * block_radius + 1) square block centered on it. If the pixel if at least as bright
+/// as the threshold then it will have a value of 255 in the output image, otherwise 0.
+pub fn adaptive_threshold<I>(image: &I, block_radius: u32) -> GrayImage
+     where I: GenericImage<Pixel = Luma<u8>>
+{
+     assert!(block_radius > 0);
+     let integral = integral_image(image);
+     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
+     for y in 0..image.height() {
+         for x in 0..image.width() {
+             let current_pixel = image.get_pixel(x, y);
+             // Traverse all neighbors in (2 * block_radius + 1) x (2 * block_radius + 1)
+             let (y_low, y_high) = (max(0, y as i32 - (block_radius as i32)) as u32,
+                                    min(image.height() - 1, y + block_radius));
+             let (x_low, x_high) = (max(0, x as i32 - (block_radius as i32)) as u32,
+                                    min(image.width() - 1, x + block_radius));
+
+             // Number of pixels in the block, adjusted for edge cases.
+             let w = (y_high - y_low + 1) * (x_high - x_low + 1);
+             let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high) / w;
+
+             if current_pixel[0] as u32 >= mean as u32 {
+                 out.put_pixel(x, y, Luma::white());
+             }
+         }
+     }
+     out
+}
 
 /// Returns the Otsu threshold level of an 8bpp image.
 /// This threshold will optimally binarize an image that
@@ -209,15 +244,74 @@ fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize
 mod test {
 
     use super::{
+        adaptive_threshold,
         cumulative_histogram,
         equalize_histogram,
         histogram,
         histogram_lut,
         otsu_level,
         threshold};
+    use definitions::{HasBlack, HasWhite};
     use utils::gray_bench_image;
-    use image::{GrayImage, ImageBuffer};
+    use image::{GrayImage, ImageBuffer, Luma};
     use test;
+
+    #[test]
+    fn adaptive_threshold_constant() {
+        let image = GrayImage::from_pixel(3, 3, Luma([100u8]));
+        let binary = adaptive_threshold(&image, 1);
+        let expected = GrayImage::from_pixel(3, 3, Luma::white());
+        assert_pixels_eq!(expected, binary);
+    }
+
+    #[test]
+    fn adaptive_threshold_one_darker_pixel() {
+        for y in 0..3 {
+            for x in 0..3 {
+                let mut image = GrayImage::from_pixel(3, 3, Luma([200u8]));
+                image.put_pixel(x, y, Luma([100u8]));
+                let binary = adaptive_threshold(&image, 1);
+                // All except the dark pixel have brightness >= their local mean
+                let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
+                expected.put_pixel(x, y, Luma::black());
+                assert_pixels_eq!(binary, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn adaptive_threshold_one_lighter_pixel() {
+        for y in 0..5 {
+            for x in 0..5 {
+                let mut image = GrayImage::from_pixel(5, 5, Luma([100u8]));
+                image.put_pixel(x, y, Luma([200u8]));
+
+                let binary = adaptive_threshold(&image, 1);
+
+                for yb in 0..5 {
+                    for xb in 0..5 {
+                        let output_intensity = binary.get_pixel(xb, yb)[0];
+
+                        let is_light_pixel = xb == x && yb == y;
+
+                        let local_mean_includes_light_pixel =
+                            (yb as i32 - y as i32).abs() <= 1 &&
+                            (xb as i32 - x as i32).abs() <= 1;
+
+                        if is_light_pixel {
+                            assert_eq!(output_intensity, 255);
+                        }
+                        else if local_mean_includes_light_pixel {
+                            assert_eq!(output_intensity, 0);
+                        }
+                        else {
+                            assert_eq!(output_intensity, 255);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]

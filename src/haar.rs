@@ -208,34 +208,15 @@ impl Mul<i8> for HaarFilter {
 
 /// Points at which to evaluate an integral image to produce the sum of the
 /// pixel intensities of all points within a rectangle. Only valid when the
-/// rectangle is wholly contained in the image boundaries. The only non-trivial
-/// cases are when the rectangle touches the left or top image boundaries. In this
-/// case we need to evaluate fewer than four points, and return weights of zero
-/// for the other points.
+/// rectangle is wholly contained in the image boundaries.
 fn eval_points(top: u32, left: u32, width: u32, height: u32) -> EvalPoints {
+    let right = left + width - 1;
+    let bottom = top + height - 1;
 
-    let mut points = [
-        (0u32, 0u32),
-        (0u32, 0u32),
-        (0u32, 0u32),
-        (left + width - 1, top + height - 1)];
-
-    let mut weights = [0i8, 0i8, 0i8, 1i8];
-
-    if top > 0 && left > 0 {
-        points[0] = (left - 1, top - 1);
-        weights[0] = 1i8;
-    }
-    if top > 0 {
-        points[1] = (left + width - 1, top - 1);
-        weights[1] = -1i8;
-    }
-    if left > 0 {
-        points[2] = (left - 1, top + height - 1);
-        weights[2] = -1i8;
-    }
-
-    EvalPoints::new(points, weights)
+    EvalPoints::new(
+        [(left, top), (left, bottom + 1), (right + 1, top), (right + 1, bottom + 1)],
+        [1i8, -1i8, -1i8, 1i8]
+    )
 }
 
 /// Combine sets of evaluation points with alternating signs.
@@ -305,7 +286,7 @@ pub fn draw_haar_filter_mut<I>(image: &mut I, filter: HaarFilter)
         for x in 0..width {
             let mut weight = 0;
             for i in 0..filter.count {
-                if y <= filter.points[2 * i + 1] && x <= filter.points[2 * i] {
+                if y < filter.points[2 * i + 1] && x < filter.points[2 * i] {
                     weight += filter.weights[i];
                 }
             }

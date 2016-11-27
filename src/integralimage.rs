@@ -13,59 +13,40 @@ use definitions::{
     VecBuffer
 };
 
-/// Computes the integral image of an 8bpp grayscale image.
-/// I is the integral image of an image F if I(x, y) is the
-/// sum of F(x', y') for x' <= x, y' <= y. i.e. each pixel
-/// in the integral image contains the sum of the pixel intensities
-/// of all input pixels that are above it and to its left.
-/// The integral image has the helpful property that it lets us
-/// compute the sum of pixel intensities from any rectangular region
-/// in the input image in constant time.
-/// Specifically, given a rectangle in F with clockwise corners
-/// A, B, C, D, with A at the upper left, the total pixel intensity
-/// of this rectangle is I(C) - I(B) - I(D) + I(A).
-// TODO: Support more formats.
-// TODO: This is extremely slow. Fix that!
+/// Compute the 2d running sum of a grayscale image.
+///
+/// An integral image I has width and height one greater than its source image F,
+/// and is defined by I(x, y) = sum of F(x', y') for x' < x, y' < y, i.e. each pixel
+/// in the integral image contains the sum of the pixel intensities of all input pixels
+/// that are strictly above it and strictly to its left. In particular, the left column
+/// and top row of an integral image are all 0, and the value of the bottom right pixel of
+/// an integral image is equal to the sum of all pixels in the source image.
+///
+/// Integral images have the helpful property of allowing us to
+/// compute the sum of pixel intensities in a rectangular region of an image
+/// in constant time. Specifically, given a rectangle [l, r] * [t, b] in F,
+/// the sum of the pixels in this rectangle is
+/// I(r + 1, b + 1) - I(r + 1, t) - I(l, b + 1) + I(l, t).
+// TODO: Support more formats, make faster, add a new IntegralImage type
+// TODO: to make it harder to make off-by-one errors when computing sums of regions.
 pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
-    where I: GenericImage<Pixel=Luma<u8>> {
-    padded_integral_image(image, 0, 0)
-}
-
-/// Computes the integral image of the result of padding image with
-/// its boundary pixels for x_padding columns on either side and y_padding
-/// rows at its top and bottom. Returned image has width image.width() + 2 * x_padding
-/// and height image.height() + 2 * y_padding.
-pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> VecBuffer<Luma<u32>>
     where I: GenericImage<Pixel=Luma<u8>>
 {
     let (in_width, in_height) = image.dimensions();
-    let out_width = in_width + 2 * x_padding;
-    let out_height = in_height + 2 * y_padding;
+    let out_width = in_width + 1;
+    let out_height = in_height + 1;
 
-    let mut out: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(out_width, out_height);
+    let mut out = ImageBuffer::from_pixel(out_width, out_height, Luma([0u32]));
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
-    let mut top_sum = 0u32;
-    for x in 0..out_width {
-        let x_in = adjust_for_padding(x, x_padding, in_width);
-        unsafe {
-            top_sum += image.unsafe_get_pixel(x_in, 0)[0] as u32;
-            out.unsafe_put_pixel(x, 0, Luma([top_sum]));
-        }
-    }
-
     for y in 1..out_height {
-        let y_in = adjust_for_padding(y, y_padding, in_height);
         let mut sum = 0;
-
-        for x in 0..out_width {
-            let x_in = adjust_for_padding(x, x_padding, in_width);
-
+        for x in 1..out_width {
             unsafe {
-                sum += image.unsafe_get_pixel(x_in, y_in)[0] as u32;
+                sum += image.unsafe_get_pixel(x - 1, y - 1)[0] as u32;
                 let above = out.unsafe_get_pixel(x, y - 1)[0];
                 out.unsafe_put_pixel(x, y, Luma([above + sum]))
             }
@@ -75,14 +56,15 @@ pub fn padded_integral_image<I>(image: &I, x_padding: u32, y_padding: u32) -> Ve
     out
 }
 
-#[inline(always)]
-fn adjust_for_padding(out_index: u32, padding: u32, upper: u32) -> u32 {
-    if out_index < padding {
-        return 0;
-    } else if out_index >= upper + padding {
-        return upper - 1;
-    }
-    out_index - padding
+/// Sums the pixels in positions [left, right] * [top, bottom] in F, where integral_image is the
+/// integral image of F.
+// TODO: better type-safety. It's too easy to pass the original image in here by mistake.
+pub fn sum_image_pixels(integral_image: &VecBuffer<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
+    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
+            - integral_image.get_pixel(right + 1, top)[0] as i32
+            - integral_image.get_pixel(left, bottom + 1)[0] as i32
+            + integral_image.get_pixel(left, top)[0] as i32;
+    sum as u32
 }
 
 /// Computes the running sum of one row of image, padded
@@ -155,7 +137,7 @@ mod test {
     use super::{
         column_running_sum,
         integral_image,
-        padded_integral_image,
+        sum_image_pixels,
         row_running_sum
     };
     use utils::{
@@ -179,15 +161,35 @@ mod test {
     use test;
 
     #[test]
+    fn test_sum_image_pixels() {
+        let image = GrayImage::from_raw(2, 2, vec![
+            1, 2,
+            3, 4]).unwrap();
+
+        let integral = ::integralimage::integral_image(&image);
+
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), 1);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), 3);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 1), 4);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 1), 10);
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 0), 2);
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 1), 6);
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 0, 1), 3);
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 1, 1), 7);
+        assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), 4);
+    }
+
+    #[test]
     fn test_integral_image() {
         let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
             1, 2, 3,
             4, 5, 6]).unwrap();
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(3, 2, vec![
-            1,  3,  6,
-            5, 12, 21]).unwrap();
+            = ImageBuffer::from_raw(4, 3, vec![
+            0,  0,  0,  0,
+            0,  1,  3,  6,
+            0,  5, 12, 21]).unwrap();
 
         assert_pixels_eq!(integral_image(&image), expected);
     }
@@ -201,20 +203,42 @@ mod test {
             });
     }
 
+    /// Simple implementation of integral_image to validate faster versions against.
+    fn integral_image_ref<I>(image: &I) -> VecBuffer<Luma<u32>>
+        where I: GenericImage<Pixel=Luma<u8>>
+    {
+        let (in_width, in_height) = image.dimensions();
+        let (out_width, out_height) = (in_width + 1, in_height + 1);
+        let mut out = ImageBuffer::from_pixel(out_width, out_height, Luma([0u32]));
+
+        for y in 1..out_height {
+            for x in 0..out_width {
+                let mut sum = 0u32;
+
+                for iy in 0..y {
+                    for ix in 0..x {
+                        sum += image.get_pixel(ix, iy)[0] as u32;
+                    }
+                }
+
+                out.put_pixel(x, y, Luma([sum]));
+            }
+        }
+
+        out
+    }
+
     #[test]
-    fn test_padded_integral_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1, 2, 3,
-            4, 5, 6]).unwrap();
-
-        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(5, 4, vec![
-              1,  2,   4,   7,  10,
-              2,  4,   8,  14,  20,
-              6, 12,  21,  33,  45,
-             10, 20,  34,  52,  70]).unwrap();
-
-        assert_pixels_eq!(padded_integral_image(&image, 1, 1), expected);
+    fn test_integral_image_matches_reference_implementation() {
+        fn prop(image: GrayTestImage) -> TestResult {
+            let expected = integral_image_ref(&image.0);
+            let actual = integral_image(&image.0);
+            match pixel_diff_summary(&actual, &expected) {
+                None => TestResult::passed(),
+                Some(err) => TestResult::error(err)
+            }
+        }
+        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
     #[test]
@@ -262,42 +286,5 @@ mod test {
         b.iter(|| {
             column_running_sum(&image, 0, &mut buffer, 5);
             });
-    }
-
-    /// Simple implementation of integral_image to validate faster versions against.
-    fn integral_image_ref<I>(image: &I) -> VecBuffer<Luma<u32>>
-        where I: GenericImage<Pixel=Luma<u8>>
-    {
-        let (width, height) = image.dimensions();
-        let mut out = ImageBuffer::new(width, height);
-
-        for y in 0..height {
-            for x in 0..width {
-                let mut sum = 0u32;
-
-                for iy in 0..(y + 1) {
-                    for ix in 0..(x + 1) {
-                        sum += image.get_pixel(ix, iy)[0] as u32;
-                    }
-                }
-
-                out.put_pixel(x, y, Luma([sum]));
-            }
-        }
-
-        out
-    }
-
-    #[test]
-    fn test_integral_image_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = integral_image_ref(&image.0);
-            let actual = integral_image(&image.0);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err)
-            }
-        }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 }
