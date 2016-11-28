@@ -25,39 +25,45 @@ pub struct HaarFilter {
 
 /// Returns a vector of all valid Haar filters for an image with given width and height.
 pub fn enumerate_haar_filters(width: u32, height: u32) -> Vec<HaarFilter> {
-    let mut positive_features = Vec::new();
+    let signs = [Sign::Positive, Sign::Negative];
+    let mut features = Vec::with_capacity(number_of_haar_filters(width, height) as usize);
 
     for y0 in 0..height {
         for x0 in 0..width {
             for h0 in 1..(height - y0) + 1 {
                 for w0 in 1..(width - x0) + 1 {
                     for w1 in 1..(width - x0 - w0) + 1 {
-                        positive_features.push(
-                            HaarFilter::two_region_horizontal(
-                                y0, x0, w0, w1, h0, Sign::Positive));
+                        for sign in &signs {
+                            features.push(
+                                HaarFilter::two_region_horizontal(y0, x0, w0, w1, h0, *sign));
+                        }
 
                         for w2 in 1..(width - x0 - w0 - w1) + 1 {
-                            positive_features.push(
-                                HaarFilter::three_region_horizontal(
-                                    y0, x0, w0, w1, w2, h0, Sign::Positive));
+                            for sign in &signs {
+                                features.push(
+                                    HaarFilter::three_region_horizontal(y0, x0, w0, w1, w2, h0, *sign));
+                            }
                         }
 
                         for h1 in 1..(height - y0 - h0) + 1 {
-                            positive_features.push(
-                                HaarFilter::four_region(
-                                    y0, x0, w0, w1, h0, h1, Sign::Positive));
+                            for sign in &signs {
+                                features.push(
+                                    HaarFilter::four_region(y0, x0, w0, w1, h0, h1, *sign));
+                            }
                         }
                     }
 
                     for h1 in 1..(height - y0 - h0) + 1 {
-                        positive_features.push(
-                            HaarFilter::two_region_vertical(
-                                y0, x0, w0, h0, h1, Sign::Positive));
+                        for sign in &signs {
+                            features.push(
+                                HaarFilter::two_region_vertical(y0, x0, w0, h0, h1, *sign));
+                        }
 
-                        for h2 in 1..(height - y0 - h0 - h1) + 1{
-                            positive_features.push(
-                                HaarFilter::three_region_vertical(
-                                    y0, x0, w0, h0, h1, h2, Sign::Positive));
+                        for h2 in 1..(height - y0 - h0 - h1) + 1 {
+                            for sign in &signs {
+                                features.push(
+                                    HaarFilter::three_region_vertical(y0, x0, w0, h0, h1, h2, *sign));
+                            }
                         }
                     }
                 }
@@ -65,14 +71,56 @@ pub fn enumerate_haar_filters(width: u32, height: u32) -> Vec<HaarFilter> {
         }
     }
 
-    let mut features = Vec::new();
-
-    for feature in positive_features {
-        features.push(feature);
-        features.push(feature * -1i8);
-    }
-
     features
+}
+
+/// Returns the number of distinct Haar filters for an image of the given dimensions.
+/// Includes positive and negative, two and three region, vertical and horizontal filters,
+/// as well as positive and negative four region filters.
+///
+/// Consider two-region positive horizontal Haar filters in an image of height 1.
+/// There is exactly one such filter for each choice of L, M and R below.
+///
+/// <pre>
+///     L   M     R
+/// | | | | | | | | |
+///  . . + + - - - .
+/// </pre>
+///
+/// There are (width + 1) dividing lines between pixels, so {(width + 1) choose 3} such filters.
+/// For an image of arbitrary height there are {(height + 1) choose 2} choices for the top and
+/// bottom of each two region positive Haar filter, and every positive filter has a corresponding
+/// negative filter. Thus there are {(width + 1) choose 3} * {(height + 1) choose 2} * 2 filters
+/// of this type in an image with dimensions (width, height).
+///
+/// A very similar argument applies to the other filter types.
+pub fn number_of_haar_filters(width: u32, height: u32) -> u32 {
+    // Two-region horizontal
+    n_choose_k(width + 1, 3) * n_choose_k(height + 1, 2) * 2 +
+    // Two-region vertical
+    n_choose_k(height + 1, 3) * n_choose_k(width + 1, 2) * 2 +
+    // Three-region horizontal
+    n_choose_k(width + 1, 4) * n_choose_k(height + 1, 2) * 2 +
+    // Three-region vertical
+    n_choose_k(height + 1, 4) * n_choose_k(width + 1, 2) * 2 +
+    // Four-region
+    n_choose_k(width + 1, 3) * n_choose_k(height + 1, 3) * 2
+}
+
+fn n_choose_k(n: u32, k: u32) -> u32 {
+    if k > n {
+        return 0;
+    }
+    let k = if k * 2 > n { n - k } else { k };
+    if k == 0 {
+        return 1;
+    }
+    let mut r = n;
+    for i in 2..(k + 1) {
+        r *= n - i + 1;
+        r /= i;
+    }
+    r
 }
 
 impl HaarFilter {
@@ -312,7 +360,8 @@ mod test {
         enumerate_haar_filters,
         EvalPoints,
         HaarFilter,
-        Sign
+        Sign,
+        number_of_haar_filters
     };
     use image::{
         GrayImage,
@@ -323,6 +372,18 @@ mod test {
     };
     use utils::gray_bench_image;
     use test;
+
+    #[test]
+    fn test_number_of_haar_filters() {
+        for h in 0..6 {
+            for w in 0..6 {
+                let filters = enumerate_haar_filters(w, h);
+                let actual = filters.len() as u32;
+                let expected = number_of_haar_filters(w, h);
+                assert_eq!(actual, expected);
+            }
+        }
+    }
 
     #[test]
     fn test_combine_alternating() {
