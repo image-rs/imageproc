@@ -13,12 +13,13 @@ extern crate imageproc;
 
 use std::ops::Deref;
 use std::path::Path;
-use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, RgbImage};
+use std::f32;
+use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage};
 use imageproc::utils::{load_image_or_panic};
 use imageproc::affine::{affine, Interpolation, rotate_about_center};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
-use imageproc::definitions::Clamp;
+use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::gradients;
 use imageproc::math::{Affine2, Mat2, Vec2};
 
@@ -211,6 +212,50 @@ fn test_draw_antialiased_line_segment_rgb() {
     }
     else {
         let truth = load_truth_image("antialiased_lines_rgb.png").to_rgb();
+        assert_pixels_eq!(image, truth);
+    }
+}
+
+
+#[test]
+fn test_draw_convex_polygon() {
+    use imageproc::drawing::draw_convex_polygon_mut;
+    use imageproc::drawing::Point;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let triangle = vec![
+        Point::new(35, 50),
+        Point::new(145, 80),
+        Point::new(5, 60)];
+    draw_convex_polygon_mut(&mut image, &triangle, white);
+
+    let partially_out_of_bounds_triangle = vec![
+        Point::new(250, 50),
+        Point::new(350, 100),
+        Point::new(250, 90)];
+    draw_convex_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
+
+    let quad = vec![
+        Point::new(190, 250),
+        Point::new(240, 210),
+        Point::new(270, 200),
+        Point::new(220, 280)];
+    draw_convex_polygon_mut(&mut image, &quad, white);
+
+    let hex: Vec<Point<i32>> = (0..6)
+        .map(|i| i as f32 * f32::consts::PI / 3f32)
+        .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
+        .map(|(x, y)| Point::new(x as i32, y as i32))
+        .collect();
+    draw_convex_polygon_mut(&mut image, &hex, white);
+
+    if REGENERATE {
+        save_truth_image(&image, "polygon.png");
+    }
+    else {
+        let truth = load_truth_image("polygon.png").to_luma();
         assert_pixels_eq!(image, truth);
     }
 }
