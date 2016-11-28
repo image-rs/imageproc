@@ -130,8 +130,8 @@ mod test {
 
     #[test]
     fn test_gradients_constant_image() {
-        let image = ImageBuffer::from_fn(5, 5, |_, _| Luma([15u8]));
-        let expected = ImageBuffer::from_fn(5, 5, |_, _| Luma([0i16]));
+        let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
+        let expected = ImageBuffer::from_pixel(5, 5, Luma([0i16]));
         assert_pixels_eq!(horizontal_sobel(&image), expected);
         assert_pixels_eq!(vertical_sobel(&image), expected);
         assert_pixels_eq!(horizontal_prewitt(&image), expected);

@@ -87,10 +87,10 @@ pub fn enumerate_haar_filters(width: u32, height: u32) -> Vec<HaarFilter> {
 ///  . . + + - - - .
 /// </pre>
 ///
-/// There are (width + 1) dividing lines between pixels, so {(width + 1) choose 3} such filters.
-/// For an image of arbitrary height there are {(height + 1) choose 2} choices for the top and
+/// There are (width + 1) dividing lines between pixels, so ((width + 1) choose 3) such filters.
+/// For an image of arbitrary height there are ((height + 1) choose 2) choices for the top and
 /// bottom of each two region positive Haar filter, and every positive filter has a corresponding
-/// negative filter. Thus there are {(width + 1) choose 3} * {(height + 1) choose 2} * 2 filters
+/// negative filter. Thus there are ((width + 1) choose 3) * ((height + 1) choose 2) * 2 filters
 /// of this type in an image with dimensions (width, height).
 ///
 /// A very similar argument applies to the other filter types.

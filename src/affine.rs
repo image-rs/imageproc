@@ -1,11 +1,8 @@
 //! Functions for affine transformations of images.
 
 use image::{Pixel, GenericImage, ImageBuffer};
-
 use definitions::{Clamp, HasBlack, VecBuffer};
-
 use math::{Affine2, cast, Vec2};
-
 use conv::ValueInto;
 
 /// How to handle pixels whose pre-image lies between input pixels.
@@ -356,11 +353,7 @@ mod test {
 
     #[bench]
     fn bench_rotate_nearest(b: &mut test::Bencher) {
-        let mut image: GrayImage = ImageBuffer::new(200, 200);
-        for pix in image.pixels_mut() {
-            *pix = Luma([15u8]);
-        }
-
+        let mut image = GrayImage::from_pixel(200, 200, Luma([15u8]));
         b.iter(|| {
             let rotated = rotate_nearest(&image, (3f32, 3f32), 1f32, Luma([0u8]));
             test::black_box(rotated);
@@ -369,11 +362,7 @@ mod test {
 
     #[bench]
     fn bench_rotate_bilinear(b: &mut test::Bencher) {
-        let mut image: GrayImage = ImageBuffer::new(200, 200);
-        for pix in image.pixels_mut() {
-            *pix = Luma([15u8]);
-        }
-
+        let mut image = GrayImage::from_pixel(200, 200, Luma([15u8]));
         b.iter(|| {
             let rotated = rotate_bilinear(&image, (3f32, 3f32), 1f32, Luma([0u8]));
             test::black_box(rotated);
