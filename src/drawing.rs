@@ -500,7 +500,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_inside_bounds() {
-      let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+      let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
       let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
           1, 1, 1, 1, 1,
@@ -515,7 +515,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_left() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -530,7 +530,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_right() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -545,7 +545,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_bottom() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -560,7 +560,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_partially_outside_top() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 9, 9, 9, 1,
@@ -575,7 +575,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_outside_bottom() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -590,7 +590,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_corner_outside_right() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 9,
@@ -614,7 +614,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_horizontal() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -633,7 +633,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct0_and_oct4() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -652,7 +652,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_diagonal() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -671,7 +671,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct1_and_oct5() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             5, 1, 1, 1, 1,
@@ -690,7 +690,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_vertical() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -709,7 +709,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct2_and_oct6() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 4, 1, 1,
@@ -728,7 +728,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_line_segment_oct3_and_oct7() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -750,7 +750,7 @@ mod test {
         use image::imageops::rotate270;
         use pixelops::interpolate;
 
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -783,7 +783,7 @@ mod test {
         use image::imageops::rotate90;
         use pixelops::interpolate;
 
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -833,7 +833,7 @@ mod test {
     fn test_draw_antialiased_line_segment_oct7_and_oct3() {
         use pixelops::interpolate;
 
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         // Gradient is 3/4
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
@@ -854,7 +854,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_hollow_rect() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
@@ -870,7 +870,7 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_filled_rect() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![1; 25]).unwrap();
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
             1, 1, 1, 1, 1,
