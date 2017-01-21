@@ -875,6 +875,25 @@ mod test {
     bench_antialiased_lines!(bench_draw_antialiased_line_segment_diagonal, (10, 10), (450, 450));
     bench_antialiased_lines!(bench_draw_antialiased_line_segment_shallow, (10, 10), (450, 80));
 
+    macro_rules! bench_cubic_bezier_curve {
+        ($name:ident, $start:expr, $end:expr, $control_a:expr, $control_b:expr) => {
+            #[bench]
+            fn $name(b: &mut test::Bencher) {
+                use super::draw_cubic_bezier_curve_mut;
+
+                let mut image = GrayImage::new(500, 500);
+                let color = Luma([50u8]);
+                b.iter(|| {
+                    draw_cubic_bezier_curve_mut(&mut image, $start, $end, $control_a, $control_b, color);
+                    test::black_box(&image);
+                    });
+            }
+        }
+    }
+
+    bench_cubic_bezier_curve!(bench_draw_cubic_bezier_curve_short, (100.0, 100.0), (130.0, 130.0), (110.0, 100.0), (120.0, 130.0));
+    bench_cubic_bezier_curve!(bench_draw_cubic_bezier_curve_long, (100.0, 100.0), (400.0, 400.0), (500.0, 0.0), (0.0, 500.0));
+
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_draw_antialiased_line_segment_oct7_and_oct3() {
