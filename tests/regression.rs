@@ -259,3 +259,33 @@ fn test_draw_convex_polygon() {
         assert_pixels_eq!(image, truth);
     }
 }
+
+#[test]
+fn test_draw_cubic_bezier_curve() {
+    use image::{Rgb};
+    use imageproc::drawing::draw_cubic_bezier_curve_mut;
+
+    let red = Rgb([255, 0, 0]);
+    let green = Rgb([0, 255, 0]);
+    let blue = Rgb([0, 0, 255]);
+    let mut image = RgbImage::from_pixel(200, 200, Rgb([255, 255, 255]));
+
+    // Straight line
+    draw_cubic_bezier_curve_mut(&mut image, (0.0, 100.0), (200.0, 100.0), (-10.0, 100.0), (210.0, 100.0), red);
+    // Straight line off screen
+    draw_cubic_bezier_curve_mut(&mut image, (30.0, -30.0), (40.0, 250.0), (30.0, -30.0), (40.0, 250.0), red);
+    // Basic curve horizontal
+    draw_cubic_bezier_curve_mut(&mut image, (20.0, 150.0), (180.0, 150.0), (100.0, 100.0), (150.0, 80.0), blue);
+    // Curve with inflection
+    draw_cubic_bezier_curve_mut(&mut image, (100.0, 0.0), (120.0, 200.0), (300.0, 20.0), (-100.0, 150.0), green);
+    // Curve that makes a lopsided loop
+    draw_cubic_bezier_curve_mut(&mut image, (150.0, 50.0), (150.0, 50.0), (200.0, 20.0), (50.0, 20.0), red);
+
+    if REGENERATE {
+        save_truth_image(&image, "cubic_bezier_curve.png");
+    }
+    else {
+        let truth = load_truth_image("cubic_bezier_curve.png").to_rgb();
+        assert_pixels_eq!(image, truth);
+    }
+}
