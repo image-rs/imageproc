@@ -274,6 +274,83 @@ pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
     }
 }
 
+/// Draw as much of an ellipse as lies inside the image bounds.
+pub fn draw_hollow_ellipse<I>(image: &I,
+                             center: (i32, i32),
+                             width_radius: i32,
+                             height_radius: i32,
+                             color: I::Pixel) -> VecBuffer<I::Pixel>
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_hollow_ellipse_mut(&mut out, center, width_radius, height_radius, color);
+    out
+}
+
+/// Draw as much of an ellipse as lies inside the image bounds.
+/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+pub fn draw_hollow_ellipse_mut<I>(image: &mut I, center: (i32, i32), width_radius: i32, height_radius: i32, color: I::Pixel)
+    where I: GenericImage,
+          I::Pixel: 'static
+{
+    // Circle drawing algorithm is faster, so use it if the given ellipse is actually a circle.
+    if width_radius == height_radius {
+        draw_hollow_circle_mut(image, center, width_radius, color);
+        return;
+    }
+
+    let draw_quad_pixels = |image: &mut I, x0: i32, y0: i32, x: i32, y: i32, color: I::Pixel| {
+        draw_if_in_bounds(image, x0 + x, y0 + y, color);
+        draw_if_in_bounds(image, x0 - x, y0 + y, color);
+        draw_if_in_bounds(image, x0 + x, y0 - y, color);
+        draw_if_in_bounds(image, x0 - x, y0 - y, color);
+    };
+
+    let (x0, y0) = center;
+    let w2 = width_radius * width_radius;
+    let h2 = height_radius * height_radius;
+    let mut x = 0;
+    let mut y = height_radius;
+    let mut px = 0;
+    let mut py = 2 * w2 * y;
+
+    draw_quad_pixels(image, x0, y0, x, y, color);
+
+    // Top and bottom regions.
+    let mut p = (h2 - (w2 * height_radius)) as f32 + (0.25 * w2 as f32);
+    while px < py {
+        x += 1;
+        px += 2 * h2;
+        if p < 0.0 {
+            p += (h2 + px) as f32;
+        } else {
+            y -= 1;
+            py += -2 * w2;
+            p += (h2 + px - py) as f32;
+        }
+
+        draw_quad_pixels(image, x0, y0, x, y, color);
+    }
+
+    // Left and right regions.
+    p = (h2 as f32) * (x as f32 + 0.5).powi(2) + (w2 * (y - 1).pow(2)) as f32 - (w2 * h2) as f32;
+    while y > 0 {
+        y -= 1;
+        py += -2 * w2;
+        if p > 0.0 {
+            p += (w2 - py) as f32;
+        } else {
+            x += 1;
+            px += 2 * h2;
+            p += (w2 - py + px) as f32;
+        }
+
+        draw_quad_pixels(image, x0, y0, x, y, color);
+    }
+}
+
 /// Draw as much of a circle as lies inside the image bounds.
 pub fn draw_hollow_circle<I>(image: &I,
                              center: (i32, i32),
@@ -893,6 +970,26 @@ mod test {
 
     bench_cubic_bezier_curve!(bench_draw_cubic_bezier_curve_short, (100.0, 100.0), (130.0, 130.0), (110.0, 100.0), (120.0, 130.0));
     bench_cubic_bezier_curve!(bench_draw_cubic_bezier_curve_long, (100.0, 100.0), (400.0, 400.0), (500.0, 0.0), (0.0, 500.0));
+
+    macro_rules! bench_hollow_ellipse {
+        ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
+            #[bench]
+            fn $name(b: &mut test::Bencher) {
+                use super::draw_hollow_ellipse_mut;
+
+                let mut image = GrayImage::new(500, 500);
+                let color = Luma([50u8]);
+                b.iter(|| {
+                    draw_hollow_ellipse_mut(&mut image, $center, $width_radius, $height_radius, color);
+                    test::black_box(&image);
+                    });
+            }
+        }
+    }
+
+    bench_hollow_ellipse!(bench_bench_hollow_ellipse_circle, (200, 200), 80, 80);
+    bench_hollow_ellipse!(bench_bench_hollow_ellipse_vertical, (200, 200), 40, 100);
+    bench_hollow_ellipse!(bench_bench_hollow_ellipse_horizontal, (200, 200), 100, 40);
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
