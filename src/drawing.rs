@@ -275,11 +275,16 @@ pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
 }
 
 /// Draw as much of an ellipse as lies inside the image bounds.
+/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// The ellipse is axis-aligned and satisfies the following equation:
+///
+/// (`x^2 / width_radius^2) + (y^2 / height_radius^2) = 1`
 pub fn draw_hollow_ellipse<I>(image: &I,
-                             center: (i32, i32),
-                             width_radius: i32,
-                             height_radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                              center: (i32, i32),
+                              width_radius: i32,
+                              height_radius: i32,
+                              color: I::Pixel) -> VecBuffer<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -291,6 +296,10 @@ pub fn draw_hollow_ellipse<I>(image: &I,
 
 /// Draw as much of an ellipse as lies inside the image bounds.
 /// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// The ellipse is axis-aligned and satisfies the following equation:
+///
+/// `(x^2 / width_radius^2) + (y^2 / height_radius^2) = 1`
 pub fn draw_hollow_ellipse_mut<I>(image: &mut I, center: (i32, i32), width_radius: i32, height_radius: i32, color: I::Pixel)
     where I: GenericImage,
           I::Pixel: 'static
@@ -312,11 +321,16 @@ pub fn draw_hollow_ellipse_mut<I>(image: &mut I, center: (i32, i32), width_radiu
 }
 
 /// Draw as much of an ellipse, including its contents, as lies inside the image bounds.
+/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// The ellipse is axis-aligned and satisfies the following equation:
+///
+/// `(x^2 / width_radius^2) + (y^2 / height_radius^2) <= 1`
 pub fn draw_filled_ellipse<I>(image: &I,
-                             center: (i32, i32),
-                             width_radius: i32,
-                             height_radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                              center: (i32, i32),
+                              width_radius: i32,
+                              height_radius: i32,
+                              color: I::Pixel) -> VecBuffer<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -328,6 +342,10 @@ pub fn draw_filled_ellipse<I>(image: &I,
 
 /// Draw as much of an ellipse, including its contents, as lies inside the image bounds.
 /// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// The ellipse is axis-aligned and satisfies the following equation:
+///
+/// `(x^2 / width_radius^2) + (y^2 / height_radius^2) <= 1`
 pub fn draw_filled_ellipse_mut<I>(image: &mut I, center: (i32, i32), width_radius: i32, height_radius: i32, color: I::Pixel)
     where I: GenericImage,
           I::Pixel: 'static
