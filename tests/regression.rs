@@ -289,3 +289,59 @@ fn test_draw_cubic_bezier_curve() {
         assert_pixels_eq!(image, truth);
     }
 }
+
+#[test]
+fn test_draw_hollow_ellipse() {
+    use image::{Rgb};
+    use imageproc::drawing::draw_hollow_ellipse_mut;
+
+    let red = Rgb([255, 0, 0]);
+    let green = Rgb([0, 255, 0]);
+    let blue = Rgb([0, 0, 255]);
+    let mut image = RgbImage::from_pixel(200, 200, Rgb([255, 255, 255]));
+
+    // Circle
+    draw_hollow_ellipse_mut(&mut image, (100, 100), 50, 50, red);
+    // Vertically stretched
+    draw_hollow_ellipse_mut(&mut image, (50, 100), 40, 90, blue);
+    // Horizontally stretched
+    draw_hollow_ellipse_mut(&mut image, (100, 150), 80, 30, green);
+    // Partially off-screen
+    draw_hollow_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
+
+    if REGENERATE {
+        save_truth_image(&image, "hollow_ellipse.png");
+    }
+    else {
+        let truth = load_truth_image("hollow_ellipse.png").to_rgb();
+        assert_pixels_eq!(image, truth);
+    }
+}
+
+#[test]
+fn test_draw_filled_ellipse() {
+    use image::{Rgb};
+    use imageproc::drawing::draw_filled_ellipse_mut;
+
+    let red = Rgb([255, 0, 0]);
+    let green = Rgb([0, 255, 0]);
+    let blue = Rgb([0, 0, 255]);
+    let mut image = RgbImage::from_pixel(200, 200, Rgb([255, 255, 255]));
+
+    // Circle
+    draw_filled_ellipse_mut(&mut image, (100, 100), 50, 50, red);
+    // Vertically stretched
+    draw_filled_ellipse_mut(&mut image, (50, 100), 40, 90, blue);
+    // Horizontally stretched
+    draw_filled_ellipse_mut(&mut image, (100, 150), 80, 30, green);
+    // Partially off-screen
+    draw_filled_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
+
+    if REGENERATE {
+        save_truth_image(&image, "filled_ellipse.png");
+    }
+    else {
+        let truth = load_truth_image("filled_ellipse.png").to_rgb();
+        assert_pixels_eq!(image, truth);
+    }
+}
