@@ -1,5 +1,7 @@
 imageproc
 ====
+
+[![Join the chat at https://gitter.im/PistonDevelopers/imageproc](https://badges.gitter.im/PistonDevelopers/imageproc.svg)](https://gitter.im/PistonDevelopers/imageproc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/PistonDevelopers/imageproc.svg?branch=master)](https://travis-ci.org/PistonDevelopers/imageproc)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/PistonDevelopers/imageproc/blob/master/LICENSE)
 
