@@ -8,6 +8,46 @@ use std::cmp::{min, max};
 use std::f32;
 use std::i32;
 
+use pixelops::weighted_sum;
+use rusttype::{FontCollection, Scale, point, PositionedGlyph};
+
+pub fn draw_text<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, height: f32, offset: f32, scale: Scale, font_data: &[u8], text: &str) 
+    where I: GenericImage
+{
+
+    let collection = FontCollection::from_bytes(font_data);
+    let font = collection.into_font().unwrap();
+
+    let pixel_height = height.ceil() as usize;
+    let v_metrics = font.v_metrics(scale);
+    let offset = point(offset, v_metrics.ascent);
+
+    let glyphs: Vec<PositionedGlyph> = font.layout(text, scale, offset).collect();
+
+    let width = glyphs.iter().rev()
+        .filter_map(|g| g.pixel_bounding_box()
+                    .map(|b| b.min.x as f32 + g.unpositioned().h_metrics().advance_width))
+        .next().unwrap_or(0.0).ceil() as usize;
+
+    for g in glyphs {
+        if let Some(bb) = g.pixel_bounding_box() {
+            g.draw(|gx, gy, gv| {
+                let gx = gx as i32 + bb.min.x;
+                let gy = gy as i32 + bb.min.y;
+                
+                if gx >= 0 && gx < width as i32 && gy >= 0 && gy < pixel_height as i32 {
+
+                  let pixel = image.get_pixel(gx as u32 + x, gy as u32 + y);
+                  let foreground = color;
+                  let background = pixel;
+                  let color = weighted_sum(background, foreground, 1.0 - gv, gv);
+                  image.put_pixel(gx as u32 + x, gy as u32 + y, color);
+                }
+            })
+        }
+    }
+}
+
 /// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)

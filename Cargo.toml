@@ -6,6 +6,7 @@ license = "MIT"
 description = "Image processing operations"
 readme = "README.md"
 homepage = "https://github.com/PistonDevelopers/imageproc"
+exclude = ["examples/*.ttf"]
 
 [dependencies]
 conv = "0.3.1"
@@ -15,6 +16,7 @@ nalgebra = "0.5.1"
 num = "0.1.27"
 quickcheck = "0.2.24"
 rand = "0.3.11"
+rusttype = "0.2.1"
 
 [profile.release]
 opt-level = 3
