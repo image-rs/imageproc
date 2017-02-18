@@ -5,7 +5,9 @@ extern crate imageproc;
 extern crate rusttype;
 
 use std::path::Path;
+use std::env;
 use imageproc::pixelops::weighted_sum;
+use imageproc::drawing::draw_text;
 use image::{Rgb, RgbImage, open, ImageBuffer, GenericImage};
 use rusttype::{FontCollection, Scale, point, PositionedGlyph};
 
@@ -23,9 +25,9 @@ fn main() {
 
     let font = include_bytes!("DejaVuSans.ttf") as &[u8];
 
-    let height = 12.4 * 2.5
+    let height = 12.4;
     let scale = Scale { x: height * 2.0, y: height };
-    image.draw_text(color: Rgb([0u8, 0u8, 255u8]), 0, 0, height, scale, font, "Hello, world!");
-    
+    draw_text(&mut image, Rgb([0u8, 0u8, 255u8]), 0, 0, height, 0.0, scale, font, "Hello, world!");
+
     let _ = image.save(path).unwrap();
 }

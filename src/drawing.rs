@@ -1,7 +1,8 @@
 //! Helpers for drawing basic shapes on images.
 
-use image::{GenericImage, ImageBuffer};
-use definitions::VecBuffer;
+use image::{GenericImage, ImageBuffer, Pixel};
+use definitions::{VecBuffer, Clamp};
+use conv::ValueInto;
 use rect::Rect;
 use std::mem::swap;
 use std::cmp::{min, max};
@@ -11,8 +12,9 @@ use std::i32;
 use pixelops::weighted_sum;
 use rusttype::{FontCollection, Scale, point, PositionedGlyph};
 
+/// Draws colored text on an image in place. `height` is your desired font height (in pixels), `offset` pushes your text to the right (in pixels), `scale` is augumented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
 pub fn draw_text<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, height: f32, offset: f32, scale: Scale, font_data: &[u8], text: &str) 
-    where I: GenericImage
+    where I: GenericImage, <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
 
     let collection = FontCollection::from_bytes(font_data);
@@ -38,10 +40,8 @@ pub fn draw_text<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, height: f32,
                 if gx >= 0 && gx < width as i32 && gy >= 0 && gy < pixel_height as i32 {
 
                   let pixel = image.get_pixel(gx as u32 + x, gy as u32 + y);
-                  let foreground = color;
-                  let background = pixel;
-                  let color = weighted_sum(background, foreground, 1.0 - gv, gv);
-                  image.put_pixel(gx as u32 + x, gy as u32 + y, color);
+                  let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
+                  image.put_pixel(gx as u32 + x, gy as u32 + y, weighted_color);
                 }
             })
         }
