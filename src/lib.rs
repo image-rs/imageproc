@@ -1,4 +1,5 @@
 
+#![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
