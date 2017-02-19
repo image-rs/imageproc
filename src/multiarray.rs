@@ -40,7 +40,7 @@ impl<'a, T> View3d<'a, T> {
 
     /// Immutable access to the raw data.
     pub fn data(&self) -> &[T] {
-        &self.data
+        self.data
     }
 
     /// Mutable access to the raw data.

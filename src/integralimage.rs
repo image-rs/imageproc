@@ -56,7 +56,7 @@ pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
     out
 }
 
-/// Sums the pixels in positions [left, right] * [top, bottom] in F, where integral_image is the
+/// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
 /// integral image of F.
 // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
 pub fn sum_image_pixels(integral_image: &VecBuffer<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
