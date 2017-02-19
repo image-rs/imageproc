@@ -15,22 +15,28 @@ use definitions::{
 /// corner detectors.
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Corner {
+    /// x-coordinate of the corner.
     pub x: u32,
+    /// y-coordinate of the corner.
     pub y: u32,
+    /// Score of the detected corner.
     pub score: f32
 }
 
 impl Corner {
+    /// A corner at location (x, y) with score `score`.
     pub fn new(x: u32, y: u32, score: f32) -> Corner {
         Corner {x: x, y: y, score: score}
     }
 }
 
 impl Position for Corner {
+    /// x-coordinate of the corner.
     fn x(&self) -> u32 {
         self.x
     }
 
+    /// y-coordinate of the corner.
     fn y(&self) -> u32 {
         self.y
     }
@@ -234,7 +240,7 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 }
 
 #[inline]
-unsafe fn get_circle<I>(image: &I, x: u32, y: u32, 
+unsafe fn get_circle<I>(image: &I, x: u32, y: u32,
                         p0: i16, p4: i16, p8: i16, p12: i16) -> [i16; 16]
     where I: GenericImage<Pixel=Luma<u8>>
 {

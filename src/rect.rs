@@ -13,6 +13,7 @@ pub struct Rect {
 
 /// A geometrical representation of a set of 2D points with coordinate type T.
 pub trait Region<T> {
+    /// Whether this region contains the given point.
     fn contains(&self, x: T, y: T) -> bool;
 }
 

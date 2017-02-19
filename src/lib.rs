@@ -1,4 +1,5 @@
-
+//! An image processing library, based on the
+//! [image](https://github.com/PistonDevelopers/image) crate.
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 

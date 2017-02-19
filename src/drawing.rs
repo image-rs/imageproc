@@ -368,7 +368,7 @@ fn draw_if_in_bounds<I>(image: &mut I, x: i32, y: i32, color: I::Pixel)
     }
 }
 
-
+/// A 2D point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Point<T: Copy + PartialEq + Eq> {
     x: T,
@@ -376,6 +376,7 @@ pub struct Point<T: Copy + PartialEq + Eq> {
 }
 
 impl<T: Copy + PartialEq + Eq> Point<T> {
+    /// Construct a point at (x, y).
     pub fn new (x: T, y: T) -> Point<T> {
         Point::<T> { x: x, y: y}
     }

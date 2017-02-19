@@ -21,11 +21,13 @@ pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
 
 /// Pixels which have a named Black value.
 pub trait HasBlack {
+    /// Returns a black pixel of this type.
     fn black() -> Self;
 }
 
 /// Pixels which have a named White value.
 pub trait HasWhite {
+    /// Returns a white pixel of this type.
     fn white() -> Self;
 }
 
@@ -51,18 +53,22 @@ impl_black_white!(Rgb<u8>, Rgb([u8::MIN; 3]), Rgb([u8::MAX; 3]));
 
 /// Something with a 2d position.
 pub trait Position {
+    /// x-coordinate.
     fn x(&self) -> u32;
+    /// y-coordinate.
     fn y(&self) -> u32;
 }
 
 /// Something with a score.
 pub trait Score {
+    /// Score of this item.
     fn score(&self) -> f32;
 }
 
 /// A type to which we can clamp a value of type T.
 /// Implementations are not required to handle NaNs gracefully.
 pub trait Clamp<T> {
+    /// Clamp `x` to a valid value for this type.
     fn clamp(x: T) -> Self;
 }
 
