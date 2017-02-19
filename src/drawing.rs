@@ -167,10 +167,10 @@ pub fn draw_antialiased_line_segment_mut<I, B>(image: &mut I,
     };
 }
 
-fn plot_wu_line<'a, I: 'a, T, B>(mut plotter: Plotter<'a, I, T, B>,
-                              start: (i32, i32),
-                              end: (i32, i32),
-                              color: I::Pixel)
+fn plot_wu_line<I, T, B>(mut plotter: Plotter<I, T, B>,
+                         start: (i32, i32),
+                         end: (i32, i32),
+                         color: I::Pixel)
     where I: GenericImage, I::Pixel: 'static,
           T: Fn(i32, i32) -> (i32, i32),
           B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel
@@ -183,7 +183,7 @@ fn plot_wu_line<'a, I: 'a, T, B>(mut plotter: Plotter<'a, I, T, B>,
     for x in start.0..(end.0 + 1) {
         plotter.plot(x, fy as i32, color, 1.0 - fy.fract());
         plotter.plot(x, fy as i32 + 1, color, fy.fract());
-        fy = fy + gradient;
+        fy += gradient;
     }
 }
 

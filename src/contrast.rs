@@ -217,7 +217,7 @@ fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize
         let mut target_fraction = target_histc[y] as f32 / target_total;
 
         while source_fraction > target_fraction && y < 255 {
-            y = y + 1;
+            y += 1;
             prev_target_fraction = target_fraction;
             target_fraction = target_histc[y] as f32 / target_total;
         }

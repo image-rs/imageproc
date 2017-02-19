@@ -139,7 +139,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                 }
                 let out_channels = out.get_pixel_mut(x, y).channels_mut();
                 for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                    f(c, a.clone());
+                    f(c, *a);
                     *a = zero;
                 }
             }

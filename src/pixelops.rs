@@ -12,7 +12,7 @@ pub fn weighted_sum<P: Pixel>(left: P, right: P, left_weight: f32, right_weight:
     left.map2(&right, |p, q| weighted_channel_sum(p, q, left_weight, right_weight))
 }
 
-/// Equivalent to weighted_sum(left, right, left_weight, 1 - left_weight).
+/// Equivalent to `weighted_sum(left, right, left_weight, 1 - left_weight).
 pub fn interpolate<P: Pixel>(left: P, right: P, left_weight: f32) -> P
     where P::Subpixel: ValueInto<f32> + Clamp<f32>
 {

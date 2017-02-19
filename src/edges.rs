@@ -123,7 +123,7 @@ fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
                 out.put_pixel(x, y, max_brightness);
                 edges.push((x, y));
                 // Track neighbors until no neighbor is >= low_thresh.
-                while edges.len() > 0 {
+                while !edges.is_empty() {
                     let (nx, ny) = edges.pop().unwrap();
                     let neighbor_indices = [(nx + 1, ny),
                                             (nx + 1, ny + 1),

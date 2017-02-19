@@ -81,7 +81,7 @@ impl HogSpec {
 		})
 	}
 
-	fn invalid_options_message(errors: &Vec<String>) -> String {
+	fn invalid_options_message(errors: &[String]) -> String {
 		format!("Invalid HoG options: {0}", errors.join(", "))
 	}
 
@@ -95,7 +95,7 @@ impl HogSpec {
 			if height % options.cell_side != 0 {
 				errors.push(format!("cell side {} does not evenly divide height {}", options.cell_side, height));
 			}
-			if errors.len() > 0 {
+			if !errors.is_empty() {
 				return Err(Self::invalid_options_message(&errors));
 			}
 			Ok((width / options.cell_side, height / options.cell_side))
@@ -114,7 +114,7 @@ impl HogSpec {
 			errors.push(format!("block stride {} does not evenly divide (cells high {} - block side {})",
 				options.block_stride, cells_high, options.block_side));
 		}
-		if errors.len() > 0 {
+		if !errors.is_empty() {
 			return Err(Self::invalid_options_message(&errors));
 		}
 		Ok((num_blocks(cells_wide, options.block_side, options.block_stride),
@@ -265,7 +265,7 @@ pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 
 			let mut d = v.atan2(h);
 			if d < 0f32 {
-				d = d + range;
+				d += range;
 			}
 			if !spec.options.signed && d >= f32::consts::PI {
 				d -= f32::consts::PI;
@@ -350,7 +350,7 @@ impl Interpolation {
 /// The dimensions of the provided Array3d are orientation bucket,
 /// horizontal location of the cell, then vertical location of the cell.
 /// Note that we ignore block-level aggregation or normalisation here.
-/// Each rendered star has side length star_side, so the image will have
+/// Each rendered star has side length `star_side`, so the image will have
 /// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
 pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> VecBuffer<Luma<u8>> {
 	let width = grid.lengths[1] as u32 * star_side;
