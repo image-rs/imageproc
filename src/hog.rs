@@ -68,7 +68,6 @@ pub struct HogSpec {
 }
 
 impl HogSpec {
-
 	/// Returns an error message if image dimensions aren't compatible with the provided options.
 	pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
 		let (cells_wide, cells_high) = try!(Self::checked_cell_dimensions(width as usize, height as usize, options));
@@ -159,8 +158,8 @@ impl HogSpec {
 	}
 }
 
-/// Number of blocks required to cover num_cells cells when each block is
-/// block_side long and blocks are staggered by block_stride. Assumes that
+/// Number of blocks required to cover `num_cells` cells when each block is
+/// `block_side` long and blocks are staggered by `block_stride`. Assumes that
 /// options are compatible.
 fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 {
@@ -352,7 +351,7 @@ impl Interpolation {
 /// horizontal location of the cell, then vertical location of the cell.
 /// Note that we ignore block-level aggregation or normalisation here.
 /// Each rendered star has side length star_side, so the image will have
-/// width grid.lengths[1] * star_side and height grid.lengths[2] * star_side.
+/// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
 pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> VecBuffer<Luma<u8>> {
 	let width = grid.lengths[1] as u32 * star_side;
 	let height = grid.lengths[2] as u32 * star_side;

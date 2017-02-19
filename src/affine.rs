@@ -353,7 +353,7 @@ mod test {
 
     #[bench]
     fn bench_rotate_nearest(b: &mut test::Bencher) {
-        let mut image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
         b.iter(|| {
             let rotated = rotate_nearest(&image, (3f32, 3f32), 1f32, Luma([0u8]));
             test::black_box(rotated);

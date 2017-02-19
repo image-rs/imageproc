@@ -1,10 +1,6 @@
 //! Utils for testing and debugging.
 
-use definitions::{
-    VecBuffer,
-    HasWhite,
-    HasBlack
-};
+use definitions::VecBuffer;
 
 use image::{
     DynamicImage,
@@ -187,7 +183,7 @@ pub fn gray_bench_image(width: u32, height: u32) -> GrayImage {
     image
 }
 
-/// RGB image to use in benchmarks. See comment on gray_bench_image.
+/// RGB image to use in benchmarks. See comment on `gray_bench_image`.
 pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
     use std::cmp;
     let mut image = RgbImage::new(width, height);
@@ -202,33 +198,14 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
     image
 }
 
-/// Gray image to use in edge detection benchmarks.
-/// Creates a white rectangle centered in black background.
-pub fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
-    let mut image = GrayImage::new(width, height);
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            if x > 9 && x < 12 && y > 9 && y < 12 {
-                image.put_pixel(x, y, Luma::white());
-            }
-            else if x > width / 4 && x < 3 * (width/4 )&& y > height/4 && y < 3 * (height/4) {
-                image.put_pixel(x, y, Luma::white());
-            } else {
-                image.put_pixel(x, y, Luma::black());
-            }
-        }
-    }
-    image
-}
-
 /// Wrapper for image buffers to allow us to write an Arbitrary instance.
 #[derive(Clone)]
 pub struct TestBuffer<T: Pixel>(pub VecBuffer<T>);
 
-/// 8bpp grayscale TestBuffer.
+/// 8bpp grayscale `TestBuffer`.
 pub type GrayTestImage = TestBuffer<Luma<u8>>;
 
-/// 24bpp RGB TestBuffer.
+/// 24bpp RGB `TestBuffer`.
 pub type RgbTestImage = TestBuffer<Rgb<u8>>;
 
 impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>

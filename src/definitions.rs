@@ -12,8 +12,8 @@ use std::{
     i16
 };
 
-/// An ImageBuffer containing Pixels of type P with storage
-/// Vec<P::Subpixel>.
+/// An `ImageBuffer` containing Pixels of type P with storage
+/// `Vec<P::Subpixel>`.
 // TODO: This produces a compiler warning about trait bounds
 // TODO: not being enforced in type definitions. In this case
 // TODO: they are. Can we get rid of the warning?
@@ -66,7 +66,7 @@ pub trait Score {
 }
 
 /// A type to which we can clamp a value of type T.
-/// Implementations are not required to handle NaNs gracefully.
+/// Implementations are not required to handle `NaN`s gracefully.
 pub trait Clamp<T> {
     /// Clamp `x` to a valid value for this type.
     fn clamp(x: T) -> Self;

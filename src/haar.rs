@@ -235,7 +235,7 @@ impl HaarFilter {
     }
 }
 
-/// See comment on eval_points.
+/// See comment on `eval_points`.
 struct EvalPoints {
     points: [(u32, u32); 4],
     weights: [i8; 4]

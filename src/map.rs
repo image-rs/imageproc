@@ -20,7 +20,7 @@ pub trait WithChannel<C: Primitive>: Pixel {
     type Pixel: Pixel<Subpixel=C> + 'static;
 }
 
-/// Alias to make uses of WithChannel less syntactically noisy.
+/// Alias to make uses of `WithChannel` less syntactically noisy.
 pub type ChannelMap<Pix, Sub> = <Pix as WithChannel<Sub>>::Pixel;
 
 impl<T, U> WithChannel<U> for Rgb<T>

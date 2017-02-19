@@ -8,8 +8,6 @@ extern crate test;
 extern crate conv;
 extern crate image;
 extern crate itertools;
-
-#[macro_use]
 extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
