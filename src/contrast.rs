@@ -141,8 +141,8 @@ pub fn cumulative_histogram<I>(image: &I) -> [i32; 256]
     hist
 }
 
-/// Equalises the histogram of an 8bpp grayscale image in place.
-/// https://en.wikipedia.org/wiki/Histogram_equalization
+/// Equalises the histogram of an 8bpp grayscale image in place. See also
+/// [histogram equalization (wikipedia)](https://en.wikipedia.org/wiki/Histogram_equalization).
 pub fn equalize_histogram_mut<I>(image: &mut I)
     where I: GenericImage<Pixel = Luma<u8>>
 {
@@ -159,8 +159,8 @@ pub fn equalize_histogram_mut<I>(image: &mut I)
     }
 }
 
-/// Equalises the histogram of an 8bpp grayscale image.
-/// https://en.wikipedia.org/wiki/Histogram_equalization
+/// Equalises the histogram of an 8bpp grayscale image. See also
+/// [histogram equalization (wikipedia)](https://en.wikipedia.org/wiki/Histogram_equalization).
 pub fn equalize_histogram<I>(image: &I) -> GrayImage
     where I: GenericImage<Pixel = Luma<u8>>
 {
@@ -202,8 +202,8 @@ pub fn match_histogram<I, J>(image: &I, target: &J) -> GrayImage
     out
 }
 
-/// l = histogram_lut(s, t) is chosen so that target_histc[l[i]] / sum(target_histc)
-/// is as close as possible to source_histc[i] / sum(source_histc).
+/// `l = histogram_lut(s, t)` is chosen so that `target_histc[l[i]] / sum(target_histc)`
+/// is as close as possible to `source_histc[i] / sum(source_histc)`.
 fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize; 256] {
     let source_total = source_histc[255] as f32;
     let target_total = target_histc[255] as f32;
