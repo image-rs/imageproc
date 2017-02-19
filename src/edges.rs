@@ -10,10 +10,10 @@ use filter::gaussian_blur_f32;
 ///
 /// # Params
 ///
-/// - low_threshold: Low threshold for the hysteresis procedure.
+/// - `low_threshold`: Low threshold for the hysteresis procedure.
 /// Edges with a strength higher than the low threshold will appear
 /// in the output image, if there are strong edges nearby.
-/// - high_threshold: High threshold for the hysteresis procedure.
+/// - `high_threshold`: High threshold for the hysteresis procedure.
 /// Edges with a strength higher than the high threshold will always
 /// appear as edges in the output image.
 ///
@@ -150,8 +150,22 @@ fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
 #[cfg(test)]
 mod test {
     use super::canny;
-    use utils::edge_detect_bench_image;
+    use drawing::{draw_filled_rect_mut};
+    use rect::Rect;
+    use image::{GrayImage, Luma};
     use test;
+
+    fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
+        let mut image = GrayImage::new(width, height);
+        let (w, h) = (width as i32, height as i32);
+        let large = Rect::at(w / 4, h / 4).of_size(width / 2, height / 2);
+        let small = Rect::at(9, 9).of_size(3, 3);
+
+        draw_filled_rect_mut(&mut image, large, Luma([255]));
+        draw_filled_rect_mut(&mut image, small, Luma([255]));
+
+        image
+    }
 
     #[bench]
     fn bench_canny(b: &mut test::Bencher) {

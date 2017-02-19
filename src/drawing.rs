@@ -102,10 +102,8 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
                 if in_bounds(y, x) {
                     image.unsafe_put_pixel(y as u32, x as u32, color);
                 }
-            } else {
-                if in_bounds(x, y) {
-                    image.unsafe_put_pixel(x as u32, y as u32, color);
-                }
+            } else if in_bounds(x, y) {
+                image.unsafe_put_pixel(x as u32, y as u32, color);
             }
         }
         error -= dy;
@@ -117,7 +115,7 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
 }
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
-/// The parameters of blend are (line_color, original_color, line_weight).
+/// The parameters of blend are (line color, original color, line weight).
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment<I, B>(image: &I,
                                            start: (i32, i32),
@@ -136,7 +134,7 @@ pub fn draw_antialiased_line_segment<I, B>(image: &I,
 }
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
-/// The parameters of blend are (line_color, original_color, line_weight).
+/// The parameters of blend are (line color, original color, line weight).
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment_mut<I, B>(image: &mut I,
                                                start: (i32, i32),

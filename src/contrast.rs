@@ -8,7 +8,7 @@ use integralimage::{integral_image, sum_image_pixels};
 /// Applies an adaptive threshold to an image.
 ///
 /// This algorithm compares each pixel's brightness with the average brightness of the pixels
-/// in the (2 * block_radius + 1) square block centered on it. If the pixel if at least as bright
+/// in the (2 * `block_radius` + 1) square block centered on it. If the pixel if at least as bright
 /// as the threshold then it will have a value of 255 in the output image, otherwise 0.
 pub fn adaptive_threshold<I>(image: &I, block_radius: u32) -> GrayImage
      where I: GenericImage<Pixel = Luma<u8>>

@@ -33,8 +33,8 @@ use math::cast;
 use std::cmp;
 use std::f32;
 
-/// Convolves an 8bpp grayscale image with a kernel of width (2 * x_radius + 1)
-/// and height (2 * y_radius + 1) whose entries are equal and
+/// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
+/// and height (2 * `y_radius` + 1) whose entries are equal and
 /// sum to one. i.e. each output pixel is the unweighted mean of
 /// a rectangular region surrounding its corresponding input pixel.
 /// We handle locations where the kernel would extend past the image's
@@ -180,7 +180,7 @@ pub fn gaussian_blur_f32<I>(image: &I, sigma: f32) -> VecBuffer<I::Pixel>
 }
 
 /// Returns 2d correlation of view with the outer product of the 1d
-/// kernels h_filter and v_filter.
+/// kernels `h_kernel` and `v_kernel`.
 pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
         -> VecBuffer<I::Pixel>
     where I: GenericImage,
