@@ -38,6 +38,7 @@ pub struct HogOptions {
 }
 
 impl HogOptions {
+	/// User-provided options, prior to validation.
     pub fn new(orientations: usize, signed: bool, cell_side: usize,
         block_side: usize, block_stride: usize) -> HogOptions {
         HogOptions {

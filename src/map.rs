@@ -16,6 +16,7 @@ use definitions::{
 
 /// The type obtained by replacing the channel type of a given Pixel type.
 pub trait WithChannel<C: Primitive>: Pixel {
+    /// The new pixel type.
     type Pixel: Pixel<Subpixel=C> + 'static;
 }
 

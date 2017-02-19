@@ -5,7 +5,7 @@ use num::Zero;
 pub use nalgebra::{Mat2, Vec2};
 use nalgebra::{Eye, Inv};
 
-// L2 norm of a vector.
+/// L2 norm of a vector.
 pub fn l2_norm(xs: &[f32]) -> f32 {
     xs.iter().fold(0f32, |acc, x| acc + x * x).sqrt()
 }
@@ -18,11 +18,13 @@ pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {
     }
 }
 
-/// A 2d affine transformation.
+/// A 2d affine transformation, Ax + b.
 // TODO: Should we switch to homogeneous coordinates?
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Affine2 {
+    /// A
     pub linear: Mat2<f32>,
+    /// b
     pub translation: Vec2<f32>
 }
 

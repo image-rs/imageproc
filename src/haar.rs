@@ -9,7 +9,12 @@ use std::ops::Mul;
 /// Whether the top left region in a Haar filter is counted
 /// with positive or negative sign.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Sign { Positive, Negative }
+pub enum Sign {
+    /// Top left region is counted with a positive sign.
+    Positive,
+    /// Top left region is counted with a negative sign.
+    Negative
+}
 
 /// A Haar filter whose value on an integral image is the weighted sum
 /// of the values of the integral image at the given points.

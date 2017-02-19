@@ -254,6 +254,7 @@ impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
 /// Workaround for not being able to define Arbitrary instances for pixel types
 /// defines in other modules.
 pub trait ArbitraryPixel {
+    /// Generate an arbitrary instance of this pixel type.
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 }
 
