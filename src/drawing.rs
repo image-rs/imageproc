@@ -669,17 +669,10 @@ pub fn draw_cubic_bezier_curve_mut<I>(image: &mut I, start: (f32, f32), end: (f3
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        draw_cross,
-        draw_line_segment,
-        draw_filled_rect,
-        draw_hollow_rect,
-        draw_antialiased_line_segment
-    };
+    use super::*;
     use rect::Rect;
-    use image::{GrayImage, ImageBuffer, Luma};
-    use test;
+    use image::{GrayImage, ImageBuffer, Luma, RgbImage, Rgb};
+    use test::{Bencher, black_box};
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -990,6 +983,29 @@ mod test {
         assert_pixels_eq!(down_right, rotate90(&expected));
     }
 
+    #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_draw_antialiased_line_segment_oct7_and_oct3() {
+        use pixelops::interpolate;
+
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
+
+        // Gradient is 3/4
+        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1,  1,  1,  13, 50,
+            1,  1,  25, 37,  1,
+            1,  37, 25,  1,  1,
+            50, 13, 1,   1,  1,
+            1,  1,  1,   1,  1]).unwrap();
+
+        let color = Luma([50u8]);
+        let oct7 = draw_antialiased_line_segment(&image, (0, 3), (4, 0), color, interpolate);
+        assert_pixels_eq!(oct7, expected);
+
+        let oct3 = draw_antialiased_line_segment(&image, (4, 0), (0, 3), color, interpolate);
+        assert_pixels_eq!(oct3, expected);
+    }
+
     macro_rules! bench_antialiased_lines {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
@@ -1071,27 +1087,15 @@ mod test {
     bench_filled_ellipse!(bench_bench_filled_ellipse_vertical, (200, 200), 40, 100);
     bench_filled_ellipse!(bench_bench_filled_ellipse_horizontal, (200, 200), 100, 40);
 
-    #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_draw_antialiased_line_segment_oct7_and_oct3() {
-        use pixelops::interpolate;
-
-        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
-
-        // Gradient is 3/4
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1,  1,  1,  13, 50,
-            1,  1,  25, 37,  1,
-            1,  37, 25,  1,  1,
-            50, 13, 1,   1,  1,
-            1,  1,  1,   1,  1]).unwrap();
-
-        let color = Luma([50u8]);
-        let oct7 = draw_antialiased_line_segment(&image, (0, 3), (4, 0), color, interpolate);
-        assert_pixels_eq!(oct7, expected);
-
-        let oct3 = draw_antialiased_line_segment(&image, (4, 0), (0, 3), color, interpolate);
-        assert_pixels_eq!(oct3, expected);
+    #[bench]
+    fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
+        let mut image = RgbImage::new(200, 200);
+        let color = Rgb([120u8, 60u8, 47u8]);
+        let rect = Rect::at(50, 50).of_size(80, 90);
+        b.iter(|| {
+            draw_filled_rect_mut(&mut image, rect, color);
+            black_box(&image);
+        });
     }
 
     #[test]

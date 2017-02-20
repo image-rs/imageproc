@@ -607,8 +607,10 @@ mod test {
     };
     use image::{
         GrayImage,
+        Luma,
         ImageBuffer
     };
+    use test::{Bencher, black_box};
 
     #[test]
     fn test_local_binary_pattern() {
@@ -650,5 +652,20 @@ mod test {
         assert_eq!(UNIFORM_REPRESENTATIVE_2[b], 0b00000000);
         let c = 0b10011001;
         assert_eq!(UNIFORM_REPRESENTATIVE_2[c], 0b10101010);
+    }
+
+    #[bench]
+    fn bench_local_binary_pattern(b: &mut Bencher) {
+        let image = GrayImage::from_fn(100, 100, |x, y| {
+            Luma([x as u8 % 2 + y as u8 % 2])
+        });
+        b.iter(|| {
+            for y in 0..20 {
+                for x in 0..20 {
+                    let pattern = local_binary_pattern(&image, x, y);
+                    black_box(pattern);
+                }
+            }
+        });
     }
 }
