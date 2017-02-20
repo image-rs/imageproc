@@ -242,16 +242,7 @@ fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize
 
 #[cfg(test)]
 mod test {
-    use super::{
-        adaptive_threshold,
-        cumulative_histogram,
-        equalize_histogram,
-        equalize_histogram_mut,
-        histogram,
-        histogram_lut,
-        otsu_level,
-        threshold,
-        threshold_mut};
+    use super::*;
     use definitions::{HasBlack, HasWhite};
     use utils::gray_bench_image;
     use image::{GrayImage, ImageBuffer, Luma};
@@ -312,6 +303,35 @@ mod test {
                 }
             }
         }
+    }
+
+    #[bench]
+    fn bench_adaptive_threshold(b: &mut test::Bencher) {
+        let image = gray_bench_image(200, 200);
+        let block_radius = 10;
+        b.iter(|| {
+            let thresholded = adaptive_threshold(&image, block_radius);
+            test::black_box(thresholded);
+        });
+    }
+
+    #[bench]
+    fn bench_match_histogram(b: &mut test::Bencher) {
+        let target = GrayImage::from_pixel(200, 200, Luma([150]));
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let matched = match_histogram(&image, &target);
+            test::black_box(matched);
+        });
+    }
+
+    #[bench]
+    fn bench_match_histogram_mut(b: &mut test::Bencher) {
+        let target = GrayImage::from_pixel(200, 200, Luma([150]));
+        let mut image = gray_bench_image(200, 200);
+        b.iter(|| {
+            match_histogram_mut(&mut image, &target);
+        });
     }
 
     #[test]
@@ -405,6 +425,15 @@ mod test {
                 220u8,  230u8,  240u8,  250u8]).unwrap();
         let level = otsu_level(&image);
         assert_eq!(level, 125);
+    }
+
+    #[bench]
+    fn bench_otsu_level(b: &mut test::Bencher) {
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let level = otsu_level(&image);
+            test::black_box(level);
+        });
     }
 
     #[test]
