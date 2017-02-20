@@ -433,7 +433,7 @@ mod test {
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_affine_translation() {
+    fn test_affine() {
         let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
             00, 01, 02,
             10, 11, 12,
@@ -454,5 +454,31 @@ mod test {
         else {
             assert!(false, "Affine transformation returned None");
         }
+    }
+
+    #[bench]
+    fn bench_affine_nearest(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let aff = Affine2::new(
+            Mat2::new(1f32, 0f32, 0f32, 1f32),
+            Vec2::new(1f32, 1f32));
+
+        b.iter(|| {
+            let transformed = affine(&image, aff, Interpolation::Nearest);
+            test::black_box(transformed);
+        });
+    }
+
+    #[bench]
+    fn bench_affine_bilinear(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let aff = Affine2::new(
+            Mat2::new(1f32, 0f32, 0f32, 1f32),
+            Vec2::new(1f32, 1f32));
+
+        b.iter(|| {
+            let transformed = affine(&image, aff, Interpolation::Bilinear);
+            test::black_box(transformed);
+        });
     }
 }
