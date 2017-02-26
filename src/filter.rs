@@ -296,7 +296,6 @@ fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
 
 #[cfg(test)]
 mod test {
-
     use super::{
         box_filter,
         filter3x3,
@@ -317,12 +316,16 @@ mod test {
         Luma,
         Rgb
     };
-    use definitions::Image;
+    use definitions::{
+        Clamp,
+        Image
+    };
     use image::imageops::blur;
     use test::{
         Bencher,
         black_box
     };
+    use std::cmp;
 
     #[test]
     fn test_box_filter() {
@@ -399,6 +402,108 @@ mod test {
             black_box(filtered);
             });
     }
+
+    /// Reference implementation of horizontal_filter. Used to validate
+    /// the (presumably faster) actual implementation.
+    fn horizontal_filter_reference(image: &GrayImage, kernel: &[f32]) -> GrayImage {
+        let (width, height) = image.dimensions();
+        let mut out = GrayImage::new(width, height);
+
+        for y in 0..height {
+            for x in 0..width {
+
+                let mut acc = 0f32;
+
+                for k in 0..kernel.len() {
+
+                    let mut x_unchecked = x as i32 + k as i32 - (kernel.len() / 2) as i32;
+                    x_unchecked = cmp::max(0, x_unchecked);
+                    x_unchecked = cmp::min(x_unchecked, width as i32 - 1);
+
+                    let x_checked = x_unchecked as u32;
+                    let color = image.get_pixel(x_checked, y)[0];
+                    let weight = kernel[k];
+
+                    acc += color as f32 * weight;
+                }
+
+                let clamped = u8::clamp(acc);
+                out.put_pixel(x, y, Luma([clamped]));
+            }
+        }
+
+        out
+    }
+
+    /// Reference implementation of vertical_filter. Used to validate
+    /// the (presumably faster) actual implementation.
+    fn vertical_filter_reference(image: &GrayImage, kernel: &[f32]) -> GrayImage {
+        let (width, height) = image.dimensions();
+        let mut out = GrayImage::new(width, height);
+
+        for y in 0..height {
+            for x in 0..width {
+
+                let mut acc = 0f32;
+
+                for k in 0..kernel.len() {
+
+                    let mut y_unchecked = y as i32 + k as i32 - (kernel.len() / 2) as i32;
+                    y_unchecked = cmp::max(0, y_unchecked);
+                    y_unchecked = cmp::min(y_unchecked, height as i32 - 1);
+
+                    let y_checked = y_unchecked as u32;
+                    let color = image.get_pixel(x, y_checked)[0];
+                    let weight = kernel[k];
+
+                    acc += color as f32 * weight;
+                }
+
+                let clamped = u8::clamp(acc);
+                out.put_pixel(x, y, Luma([clamped]));
+            }
+        }
+
+        out
+    }
+
+    macro_rules! test_against_reference_implementation {
+        ($test_name:ident, $under_test:ident, $reference_impl:ident) => {
+            #[test]
+            fn $test_name() {
+                // I think the interesting edge cases here are determined entirely
+                // by the relative sizes of the kernel and the image side length, so
+                // I'm just enumerating over small values instead of generating random
+                // examples via quickcheck.
+                for height in 0..5 {
+                    for width in 0..5 {
+                        for kernel_length in 0..15 {
+                            let image = gray_bench_image(width, height);
+                            let kernel: Vec<f32> =
+                                (0..kernel_length).map(|i| i as f32 % 1.35).collect();
+
+                            let expected = $reference_impl(&image, &kernel);
+                            let actual = $under_test(&image, &kernel);
+
+                            assert_pixels_eq!(actual, expected);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    test_against_reference_implementation!(
+        test_horizontal_filter_matches_reference_implementation,
+        horizontal_filter,
+        horizontal_filter_reference
+    );
+
+    test_against_reference_implementation!(
+        test_vertical_filter_matches_reference_implementation,
+        vertical_filter,
+        vertical_filter_reference
+    );
 
     #[test]
     fn test_horizontal_filter() {
