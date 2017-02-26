@@ -221,16 +221,15 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K])
     // specialised implementation is faster.
     let (width, height) = image.dimensions();
     let mut out = Image::<P>::new(width, height);
-    let num_channels = P::channel_count() as usize;
     let zero = K::zero();
-    let mut acc = vec![zero; num_channels];
-    let k_width = kernel.len() as u32;
+    let mut acc = vec![zero; P::channel_count() as usize];
+    let k_width = kernel.len() as i32;
 
     for y in 0..height {
         for x in 0..width {
               for k_x in 0..k_width {
-                  let x_p = cmp::min(width + width - 1,
-                                     cmp::max(width, (width + x + k_x - k_width / 2))) - width;
+                  let x_unchecked = (x as i32) + k_x - k_width / 2;
+                  let x_p = cmp::max(0, cmp::min(x_unchecked, width as i32 - 1)) as u32;
                   let (p, k) = unsafe {
                       (image.unsafe_get_pixel(x_p, y),
                        *kernel.get_unchecked(k_x as usize))
@@ -261,16 +260,15 @@ pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
     // specialised implementation is faster.
     let (width, height) = image.dimensions();
     let mut out = Image::<P>::new(width, height);
-    let num_channels = P::channel_count() as usize;
     let zero = K::zero();
-    let mut acc = vec![zero; num_channels];
-    let k_height = kernel.len() as u32;
+    let mut acc = vec![zero; P::channel_count() as usize];
+    let k_height = kernel.len() as i32;
 
     for y in 0..height {
         for x in 0..width {
               for k_y in 0..k_height {
-                  let y_p = cmp::min(height + height - 1,
-                                     cmp::max(height, (height + y + k_y - k_height / 2))) - height;
+                  let y_unchecked = (y as i32) + k_y - k_height / 2;
+                  let y_p = cmp::max(0, cmp::min(y_unchecked, height as i32 - 1)) as u32;
                   let (p, k) = unsafe {
                       (image.unsafe_get_pixel(x, y_p),
                        *kernel.get_unchecked(k_y as usize))
@@ -321,7 +319,10 @@ mod test {
     };
     use definitions::Image;
     use image::imageops::blur;
-    use test;
+    use test::{
+        Bencher,
+        black_box
+    };
 
     #[test]
     fn test_box_filter() {
@@ -343,11 +344,11 @@ mod test {
     }
 
     #[bench]
-    fn bench_box_filter(b: &mut test::Bencher) {
+    fn bench_box_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
             let filtered = box_filter(&image, 7, 7);
-            test::black_box(filtered);
+            black_box(filtered);
             });
     }
 
@@ -389,13 +390,13 @@ mod test {
     }
 
     #[bench]
-    fn bench_separable_filter(b: &mut test::Bencher) {
+    fn bench_separable_filter(b: &mut Bencher) {
         let image = gray_bench_image(300, 300);
         let h_kernel = vec![1f32/5f32; 5];
         let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
         b.iter(|| {
             let filtered = separable_filter(&image, &h_kernel, &v_kernel);
-            test::black_box(filtered);
+            black_box(filtered);
             });
     }
 
@@ -411,19 +412,30 @@ mod test {
             5, 5, 5,
             2, 2, 2]).unwrap();
 
-        let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
+        let kernel = vec![1f32/3f32; 3];
         let filtered = horizontal_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
     }
 
+    #[test]
+    fn test_horizontal_filter_with_kernel_wider_than_image_does_not_panic() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            1, 4, 1,
+            4, 7, 4,
+            1, 4, 1]).unwrap();
+
+        let kernel = vec![1f32/10f32; 10];
+        black_box(horizontal_filter(&image, &kernel));
+    }
+
     #[bench]
-    fn bench_horizontal_filter(b: &mut test::Bencher) {
+    fn bench_horizontal_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         let kernel = vec![1f32/5f32; 5];
         b.iter(|| {
             let filtered = horizontal_filter(&image, &kernel);
-            test::black_box(filtered);
+            black_box(filtered);
             });
     }
 
@@ -439,19 +451,30 @@ mod test {
             2, 5, 2,
             2, 5, 2]).unwrap();
 
-        let kernel = vec![1f32/3f32, 1f32/3f32, 1f32/3f32];
+        let kernel = vec![1f32/3f32; 3];
         let filtered = vertical_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
     }
 
+    #[test]
+    fn test_vertical_filter_with_kernel_taller_than_image_does_not_panic() {
+        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
+            1, 4, 1,
+            4, 7, 4,
+            1, 4, 1]).unwrap();
+
+        let kernel = vec![1f32/10f32; 10];
+        black_box(vertical_filter(&image, &kernel));
+    }
+
     #[bench]
-    fn bench_vertical_filter(b: &mut test::Bencher) {
+    fn bench_vertical_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         let kernel = vec![1f32/5f32; 5];
         b.iter(|| {
             let filtered = vertical_filter(&image, &kernel);
-            test::black_box(filtered);
+            black_box(filtered);
             });
     }
 
@@ -477,7 +500,7 @@ mod test {
     }
 
     #[bench]
-    fn bench_filter3x3_i32_filter(b: &mut test::Bencher) {
+    fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         let kernel: Vec<i32> = vec![
             -1, 0, 1,
@@ -487,7 +510,7 @@ mod test {
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>>
                 = filter3x3::<_, _, i16>(&image, &kernel);
-            test::black_box(filtered);
+            black_box(filtered);
             });
     }
 
@@ -501,58 +524,58 @@ mod test {
 
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
-    fn bench_baseline_gaussian_stdev_1(b: &mut test::Bencher) {
+    fn bench_baseline_gaussian_stdev_1(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 1f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
-    fn bench_baseline_gaussian_stdev_3(b: &mut test::Bencher) {
+    fn bench_baseline_gaussian_stdev_3(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 3f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
-    fn bench_baseline_gaussian_stdev_10(b: &mut test::Bencher) {
+    fn bench_baseline_gaussian_stdev_10(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 10f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 
     #[bench]
-    fn bench_gaussian_f32_stdev_1(b: &mut test::Bencher) {
+    fn bench_gaussian_f32_stdev_1(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 1f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 
     #[bench]
-    fn bench_gaussian_f32_stdev_3(b: &mut test::Bencher) {
+    fn bench_gaussian_f32_stdev_3(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 3f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 
     #[bench]
-    fn bench_gaussian_f32_stdev_10(b: &mut test::Bencher) {
+    fn bench_gaussian_f32_stdev_10(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 10f32);
-            test::black_box(blurred);
+            black_box(blurred);
             });
     }
 }
