@@ -1,7 +1,7 @@
 //! Functions for detecting edges in images.
 
 use std::f32;
-use image::{GenericImage, ImageBuffer, Luma};
+use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use gradients::{vertical_sobel, horizontal_sobel};
 use definitions::{HasWhite, HasBlack};
 use filter::gaussian_blur_f32;
@@ -18,12 +18,10 @@ use filter::gaussian_blur_f32;
 /// appear as edges in the output image.
 ///
 /// Returns a binary image, where edge pixels have a value of 255 and non-edge pixels a value of 0.
-pub fn canny<I>(image: &I,
-                low_threshold: f32,
-                high_threshold: f32)
-                -> ImageBuffer<Luma<u8>, Vec<u8>>
-    where I: GenericImage<Pixel = Luma<u8>> + 'static
-{
+pub fn canny(image: &GrayImage,
+             low_threshold: f32,
+             high_threshold: f32)
+             -> GrayImage {
     assert!(high_threshold >= low_threshold);
     // Heavily based on the implementation proposed by wikipedia.
     // 1. Gaussian blur.

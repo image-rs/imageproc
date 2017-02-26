@@ -11,7 +11,7 @@ use image::{
 };
 
 use definitions::{
-    VecBuffer
+    Image
 };
 
 /// The type obtained by replacing the channel type of a given Pixel type.
@@ -42,7 +42,7 @@ impl<T, U> WithChannel<U> for Luma<T>
 }
 
 /// Applies f to each subpixel of the input image.
-pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
+pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
     where I: GenericImage<Pixel=P>,
           P: WithChannel<S> + 'static,
           S: Primitive + 'static,
@@ -66,7 +66,7 @@ pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> VecBuffer<ChannelMap<P, S>>
 }
 
 /// Applies f to the color of each pixel in the input image.
-pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
+pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
           P: Pixel,
           Q: Pixel + 'static,
@@ -88,7 +88,7 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
 }
 
 /// Applies f to each pixel in the input image.
-pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
+pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
           P: Pixel,
           Q: Pixel + 'static,
@@ -112,7 +112,7 @@ pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> VecBuffer<Q>
 macro_rules! implement_channel_extraction {
     ($extract_name: ident, $embed_name: ident, $idx: expr) => (
         /// Create a grayscale image by extracting a channel of an RGB image.
-        pub fn $extract_name<I, C>(image: &I) -> VecBuffer<Luma<C>>
+        pub fn $extract_name<I, C>(image: &I) -> Image<Luma<C>>
             where I: GenericImage<Pixel=Rgb<C>>,
                   C: Primitive + 'static
         {
@@ -120,7 +120,7 @@ macro_rules! implement_channel_extraction {
         }
 
         /// Create an RGB image by embedding a grayscale image in a single channel.
-        pub fn $embed_name<I, C>(image: &I) -> VecBuffer<Rgb<C>>
+        pub fn $embed_name<I, C>(image: &I) -> Image<Rgb<C>>
             where I: GenericImage<Pixel=Luma<C>>,
                   C: Primitive + 'static
         {

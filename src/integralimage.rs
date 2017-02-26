@@ -5,12 +5,13 @@ extern crate image;
 
 use image::{
     Luma,
+    GrayImage,
     GenericImage,
     ImageBuffer
 };
 
 use definitions::{
-    VecBuffer
+    Image
 };
 
 /// Compute the 2d running sum of a grayscale image.
@@ -29,9 +30,7 @@ use definitions::{
 /// I(r + 1, b + 1) - I(r + 1, t) - I(l, b + 1) + I(l, t).
 // TODO: Support more formats, make faster, add a new IntegralImage type
 // TODO: to make it harder to make off-by-one errors when computing sums of regions.
-pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
-    where I: GenericImage<Pixel=Luma<u8>>
-{
+pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
     let (in_width, in_height) = image.dimensions();
     let out_width = in_width + 1;
     let out_height = in_height + 1;
@@ -59,7 +58,7 @@ pub fn integral_image<I>(image: &I) -> VecBuffer<Luma<u32>>
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
 /// integral image of F.
 // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
-pub fn sum_image_pixels(integral_image: &VecBuffer<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
+pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
     let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
             - integral_image.get_pixel(right + 1, top)[0] as i32
             - integral_image.get_pixel(left, bottom + 1)[0] as i32
@@ -72,8 +71,7 @@ pub fn sum_image_pixels(integral_image: &VecBuffer<Luma<u32>>, left: u32, top: u
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
 // TODO: faster, more formats
-pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
-    where I: GenericImage<Pixel=Luma<u8>> {
+pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
 
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
@@ -104,8 +102,7 @@ pub fn row_running_sum<I>(image: &I, row: u32, buffer: &mut [u32], padding: u32)
 /// Takes a reference to buffer so that this can be reused
 /// for all columns in an image.
 // TODO: faster, more formats
-pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding: u32)
-    where I: GenericImage<Pixel=Luma<u8>> {
+pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
 
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
@@ -133,13 +130,7 @@ pub fn column_running_sum<I>(image: &I, column: u32, buffer: &mut [u32], padding
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        column_running_sum,
-        integral_image,
-        sum_image_pixels,
-        row_running_sum
-    };
+    use super::*;
     use utils::{
         gray_bench_image,
         GrayTestImage,
@@ -156,7 +147,7 @@ mod test {
         TestResult
     };
     use definitions::{
-        VecBuffer
+        Image
     };
     use test;
 
@@ -204,7 +195,7 @@ mod test {
     }
 
     /// Simple implementation of integral_image to validate faster versions against.
-    fn integral_image_ref<I>(image: &I) -> VecBuffer<Luma<u32>>
+    fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
         where I: GenericImage<Pixel=Luma<u8>>
     {
         let (in_width, in_height) = image.dimensions();

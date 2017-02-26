@@ -1,6 +1,6 @@
 //! Functions for creating and evaluating [Haar-like features](https://en.wikipedia.org/wiki/Haar-like_features).
 
-use definitions::{HasBlack,HasWhite,VecBuffer};
+use definitions::{HasBlack,HasWhite,Image};
 use image::{GenericImage,ImageBuffer,Luma};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -318,7 +318,7 @@ fn multiplier(sign: Sign) -> i8 {
 
 /// Draws the given Haar filter on an image, drawing pixels
 /// with a positive sign white and those with a negative sign black.
-pub fn draw_haar_filter<I>(image: &I, filter: HaarFilter) -> VecBuffer<I::Pixel>
+pub fn draw_haar_filter<I>(image: &I, filter: HaarFilter) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: HasBlack + HasWhite + 'static
 {
