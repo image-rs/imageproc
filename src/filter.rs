@@ -216,9 +216,37 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K])
     where P: Pixel + 'static,
           <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
-    let kernel = Kernel::new(kernel, kernel.len() as u32, 1);
-    kernel.filter(image, |channel, acc|
-                  *channel = <P as Pixel>::Subpixel::clamp(acc))
+    // Don't replace this with a call to Kernel::filter without
+    // checking the benchmark results. At the time of writing this
+    // specialised implementation is faster.
+    let (width, height) = image.dimensions();
+    let mut out = Image::<P>::new(width, height);
+    let num_channels = P::channel_count() as usize;
+    let zero = K::zero();
+    let mut acc = vec![zero; num_channels];
+    let k_width = kernel.len() as u32;
+
+    for y in 0..height {
+        for x in 0..width {
+              for k_x in 0..k_width {
+                  let x_p = cmp::min(width + width - 1,
+                                     cmp::max(width, (width + x + k_x - k_width / 2))) - width;
+                  let (p, k) = unsafe {
+                      (image.unsafe_get_pixel(x_p, y),
+                       *kernel.get_unchecked(k_x as usize))
+                  };
+                  accumulate(&mut acc, &p, k);
+              }
+
+              let out_channels = out.get_pixel_mut(x, y).channels_mut();
+              for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                  *c = <P as Pixel>::Subpixel::clamp(*a);
+                  *a = zero;
+              }
+        }
+    }
+
+    out
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
@@ -228,9 +256,37 @@ pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
     where P: Pixel + 'static,
           <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
-    let kernel = Kernel::new(kernel, 1, kernel.len() as u32);
-    kernel.filter(image, |channel, acc|
-                  *channel = <P as Pixel>::Subpixel::clamp(acc))
+    // Don't replace this with a call to Kernel::filter without
+    // checking the benchmark results. At the time of writing this
+    // specialised implementation is faster.
+    let (width, height) = image.dimensions();
+    let mut out = Image::<P>::new(width, height);
+    let num_channels = P::channel_count() as usize;
+    let zero = K::zero();
+    let mut acc = vec![zero; num_channels];
+    let k_height = kernel.len() as u32;
+
+    for y in 0..height {
+        for x in 0..width {
+              for k_y in 0..k_height {
+                  let y_p = cmp::min(height + height - 1,
+                                     cmp::max(height, (height + y + k_y - k_height / 2))) - height;
+                  let (p, k) = unsafe {
+                      (image.unsafe_get_pixel(x, y_p),
+                       *kernel.get_unchecked(k_y as usize))
+                  };
+                  accumulate(&mut acc, &p, k);
+              }
+
+              let out_channels = out.get_pixel_mut(x, y).channels_mut();
+              for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                  *c = <P as Pixel>::Subpixel::clamp(*a);
+                  *a = zero;
+              }
+        }
+    }
+
+    out
 }
 
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
