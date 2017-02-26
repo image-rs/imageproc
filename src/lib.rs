@@ -12,6 +12,7 @@ extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
 extern crate rand;
+extern crate rayon;
 
 #[macro_use]
 pub mod utils;

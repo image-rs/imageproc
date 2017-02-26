@@ -4,6 +4,7 @@ use std::cmp::{min, max};
 use image::{GrayImage, ImageBuffer, Luma};
 use definitions::{HasBlack, HasWhite};
 use integralimage::{integral_image, sum_image_pixels};
+use rayon::prelude::*;
 
 /// Applies an adaptive threshold to an image.
 ///
@@ -126,10 +127,10 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let hist = cumulative_histogram(image);
     let total = hist[255] as f32;
 
-    for p in image.iter_mut() {
-        let fraction = hist[*p as usize] as f32 / total;
+    image.par_iter_mut().for_each(|p| {
+        let fraction = unsafe { *hist.get_unchecked(*p as usize) as f32 / total };
         *p = (f32::min(255f32, 255f32 * fraction)) as u8;
-    }
+    });
 }
 
 /// Equalises the histogram of an 8bpp grayscale image. See also

@@ -15,6 +15,7 @@ nalgebra = "0.5.1"
 num = "0.1.27"
 quickcheck = "0.2.24"
 rand = "0.3.11"
+rayon = "0.6.0"
 
 [profile.release]
 opt-level = 3
