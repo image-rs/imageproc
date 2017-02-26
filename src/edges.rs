@@ -31,10 +31,12 @@ pub fn canny(image: &GrayImage,
     // 2. Intensity of gradients.
     let gx = horizontal_sobel(&blurred);
     let gy = vertical_sobel(&blurred);
-    let g = ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
-        let g = (gx[(x, y)][0] as f32).hypot(gy[(x, y)][0] as f32);
-        Luma { data: [g] }
-    });
+    let g: Vec<f32> = gx.iter()
+                        .zip(gy.iter())
+                        .map(|(h, v)| (*h as f32).hypot(*v as f32))
+                        .collect::<Vec<f32>>();
+
+    let g = ImageBuffer::from_raw(image.width(), image.height(), g).unwrap();
 
     // 3. Non-maximum-suppression (Make edges thinner)
     let thinned = non_maximum_suppression(&g, &gx, &gy);
