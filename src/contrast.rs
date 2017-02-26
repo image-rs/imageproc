@@ -94,7 +94,7 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
     for p in image.iter_mut() {
         *p = if *p <= thresh { 0 } else { 255 };
-    };
+    }
 }
 
 /// Returns the histogram of grayscale values in an 8bpp
@@ -150,7 +150,7 @@ pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
 
     for p in image.iter_mut() {
         *p = lut[*p as usize] as u8;
-    };
+    }
 }
 
 /// Adjusts contrast of an 8bpp grayscale image so that its
