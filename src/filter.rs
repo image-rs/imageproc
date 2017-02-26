@@ -230,21 +230,18 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
     if k_width >= width as i32 {
         for y in 0..height {
             for x in 0..width {
-                  for k_x in 0..k_width {
-                      let x_unchecked = (x as i32) + k_x - k_width / 2;
-                      let x_p = cmp::max(0, cmp::min(x_unchecked, width as i32 - 1)) as u32;
-                      let (p, k) = unsafe {
-                          (image.unsafe_get_pixel(x_p, y),
-                           *kernel.get_unchecked(k_x as usize))
-                      };
-                      accumulate(&mut acc, &p, k);
-                  }
+                for (i, k) in kernel.iter().enumerate() {
+                    let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                    let x_p = cmp::max(0, cmp::min(x_unchecked, width as i32 - 1)) as u32;
+                    let p = unsafe { image.unsafe_get_pixel(x_p, y) };
+                    accumulate(&mut acc, &p, *k);
+                }
 
-                  let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                  for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                      *c = <P as Pixel>::Subpixel::clamp(*a);
-                      *a = zero;
-                  }
+                let out_channels = out.get_pixel_mut(x, y).channels_mut();
+                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                    *c = <P as Pixel>::Subpixel::clamp(*a);
+                    *a = zero;
+                }
             }
         }
 
@@ -256,14 +253,11 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
     for y in 0..height {
         // Left margin - need to check lower bound only
         for x in 0..half_k {
-            for k_x in 0..k_width {
-                let x_unchecked = (x as i32) + k_x - k_width / 2;
+            for (i, k) in kernel.iter().enumerate() {
+                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
                 let x_p = cmp::max(0, x_unchecked) as u32;
-                let (p, k) = unsafe {
-                    (image.unsafe_get_pixel(x_p, y),
-                     *kernel.get_unchecked(k_x as usize))
-                };
-                accumulate(&mut acc, &p, k);
+                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
+                accumulate(&mut acc, &p, *k);
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
@@ -275,14 +269,11 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 
         // Neither margin - don't need bounds check on either side
         for x in half_k..(width as i32 - half_k) {
-            for k_x in 0..k_width {
-                let x_unchecked = (x as i32) + k_x - k_width / 2;
+            for (i, k) in kernel.iter().enumerate() {
+                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
                 let x_p = x_unchecked as u32;
-                let (p, k) = unsafe {
-                    (image.unsafe_get_pixel(x_p, y),
-                     *kernel.get_unchecked(k_x as usize))
-                };
-                accumulate(&mut acc, &p, k);
+                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
+                accumulate(&mut acc, &p, *k);
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
@@ -294,14 +285,11 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 
         // Right margin - need to check upper bound only
         for x in (width as i32 - half_k)..(width as i32) {
-            for k_x in 0..k_width {
-                let x_unchecked = (x as i32) + k_x - k_width / 2;
+            for (i, k) in kernel.iter().enumerate() {
+                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
                 let x_p = cmp::min(x_unchecked, width as i32 - 1) as u32;
-                let (p, k) = unsafe {
-                    (image.unsafe_get_pixel(x_p, y),
-                     *kernel.get_unchecked(k_x as usize))
-                };
-                accumulate(&mut acc, &p, k);
+                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
+                accumulate(&mut acc, &p, *k);
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
@@ -336,21 +324,18 @@ pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
     if k_height >= height as i32 {
         for y in 0..height {
             for x in 0..width {
-                  for k_y in 0..k_height {
-                      let y_unchecked = (y as i32) + k_y - k_height / 2;
-                      let y_p = cmp::max(0, cmp::min(y_unchecked, height as i32 - 1)) as u32;
-                      let (p, k) = unsafe {
-                          (image.unsafe_get_pixel(x, y_p),
-                           *kernel.get_unchecked(k_y as usize))
-                      };
-                      accumulate(&mut acc, &p, k);
-                  }
+                for (i, k) in kernel.iter().enumerate() {
+                    let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                    let y_p = cmp::max(0, cmp::min(y_unchecked, height as i32 - 1)) as u32;
+                    let p = unsafe { image.unsafe_get_pixel(x, y_p) };
+                    accumulate(&mut acc, &p, *k);
+                }
 
-                  let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                  for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                      *c = <P as Pixel>::Subpixel::clamp(*a);
-                      *a = zero;
-                  }
+                let out_channels = out.get_pixel_mut(x, y).channels_mut();
+                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                    *c = <P as Pixel>::Subpixel::clamp(*a);
+                    *a = zero;
+                }
             }
         }
 
@@ -362,63 +347,54 @@ pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
     // Top margin - need to check lower bound only
     for y in 0..half_k {
         for x in 0..width {
-              for k_y in 0..k_height {
-                  let y_unchecked = (y as i32) + k_y - k_height / 2;
-                  let y_p = cmp::max(0, y_unchecked) as u32;
-                  let (p, k) = unsafe {
-                      (image.unsafe_get_pixel(x, y_p),
-                       *kernel.get_unchecked(k_y as usize))
-                  };
-                  accumulate(&mut acc, &p, k);
-              }
+            for (i, k) in kernel.iter().enumerate() {
+                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_p = cmp::max(0, y_unchecked) as u32;
+                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
+                accumulate(&mut acc, &p, *k);
+            }
 
-              let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-              for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                  *c = <P as Pixel>::Subpixel::clamp(*a);
-                  *a = zero;
-              }
+            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
+            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                *c = <P as Pixel>::Subpixel::clamp(*a);
+                *a = zero;
+            }
         }
     }
 
     // Neither margin - don't need bounds check on either side
     for y in half_k..(height as i32 - half_k) {
         for x in 0..width {
-              for k_y in 0..k_height {
-                  let y_unchecked = (y as i32) + k_y - k_height / 2;
-                  let y_p = y_unchecked as u32;
-                  let (p, k) = unsafe {
-                      (image.unsafe_get_pixel(x, y_p),
-                       *kernel.get_unchecked(k_y as usize))
-                  };
-                  accumulate(&mut acc, &p, k);
-              }
+            for (i, k) in kernel.iter().enumerate() {
+                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_p = y_unchecked as u32;
+                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
+                accumulate(&mut acc, &p, *k);
+            }
 
-              let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-              for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                  *c = <P as Pixel>::Subpixel::clamp(*a);
-                  *a = zero;
-              }
+            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
+            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                *c = <P as Pixel>::Subpixel::clamp(*a);
+                *a = zero;
+            }
         }
     }
 
     // Right margin - need to check upper bound only
     for y in (height as i32 - half_k)..(height as i32) {
         for x in 0..width {
-              for k_y in 0..k_height {
-                  let y_unchecked = (y as i32) + k_y - k_height / 2;
-                  let y_p = cmp::min(y_unchecked, height as i32 - 1) as u32;
-                  let (p, k) = unsafe {
-                      (image.unsafe_get_pixel(x, y_p),
-                       *kernel.get_unchecked(k_y as usize))
-                  };
-                  accumulate(&mut acc, &p, k);
-              }
+            for (i, k) in kernel.iter().enumerate() {
+                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_p = cmp::min(y_unchecked, height as i32 - 1) as u32;
+                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
+                accumulate(&mut acc, &p, *k);
+            }
 
-              let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-              for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                  *c = <P as Pixel>::Subpixel::clamp(*a);
-                  *a = zero;
-              }
+            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
+            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                *c = <P as Pixel>::Subpixel::clamp(*a);
+                *a = zero;
+            }
         }
     }
 
