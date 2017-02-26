@@ -2,8 +2,7 @@
 
 use image::{
     GrayImage,
-    GenericImage,
-    Luma
+    GenericImage
 };
 
 use definitions::{

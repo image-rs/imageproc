@@ -2,6 +2,7 @@
 
 use image::{
     GenericImage,
+    GrayImage,
     ImageBuffer,
     Luma
 };
@@ -28,17 +29,13 @@ static HORIZONTAL_SOBEL: [i32; 9] = [
 
 /// Convolves with the horizontal Sobel kernel to detect horizontal
 /// gradients in an image.
-pub fn horizontal_sobel<I>(image: &I) -> Image<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &HORIZONTAL_SOBEL)
 }
 
 /// Convolves with the vertical Sobel kernel to detect vertical
 /// gradients in an image.
-pub fn vertical_sobel<I>(image: &I) -> Image<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_SOBEL)
 }
 
@@ -56,31 +53,23 @@ static HORIZONTAL_PREWITT: [i32; 9] = [
 
 /// Convolves with the horizontal Prewitt kernel to detect horizontal
 /// gradients in an image.
-pub fn horizontal_prewitt<I>(image: &I) -> Image<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &HORIZONTAL_PREWITT)
 }
 
 /// Convolves with the vertical Prewitt kernel to detect vertical
 /// gradients in an image.
-pub fn vertical_prewitt<I>(image: &I) -> Image<Luma<i16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_PREWITT)
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
-pub fn sobel_gradients<I>(image: &I) -> Image<Luma<u16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
     gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL)
 }
 
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
-pub fn prewitt_gradients<I>(image: &I) -> Image<Luma<u16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
     gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT)
 }
 
@@ -88,10 +77,8 @@ pub fn prewitt_gradients<I>(image: &I) -> Image<Luma<u16>>
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients<I>(image: &I, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9])
-    -> Image<Luma<u16>>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9])
+    -> Image<Luma<u16>> {
     let horizontal: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, horizontal_kernel);
     let vertical: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, vertical_kernel);
 

@@ -106,15 +106,15 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
-    pub fn filter<I, F, Q>(&self, image: &I, mut f: F) -> Image<Q>
-        where I: GenericImage,
-              <I::Pixel as Pixel>::Subpixel: ValueInto<K>,
+    pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
+        where P: Pixel + 'static,
+              <P as Pixel>::Subpixel: ValueInto<K>,
               Q: Pixel + 'static,
               F: FnMut(&mut Q::Subpixel, K) -> (),
     {
         let (width, height) = image.dimensions();
         let mut out = Image::<Q>::new(width, height);
-        let num_channels = I::Pixel::channel_count() as usize;
+        let num_channels = P::channel_count() as usize;
         let zero = K::zero();
         let mut acc = vec![zero; num_channels];
         let (k_width, k_height) = (self.width, self.height);
@@ -167,10 +167,9 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 /// The kernel used has type f32 and all intermediate calculations are performed
 /// at this type.
 // TODO: Integer type kernel, approximations via repeated box filter.
-pub fn gaussian_blur_f32<I>(image: &I, sigma: f32) -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let kernel = gaussian_kernel_f32(sigma);
     separable_filter_equal(image, &kernel)
@@ -178,33 +177,30 @@ pub fn gaussian_blur_f32<I>(image: &I, sigma: f32) -> Image<I::Pixel>
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels `h_kernel` and `v_kernel`.
-pub fn separable_filter<I, K>(image: &I, h_kernel: &[K], v_kernel: &[K])
-        -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
-          K: Num + Copy {
-
+pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K])
+        -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+          K: Num + Copy
+{
     let h = horizontal_filter(image, h_kernel);
     vertical_filter(&h, v_kernel)
 }
 
 /// Returns 2d correlation of an image with the outer product of the 1d
 /// kernel filter with itself.
-pub fn separable_filter_equal<I, K>(image: &I, kernel: &[K])
-        -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K])
+        -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
     separable_filter(image, kernel, kernel)
 }
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
-pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> Image<ChannelMap<P, S>>
-    where I: GenericImage<Pixel=P>,
-          P::Subpixel: ValueInto<K>,
+pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+    where P::Subpixel: ValueInto<K>,
           S: Clamp<K> + Primitive + 'static,
           P: WithChannel<S> + 'static,
           K: Num + Copy {
@@ -215,28 +211,26 @@ pub fn filter3x3<I, P, K, S>(image: &I, kernel: &[K]) -> Image<ChannelMap<P, S>>
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
-pub fn horizontal_filter<I, K>(image: &I, kernel: &[K])
-        -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K])
+        -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
     let kernel = Kernel::new(kernel, kernel.len() as u32, 1);
     kernel.filter(image, |channel, acc|
-                  *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
+                  *channel = <P as Pixel>::Subpixel::clamp(acc))
 }
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
-pub fn vertical_filter<I, K>(image: &I, kernel: &[K])
-        -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
+        -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
           K: Num + Copy {
     let kernel = Kernel::new(kernel, 1, kernel.len() as u32);
     kernel.filter(image, |channel, acc|
-                  *channel = <I::Pixel as Pixel>::Subpixel::clamp(acc))
+                  *channel = <P as Pixel>::Subpixel::clamp(acc))
 }
 
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
@@ -436,7 +430,7 @@ mod test {
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>>
-                = filter3x3::<_, _, _, i16>(&image, &kernel);
+                = filter3x3::<_, _, i16>(&image, &kernel);
             test::black_box(filtered);
             });
     }

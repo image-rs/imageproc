@@ -3,6 +3,7 @@
 
 use image::{
 	GenericImage,
+	GrayImage,
 	ImageBuffer,
 	Luma
 };
@@ -169,9 +170,7 @@ fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 /// Computes the HoG descriptor of an image, or None if the provided
 /// options are incompatible with the image size.
 // TODO: support color images by taking the channel with maximum gradient at each point
-pub fn hog<I>(image: &I, options: HogOptions) -> Result<Vec<f32>, String>
-	where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
 	match HogSpec::from_options(image.width(), image.height(), options) {
 		Err(e) => Err(e),
 		Ok(spec) => {
@@ -240,9 +239,7 @@ fn copy<T: Copy>(from: &[T], to: &mut[T]) {
 
 /// Computes orientation histograms for each cell of an image. Assumes that
 /// the provided dimensions are valid.
-pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
+pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
     let (width, height) = image.dimensions();
 	let mut grid = Array3d::new(spec.cell_grid_lengths());
 	let cell_area = spec.cell_area() as f32;
