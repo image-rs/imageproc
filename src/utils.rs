@@ -1,6 +1,6 @@
 //! Utils for testing and debugging.
 
-use definitions::VecBuffer;
+use definitions::Image;
 
 use image::{
     DynamicImage,
@@ -200,7 +200,7 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
 
 /// Wrapper for image buffers to allow us to write an Arbitrary instance.
 #[derive(Clone)]
-pub struct TestBuffer<T: Pixel>(pub VecBuffer<T>);
+pub struct TestBuffer<T: Pixel>(pub Image<T>);
 
 /// 8bpp grayscale `TestBuffer`.
 pub type GrayTestImage = TestBuffer<Luma<u8>>;
@@ -235,7 +235,7 @@ pub trait ArbitraryPixel {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 }
 
-fn shrink<I>(image: &I) -> Box<Iterator<Item=VecBuffer<I::Pixel>>>
+fn shrink<I>(image: &I) -> Box<Iterator<Item=Image<I::Pixel>>>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -260,7 +260,7 @@ fn shrink<I>(image: &I) -> Box<Iterator<Item=VecBuffer<I::Pixel>>>
     Box::new(subs.into_iter())
 }
 
-fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> VecBuffer<I::Pixel>
+fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {

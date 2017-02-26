@@ -1,6 +1,7 @@
 //! Functions for detecting corners, also known as interest points.
 
 use image::{
+    GrayImage,
     GenericImage,
     Luma
 };
@@ -64,9 +65,7 @@ pub enum Fast {
 }
 
 /// Finds corners using FAST-12 features. See comment on Fast enum.
-pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+pub fn corners_fast12(image: &GrayImage, threshold: u8) -> Vec<Corner> {
     let (width, height) = image.dimensions();
     let mut corners = vec![];
 
@@ -83,9 +82,7 @@ pub fn corners_fast12<I>(image: &I, threshold: u8) -> Vec<Corner>
 }
 
 /// Finds corners using FAST-9 features. See comment on Fast enum.
-pub fn corners_fast9<I>(image: &I, threshold: u8) -> Vec<Corner>
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+pub fn corners_fast9(image: &GrayImage, threshold: u8) -> Vec<Corner> {
     let (width, height) = image.dimensions();
     let mut corners = vec![];
 
@@ -108,9 +105,7 @@ pub fn corners_fast9<I>(image: &I, threshold: u8) -> Vec<Corner>
 /// Note that the corner check uses a strict inequality, so if
 /// the smallest intensity difference between the center pixel
 /// and a corner pixel is n then the corner will have a score of n - 1.
-pub fn fast_corner_score<I>(image: &I, threshold: u8, x: u32, y: u32, variant: Fast) -> u8
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+pub fn fast_corner_score(image: &GrayImage, threshold: u8, x: u32, y: u32, variant: Fast) -> u8 {
     let mut max = 255u8;
     let mut min = threshold;
 
@@ -149,9 +144,7 @@ pub fn fast_corner_score<I>(image: &I, threshold: u8, x: u32, y: u32, variant: F
 /// Checks if the given pixel is a corner according to the FAST9 detector.
 /// The current implementation is extremely inefficient.
 // TODO: Make this much faster!
-fn is_corner_fast9<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (width, height) = image.dimensions();
     if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
         return false;
@@ -189,9 +182,7 @@ fn is_corner_fast9<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 }
 
 /// Checks if the given pixel is a corner according to the FAST12 detector.
-fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
-    where I: GenericImage<Pixel=Luma<u8>> {
-
+fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (width, height) = image.dimensions();
     if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
         return false;
@@ -240,10 +231,8 @@ fn is_corner_fast12<I>(image: &I, threshold: u8, x: u32, y: u32) -> bool
 }
 
 #[inline]
-unsafe fn get_circle<I>(image: &I, x: u32, y: u32,
-                        p0: i16, p4: i16, p8: i16, p12: i16) -> [i16; 16]
-    where I: GenericImage<Pixel=Luma<u8>>
-{
+unsafe fn get_circle(image: &GrayImage, x: u32, y: u32,
+                     p0: i16, p4: i16, p8: i16, p12: i16) -> [i16; 16] {
     [
         p0,
         image.unsafe_get_pixel(x + 1, y - 3)[0] as i16,
@@ -330,7 +319,6 @@ mod test {
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
     }
 
-
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels_large_threshold() {
         let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
@@ -384,7 +372,7 @@ mod test {
             10, 00, 10, 10, 10, 10, 10,
             10, 10, 00, 00, 00, 10, 10]).unwrap();
 
-	b.iter(||is_corner_fast12(&image, 8, 3, 3));
+       b.iter(||is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]

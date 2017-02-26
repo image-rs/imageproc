@@ -16,7 +16,7 @@ use multiarray::{
 };
 use definitions::{
 	Clamp,
-	VecBuffer
+	Image
 };
 use math::l2_norm;
 use std::f32;
@@ -352,7 +352,7 @@ impl Interpolation {
 /// Note that we ignore block-level aggregation or normalisation here.
 /// Each rendered star has side length `star_side`, so the image will have
 /// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
-pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> VecBuffer<Luma<u8>> {
+pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Image<Luma<u8>> {
 	let width = grid.lengths[1] as u32 * star_side;
 	let height = grid.lengths[2] as u32 * star_side;
 	let mut out = ImageBuffer::new(width, height);

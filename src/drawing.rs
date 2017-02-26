@@ -1,7 +1,7 @@
 //! Helpers for drawing basic shapes on images.
 
 use image::{GenericImage, ImageBuffer};
-use definitions::VecBuffer;
+use definitions::Image;
 use rect::Rect;
 use std::mem::swap;
 use std::cmp::{min, max};
@@ -40,7 +40,7 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
 }
 
 /// Draws a colored cross on an image. Handles coordinates outside image bounds.
-pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> VecBuffer<I::Pixel>
+pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -56,7 +56,7 @@ pub fn draw_line_segment<I>(image: &I,
                             start: (f32, f32),
                             end: (f32, f32),
                             color: I::Pixel)
-                            -> VecBuffer<I::Pixel>
+                            -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -123,7 +123,7 @@ pub fn draw_antialiased_line_segment<I, B>(image: &I,
                                            end: (i32, i32),
                                            color: I::Pixel,
                                            blend: B)
-                                           -> VecBuffer<I::Pixel>
+                                           -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static,
           B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel
@@ -218,7 +218,7 @@ impl<'a, I, T, B> Plotter<'a, I, T, B>
 }
 
 /// Draws as much of the boundary of a rectangle as lies inside the image bounds.
-pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -245,7 +245,7 @@ pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
 }
 
 /// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
-pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -282,7 +282,7 @@ pub fn draw_hollow_ellipse<I>(image: &I,
                               center: (i32, i32),
                               width_radius: i32,
                               height_radius: i32,
-                              color: I::Pixel) -> VecBuffer<I::Pixel>
+                              color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -328,7 +328,7 @@ pub fn draw_filled_ellipse<I>(image: &I,
                               center: (i32, i32),
                               width_radius: i32,
                               height_radius: i32,
-                              color: I::Pixel) -> VecBuffer<I::Pixel>
+                              color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -414,7 +414,7 @@ fn draw_ellipse<F>(mut render_func: F, center: (i32, i32), width_radius: i32, he
 pub fn draw_hollow_circle<I>(image: &I,
                              center: (i32, i32),
                              radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                             color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -484,7 +484,7 @@ pub fn draw_filled_circle_mut<I>(image: &mut I, center: (i32, i32), radius: i32,
 pub fn draw_filled_circle<I>(image: &I,
                              center: (i32, i32),
                              radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                             color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -524,7 +524,7 @@ impl<T: Copy + PartialEq + Eq> Point<T> {
 /// An implicit edge is added from the last to the first point in the slice.
 ///
 /// Does not validate that input is convex.
-pub fn draw_convex_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_convex_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
     where I : GenericImage, I::Pixel: 'static
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
@@ -622,7 +622,7 @@ pub fn draw_convex_polygon_mut<I>(image: &mut I, poly: &[Point<i32>], color: I::
 }
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
-pub fn draw_cubic_bezier_curve<I>(image: &I, start: (f32, f32), end: (f32, f32), control_a: (f32, f32), control_b: (f32, f32), color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_cubic_bezier_curve<I>(image: &I, start: (f32, f32), end: (f32, f32), control_a: (f32, f32), control_b: (f32, f32), color: I::Pixel) -> Image<I::Pixel>
     where I : GenericImage, I::Pixel: 'static
 {
     let mut out = ImageBuffer::new(image.width(), image.height());

@@ -1,7 +1,7 @@
 //! Functions for affine transformations of images.
 
 use image::{Pixel, GenericImage, ImageBuffer};
-use definitions::{Clamp, HasBlack, VecBuffer};
+use definitions::{Clamp, HasBlack, Image};
 use math::{Affine2, cast, Vec2};
 use conv::ValueInto;
 
@@ -20,29 +20,27 @@ pub enum Interpolation {
 /// transformation is not invertible.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to black.
-pub fn affine<I>(image: &I,
+pub fn affine<P>(image: &Image<P>,
                  affine: Affine2,
                  interpolation: Interpolation)
-                 -> Option<VecBuffer<I::Pixel>>
-    where I: GenericImage,
-          I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                 -> Option<Image<P>>
+    where P: Pixel + HasBlack + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
-    affine_with_default(image, affine, I::Pixel::black(), interpolation)
+    affine_with_default(image, affine, P::black(), interpolation)
 }
 
 /// Applies an affine transformation to an image, or None if the provided
 /// transformation is not invertible.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
-pub fn affine_with_default<I>(image: &I,
+pub fn affine_with_default<P>(image: &Image<P>,
                               affine: Affine2,
-                              default: I::Pixel,
+                              default: P,
                               interpolation: Interpolation)
-                              -> Option<VecBuffer<I::Pixel>>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                              -> Option<Image<P>>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let inverse: Affine2;
     match affine.inverse() {
@@ -78,32 +76,30 @@ pub fn affine_with_default<I>(image: &I,
 /// Rotate an image clockwise about provided center by theta radians.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are black.
-pub fn rotate<I>(image: &I,
+pub fn rotate<P>(image: &Image<P>,
                  center: (f32, f32),
                  theta: f32,
                  interpolation: Interpolation)
-                 -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                 -> Image<P>
+    where P: Pixel + HasBlack + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     rotate_with_default(image,
                         center,
                         theta,
-                        <I::Pixel as HasBlack>::black(),
+                        <P as HasBlack>::black(),
                         interpolation)
 }
 
 /// Rotate an image clockwise about its center by theta radians.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are black.
-pub fn rotate_about_center<I>(image: &I,
+pub fn rotate_about_center<P>(image: &Image<P>,
                               theta: f32,
                               interpolation: Interpolation)
-                              -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                              -> Image<P>
+    where P: Pixel + HasBlack + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let center = (image.width() as f32 / 2f32, image.height() as f32 / 2f32);
     rotate(image, center, theta, interpolation)
@@ -112,15 +108,14 @@ pub fn rotate_about_center<I>(image: &I,
 /// Rotate an image clockwise about provided center by theta radians.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
-pub fn rotate_with_default<I>(image: &I,
+pub fn rotate_with_default<P>(image: &Image<P>,
                               center: (f32, f32),
                               theta: f32,
-                              default: I::Pixel,
+                              default: P,
                               interpolation: Interpolation)
-                              -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: HasBlack + 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                              -> Image<P>
+    where P: Pixel + HasBlack + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     match interpolation {
         Interpolation::Nearest => rotate_nearest(image, center, theta, default),
@@ -128,13 +123,12 @@ pub fn rotate_with_default<I>(image: &I,
     }
 }
 
-fn rotate_nearest<I>(image: &I,
+fn rotate_nearest<P>(image: &Image<P>,
                      center: (f32, f32),
                      theta: f32,
-                     default: I::Pixel)
-                     -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static
+                     default: P)
+                     -> Image<P>
+    where P: Pixel + 'static
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -164,14 +158,13 @@ fn rotate_nearest<I>(image: &I,
     out
 }
 
-fn rotate_bilinear<I>(image: &I,
+fn rotate_bilinear<P>(image: &Image<P>,
                       center: (f32, f32),
                       theta: f32,
-                      default: I::Pixel)
-                      -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+                      default: P)
+                      -> Image<P>
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -204,9 +197,8 @@ fn rotate_bilinear<I>(image: &I,
 /// image are set to the boundary pixel in the input image nearest to their pre-image.
 // TODO: it's possibly confusing that this has different behaviour to
 // TODO: attempting the equivalent transformation via the affine function
-pub fn translate<I>(image: &I, t: (i32, i32)) -> VecBuffer<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static
+pub fn translate<P>(image: &Image<P>, t: (i32, i32)) -> Image<P>
+    where P: Pixel + 'static
 {
     use std::cmp;
 
@@ -253,9 +245,9 @@ fn blend<P>(top_left: P,
              |u, v| P::Subpixel::clamp((1f32 - bottom_weight) * cast(u) + bottom_weight * cast(v)))
 }
 
-fn interpolate<I>(image: &I, x: f32, y: f32, default: I::Pixel) -> I::Pixel
-    where I: GenericImage,
-          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+fn interpolate<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
+    where P: Pixel + 'static,
+          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
     let left = x.floor();
     let right = left + 1f32;
@@ -280,8 +272,7 @@ fn interpolate<I>(image: &I, x: f32, y: f32, default: I::Pixel) -> I::Pixel
     }
 }
 
-fn nearest<I>(image: &I, x: f32, y: f32, default: I::Pixel) -> I::Pixel
-    where I: GenericImage
+fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 {
     let rx = x.round();
     let ry = y.round();

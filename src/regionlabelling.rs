@@ -7,7 +7,7 @@ use image::{
 };
 
 use definitions::{
-    VecBuffer
+    Image
 };
 
 use unionfind::{
@@ -32,7 +32,7 @@ pub enum Connectivity {
 /// is labelled by the connected foreground component it belongs to,
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they are equal to the provided background pixel.
-pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pixel) -> VecBuffer<Luma<u32>>
+pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pixel) -> Image<Luma<u32>>
     where I: GenericImage,
           I::Pixel: Eq
 {
