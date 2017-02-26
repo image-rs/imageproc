@@ -128,7 +128,7 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let total = hist[255] as f32;
 
     image.par_iter_mut().for_each(|p| {
-        let fraction = hist[*p as usize] as f32 / total;
+        let fraction = unsafe { *hist.get_unchecked(*p as usize) as f32 / total };
         *p = (f32::min(255f32, 255f32 * fraction)) as u8;
     });
 }
