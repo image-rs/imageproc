@@ -1,6 +1,6 @@
 //! Functions for creating and evaluating [Haar-like features](https://en.wikipedia.org/wiki/Haar-like_features).
 
-use definitions::{HasBlack,HasWhite,VecBuffer};
+use definitions::{HasBlack,HasWhite,Image};
 use image::{GenericImage,ImageBuffer,Luma};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -9,7 +9,12 @@ use std::ops::Mul;
 /// Whether the top left region in a Haar filter is counted
 /// with positive or negative sign.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Sign { Positive, Negative }
+pub enum Sign {
+    /// Top left region is counted with a positive sign.
+    Positive,
+    /// Top left region is counted with a negative sign.
+    Negative
+}
 
 /// A Haar filter whose value on an integral image is the weighted sum
 /// of the values of the integral image at the given points.
@@ -230,7 +235,7 @@ impl HaarFilter {
     }
 }
 
-/// See comment on eval_points.
+/// See comment on `eval_points`.
 struct EvalPoints {
     points: [(u32, u32); 4],
     weights: [i8; 4]
@@ -313,7 +318,7 @@ fn multiplier(sign: Sign) -> i8 {
 
 /// Draws the given Haar filter on an image, drawing pixels
 /// with a positive sign white and those with a negative sign black.
-pub fn draw_haar_filter<I>(image: &I, filter: HaarFilter) -> VecBuffer<I::Pixel>
+pub fn draw_haar_filter<I>(image: &I, filter: HaarFilter) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: HasBlack + HasWhite + 'static
 {

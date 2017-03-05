@@ -12,7 +12,6 @@ fn create_hog_image(input: &Path, signed: bool) {
 
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(input)
-        .ok()
         .expect(&format!("Could not load image at {:?}", input))
         .to_luma();
 
@@ -41,7 +40,7 @@ fn create_hog_image(input: &Path, signed: bool) {
         }
     }
 
-    let _ = cropped.save(input.with_file_name("cropped.png")).unwrap();
+    cropped.save(input.with_file_name("cropped.png")).unwrap();
 
     let spec = HogSpec::from_options(cropped_width, cropped_height, opts).unwrap();
     let mut hist = cell_histograms(&cropped, spec);
@@ -50,7 +49,7 @@ fn create_hog_image(input: &Path, signed: bool) {
     let hog = render_hist_grid(star_side, &hist.view_mut(), signed);
 
     let output_name = if signed { "hog_signed.png" } else { "hog_unsigned.png" };
-    let _ = hog.save(input.with_file_name(output_name)).unwrap();
+    hog.save(input.with_file_name(output_name)).unwrap();
 }
 
 fn main() {

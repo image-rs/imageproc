@@ -1,7 +1,5 @@
-//! Helpers for drawing basic shapes on images.
-
 use image::{GenericImage, ImageBuffer, Pixel};
-use definitions::{VecBuffer, Clamp};
+use definitions::{VecBuffer, Clamp, Image};
 use conv::ValueInto;
 use rect::Rect;
 use std::mem::swap;
@@ -80,7 +78,7 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
 }
 
 /// Draws a colored cross on an image. Handles coordinates outside image bounds.
-pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> VecBuffer<I::Pixel>
+pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -96,7 +94,7 @@ pub fn draw_line_segment<I>(image: &I,
                             start: (f32, f32),
                             end: (f32, f32),
                             color: I::Pixel)
-                            -> VecBuffer<I::Pixel>
+                            -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -143,10 +141,8 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
                 if in_bounds(y, x) {
                     image.unsafe_put_pixel(y as u32, x as u32, color);
                 }
-            } else {
-                if in_bounds(x, y) {
-                    image.unsafe_put_pixel(x as u32, y as u32, color);
-                }
+            } else if in_bounds(x, y) {
+                image.unsafe_put_pixel(x as u32, y as u32, color);
             }
         }
         error -= dy;
@@ -158,14 +154,14 @@ pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32
 }
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
-/// The parameters of blend are (line_color, original_color, line_weight).
+/// The parameters of blend are (line color, original color, line weight).
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment<I, B>(image: &I,
                                            start: (i32, i32),
                                            end: (i32, i32),
                                            color: I::Pixel,
                                            blend: B)
-                                           -> VecBuffer<I::Pixel>
+                                           -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static,
           B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel
@@ -177,7 +173,7 @@ pub fn draw_antialiased_line_segment<I, B>(image: &I,
 }
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
-/// The parameters of blend are (line_color, original_color, line_weight).
+/// The parameters of blend are (line color, original color, line weight).
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment_mut<I, B>(image: &mut I,
                                                start: (i32, i32),
@@ -210,10 +206,10 @@ pub fn draw_antialiased_line_segment_mut<I, B>(image: &mut I,
     };
 }
 
-fn plot_wu_line<'a, I: 'a, T, B>(mut plotter: Plotter<'a, I, T, B>,
-                              start: (i32, i32),
-                              end: (i32, i32),
-                              color: I::Pixel)
+fn plot_wu_line<I, T, B>(mut plotter: Plotter<I, T, B>,
+                         start: (i32, i32),
+                         end: (i32, i32),
+                         color: I::Pixel)
     where I: GenericImage, I::Pixel: 'static,
           T: Fn(i32, i32) -> (i32, i32),
           B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel
@@ -226,7 +222,7 @@ fn plot_wu_line<'a, I: 'a, T, B>(mut plotter: Plotter<'a, I, T, B>,
     for x in start.0..(end.0 + 1) {
         plotter.plot(x, fy as i32, color, 1.0 - fy.fract());
         plotter.plot(x, fy as i32 + 1, color, fy.fract());
-        fy = fy + gradient;
+        fy += gradient;
     }
 }
 
@@ -260,7 +256,7 @@ impl<'a, I, T, B> Plotter<'a, I, T, B>
 }
 
 /// Draws as much of the boundary of a rectangle as lies inside the image bounds.
-pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -287,7 +283,7 @@ pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
 }
 
 /// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
-pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -324,7 +320,7 @@ pub fn draw_hollow_ellipse<I>(image: &I,
                               center: (i32, i32),
                               width_radius: i32,
                               height_radius: i32,
-                              color: I::Pixel) -> VecBuffer<I::Pixel>
+                              color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -370,7 +366,7 @@ pub fn draw_filled_ellipse<I>(image: &I,
                               center: (i32, i32),
                               width_radius: i32,
                               height_radius: i32,
-                              color: I::Pixel) -> VecBuffer<I::Pixel>
+                              color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -456,7 +452,7 @@ fn draw_ellipse<F>(mut render_func: F, center: (i32, i32), width_radius: i32, he
 pub fn draw_hollow_circle<I>(image: &I,
                              center: (i32, i32),
                              radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                             color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -526,7 +522,7 @@ pub fn draw_filled_circle_mut<I>(image: &mut I, center: (i32, i32), radius: i32,
 pub fn draw_filled_circle<I>(image: &I,
                              center: (i32, i32),
                              radius: i32,
-                             color: I::Pixel) -> VecBuffer<I::Pixel>
+                             color: I::Pixel) -> Image<I::Pixel>
     where I: GenericImage,
           I::Pixel: 'static
 {
@@ -547,7 +543,7 @@ fn draw_if_in_bounds<I>(image: &mut I, x: i32, y: i32, color: I::Pixel)
     }
 }
 
-
+/// A 2D point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Point<T: Copy + PartialEq + Eq> {
     x: T,
@@ -555,6 +551,7 @@ pub struct Point<T: Copy + PartialEq + Eq> {
 }
 
 impl<T: Copy + PartialEq + Eq> Point<T> {
+    /// Construct a point at (x, y).
     pub fn new (x: T, y: T) -> Point<T> {
         Point::<T> { x: x, y: y}
     }
@@ -565,7 +562,7 @@ impl<T: Copy + PartialEq + Eq> Point<T> {
 /// An implicit edge is added from the last to the first point in the slice.
 ///
 /// Does not validate that input is convex.
-pub fn draw_convex_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_convex_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
     where I : GenericImage, I::Pixel: 'static
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
@@ -663,7 +660,7 @@ pub fn draw_convex_polygon_mut<I>(image: &mut I, poly: &[Point<i32>], color: I::
 }
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
-pub fn draw_cubic_bezier_curve<I>(image: &I, start: (f32, f32), end: (f32, f32), control_a: (f32, f32), control_b: (f32, f32), color: I::Pixel) -> VecBuffer<I::Pixel>
+pub fn draw_cubic_bezier_curve<I>(image: &I, start: (f32, f32), end: (f32, f32), control_a: (f32, f32), control_b: (f32, f32), color: I::Pixel) -> Image<I::Pixel>
     where I : GenericImage, I::Pixel: 'static
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
@@ -710,17 +707,10 @@ pub fn draw_cubic_bezier_curve_mut<I>(image: &mut I, start: (f32, f32), end: (f3
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        draw_cross,
-        draw_line_segment,
-        draw_filled_rect,
-        draw_hollow_rect,
-        draw_antialiased_line_segment
-    };
+    use super::*;
     use rect::Rect;
-    use image::{GrayImage, ImageBuffer, Luma};
-    use test;
+    use image::{GrayImage, ImageBuffer, Luma, RgbImage, Rgb};
+    use test::{Bencher, black_box};
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -1031,6 +1021,29 @@ mod test {
         assert_pixels_eq!(down_right, rotate90(&expected));
     }
 
+    #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_draw_antialiased_line_segment_oct7_and_oct3() {
+        use pixelops::interpolate;
+
+        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
+
+        // Gradient is 3/4
+        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+            1,  1,  1,  13, 50,
+            1,  1,  25, 37,  1,
+            1,  37, 25,  1,  1,
+            50, 13, 1,   1,  1,
+            1,  1,  1,   1,  1]).unwrap();
+
+        let color = Luma([50u8]);
+        let oct7 = draw_antialiased_line_segment(&image, (0, 3), (4, 0), color, interpolate);
+        assert_pixels_eq!(oct7, expected);
+
+        let oct3 = draw_antialiased_line_segment(&image, (4, 0), (0, 3), color, interpolate);
+        assert_pixels_eq!(oct3, expected);
+    }
+
     macro_rules! bench_antialiased_lines {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
@@ -1112,27 +1125,15 @@ mod test {
     bench_filled_ellipse!(bench_bench_filled_ellipse_vertical, (200, 200), 40, 100);
     bench_filled_ellipse!(bench_bench_filled_ellipse_horizontal, (200, 200), 100, 40);
 
-    #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_draw_antialiased_line_segment_oct7_and_oct3() {
-        use pixelops::interpolate;
-
-        let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
-
-        // Gradient is 3/4
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1,  1,  1,  13, 50,
-            1,  1,  25, 37,  1,
-            1,  37, 25,  1,  1,
-            50, 13, 1,   1,  1,
-            1,  1,  1,   1,  1]).unwrap();
-
-        let color = Luma([50u8]);
-        let oct7 = draw_antialiased_line_segment(&image, (0, 3), (4, 0), color, interpolate);
-        assert_pixels_eq!(oct7, expected);
-
-        let oct3 = draw_antialiased_line_segment(&image, (4, 0), (0, 3), color, interpolate);
-        assert_pixels_eq!(oct3, expected);
+    #[bench]
+    fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
+        let mut image = RgbImage::new(200, 200);
+        let color = Rgb([120u8, 60u8, 47u8]);
+        let rect = Rect::at(50, 50).of_size(80, 90);
+        b.iter(|| {
+            draw_filled_rect_mut(&mut image, rect, color);
+            black_box(&image);
+        });
     }
 
     #[test]

@@ -4,6 +4,7 @@ use num::Zero;
 
 /// A 3d array that owns its data.
 pub struct Array3d<T> {
+    /// The owned data.
     pub data: Vec<T>,
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
     pub lengths: [usize; 3]
@@ -11,7 +12,7 @@ pub struct Array3d<T> {
 
 /// A view into a 3d array.
 pub struct View3d<'a, T: 'a> {
-    /// THe underlying data.
+    /// The underlying data.
 	pub data: &'a mut [T],
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
     pub lengths: [usize; 3]
@@ -39,7 +40,7 @@ impl<'a, T> View3d<'a, T> {
 
     /// Immutable access to the raw data.
     pub fn data(&self) -> &[T] {
-        &self.data
+        self.data
     }
 
     /// Mutable access to the raw data.

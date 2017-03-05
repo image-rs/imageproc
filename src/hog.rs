@@ -3,6 +3,7 @@
 
 use image::{
 	GenericImage,
+	GrayImage,
 	ImageBuffer,
 	Luma
 };
@@ -16,7 +17,7 @@ use multiarray::{
 };
 use definitions::{
 	Clamp,
-	VecBuffer
+	Image
 };
 use math::l2_norm;
 use std::f32;
@@ -38,6 +39,7 @@ pub struct HogOptions {
 }
 
 impl HogOptions {
+	/// User-provided options, prior to validation.
     pub fn new(orientations: usize, signed: bool, cell_side: usize,
         block_side: usize, block_stride: usize) -> HogOptions {
         HogOptions {
@@ -67,7 +69,6 @@ pub struct HogSpec {
 }
 
 impl HogSpec {
-
 	/// Returns an error message if image dimensions aren't compatible with the provided options.
 	pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
 		let (cells_wide, cells_high) = try!(Self::checked_cell_dimensions(width as usize, height as usize, options));
@@ -81,7 +82,7 @@ impl HogSpec {
 		})
 	}
 
-	fn invalid_options_message(errors: &Vec<String>) -> String {
+	fn invalid_options_message(errors: &[String]) -> String {
 		format!("Invalid HoG options: {0}", errors.join(", "))
 	}
 
@@ -95,7 +96,7 @@ impl HogSpec {
 			if height % options.cell_side != 0 {
 				errors.push(format!("cell side {} does not evenly divide height {}", options.cell_side, height));
 			}
-			if errors.len() > 0 {
+			if !errors.is_empty() {
 				return Err(Self::invalid_options_message(&errors));
 			}
 			Ok((width / options.cell_side, height / options.cell_side))
@@ -114,7 +115,7 @@ impl HogSpec {
 			errors.push(format!("block stride {} does not evenly divide (cells high {} - block side {})",
 				options.block_stride, cells_high, options.block_side));
 		}
-		if errors.len() > 0 {
+		if !errors.is_empty() {
 			return Err(Self::invalid_options_message(&errors));
 		}
 		Ok((num_blocks(cells_wide, options.block_side, options.block_stride),
@@ -158,8 +159,8 @@ impl HogSpec {
 	}
 }
 
-/// Number of blocks required to cover num_cells cells when each block is
-/// block_side long and blocks are staggered by block_stride. Assumes that
+/// Number of blocks required to cover `num_cells` cells when each block is
+/// `block_side` long and blocks are staggered by `block_stride`. Assumes that
 /// options are compatible.
 fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 {
@@ -169,9 +170,7 @@ fn num_blocks(num_cells: usize, block_side: usize, block_stride: usize) -> usize
 /// Computes the HoG descriptor of an image, or None if the provided
 /// options are incompatible with the image size.
 // TODO: support color images by taking the channel with maximum gradient at each point
-pub fn hog<I>(image: &I, options: HogOptions) -> Result<Vec<f32>, String>
-	where I: GenericImage<Pixel=Luma<u8>> + 'static
-{
+pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
 	match HogSpec::from_options(image.width(), image.height(), options) {
 		Err(e) => Err(e),
 		Ok(spec) => {
@@ -240,9 +239,7 @@ fn copy<T: Copy>(from: &[T], to: &mut[T]) {
 
 /// Computes orientation histograms for each cell of an image. Assumes that
 /// the provided dimensions are valid.
-pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
-    where I: GenericImage<Pixel=Luma<u8>> + 'static {
-
+pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
     let (width, height) = image.dimensions();
 	let mut grid = Array3d::new(spec.cell_grid_lengths());
 	let cell_area = spec.cell_area() as f32;
@@ -265,7 +262,7 @@ pub fn cell_histograms<I>(image: &I, spec: HogSpec) -> Array3d<f32>
 
 			let mut d = v.atan2(h);
 			if d < 0f32 {
-				d = d + range;
+				d += range;
 			}
 			if !spec.options.signed && d >= f32::consts::PI {
 				d -= f32::consts::PI;
@@ -350,9 +347,9 @@ impl Interpolation {
 /// The dimensions of the provided Array3d are orientation bucket,
 /// horizontal location of the cell, then vertical location of the cell.
 /// Note that we ignore block-level aggregation or normalisation here.
-/// Each rendered star has side length star_side, so the image will have
-/// width grid.lengths[1] * star_side and height grid.lengths[2] * star_side.
-pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> VecBuffer<Luma<u8>> {
+/// Each rendered star has side length `star_side`, so the image will have
+/// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
+pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Image<Luma<u8>> {
 	let width = grid.lengths[1] as u32 * star_side;
 	let height = grid.lengths[2] as u32 * star_side;
 	let mut out = ImageBuffer::new(width, height);

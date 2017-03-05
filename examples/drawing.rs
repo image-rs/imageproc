@@ -78,5 +78,5 @@ fn main() {
     // Partially outside bounds
     draw_filled_circle_mut(&mut image, (150, 190), 20, white);
 
-    let _ = image.save(path).unwrap();
+    image.save(path).unwrap();
 }

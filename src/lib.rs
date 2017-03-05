@@ -1,4 +1,6 @@
-
+//! An image processing library, based on the
+//! [image](https://github.com/PistonDevelopers/image) crate.
+#![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
@@ -6,13 +8,12 @@ extern crate test;
 extern crate conv;
 extern crate image;
 extern crate itertools;
-
-#[macro_use]
 extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
 extern crate rand;
 extern crate rusttype;
+extern crate rayon;
 
 #[macro_use]
 pub mod utils;

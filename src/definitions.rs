@@ -12,20 +12,27 @@ use std::{
     i16
 };
 
-/// An ImageBuffer containing Pixels of type P with storage
-/// Vec<P::Subpixel>.
+/// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
+/// Most operations in this library only support inputs of type `Image`, rather
+/// than arbitrary `image::GenericImage`s. This is obviously less flexible, but
+/// has the advantage of allowing many functions to be more performant. We may want
+/// to add more flexibility later, but this should not be at the expense of performance.
+/// When specialisation lands we should be able to do this by defining traits for images
+/// with contiguous storage.
 // TODO: This produces a compiler warning about trait bounds
 // TODO: not being enforced in type definitions. In this case
 // TODO: they are. Can we get rid of the warning?
-pub type VecBuffer<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
+pub type Image<P: Pixel> = ImageBuffer<P, Vec<P::Subpixel>>;
 
 /// Pixels which have a named Black value.
 pub trait HasBlack {
+    /// Returns a black pixel of this type.
     fn black() -> Self;
 }
 
 /// Pixels which have a named White value.
 pub trait HasWhite {
+    /// Returns a white pixel of this type.
     fn white() -> Self;
 }
 
@@ -51,18 +58,22 @@ impl_black_white!(Rgb<u8>, Rgb([u8::MIN; 3]), Rgb([u8::MAX; 3]));
 
 /// Something with a 2d position.
 pub trait Position {
+    /// x-coordinate.
     fn x(&self) -> u32;
+    /// y-coordinate.
     fn y(&self) -> u32;
 }
 
 /// Something with a score.
 pub trait Score {
+    /// Score of this item.
     fn score(&self) -> f32;
 }
 
 /// A type to which we can clamp a value of type T.
-/// Implementations are not required to handle NaNs gracefully.
+/// Implementations are not required to handle `NaN`s gracefully.
 pub trait Clamp<T> {
+    /// Clamp `x` to a valid value for this type.
     fn clamp(x: T) -> Self;
 }
 

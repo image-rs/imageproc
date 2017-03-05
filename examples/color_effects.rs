@@ -38,7 +38,6 @@ fn main() {
 
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(path)
-        .ok()
         .expect(&format!("Could not load image at {:?}", path))
         .to_luma();
 
@@ -46,12 +45,12 @@ fn main() {
 
     // Apply the color tint to every pixel in the grayscale image, producing a image::RgbImage
     let tinted = map_colors(&image, |pix| tint(pix, blue));
-    let _ = tinted.save(path.with_file_name("tinted.png")).unwrap();
+    tinted.save(path.with_file_name("tinted.png")).unwrap();
 
     // Apply color gradient to each image pixel
     let black = Rgb([0u8, 0u8, 0u8]);
     let red = Rgb([255u8, 0u8, 0u8]);
     let yellow = Rgb([255u8, 255u8, 0u8]);
     let gradient = map_colors(&image, |pix| color_gradient(pix, black, red, yellow));
-    let _ = gradient.save(path.with_file_name("gradient.png")).unwrap();
+    gradient.save(path.with_file_name("gradient.png")).unwrap();
 }

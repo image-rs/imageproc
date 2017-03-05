@@ -1,7 +1,7 @@
 //! Functions for detecting edges in images.
 
 use std::f32;
-use image::{GenericImage, ImageBuffer, Luma};
+use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use gradients::{vertical_sobel, horizontal_sobel};
 use definitions::{HasWhite, HasBlack};
 use filter::gaussian_blur_f32;
@@ -10,20 +10,18 @@ use filter::gaussian_blur_f32;
 ///
 /// # Params
 ///
-/// - low_threshold: Low threshold for the hysteresis procedure.
+/// - `low_threshold`: Low threshold for the hysteresis procedure.
 /// Edges with a strength higher than the low threshold will appear
 /// in the output image, if there are strong edges nearby.
-/// - high_threshold: High threshold for the hysteresis procedure.
+/// - `high_threshold`: High threshold for the hysteresis procedure.
 /// Edges with a strength higher than the high threshold will always
 /// appear as edges in the output image.
 ///
 /// Returns a binary image, where edge pixels have a value of 255 and non-edge pixels a value of 0.
-pub fn canny<I>(image: &I,
-                low_threshold: f32,
-                high_threshold: f32)
-                -> ImageBuffer<Luma<u8>, Vec<u8>>
-    where I: GenericImage<Pixel = Luma<u8>> + 'static
-{
+pub fn canny(image: &GrayImage,
+             low_threshold: f32,
+             high_threshold: f32)
+             -> GrayImage {
     assert!(high_threshold >= low_threshold);
     // Heavily based on the implementation proposed by wikipedia.
     // 1. Gaussian blur.
@@ -33,10 +31,12 @@ pub fn canny<I>(image: &I,
     // 2. Intensity of gradients.
     let gx = horizontal_sobel(&blurred);
     let gy = vertical_sobel(&blurred);
-    let g = ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
-        let g = (gx[(x, y)][0] as f32).hypot(gy[(x, y)][0] as f32);
-        Luma { data: [g] }
-    });
+    let g: Vec<f32> = gx.iter()
+                        .zip(gy.iter())
+                        .map(|(h, v)| (*h as f32).hypot(*v as f32))
+                        .collect::<Vec<f32>>();
+
+    let g = ImageBuffer::from_raw(image.width(), image.height(), g).unwrap();
 
     // 3. Non-maximum-suppression (Make edges thinner)
     let thinned = non_maximum_suppression(&g, &gx, &gy);
@@ -123,7 +123,7 @@ fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
                 out.put_pixel(x, y, max_brightness);
                 edges.push((x, y));
                 // Track neighbors until no neighbor is >= low_thresh.
-                while edges.len() > 0 {
+                while !edges.is_empty() {
                     let (nx, ny) = edges.pop().unwrap();
                     let neighbor_indices = [(nx + 1, ny),
                                             (nx + 1, ny + 1),
@@ -150,8 +150,22 @@ fn hysteresis(input: &ImageBuffer<Luma<f32>, Vec<f32>>,
 #[cfg(test)]
 mod test {
     use super::canny;
-    use utils::edge_detect_bench_image;
+    use drawing::{draw_filled_rect_mut};
+    use rect::Rect;
+    use image::{GrayImage, Luma};
     use test;
+
+    fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
+        let mut image = GrayImage::new(width, height);
+        let (w, h) = (width as i32, height as i32);
+        let large = Rect::at(w / 4, h / 4).of_size(width / 2, height / 2);
+        let small = Rect::at(9, 9).of_size(3, 3);
+
+        draw_filled_rect_mut(&mut image, large, Luma([255]));
+        draw_filled_rect_mut(&mut image, small, Luma([255]));
+
+        image
+    }
 
     #[bench]
     fn bench_canny(b: &mut test::Bencher) {

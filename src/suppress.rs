@@ -86,7 +86,6 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
 /// Returns true if the given block contains a larger value than
 /// the input, or contains an equal value with lexicographically
 /// lesser coordinates.
-#[inline(always)]
 fn contains_greater_value<I, C>(
     image: &I,
     x: u32, y: u32, v: C,
@@ -151,12 +150,12 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
     };
 
     let mut ts_by_row = vec![vec![]; (height + 1) as usize];
-    for t in ordered_ts.iter() {
+    for t in &ordered_ts {
         ts_by_row[t.y() as usize].push(t);
     }
 
     let mut max_ts = vec![];
-    for t in ordered_ts.iter() {
+    for t in &ordered_ts {
         let cx = t.x();
         let cy = t.y();
         let cs = t.score();
@@ -165,7 +164,7 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
         let row_lower = if radius > cy {0} else {cy - radius};
         let row_upper = if cy + radius + 1 > height {height} else {cy + radius + 1};
         for y in row_lower..row_upper {
-            for c in ts_by_row[y as usize].iter() {
+            for c in &ts_by_row[y as usize] {
                 if c.x() + radius < cx {
                     continue;
                 }

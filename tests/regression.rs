@@ -32,7 +32,7 @@ const REGENERATE: bool = false;
 fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
     where P: Pixel<Subpixel=u8> + 'static, Container: Deref<Target=[u8]>
 {
-    let _ = image.save(Path::new("./tests/data/truth").join(file_name)).unwrap();
+    image.save(Path::new("./tests/data/truth").join(file_name)).unwrap();
 }
 
 /// Load an image with the given name from the input data directory "./tests/data/".
@@ -141,7 +141,7 @@ fn test_affine_bilinear_rgb() {
 #[test]
 fn test_sobel_gradients() {
     fn sobel_gradients(image: &GrayImage) -> GrayImage {
-        imageproc::map::map_subpixels(&gradients::sobel_gradients(image), |x| u8::clamp(x))
+        imageproc::map::map_subpixels(&gradients::sobel_gradients(image), u8::clamp)
     }
     compare_to_truth_grayscale("elephant.png", "elephant_gradients.png", sobel_gradients);
 }
