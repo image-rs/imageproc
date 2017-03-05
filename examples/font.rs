@@ -26,7 +26,7 @@ fn main() {
 
     let height = 12.4;
     let scale = Scale { x: height * 2.0, y: height };
-    draw_text_mut(&mut image, Rgb([0u8, 0u8, 255u8]), 0, 0, height, scale, font, "Hello, world!");
+    draw_text_mut(&mut image, Rgb([0u8, 0u8, 255u8]), 0, 0, scale, font, "Hello, world!");
 
     let _ = image.save(path).unwrap();
 }
