@@ -12,6 +12,7 @@ extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
 extern crate rand;
+extern crate rusttype;
 extern crate rayon;
 
 #[macro_use]

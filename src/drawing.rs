@@ -1,12 +1,60 @@
 //! Helpers for drawing basic shapes on images.
 
-use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use image::{GenericImage, ImageBuffer, Pixel};
+use definitions::{Clamp, Image};
+use conv::ValueInto;
 use rect::Rect;
 use std::mem::swap;
 use std::cmp::{min, max};
 use std::f32;
 use std::i32;
+
+use pixelops::weighted_sum;
+use rusttype::{FontCollection, Scale, point, PositionedGlyph};
+
+/// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
+pub fn draw_text_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font_data: &[u8], text: &str)
+    where I: GenericImage,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+{
+    let collection = FontCollection::from_bytes(font_data);
+    let font = collection.into_font().expect("Unable to parse font data");
+
+    let v_metrics = font.v_metrics(scale);
+    let offset = point(0.0, v_metrics.ascent);
+
+    let glyphs: Vec<PositionedGlyph> = font.layout(text, scale, offset).collect();
+
+    for g in glyphs {
+        if let Some(bb) = g.pixel_bounding_box() {
+            g.draw(|gx, gy, gv| {
+                let gx = gx as i32 + bb.min.x;
+                let gy = gy as i32 + bb.min.y;
+
+                let image_x = gx as u32 + x;
+                let image_y = gy as u32 + y;
+
+                if image_x >= 0 && image_x < image.width() && image_y >= 0 && image_y < image.height() {
+                    let pixel = image.get_pixel(image_x, image_y);
+                    let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
+                    image.put_pixel(image_x, image_y, weighted_color);
+                }
+            })
+        }
+    }
+}
+
+/// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
+pub fn draw_text<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font_data: &[u8], text: &str) -> Image<I::Pixel>
+    where I: GenericImage,
+          <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    I::Pixel: 'static
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0);
+    draw_text_mut(&mut out, color, x, y, scale, font_data, text);
+    out
+}
 
 /// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
 #[cfg_attr(rustfmt, rustfmt_skip)]
