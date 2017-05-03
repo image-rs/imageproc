@@ -31,13 +31,16 @@ pub fn draw_text_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: S
                 let gx = gx as i32 + bb.min.x;
                 let gy = gy as i32 + bb.min.y;
 
-                let image_x = gx as u32 + x;
-                let image_y = gy as u32 + y;
+                let image_x = gx + x as i32;
+                let image_y = gy + y as i32;
 
-                if image_x >= 0 && image_x < image.width() && image_y >= 0 && image_y < image.height() {
-                    let pixel = image.get_pixel(image_x, image_y);
+                let image_width = image.width() as i32;
+                let image_height = image.height() as i32;
+
+                if image_x >= 0 && image_x < image_width && image_y >= 0 && image_y < image_height {
+                    let pixel = image.get_pixel(image_x as u32, image_y as u32);
                     let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
-                    image.put_pixel(image_x, image_y, weighted_color);
+                    image.put_pixel(image_x as u32, image_y as u32, weighted_color);
                 }
             })
         }
