@@ -2,7 +2,8 @@
 
 use image::{Pixel, GenericImage, ImageBuffer};
 use definitions::{Clamp, HasBlack, Image};
-use math::{Affine2, cast, Vec2};
+use math::cast;
+use nalgebra::{Affine2,Point2};
 use conv::ValueInto;
 
 /// How to handle pixels whose pre-image lies between input pixels.
@@ -21,7 +22,7 @@ pub enum Interpolation {
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to black.
 pub fn affine<P>(image: &Image<P>,
-                 affine: Affine2,
+                 affine: Affine2<f32>,
                  interpolation: Interpolation)
                  -> Option<Image<P>>
     where P: Pixel + HasBlack + 'static,
@@ -35,15 +36,15 @@ pub fn affine<P>(image: &Image<P>,
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
 pub fn affine_with_default<P>(image: &Image<P>,
-                              affine: Affine2,
+                              affine: Affine2<f32>,
                               default: P,
                               interpolation: Interpolation)
                               -> Option<Image<P>>
     where P: Pixel + 'static,
           <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
-    let inverse: Affine2;
-    match affine.inverse() {
+    let inverse: Affine2<f32>;
+    match affine.try_inverse() {
         None => return None,
         Some(inv) => inverse = inv,
     }
@@ -54,7 +55,7 @@ pub fn affine_with_default<P>(image: &Image<P>,
     for y in 0..height {
         for x in 0..width {
 
-            let preimage = inverse.apply(Vec2::new(x as f32, y as f32));
+            let preimage = inverse*Point2::new(x as f32, y as f32);
             let px = preimage[0];
             let py = preimage[1];
 
@@ -292,7 +293,7 @@ mod test {
     use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
     use utils::gray_bench_image;
     use image::{GrayImage, ImageBuffer, Luma};
-    use math::{Affine2, Mat2, Vec2};
+    use nalgebra::{Affine2,Matrix3};
     use test;
 
     #[test]
@@ -435,9 +436,12 @@ mod test {
             00, 00, 01,
             00, 10, 11,]).unwrap();
 
-        let aff = Affine2::new(
-            Mat2::new(1f32, 0f32, 0f32, 1f32),
-            Vec2::new(1f32, 1f32));
+        let aff = Affine2::from_matrix_unchecked(Matrix3::new(
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ));
+
 
         if let Some(translated) = affine(&image, aff, Interpolation::Nearest) {
             assert_pixels_eq!(translated, expected);
@@ -450,9 +454,12 @@ mod test {
     #[bench]
     fn bench_affine_nearest(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let aff = Affine2::new(
-            Mat2::new(1f32, 0f32, 0f32, 1f32),
-            Vec2::new(1f32, 1f32));
+
+        let aff = Affine2::from_matrix_unchecked(Matrix3::new(
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ));
 
         b.iter(|| {
             let transformed = affine(&image, aff, Interpolation::Nearest);
@@ -463,9 +470,12 @@ mod test {
     #[bench]
     fn bench_affine_bilinear(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let aff = Affine2::new(
-            Mat2::new(1f32, 0f32, 0f32, 1f32),
-            Vec2::new(1f32, 1f32));
+
+        let aff = Affine2::from_matrix_unchecked(Matrix3::new(
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ));
 
         b.iter(|| {
             let transformed = affine(&image, aff, Interpolation::Bilinear);
