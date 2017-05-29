@@ -23,6 +23,7 @@ use imageproc::filter::gaussian_blur_f32;
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::gradients;
 use nalgebra::{Affine2,Matrix3};
+
 // If set to true then all calls to any compare_to_truth function will regenerate
 // the truth image.
 const REGENERATE: bool = false;
@@ -175,6 +176,16 @@ fn test_gaussian_blur_stdev_10() {
 fn test_adaptive_threshold() {
     use imageproc::contrast::adaptive_threshold;
     compare_to_truth_grayscale("zebra.png", "zebra_adaptive_threshold.png", |image| adaptive_threshold(image, 41));
+}
+
+#[test]
+fn test_otsu_threshold() {
+    use imageproc::contrast::{otsu_level, threshold};
+    fn otsu_threshold(image: &GrayImage) -> GrayImage {
+        let level = otsu_level(image);
+        threshold(image, level)
+    }
+    compare_to_truth_grayscale("zebra.png", "zebra_otsu.png", otsu_threshold);
 }
 
 #[test]

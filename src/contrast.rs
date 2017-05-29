@@ -36,53 +36,65 @@ pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
      out
 }
 
-/// Returns the Otsu threshold level of an 8bpp image.
-/// This threshold will optimally binarize an image that
-/// contains two classes of pixels which have distributions
-/// with equal variances. For details see:
-/// Xu, X., et al. Pattern recognition letters 32.7 (2011)
+/// Returns the [Otsu threshold level] of an 8bpp image.
+///
+/// [Otsu threshold level]: https://en.wikipedia.org/wiki/Otsu%27s_method
 pub fn otsu_level(image: &GrayImage) -> u8 {
     let hist = histogram(image);
-    let levels = hist.len();
-    let mut histc = [0i32; 256];
-    let mut meanc = [0.0f64; 256];
-    let mut pixel_count = hist[0] as f64;
+    let (width, height) = image.dimensions();
+    let total_weight = width * height;
 
-    histc[0] = hist[0];
+    // Sum of all pixel intensities, to use when calculating means.
+    let total_pixel_sum = hist
+        .iter()
+        .enumerate()
+        .fold(0f64, |sum, (t, h)| sum + (t as u32 * h) as f64);
 
-    for i in 1..levels {
-        pixel_count += hist[i] as f64;
-        histc[i] = histc[i - 1] + hist[i];
-        meanc[i] = meanc[i - 1] + (hist[i] as f64) * (i as f64);
-    }
+    // Sum of all pixel intensities in the background class.
+    let mut background_pixel_sum = 0f64;
 
-    let mut sigma_max = -1f64;
-    let mut otsu = 0f64;
-    let mut otsu2 = 0f64;
+    // The weight of a class (background or foreground) is
+    // the number of pixels which belong to that class at
+    // the current threshold.
+    let mut background_weight = 0u32;
+    let mut foreground_weight;
 
-    for i in 0..levels {
-        meanc[i] /= pixel_count;
+    let mut largest_variance = 0f64;
+    let mut best_threshold = 0u8;
 
-        let p0 = (histc[i] as f64) / pixel_count;
-        let p1 = 1f64 - p0;
-        let mu0 = meanc[i] / p0;
-        let mu1 = (meanc[levels - 1] / pixel_count - meanc[i]) / p1;
+    for (threshold, hist_count) in hist.iter().enumerate() {
+        background_weight = background_weight + hist_count;
+        if background_weight == 0 {
+            continue
+        };
 
-        let sigma = p0 * p1 * (mu0 - mu1).powi(2);
-        if sigma >= sigma_max {
-            if sigma > sigma_max {
-                otsu = i as f64;
-                sigma_max = sigma;
-            } else {
-                otsu2 = i as f64;
-            }
+        foreground_weight = total_weight - background_weight;
+        if foreground_weight == 0 {
+            break
+        };
+
+        background_pixel_sum += (threshold as u32 * hist_count) as f64;
+        let foreground_pixel_sum = total_pixel_sum - background_pixel_sum;
+
+        let background_mean = background_pixel_sum / (background_weight as f64);
+        let foreground_mean = foreground_pixel_sum / (foreground_weight as f64);
+
+        let mean_diff_squared = (background_mean - foreground_mean).powi(2);
+        let intra_class_variance =
+            (background_weight as f64) * (foreground_weight as f64) * mean_diff_squared;
+
+        if intra_class_variance > largest_variance {
+            largest_variance = intra_class_variance;
+            best_threshold = threshold as u8;
         }
     }
-    ((otsu + otsu2) / 2.0).ceil() as u8
+
+    best_threshold
 }
 
 /// Returns a binarized image from an input 8bpp grayscale image
-/// obtained by applying the given threshold.
+/// obtained by applying the given threshold. Pixels with intensity
+/// equal to the threshold are assigned to the background.
 pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
     let mut out = image.clone();
     threshold_mut(&mut out, thresh);
@@ -90,7 +102,8 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 }
 
 /// Mutates given image to form a binarized version produced by applying
-/// the given threshold.
+/// the given threshold. Pixels with intensity
+/// equal to the threshold are assigned to the background.
 pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
     for p in image.iter_mut() {
         *p = if *p <= thresh { 0 } else { 255 };
@@ -99,8 +112,8 @@ pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
 
 /// Returns the histogram of grayscale values in an 8bpp
 /// grayscale image.
-pub fn histogram(image: &GrayImage) -> [i32; 256] {
-    let mut hist = [0i32; 256];
+pub fn histogram(image: &GrayImage) -> [u32; 256] {
+    let mut hist = [0u32; 256];
 
     for pix in image.iter() {
         hist[*pix as usize] += 1;
@@ -111,7 +124,7 @@ pub fn histogram(image: &GrayImage) -> [i32; 256] {
 
 /// Returns the cumulative histogram of grayscale values in an 8bpp
 /// grayscale image.
-pub fn cumulative_histogram(image: &GrayImage) -> [i32; 256] {
+pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
     let mut hist = histogram(image);
 
     for i in 1..hist.len() {
@@ -163,7 +176,7 @@ pub fn match_histogram(image: &GrayImage, target: &GrayImage) -> GrayImage {
 
 /// `l = histogram_lut(s, t)` is chosen so that `target_histc[l[i]] / sum(target_histc)`
 /// is as close as possible to `source_histc[i] / sum(source_histc)`.
-fn histogram_lut(source_histc: &[i32; 256], target_histc: &[i32; 256]) -> [usize; 256] {
+fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize; 256] {
     let source_total = source_histc[255] as f32;
     let target_total = target_histc[255] as f32;
 
@@ -325,9 +338,9 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_histogram_lut_source_and_target_equal() {
-        let mut histc = [0i32; 256];
+        let mut histc = [0u32; 256];
         for i in 1..histc.len() {
-            histc[i] = 2 * i as i32;
+            histc[i] = 2 * i as u32;
         }
 
         let lut = histogram_lut(&histc, &histc);
@@ -339,12 +352,12 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_histogram_lut_gradient_to_step_contrast() {
-        let mut grad_histc = [0i32; 256];
+        let mut grad_histc = [0u32; 256];
         for i in 0..grad_histc.len() {
-            grad_histc[i] = i as i32;
+            grad_histc[i] = i as u32;
         }
 
-        let mut step_histc = [0i32; 256];
+        let mut step_histc = [0u32; 256];
         for i in 30..130 {
             step_histc[i] = 100;
         }
@@ -374,16 +387,26 @@ mod test {
         assert_eq!(&lut[0..256], &expected[0..256]);
     }
 
+    fn constant_image(width: u32, height: u32, intensity: u8) -> GrayImage {
+        GrayImage::from_pixel(width, height, Luma([intensity]))
+    }
+
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn test_otsu_level() {
-        let image: GrayImage = ImageBuffer::from_raw(26, 1,
-            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
-                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
-                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,
-                220u8,  230u8,  240u8,  250u8]).unwrap();
+    fn test_otsu_constant() {
+        // Variance is 0 at any threshold, and we
+        // only increase the current threshold if we
+        // see a strictly greater variance
+        assert_eq!(otsu_level(&constant_image(10, 10, 0)), 0);
+        assert_eq!(otsu_level(&constant_image(10, 10, 128)), 0);
+        assert_eq!(otsu_level(&constant_image(10, 10, 255)), 0);
+    }
+
+    #[test]
+    fn test_otsu_level_gradient() {
+        let contents = (0u8..26u8).map(|x| x * 10u8).collect();
+        let image = GrayImage::from_raw(26, 1, contents).unwrap();
         let level = otsu_level(&image);
-        assert_eq!(level, 125);
+        assert_eq!(level, 120);
     }
 
     #[bench]
@@ -396,18 +419,37 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn test_threshold_0_image_0() {
+        let expected = 0u8;
+        let actual = threshold(&constant_image(10, 10, 0), 0);
+        assert_pixels_eq!(actual, constant_image(10, 10, expected));
+    }
+
+    #[test]
+    fn test_threshold_0_image_1() {
+        let expected = 255u8;
+        let actual = threshold(&constant_image(10, 10, 1), 0);
+        assert_pixels_eq!(actual, constant_image(10, 10, expected));
+    }
+
+    #[test]
+    fn test_threshold_threshold_255_image_255() {
+        let expected = 0u8;
+        let actual = threshold(&constant_image(10, 10, 255), 255);
+        assert_pixels_eq!(actual, constant_image(10, 10, expected));
+    }
+
+    #[test]
     fn test_threshold() {
-        let original: GrayImage = ImageBuffer::from_raw(26, 1,
-            vec![0u8, 10u8, 20u8, 30u8, 40u8, 50u8, 60u8, 70u8,
-                80u8, 90u8, 100u8, 110u8, 120u8, 130u8, 140u8,
-                150u8, 160u8, 170u8, 180u8, 190u8, 200u8,  210u8,
-                220u8,  230u8,  240u8,  250u8]).unwrap();
-        let expected: GrayImage = ImageBuffer::from_raw(26, 1,
-            vec![0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
-                0u8, 0u8, 0u8, 0u8, 0u8, 255u8, 255u8,
-                255u8, 255u8, 255u8, 255u8, 255u8, 255u8,  255u8,
-                255u8,  255u8,  255u8,  255u8]).unwrap();
+        let original_contents = (0u8..26u8).map(|x| x * 10u8).collect();
+        let original = GrayImage::from_raw(26, 1, original_contents).unwrap();
+
+        let expected_contents = vec![0u8; 13]
+            .into_iter()
+            .chain(vec![255u8; 13])
+            .collect();
+
+        let expected = GrayImage::from_raw(26, 1, expected_contents).unwrap();
 
         let actual = threshold(&original, 125u8);
         assert_pixels_eq!(expected, actual);
