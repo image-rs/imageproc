@@ -1,7 +1,6 @@
 //! Assorted mathematical helper functions.
 
 use conv::ValueInto;
-use num::Zero;
 
 /// L2 norm of a vector.
 pub fn l2_norm(xs: &[f32]) -> f32 {
@@ -15,5 +14,3 @@ pub fn cast<T, U>(x: T) -> U where T: ValueInto<U> {
         Err(_) => panic!("Failed to convert"),
     }
 }
-
-
