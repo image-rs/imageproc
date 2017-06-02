@@ -94,28 +94,112 @@ impl FilterType {
 impl HaarFilter {
     /// Evaluates the Haar filter on an integral image.
     pub fn evaluate(&self, integral: &Image<Luma<u32>>) -> i32 {
-        let parity_shift = if self.sign == Sign::Positive { 0 } else { 1 };
+        // The corners of each block are lettered. Not all letters are evaluated for each filter type.
+        // A   B   C   D
+        //
+        // E   F   G   H
+        //
+        // I   J   K   L
+        //
+        // M   N   O
 
-        let mut sum = 0i32;
+        let a = self.block_boundary(0, 0);
+        let b = self.block_boundary(1, 0);
+        let e = self.block_boundary(0, 1);
+        let f = self.block_boundary(1, 1);
 
-        // TODO: this does too much work - we don't need to evaluate all of the regions individually
-        for w in 0..self.blocks_wide() {
-            let left = self.left + self.block_width() * w;
-            let right = left + self.block_width() - 1;
+        let sum = match self.filter_type {
+            FilterType::TwoRegionHorizontal => {
+                let c = self.block_boundary(2, 0);
+                let g = self.block_boundary(2, 1);
 
-            for h in 0..self.blocks_high() {
-                let top = self.top + self.block_height() * h;
-                let bottom = top + self.block_height() - 1;
+                unsafe {
+                    read(integral, a)
+                        - 2 * read(integral, b)
+                        + read(integral, c)
+                        - read(integral, e)
+                        + 2 * read(integral, f)
+                        - read(integral, g)
+                }
+            },
 
-                let parity = (w + h + parity_shift) % 2;
-                let multiplier = if parity == 0 { 1i32 } else { -1i32 };
+            FilterType::ThreeRegionHorizontal => {
+                let c = self.block_boundary(2, 0);
+                let g = self.block_boundary(2, 1);
+                let d = self.block_boundary(3, 0);
+                let h = self.block_boundary(3, 1);
 
-                let block_sum = integralimage::sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
-                sum += multiplier * block_sum;
+                unsafe {
+                    read(integral, a)
+                        - 2 * read(integral, b)
+                        + 2 * read(integral, c)
+                        - read(integral, d)
+                        - read(integral, e)
+                        + 2 * read(integral, f)
+                        - 2 * read(integral, g)
+                        + read(integral, h)
+                }
+            },
+
+            FilterType::TwoRegionVertical => {
+                let i = self.block_boundary(0, 2);
+                let j = self.block_boundary(1, 2);
+
+                unsafe {
+                    read(integral, a)
+                        - read(integral, b)
+                        - 2 * read(integral, e)
+                        + 2 * read(integral, f)
+                        + read(integral, i)
+                        - read(integral, j)
+                }
+            },
+
+            FilterType::ThreeRegionVertical => {
+                let i = self.block_boundary(0, 2);
+                let j = self.block_boundary(1, 2);
+                let m = self.block_boundary(0, 3);
+                let n = self.block_boundary(1, 3);
+
+                unsafe {
+                    read(integral, a)
+                        - read(integral, b)
+                        - 2 * read(integral, e)
+                        + 2 * read(integral, f)
+                        + 2 * read(integral, i)
+                        - 2 * read(integral, j)
+                        - read(integral, m)
+                        + read(integral, n)
+                }
+            },
+
+            FilterType::FourRegion => {
+                let c = self.block_boundary(2, 0);
+                let g = self.block_boundary(2, 1);
+                let i = self.block_boundary(0, 2);
+                let j = self.block_boundary(1, 2);
+                let k = self.block_boundary(2, 2);
+
+                unsafe {
+                    read(integral, a)
+                        - 2 * read(integral, b)
+                        + read(integral, c)
+                        - 2 * read(integral, e)
+                        + 4 * read(integral, f)
+                        - 2 * read(integral, g)
+                        + read(integral, i)
+                        - 2 * read(integral, j)
+                        + read(integral, k)
+                }
             }
-        }
+        };
 
-        sum
+        let mul = if self.sign == Sign::Positive { 1i32 } else { -1i32 };
+        sum * mul
+    }
+
+    fn block_boundary(&self, x: u8, y: u8) -> (u8, u8) {
+        (self.left + x * self.block_width(), self.top + y * self.block_height())
     }
 
     /// Width of this filter in blocks.
@@ -137,6 +221,10 @@ impl HaarFilter {
     fn block_height(&self) -> u8 {
         self.block_size.height
     }
+}
+
+unsafe fn read(integral: &Image<Luma<u32>>, location: (u8, u8)) -> i32 {
+    integral.unsafe_get_pixel(location.0 as u32, location.1 as u32)[0] as i32
 }
 
 // The total width and height of a filter with the given type and block size.
@@ -414,6 +502,47 @@ mod test {
         };
 
         assert_eq!(filter.evaluate(&integral), -6i32);
+    }
+
+    // Reference implementation of Haar filter evaluation, to validate faster implementations against.
+    fn reference_evaluate(filter: HaarFilter, integral: &Image<Luma<u32>>) -> i32 {
+        let parity_shift = if filter.sign == Sign::Positive { 0 } else { 1 };
+
+        let mut sum = 0i32;
+
+        for w in 0..filter.blocks_wide() {
+            let left = filter.left + filter.block_width() * w;
+            let right = left + filter.block_width() - 1;
+
+            for h in 0..filter.blocks_high() {
+                let top = filter.top + filter.block_height() * h;
+                let bottom = top + filter.block_height() - 1;
+                let parity = (w + h + parity_shift) & 1;
+                let multiplier = 1 - 2 * (parity as i32);
+
+                let block_sum = integralimage::sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
+                sum += multiplier * block_sum;
+            }
+        }
+
+        sum
+    }
+
+    #[test]
+    fn test_haar_evaluate_against_reference_implementation() {
+        for w in 0..6 {
+            for h in 0..6 {
+                let filters = enumerate_haar_filters(w, h);
+                let image = gray_bench_image(w as u32, h as u32);
+                let integral = integral_image(&image);
+
+                for filter in filters {
+                    let actual = filter.evaluate(&integral);
+                    let expected = reference_evaluate(filter, &integral);
+                    assert_eq!(actual, expected, "w = {}, h = {}", w, h);
+                }
+            }
+        }
     }
 
     #[test]
