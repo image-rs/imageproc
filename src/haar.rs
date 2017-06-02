@@ -1,319 +1,260 @@
 //! Functions for creating and evaluating [Haar-like features](https://en.wikipedia.org/wiki/Haar-like_features).
 
-use definitions::{HasBlack,HasWhite,Image};
-use image::{GenericImage,ImageBuffer,Luma};
+use definitions::{HasBlack, HasWhite, Image};
+use integralimage;
+use image::{GenericImage, ImageBuffer, Luma};
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::ops::Mul;
+use std::marker::PhantomData;
+use std::ops::Range;
+
+/// A Haar-like filter.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct HaarFilter {
+    sign: Sign,
+    filter_type: FilterType,
+    block_size: Size<Pixels>,
+    left: u8,
+    top: u8,
+}
 
 /// Whether the top left region in a Haar filter is counted
 /// with positive or negative sign.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Sign {
+enum Sign {
     /// Top left region is counted with a positive sign.
     Positive,
     /// Top left region is counted with a negative sign.
     Negative
 }
 
-/// A Haar filter whose value on an integral image is the weighted sum
-/// of the values of the integral image at the given points.
-// TODO: these structs are pretty big. Look into instead just storing
-// TODO: the offsets between sample points. We should only need 10 bytes/filter,
-// TODO: meaning we could fit a typical cascade in L1 cache.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct HaarFilter {
-    points: [u32; 18],
-    weights: [i8; 9],
-    count: usize
+/// The type of a Haar-like filter determines the number of regions and their orientation.
+/// The diagrams in the comments for each variant use the symbols (*, &) to represent either
+/// (+, -) or (-, +), depending on which `Sign` the filter type is used with.
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum FilterType {
+    /// Two horizontally-adjacent regions of equal width.
+    /// <pre>
+    ///      -----------
+    ///     |  *  |  &  |
+    ///      -----------
+    /// </pre>
+    TwoRegionHorizontal,
+    /// Three horizontally-adjacent regions of equal width.
+    /// <pre>
+    ///      -----------------
+    ///     |  *  |  &  |  *  |
+    ///      -----------------
+    /// </pre>
+    ThreeRegionHorizontal,
+    /// Two vertically-adjacent regions of equal height.
+    /// <pre>
+    ///      -----
+    ///     |  *  |
+    ///      -----
+    ///     |  &  |
+    ///      -----
+    /// </pre>
+    TwoRegionVertical,
+    /// Three vertically-adjacent regions of equal height.
+    /// <pre>
+    ///      -----
+    ///     |  *  |
+    ///      -----
+    ///     |  &  |
+    ///      -----
+    ///     |  *  |
+    ///      -----
+    /// </pre>
+    ThreeRegionVertical,
+    /// Four regions arranged in a two-by-two grid. The two columns
+    /// have equal width and the two rows have equal height.
+    /// <pre>
+    ///      -----------
+    ///     |  *  |  &  | 
+    ///      -----------
+    ///     |  &  |  *  |
+    ///      -----------
+    /// </pre>
+    FourRegion
 }
 
-/// Returns a vector of all valid Haar filters for an image with given width and height.
-pub fn enumerate_haar_filters(width: u32, height: u32) -> Vec<HaarFilter> {
-    let signs = [Sign::Positive, Sign::Negative];
-    let mut features = Vec::with_capacity(number_of_haar_filters(width, height) as usize);
-
-    for y0 in 0..height {
-        for x0 in 0..width {
-            for h0 in 1..(height - y0) + 1 {
-                for w0 in 1..(width - x0) + 1 {
-                    for w1 in 1..(width - x0 - w0) + 1 {
-                        for sign in &signs {
-                            features.push(
-                                HaarFilter::two_region_horizontal(y0, x0, w0, w1, h0, *sign));
-                        }
-
-                        for w2 in 1..(width - x0 - w0 - w1) + 1 {
-                            for sign in &signs {
-                                features.push(
-                                    HaarFilter::three_region_horizontal(y0, x0, w0, w1, w2, h0, *sign));
-                            }
-                        }
-
-                        for h1 in 1..(height - y0 - h0) + 1 {
-                            for sign in &signs {
-                                features.push(
-                                    HaarFilter::four_region(y0, x0, w0, w1, h0, h1, *sign));
-                            }
-                        }
-                    }
-
-                    for h1 in 1..(height - y0 - h0) + 1 {
-                        for sign in &signs {
-                            features.push(
-                                HaarFilter::two_region_vertical(y0, x0, w0, h0, h1, *sign));
-                        }
-
-                        for h2 in 1..(height - y0 - h0 - h1) + 1 {
-                            for sign in &signs {
-                                features.push(
-                                    HaarFilter::three_region_vertical(y0, x0, w0, h0, h1, h2, *sign));
-                            }
-                        }
-                    }
-                }
-            }
+impl FilterType {
+    // The width and height of a filter shape, in blocks.
+    fn shape(&self) -> Size<Blocks> {
+        match *self {
+            FilterType::TwoRegionHorizontal => Size::new(2, 1),
+            FilterType::ThreeRegionHorizontal => Size::new(3, 1),
+            FilterType::TwoRegionVertical => Size::new(1, 2),
+            FilterType::ThreeRegionVertical => Size::new(1, 3),
+            FilterType::FourRegion => Size::new(2, 2)
         }
     }
-
-    features
-}
-
-/// Returns the number of distinct Haar filters for an image of the given dimensions.
-/// Includes positive and negative, two and three region, vertical and horizontal filters,
-/// as well as positive and negative four region filters.
-///
-/// Consider two-region positive horizontal Haar filters in an image of height 1.
-/// There is exactly one such filter for each choice of L, M and R below.
-///
-/// <pre>
-///     L   M     R
-/// | | | | | | | | |
-///  . . + + - - - .
-/// </pre>
-///
-/// There are (width + 1) dividing lines between pixels, so ((width + 1) choose 3) such filters.
-/// For an image of arbitrary height there are ((height + 1) choose 2) choices for the top and
-/// bottom of each two region positive Haar filter, and every positive filter has a corresponding
-/// negative filter. Thus there are ((width + 1) choose 3) * ((height + 1) choose 2) * 2 filters
-/// of this type in an image with dimensions (width, height).
-///
-/// A very similar argument applies to the other filter types.
-pub fn number_of_haar_filters(width: u32, height: u32) -> u32 {
-    // Two-region horizontal
-    n_choose_k(width + 1, 3) * n_choose_k(height + 1, 2) * 2 +
-    // Two-region vertical
-    n_choose_k(height + 1, 3) * n_choose_k(width + 1, 2) * 2 +
-    // Three-region horizontal
-    n_choose_k(width + 1, 4) * n_choose_k(height + 1, 2) * 2 +
-    // Three-region vertical
-    n_choose_k(height + 1, 4) * n_choose_k(width + 1, 2) * 2 +
-    // Four-region
-    n_choose_k(width + 1, 3) * n_choose_k(height + 1, 3) * 2
-}
-
-fn n_choose_k(n: u32, k: u32) -> u32 {
-    if k > n {
-        return 0;
-    }
-    let k = if k * 2 > n { n - k } else { k };
-    if k == 0 {
-        return 1;
-    }
-    let mut r = n;
-    for i in 2..(k + 1) {
-        r *= n - i + 1;
-        r /= i;
-    }
-    r
 }
 
 impl HaarFilter {
     /// Evaluates the Haar filter on an integral image.
-    pub fn evaluate<I>(&self, integral: &I ) -> i32
-        where I: GenericImage<Pixel=Luma<u32>> {
+    pub fn evaluate(&self, integral: &Image<Luma<u32>>) -> i32 {
+        let parity_shift = if self.sign == Sign::Positive { 0 } else { 1 };
 
         let mut sum = 0i32;
-        for i in 0..self.count {
-            let p = integral.get_pixel(self.points[2 * i], self.points[2 * i + 1])[0];
-            sum += p as i32 * self.weights[i] as i32;
+
+        // TODO: this does too much work - we don't need to evaluate all of the regions individually
+        for w in 0..self.blocks_wide() {
+            let left = self.left + self.block_width() * w;
+            let right = left + self.block_width() - 1;
+
+            for h in 0..self.blocks_high() {
+                let top = self.top + self.block_height() * h;
+                let bottom = top + self.block_height() - 1;
+
+                let parity = (w + h + parity_shift) % 2;
+                let multiplier = if parity == 0 { 1i32 } else { -1i32 };
+
+                let block_sum = integralimage::sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
+                sum += multiplier * block_sum;
+            }
         }
+
         sum
     }
 
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B   C
-    ///       +   -
-    ///     D   E   F
-    /// </pre>
-    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, and D.y = A.y + dy.
-    pub fn two_region_horizontal(top: u32, left: u32, dx1: u32, dx2: u32, dy: u32, sign: Sign)
-        -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top, left,       dx1, dy),
-            eval_points(top, left + dx1, dx2, dy)]) * multiplier(sign)
+    /// Width of this filter in blocks.
+    fn blocks_wide(&self) -> u8 {
+        self.filter_type.shape().width
     }
 
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B
-    ///       +
-    ///     C   D
-    ///       -
-    ///     E   F
-    /// </pre>
-    /// A = (top, left), B.x = left + dx, C.y = top + dy1, and E.y = C.y + dy2.
-    pub fn two_region_vertical(top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, sign: Sign)
-        -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,       left, dx, dy1),
-            eval_points(top + dy1, left, dx, dy2)]) * multiplier(sign)
+    /// Height of this filter in blocks.
+    fn blocks_high(&self) -> u8 {
+        self.filter_type.shape().height
     }
 
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B   C   D
-    ///       +   -   +
-    ///     E   F   G   H
-    /// </pre>
-    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, D.x = C.x + dx3, and E.y = top + dy.
-    pub fn three_region_horizontal(
-        top: u32, left: u32, dx1: u32, dx2: u32, dx3: u32, dy: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top, left,             dx1, dy),
-            eval_points(top, left + dx1,       dx2, dy),
-            eval_points(top, left + dx1 + dx2, dx3, dy),
-            ]) * multiplier(sign)
+    /// Width of each block in pixels.
+    fn block_width(&self) -> u8 {
+        self.block_size.width
     }
 
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B
-    ///       +
-    ///     C   D
-    ///       -
-    ///     E   F
-    ///       +
-    ///     G   H
-    /// </pre>
-    /// A = (top, left), B.x = left + dx, C.y = top + dy1, E.y = C.y + dy2, and G.y = E.y + dy3.
-    pub fn three_region_vertical(
-        top: u32, left: u32, dx: u32, dy1: u32, dy2: u32, dy3: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,             left, dx, dy1),
-            eval_points(top + dy1,       left, dx, dy2),
-            eval_points(top + dy1 + dy2, left, dx, dy3),
-            ]) * multiplier(sign)
-    }
-
-    /// Returns the following feature (with signs reversed if Sign == Sign::Negative).
-    /// <pre>
-    ///     A   B   C
-    ///       +   -
-    ///     D   E   F
-    ///       -   +
-    ///     G   H   I
-    /// </pre>
-    /// A = (top, left), B.x = left + dx1, C.x = B.x + dx2, D.y = top + dy1, and G.y = D.y + dy2.
-    pub fn four_region(
-        top: u32, left: u32, dx1: u32, dx2: u32, dy1: u32, dy2: u32, sign: Sign)
-            -> HaarFilter {
-
-        combine_alternating(&[
-            eval_points(top,       left,       dx1, dy1),
-            eval_points(top,       left + dx1, dx2, dy1),
-            eval_points(top + dy1, left + dx1, dx2, dy2),
-            eval_points(top + dy1, left,       dx1, dy2),
-            ]) * multiplier(sign)
+    /// Height of each block in pixels.
+    fn block_height(&self) -> u8 {
+        self.block_size.height
     }
 }
 
-/// See comment on `eval_points`.
-struct EvalPoints {
-    points: [(u32, u32); 4],
-    weights: [i8; 4]
+// The total width and height of a filter with the given type and block size.
+fn filter_size(filter_type: FilterType, block_size: Size<Pixels>) -> Size<Pixels> {
+    let shape = filter_type.shape();
+    Size::new(shape.width * block_size.width, shape.height * block_size.height)
 }
 
-impl EvalPoints {
-    fn new(points: [(u32, u32); 4], weights: [i8; 4]) -> EvalPoints {
-        EvalPoints { points: points, weights: weights }
-    }
-}
+/// Returns a vector of all valid Haar filters for an image with given width and height.
+pub fn enumerate_haar_filters(frame_width: u8, frame_height: u8) -> Vec<HaarFilter> {
+    let frame_size = Size::new(frame_width, frame_height);
 
-impl Mul<i8> for HaarFilter {
-    type Output = HaarFilter;
+    let filter_types = vec![
+        FilterType::TwoRegionHorizontal,
+        FilterType::ThreeRegionHorizontal,
+        FilterType::TwoRegionVertical,
+        FilterType::ThreeRegionVertical,
+        FilterType::FourRegion
+    ];
 
-    fn mul(self, rhs: i8) -> HaarFilter {
-        let mut copy = self;
-        for i in 0..copy.weights.len() {
-            copy.weights[i] *= rhs;
-        }
-        copy
-    }
-}
-
-/// Points at which to evaluate an integral image to produce the sum of the
-/// pixel intensities of all points within a rectangle. Only valid when the
-/// rectangle is wholly contained in the image boundaries.
-fn eval_points(top: u32, left: u32, width: u32, height: u32) -> EvalPoints {
-    let right = left + width - 1;
-    let bottom = top + height - 1;
-
-    EvalPoints::new(
-        [(left, top), (left, bottom + 1), (right + 1, top), (right + 1, bottom + 1)],
-        [1i8, -1i8, -1i8, 1i8]
-    )
-}
-
-/// Combine sets of evaluation points with alternating signs.
-/// The first entry of rects is counted with positive sign.
-// TODO: check that we don't have too many distinct points. This
-// TODO: function isn't exported, so we just need to check the HaarFilter uses
-// TODO: haven't messed anything up.
-fn combine_alternating(rects: &[EvalPoints]) -> HaarFilter {
-
-    // Aggregate weights of all points, remove any with zero weight, and
-    // order lexicographically by location.
-    let mut sign = 1i8;
-    let sorted_points = rects
-        .iter()
-        .fold(HashMap::new(), |mut acc, rect| {
-            for i in 0..4 {
-                *acc.entry(rect.points[i]).or_insert(0) += sign * rect.weights[i];
-            }
-            sign *= -1i8;
-            acc
-            })
+    filter_types
         .into_iter()
-        .filter(|kv| kv.1 != 0)
-        .sorted_by(|a, b| Ord::cmp(&((a.0).1, (a.0).0), &((b.0).1, (b.0).0)));
-
-    let mut count = 0;
-    let mut points = [0u32; 18];
-    let mut weights = [0i8; 9];
-
-    for pw in sorted_points {
-        points[2 * count] = (pw.0).0;
-        points[2 * count + 1] = (pw.0).1;
-        weights[count] = pw.1;
-        count += 1;
-    }
-
-    HaarFilter {
-        points: points,
-        weights: weights,
-        count: count }
+        .flat_map(|filter_type| haar_filters_of_type(filter_type, frame_size))
+        .collect()
 }
 
-fn multiplier(sign: Sign) -> i8 {
-    if sign == Sign::Positive {1} else {-1}
+fn haar_filters_of_type(filter_type: FilterType, frame_size: Size<Pixels>) -> Vec<HaarFilter> {
+    let mut filters = Vec::new();
+
+    for block_size in block_sizes(filter_type.shape(), frame_size) {       
+        for (left, top) in filter_positions(filter_size(filter_type, block_size), frame_size) {
+            for &sign in [Sign::Positive, Sign::Negative].iter() {
+                filters.push(HaarFilter { sign, filter_type, block_size, left, top });
+            }
+        }
+    }
+
+    filters
+}
+
+// Indicates that a size size is measured in pixels, e.g. the width of an individual block within a Haar-like filter.
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, PartialOrd, Ord)]
+struct Pixels(u8);
+
+// Indicates that a size is measured in blocks, e.g. the width of a Haar-like filter in blocks.
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, PartialOrd, Ord)]
+struct Blocks(u8);
+
+// A Size, measured either in pixels (T = Pixels) or in blocks (T = Blocks)
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+struct Size<T> {
+    width: u8,
+    height: u8,
+    units: PhantomData<T>
+}
+
+impl<T> Size<T> {
+    fn new(width: u8, height: u8) -> Size<T> {
+        Size { 
+            width: width,
+            height: height,
+            units: PhantomData
+        }
+    }
+}
+
+// Returns the valid block sizes for a feature of shape `feature_shape` in a frame of size `frame_size`.
+fn block_sizes(feature_shape: Size<Blocks>, frame_size: Size<Pixels>) -> Vec<Size<Pixels>> {
+    (1..frame_size.width / feature_shape.width + 1)
+        .cartesian_product(1..frame_size.height / feature_shape.height + 1)
+        .map(|(w, h)| Size::new(w, h))
+        .collect()
+}
+
+// Returns the start positions for an interval of length `inner` for which the
+// interval is wholly contained within an interval of length `outer`.
+fn start_positions(inner: u8, outer: u8) -> Range<u8> {
+    let upper = if inner > outer { 0 } else { outer - inner + 1};
+    0..upper
+}
+
+// Returns all valid (left, top) coordinates for a filter of the given total size
+fn filter_positions(feature_size: Size<Pixels>, frame_size: Size<Pixels>) -> Vec<(u8, u8)> {
+    start_positions(feature_size.width, frame_size.width)
+        .cartesian_product(start_positions(feature_size.height, frame_size.height))
+        .collect()
+}
+
+/// Returns the number of distinct Haar filters for an image of the given dimensions.
+/// 
+/// Includes positive and negative, two and three region, vertical and horizontal filters,
+/// as well as positive and negative four region filters.
+///
+/// Consider a k-region horizontal filter in an image of height 1 and width w. The largest valid block size
+/// for such a filter is M = floor(w / k), and for a block size s there are `(w + 1) - 2 * s`
+/// valid locations for the leftmost column of this filter.
+/// Summing over s gives `M * (w + 1) - k * [(M * (M + 1)) / 2].
+/// 
+/// An equivalent argument applies vertically.
+pub fn number_of_haar_filters(width: u32, height: u32) -> u32 {
+    let num_positive_filters = 
+        // Two-region horizontal
+        num_filters(width, 2) * num_filters(height, 1)
+        // Three-region horizontal
+        + num_filters(width, 3) * num_filters(height, 1)
+        // Two-region vertical
+        + num_filters(width, 1) * num_filters(height, 2)
+        // Three-region vertical
+        + num_filters(width, 1) * num_filters(height, 3)
+        // Four-region
+        + num_filters(width, 2) * num_filters(height, 2);
+
+    num_positive_filters * 2
+}
+
+fn num_filters(image_side: u32, num_blocks: u32) -> u32 {
+    let m = image_side / num_blocks;
+    m * (image_side + 1) - num_blocks * ((m * (m + 1)) / 2)
 }
 
 /// Draws the given Haar filter on an image, drawing pixels
@@ -334,22 +275,17 @@ pub fn draw_haar_filter_mut<I>(image: &mut I, filter: HaarFilter)
     where I: GenericImage,
           I::Pixel: HasBlack + HasWhite
 {
-    let (width, height) = image.dimensions();
-    for y in 0..height {
-        for x in 0..width {
-            let mut weight = 0;
-            for i in 0..filter.count {
-                if y < filter.points[2 * i + 1] && x < filter.points[2 * i] {
-                    weight += filter.weights[i];
-                }
-            }
-            assert!(weight == 0 || weight == 1 || weight == -1);
-            unsafe {
-                if weight > 0 {
-                    image.unsafe_put_pixel(x, y, I::Pixel::white());
-                }
-                if weight < 0 {
-                    image.unsafe_put_pixel(x, y, I::Pixel::black());
+    let parity_shift = if filter.sign == Sign::Positive { 0 } else { 1 };
+
+    for w in 0..filter.blocks_wide() {
+        for h in 0..filter.blocks_high() {
+            let parity = (w + h + parity_shift) % 2;
+            let color = if parity == 0 { I::Pixel::white() } else { I::Pixel::black() };
+            for x in 0..filter.block_width() {
+                for y in 0..filter.block_height() {
+                    let px = filter.left + w * filter.block_width() + x;
+                    let py = filter.top + h * filter.block_height() + y;
+                    image.put_pixel(px as u32, py as u32, color);
                 }
             }
         }
@@ -358,25 +294,45 @@ pub fn draw_haar_filter_mut<I>(image: &mut I, filter: HaarFilter)
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        combine_alternating,
-        draw_haar_filter,
-        enumerate_haar_filters,
-        EvalPoints,
-        HaarFilter,
-        Sign,
-        number_of_haar_filters
-    };
-    use image::{
-        GrayImage,
-        ImageBuffer
-    };
-    use integralimage::{
-        integral_image
-    };
+    use super::*;
+    use image::{GrayImage, ImageBuffer};
+    use integralimage::{integral_image};
     use utils::gray_bench_image;
     use test;
+
+    #[test]
+    fn test_block_sizes() {
+        assert_eq!(
+            block_sizes(FilterType::TwoRegionHorizontal.shape(), Size::new(1, 1)), 
+            vec![]);
+
+        assert_eq!(
+            block_sizes(FilterType::TwoRegionHorizontal.shape(), Size::new(2, 1)), 
+            vec![Size::new(1, 1)]);
+
+        assert_eq!(
+            block_sizes(FilterType::TwoRegionHorizontal.shape(), Size::new(5, 1)),
+            vec![Size::new(1, 1), Size::new(2, 1)]);
+
+        assert_eq!(
+            block_sizes(FilterType::TwoRegionVertical.shape(), Size::new(1, 2)),
+            vec![Size::new(1, 1)]);
+    }
+
+    #[test]
+    fn test_filter_positions() {
+        assert_eq!(filter_positions(Size::new(2, 3), Size::new(2, 2)), 
+            vec![]);
+
+        assert_eq!(filter_positions(Size::new(2, 2), Size::new(2, 2)), 
+            vec![(0, 0)]);
+
+        assert_eq!(filter_positions(Size::new(2, 2), Size::new(3, 2)), 
+            vec![(0, 0), (1, 0)]);
+
+        assert_eq!(filter_positions(Size::new(2, 2), Size::new(3, 3)), 
+            vec![(0, 0), (0, 1), (1, 0), (1, 1)]);
+    }
 
     #[test]
     fn test_number_of_haar_filters() {
@@ -384,142 +340,109 @@ mod test {
             for w in 0..6 {
                 let filters = enumerate_haar_filters(w, h);
                 let actual = filters.len() as u32;
-                let expected = number_of_haar_filters(w, h);
-                assert_eq!(actual, expected);
+                let expected = number_of_haar_filters(w as u32, h as u32);
+                assert_eq!(actual, expected, "w = {}, h = {}", w, h);
             }
         }
     }
 
     #[test]
-    fn test_combine_alternating() {
-        let a = (0, 0);
-        let b = (1, 0);
-        let c = (2, 0);
-        let d = (3, 0);
-        let e = (0, 1);
-        let f = (1, 1);
-        let g = (2, 1);
-        let h = (3, 1);
-
-        let left  = EvalPoints::new([a, b, e, f], [1, -1, -1, 1]);
-        let mid   = EvalPoints::new([b, c, f, g], [1, -1, -1, 1]);
-        let right = EvalPoints::new([c, d, g, h], [1, -1, -1, 1]);
-
-        let filter = combine_alternating(&[left, mid, right]);
-        let expected = HaarFilter {
-            points: [0, 0, 1, 0, 2, 0, 3, 0, 0, 1, 1, 1, 2, 1, 3, 1, 0, 0],
-            weights: [1, -2, 2, -1, -1, 2, -2, 1, 0],
-            count: 8
-        };
-
-        assert_eq!(filter, expected);
-    }
-
-    #[test]
     fn test_two_region_horizontal() {
-        // Two region horizontally aligned filter:
-        // A   B   C
-        //   +   -
-        // D   E   F
         let image = ImageBuffer::from_raw(5, 5, vec![
             1u8,     2u8, 3u8,     4u8,     5u8,
-                 /***+++++++++*****-----***/
-            6u8, /**/7u8, 8u8,/**/ 9u8, /**/0u8,
-            9u8, /**/8u8, 7u8,/**/ 6u8, /**/5u8,
-            4u8, /**/3u8, 2u8,/**/ 1u8, /**/0u8,
-                 /***+++++++++*****-----***/
-            6u8,     5u8, 4u8,     2u8,     1u8]).unwrap();
+                 /***+++++++++*****---------***/
+            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8,/**/
+            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8,/**/
+            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+                 /***+++++++++*****---------***/
+            6u8,     5u8, 4u8,     2u8, 1u8     ]).unwrap();
 
         let integral = integral_image(&image);
-        let filter = HaarFilter::two_region_horizontal(1, 1, 2, 1, 3, Sign::Positive);
-        assert_eq!(filter.evaluate(&integral), 19i32);
+        let filter = HaarFilter { 
+            sign: Sign::Positive,
+            filter_type: FilterType::TwoRegionHorizontal,
+            block_size: Size::new(2, 3),
+            left: 1,
+            top: 1
+        };
+        assert_eq!(filter.evaluate(&integral), 14i32);
     }
 
     #[test]
     fn test_three_region_vertical() {
-        // Three region vertically aligned filter:
-        // A   B
-        //   +
-        // C   D
-        //   -
-        // E   F
-        //   +
-        // G   H
         let image = ImageBuffer::from_raw(5, 5, vec![
         /*****************/
         /*-*/1u8, 2u8,/*-*/ 3u8, 4u8, 5u8,
         /*****************/
         /*+*/6u8, 7u8,/*+*/ 8u8, 9u8, 0u8,
-        /*+*/9u8, 8u8,/*+*/ 7u8, 6u8, 5u8,
         /*****************/
-        /*-*/4u8, 3u8,/*-*/ 2u8, 1u8, 0u8,
+        /*-*/9u8, 8u8,/*-*/ 7u8, 6u8, 5u8,
         /*****************/
+             4u8, 3u8,      2u8, 1u8, 0u8,
              6u8, 5u8,      4u8, 2u8, 1u8]).unwrap();
 
         let integral = integral_image(&image);
-        let filter = HaarFilter::three_region_vertical(0, 0, 2, 1, 2, 1, Sign::Negative);
-        assert_eq!(filter.evaluate(&integral), 20i32);
-    }
-
-    #[test]
-    fn test_four_region() {
-        // Four region filter:
-        // A   B   C
-        //   +   -
-        // D   E   F
-        //   -   +
-        // G   H   I
-        let image = ImageBuffer::from_raw(5, 5, vec![
-        1u8,    2u8, 3u8,     4u8,     5u8,
-            /************************/
-        6u8,/**/7u8, 8u8,/**/ 9u8,/**/ 0u8,
-            /************************/
-        9u8,/**/8u8, 7u8,/**/ 6u8,/**/ 5u8,
-        4u8,/**/3u8, 2u8,/**/ 1u8,/**/ 0u8,
-            /************************/
-        6u8,    5u8, 4u8,     2u8,     1u8]).unwrap();
-
-        let integral = integral_image(&image);
-        let filter = HaarFilter::four_region(1, 1, 2, 1, 1, 2, Sign::Positive);
-
+        let filter = HaarFilter { 
+            sign: Sign::Negative,
+            filter_type: FilterType::ThreeRegionVertical,
+            block_size: Size::new(2, 1),
+            left: 0,
+            top: 0
+        };
         assert_eq!(filter.evaluate(&integral), -7i32);
     }
 
     #[test]
-    fn test_enumerate() {
-        assert_eq!(enumerate_haar_filters(1, 1).len(), 0);
-        assert_eq!(enumerate_haar_filters(1, 2).len(), 2);
-        assert_eq!(enumerate_haar_filters(2, 1).len(), 2);
-        assert_eq!(enumerate_haar_filters(3, 1).len(), 10);
-        assert_eq!(enumerate_haar_filters(1, 3).len(), 10);
-        assert_eq!(enumerate_haar_filters(2, 2).len(), 14);
+    fn test_four_region() {
+        let image = ImageBuffer::from_raw(5, 5, vec![
+            /*****************************/
+        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8,/**/
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8,/**/ 
+            /*****************************/
+        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8,/**/
+        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+            /*****************************/
+        6u8,    5u8, 4u8,     2u8, 1u8]).unwrap();
+
+        let integral = integral_image(&image);
+        let filter = HaarFilter { 
+            sign: Sign::Positive,
+            filter_type: FilterType::FourRegion,
+            block_size: Size::new(2, 2),
+            left: 1,
+            top: 0
+        };
+
+        assert_eq!(filter.evaluate(&integral), -6i32);
     }
 
     #[test]
     fn test_draw_haar_filter_two_region_horizontal() {
-        // Two region horizontally aligned filter:
-        // A   B   C
-        //   +   -
-        // D   E   F
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1u8,     2u8, 3u8,     4u8,     5u8,
-                 /***+++++++++*****-----***/
-            6u8, /**/7u8, 8u8,/**/ 9u8, /**/0u8,
-            9u8, /**/8u8, 7u8,/**/ 6u8, /**/5u8,
-            4u8, /**/3u8, 2u8,/**/ 1u8, /**/0u8,
-                 /***+++++++++*****-----***/
-            6u8,     5u8, 4u8,     2u8,     1u8]).unwrap();
+            1u8,     2u8, 3u8,     4u8, 5u8,
+                 /***+++++++++*****---------***/
+            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8,/**/
+            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8,/**/
+            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+                 /***+++++++++*****---------***/
+            6u8,     5u8, 4u8,     2u8, 1u8     ]).unwrap();
 
-        let filter = HaarFilter::two_region_horizontal(1, 1, 2, 1, 3, Sign::Positive);
+        let filter = HaarFilter { 
+            sign: Sign::Positive,
+            filter_type: FilterType::TwoRegionHorizontal,
+            block_size: Size::new(2, 3),
+            left: 1,
+            top: 1
+        };
         let actual = draw_haar_filter(&image, filter);
 
         let expected = ImageBuffer::from_raw(5, 5, vec![
             1u8,     2u8,  3u8,        4u8,     5u8,
-                 /***+++++++++++++*****-----***/
-            6u8, /**/255u8, 255u8,/**/ 0u8, /**/0u8,
-            9u8, /**/255u8, 255u8,/**/ 0u8, /**/5u8,
-            4u8, /**/255u8, 255u8,/**/ 0u8, /**/0u8,
-                 /***+++++++++++++*****-----***/
+                 /***+++++++++++++*****---------***/
+            6u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
+            9u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
+            4u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
+                 /***+++++++++++++*****---------***/
             6u8,     5u8,   4u8,       2u8,     1u8]).unwrap();
 
         assert_pixels_eq!(actual, expected);
@@ -527,41 +450,42 @@ mod test {
 
     #[test]
     fn test_draw_haar_filter_four_region() {
-        // Four region filter:
-        // A   B   C
-        //   +   -
-        // D   E   F
-        //   -   +
-        // G   H   I
         let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-        1u8,    2u8, 3u8,     4u8,     5u8,
-            /************************/
-        6u8,/**/7u8, 8u8,/**/ 9u8,/**/ 0u8,
-            /************************/
-        9u8,/**/8u8, 7u8,/**/ 6u8,/**/ 5u8,
-        4u8,/**/3u8, 2u8,/**/ 1u8,/**/ 0u8,
-            /************************/
-        6u8,    5u8, 4u8,     2u8,     1u8]).unwrap();
+            /*****************************/
+        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8,/**/
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8,/**/ 
+            /*****************************/
+        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8,/**/
+        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+            /*****************************/
+        6u8,    5u8, 4u8,     2u8, 1u8]).unwrap();
 
-        let filter = HaarFilter::four_region(1, 1, 2, 1, 1, 2, Sign::Positive);
+        let filter = HaarFilter { 
+            sign: Sign::Positive,
+            filter_type: FilterType::FourRegion,
+            block_size: Size::new(2, 2),
+            left: 1,
+            top: 0
+        };
+
         let actual = draw_haar_filter(&image, filter);
 
         let expected = ImageBuffer::from_raw(5, 5, vec![
-        1u8,    2u8,   3u8,       4u8,       5u8,
-            /******************************/
-        6u8,/**/255u8, 255u8,/**/ 0u8,  /**/ 0u8,
-            /******************************/
-        9u8,/**/0u8,   0u8,  /**/ 255u8,/**/ 5u8,
-        4u8,/**/0u8,   0u8,  /**/ 255u8,/**/ 0u8,
-            /******************************/
-        6u8,    5u8,   4u8,       2u8,     1u8]).unwrap();
+            /*************************************/
+        1u8,/**/255u8, 255u8,/**/ 0u8,   0u8,  /**/
+        6u8,/**/255u8, 255u8,/**/ 0u8,   0u8,  /**/
+            /*************************************/
+        9u8,/**/0u8,   0u8,  /**/ 255u8, 255u8,/**/
+        4u8,/**/0u8,   0u8,  /**/ 255u8, 255u8,/**/
+            /*************************************/
+        6u8,    5u8,   4u8,       2u8,   1u8      ]).unwrap();
 
         assert_pixels_eq!(actual, expected);
     }
 
     #[bench]
     fn bench_evaluate_all_filters_10x10(b: &mut test::Bencher) {
-        // 163350 filters in total
+        // 10050 filters in total
         let filters = enumerate_haar_filters(10, 10);
         let image = gray_bench_image(10, 10);
         let integral = integral_image(&image);
