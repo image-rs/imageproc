@@ -3,6 +3,24 @@
 use std::cmp;
 
 /// A rectangular region of non-zero width and height.
+/// # Examples
+/// ```
+/// use imageproc::rect::Rect;
+/// use imageproc::rect::Region;
+/// 
+/// // Construct a rectangle with top-left corner at (4, 5), width 6 and height 7.
+/// let rect = Rect::at(4, 5).of_size(6, 7);
+///
+/// // Contains top-left point:
+/// assert_eq!(rect.left(), 4);
+/// assert_eq!(rect.top(), 5);
+/// assert!(rect.contains(rect.left(), rect.top()));
+/// 
+/// // Contains bottom-right point, at (left + width - 1, top + height - 1):
+/// assert_eq!(rect.right(), 9);
+/// assert_eq!(rect.bottom(), 11);
+/// assert!(rect.contains(rect.right(), rect.bottom()));
+/// ```
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Rect {
     left: i32,
@@ -89,6 +107,7 @@ impl Region<f32> for Rect {
 }
 
 /// Position of the top left of a rectangle.
+/// Only used when building a `Rect`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct RectPosition {
     left: i32,
