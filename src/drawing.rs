@@ -10,16 +10,13 @@ use std::f32;
 use std::i32;
 
 use pixelops::weighted_sum;
-use rusttype::{FontCollection, Scale, point, PositionedGlyph};
+use rusttype::{Font, Scale, point, PositionedGlyph};
 
 /// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
-pub fn draw_text_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font_data: &[u8], text: &str)
+pub fn draw_text_mut<'a, I>(image: &'a mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font: &'a Font<'a>, text: &'a str)
     where I: GenericImage,
           <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
 {
-    let collection = FontCollection::from_bytes(font_data);
-    let font = collection.into_font().expect("Unable to parse font data");
-
     let v_metrics = font.v_metrics(scale);
     let offset = point(0.0, v_metrics.ascent);
 
@@ -48,14 +45,14 @@ pub fn draw_text_mut<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: S
 }
 
 /// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
-pub fn draw_text<I>(image: &mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font_data: &[u8], text: &str) -> Image<I::Pixel>
+pub fn draw_text<'a, I>(image: &'a mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font: &'a Font<'a>, text: &'a str) -> Image<I::Pixel>
     where I: GenericImage,
           <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
-    I::Pixel: 'static
+          I::Pixel: 'static
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
-    draw_text_mut(&mut out, color, x, y, scale, font_data, text);
+    draw_text_mut(&mut out, color, x, y, scale, font, text);
     out
 }
 
