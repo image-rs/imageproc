@@ -10,7 +10,7 @@ use std::f32;
 use std::i32;
 
 use pixelops::weighted_sum;
-use rusttype::{Font, FontCollection, Scale, point, PositionedGlyph};
+use rusttype::{Font, Scale, point, PositionedGlyph};
 
 /// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
 pub fn draw_text_mut<'a, I>(image: &'a mut I, color: I::Pixel, x: u32, y: u32, scale: Scale, font: &'a Font<'a>, text: &'a str)
