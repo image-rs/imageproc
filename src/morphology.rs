@@ -80,6 +80,83 @@ pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     }
 }
 
+/// Sets all pixels within distance `k` of a background pixel to black.
+///
+/// A pixel is treated as belonging to the foreground if it has non-zero intensity.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+/// use imageproc::morphology::{erode, Norm};
+///
+/// let image = gray_image!(
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0, 255, 255, 255,   0, 255, 255, 255,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0, 255, 255, 255, 255, 255, 255, 255,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0
+/// );
+///
+/// // L1 norm - the outermost foreground pixels are eroded,
+/// // as well as those horizontally and vertically adjacent
+/// // to the centre background pixel.
+/// let l1_eroded = gray_image!(
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0, 255, 255,   0, 255, 255,   0,  0;
+///     0,   0, 255,   0,   0,   0, 255,   0,  0;
+///     0,   0, 255, 255,   0, 255, 255,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0
+/// );
+///
+/// assert_pixels_eq!(erode(&image, Norm::L1, 1), l1_eroded);
+///
+/// // LInf norm - all pixels eroded using the L1 norm are eroded,
+/// // as well as the pixels diagonally adjacent to the centre pixel.
+/// let linf_eroded = gray_image!(
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0, 255,   0,   0,   0, 255,   0,  0;
+///     0,   0, 255,   0,   0,   0, 255,   0,  0;
+///     0,   0, 255,   0,   0,   0, 255,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0
+/// );
+///
+/// assert_pixels_eq!(erode(&image, Norm::LInf, 1), linf_eroded);
+/// # }
+/// ```
+pub fn erode(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
+    let mut out = image.clone();
+    erode_mut(&mut out, norm, k);
+    out
+}
+
+/// Sets all pixels within distance `k` of a background pixel to black.
+///
+/// A pixel is treated as belonging to the foreground if it has non-zero intensity.
+///
+/// See the [`erode`](fn.erode.html) documentation for examples.
+pub fn erode_mut(image: &mut GrayImage, norm: Norm, k: u8) {
+    distance_transform_impl(image, norm, DistanceFrom::Background);
+    for p in image.iter_mut() {
+        *p = if *p <= k { 0 } else { 255 };
+    }
+}
+
 /// Returns an image showing the distance of each pixel from a foreground pixel in the original image.
 ///
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image
@@ -138,15 +215,30 @@ pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
 ///
 /// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
 pub fn distance_transform_mut(image: &mut GrayImage, norm: Norm) {
+    distance_transform_impl(image, norm, DistanceFrom::Foreground);
+}
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+enum DistanceFrom { Foreground, Background }
+
+fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom) {
     let max_distance = Luma([min(image.width() + image.height(), 255u32) as u8]);
 
     unsafe {
         // Top-left to bottom-right
         for y in 0..image.height() {
             for x in 0..image.width() {
-                if image.unsafe_get_pixel(x, y)[0] > 0u8 {
-                    image.unsafe_put_pixel(x, y, Luma([0u8]));
-                    continue;
+                if from == DistanceFrom::Foreground {
+                    if image.unsafe_get_pixel(x, y)[0] > 0u8 {
+                        image.unsafe_put_pixel(x, y, Luma([0u8]));
+                        continue;
+                    }
+                }
+                else {
+                    if image.unsafe_get_pixel(x, y)[0] == 0u8 {
+                        image.unsafe_put_pixel(x, y, Luma([0u8]));
+                        continue;
+                    }
                 }
 
                 image.unsafe_put_pixel(x, y, max_distance);
@@ -317,6 +409,50 @@ mod test {
         );
 
         assert_pixels_eq!(dilated, expected);
+    }
+    
+    #[test]
+    fn test_erode_point_l1_1() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::L1, 1);
+
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+
+        assert_pixels_eq!(eroded, expected);
+    }
+
+    #[test]
+    fn test_erode_point_linf_1() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::LInf, 1);
+
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+
+        assert_pixels_eq!(eroded, expected);
     }
 
     fn square() -> GrayImage {
