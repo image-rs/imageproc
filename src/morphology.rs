@@ -84,6 +84,7 @@ pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image
 /// has a bit-depth of 8, distances saturate at 255.
 ///
+/// # Examples
 /// ```
 /// # extern crate image;
 /// # #[macro_use]

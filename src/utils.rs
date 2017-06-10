@@ -15,17 +15,62 @@ use image::{
     RgbImage
 };
 
-use quickcheck::{
-    Arbitrary,
-    Gen
-};
-
-use rand::{
-    Rand
-};
+use quickcheck::{Arbitrary, Gen};
+use rand::Rand;
 
 use std::fmt;
 use std::path::Path;
+
+/// Provides a more concise way of defining small images.
+///
+/// Calls `GrayImage::from_raw`.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// let equivalent = GrayImage::from_raw(3, 2, vec![
+///     1, 2, 3,
+///     4, 5, 6
+/// ]).unwrap();
+///
+/// assert_pixels_eq!(image, equivalent);
+/// # }
+/// ```
+#[macro_export]
+macro_rules! gray_image {
+    // This implementation is copied from the `matrix` macro
+    // from https://github.com/AtheMathmo/rulinalg
+
+    // No arguments - gray_image![]
+    () => {
+        {
+            use image::GrayImage;
+            GrayImage::new(0, 0)
+        }
+    };
+    ($( $( $x: expr ),*);*) => {
+        {
+            use image::GrayImage;
+            let data_as_nested_array = [ $( [ $($x),* ] ),* ];
+            let rows = data_as_nested_array.len();
+            let cols = data_as_nested_array[0].len();
+            let data_as_flat_array: Vec<_> = data_as_nested_array.into_iter()
+                .flat_map(|row| row.into_iter())
+                .cloned()
+                .collect();
+            GrayImage::from_raw(cols as u32, rows as u32, data_as_flat_array).unwrap()
+        }
+    }
+}
 
 /// Human readable description of some of the pixels that differ
 /// between left and right, or None if all pixels match.
@@ -305,11 +350,41 @@ impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
 
 #[cfg(test)]
 mod test {
+    use image::{GrayImage, ImageBuffer};
 
-    use image::{
-        GrayImage,
-        ImageBuffer
-    };
+    #[test]
+    fn gray_image_empty() {
+        let image = gray_image!();
+        assert_eq!(image.dimensions(), (0, 0));
+    }
+
+    #[test]
+    fn gray_image_multiple_rows_and_columns() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = GrayImage::from_raw(3, 2, vec![
+            1, 2, 3,
+            4, 5, 6
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn gray_image_single_row() {
+        let image = gray_image!(1, 2, 3);
+        let expected = GrayImage::from_raw(3, 1, vec![1, 2, 3]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn gray_image_single_element() {
+        let image = gray_image!(1);
+        let expected = GrayImage::from_raw(1, 1, vec![1]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
 
     #[test]
     fn test_assert_pixels_eq_passes() {
