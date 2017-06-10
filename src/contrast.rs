@@ -217,7 +217,7 @@ mod test {
     use super::*;
     use definitions::{HasBlack, HasWhite};
     use utils::gray_bench_image;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     use test;
 
     #[test]
@@ -307,11 +307,8 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_cumulative_histogram() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 1, vec![
-            1u8, 2u8, 3u8, 2u8, 1u8]).unwrap();
-
+        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
         let hist = cumulative_histogram(&image);
 
         assert_eq!(hist[0], 0);
@@ -322,11 +319,8 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_histogram() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 1, vec![
-            1u8, 2u8, 3u8, 2u8, 1u8]).unwrap();
-
+        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
         let hist = histogram(&image);
 
         assert_eq!(hist[0], 0);

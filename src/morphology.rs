@@ -31,32 +31,33 @@ pub enum Norm {
 /// use image::GrayImage;
 /// use imageproc::morphology::{dilate, Norm};
 ///
-/// let image = GrayImage::from_raw(5, 5, vec![
-///     0,   0,   0,   0,   0,
-///     0,   0,   0,   0,   0,
-///     0,   0, 255,   0,   0,
-///     0,   0,   0,   0,   0,
+/// let image = gray_image!(
+///     0,   0,   0,   0,   0;
+///     0,   0,   0,   0,   0;
+///     0,   0, 255,   0,   0;
+///     0,   0,   0,   0,   0;
 ///     0,   0,   0,   0,   0
-/// ]).unwrap();
+/// );
 ///
 /// // L1 norm
-/// let l1_dilated = GrayImage::from_raw(5, 5, vec![
-///     0,   0,   0,   0,   0,
-///     0,   0, 255,   0,   0,
-///     0, 255, 255, 255,   0,
-///     0,   0, 255,   0,   0,
+/// let l1_dilated = gray_image!(
+///     0,   0,   0,   0,   0;
+///     0,   0, 255,   0,   0;
+///     0, 255, 255, 255,   0;
+///     0,   0, 255,   0,   0;
 ///     0,   0,   0,   0,   0
-/// ]).unwrap();
+/// );
+///
 /// assert_pixels_eq!(dilate(&image, Norm::L1, 1), l1_dilated);
 ///
 /// // LInf norm
-/// let linf_dilated = GrayImage::from_raw(5, 5, vec![
-///    0,   0,   0,   0,   0,
-///    0, 255, 255, 255,   0,
-///    0, 255, 255, 255,   0,
-///    0, 255, 255, 255,   0,
+/// let linf_dilated = gray_image!(
+///    0,   0,   0,   0,   0;
+///    0, 255, 255, 255,   0;
+///    0, 255, 255, 255,   0;
+///    0, 255, 255, 255,   0;
 ///    0,   0,   0,   0,   0
-/// ]).unwrap();
+/// );
 ///
 /// assert_pixels_eq!(dilate(&image, Norm::LInf, 1), linf_dilated);
 /// # }
@@ -93,32 +94,33 @@ pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// use image::GrayImage;
 /// use imageproc::morphology::{distance_transform, Norm};
 ///
-/// let image = GrayImage::from_raw(5, 5, vec![
-///     0,   0,   0,   0,   0,
-///     0,   0,   0,   0,   0,
-///     0,   0,   1,   0,   0,
-///     0,   0,   0,   0,   0,
+/// let image = gray_image!(
+///     0,   0,   0,   0,   0;
+///     0,   0,   0,   0,   0;
+///     0,   0,   1,   0,   0;
+///     0,   0,   0,   0,   0;
 ///     0,   0,   0,   0,   0
-/// ]).unwrap();
+/// );
 ///
 /// // L1 norm
-/// let l1_distances = GrayImage::from_raw(5, 5, vec![
-///     4,   3,   2,   3,   4,
-///     3,   2,   1,   2,   3,
-///     2,   1,   0,   1,   2,
-///     3,   2,   1,   2,   3,
+/// let l1_distances = gray_image!(
+///     4,   3,   2,   3,   4;
+///     3,   2,   1,   2,   3;
+///     2,   1,   0,   1,   2;
+///     3,   2,   1,   2,   3;
 ///     4,   3,   2,   3,   4
-/// ]).unwrap();
+/// );
+///
 /// assert_pixels_eq!(distance_transform(&image, Norm::L1), l1_distances);
 ///
 /// // LInf norm
-/// let linf_distances = GrayImage::from_raw(5, 5, vec![
-///     2,   2,   2,   2,   2,
-///     2,   1,   1,   1,   2,
-///     2,   1,   0,   1,   2,
-///     2,   1,   1,   1,   2,
+/// let linf_distances = gray_image!(
+///     2,   2,   2,   2,   2;
+///     2,   1,   1,   1,   2;
+///     2,   1,   0,   1,   2;
+///     2,   1,   1,   1,   2;
 ///     2,   2,   2,   2,   2
-/// ]).unwrap();
+/// );
 ///
 /// assert_pixels_eq!(distance_transform(&image, Norm::LInf), linf_distances);
 /// # }
@@ -231,88 +233,88 @@ mod test {
 
     #[test]
     fn test_dilate_point_l1_1() {
-        let image = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0,   0,   0,   0,   0,
-              0,   0, 255,   0,   0,
-              0,   0,   0,   0,   0,
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
         let dilated = dilate(&image, Norm::L1, 1);
 
-        let expected = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0,   0, 255,   0,   0,
-              0, 255, 255, 255,   0,
-              0,   0, 255,   0,   0,
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0, 255, 255, 255,   0;
+              0,   0, 255,   0,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
 
         assert_pixels_eq!(dilated, expected);
     }
 
     #[test]
     fn test_dilate_point_l1_2() {
-        let image = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0,   0,   0,   0,   0,
-              0,   0, 255,   0,   0,
-              0,   0,   0,   0,   0,
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
         let dilated = dilate(&image, Norm::L1, 2);
 
-        let expected = GrayImage::from_raw(5, 5, vec![
-              0,   0, 255,   0,   0,
-              0, 255, 255, 255,   0,
-            255, 255, 255, 255, 255,
-              0, 255, 255, 255,   0,
+        let expected = gray_image!(
+              0,   0, 255,   0,   0;
+              0, 255, 255, 255,   0;
+            255, 255, 255, 255, 255;
+              0, 255, 255, 255,   0;
               0,   0, 255,   0,   0
-        ]).unwrap();
+        );
 
         assert_pixels_eq!(dilated, expected);
     }
 
     #[test]
     fn test_dilate_point_linf_1() {
-        let image = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0,   0,   0,   0,   0,
-              0,   0, 255,   0,   0,
-              0,   0,   0,   0,   0,
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
         let dilated = dilate(&image, Norm::LInf, 1);
 
-        let expected = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0, 255, 255, 255,   0,
-              0, 255, 255, 255,   0,
-              0, 255, 255, 255,   0,
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
 
         assert_pixels_eq!(dilated, expected);
     }
 
     #[test]
     fn test_dilate_point_linf_2() {
-        let image = GrayImage::from_raw(5, 5, vec![
-              0,   0,   0,   0,   0,
-              0,   0,   0,   0,   0,
-              0,   0, 255,   0,   0,
-              0,   0,   0,   0,   0,
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
-        ]).unwrap();
+        );
         let dilated = dilate(&image, Norm::LInf, 2);
 
-        let expected = GrayImage::from_raw(5, 5, vec![
-            255, 255, 255, 255, 255,
-            255, 255, 255, 255, 255,
-            255, 255, 255, 255, 255,
-            255, 255, 255, 255, 255,
+        let expected = gray_image!(
+            255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255;
             255, 255, 255, 255, 255
-        ]).unwrap();
+        );
 
         assert_pixels_eq!(dilated, expected);
     }

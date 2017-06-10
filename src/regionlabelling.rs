@@ -167,11 +167,11 @@ mod test {
 
     #[test]
     fn test_connected_components_four() {
-        let image: GrayImage = ImageBuffer::from_raw(4, 4, vec![
-            1, 0, 2, 1,
-            0, 1, 1, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 1]).unwrap();
+        let image = gray_image!(
+            1, 0, 2, 1;
+            0, 1, 1, 0;
+            0, 0, 0, 0;
+            0, 0, 0, 1);
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(4, 4, vec![
@@ -186,11 +186,11 @@ mod test {
 
     #[test]
     fn test_connected_components_eight() {
-        let image: GrayImage = ImageBuffer::from_raw(4, 4, vec![
-            1, 0, 2, 1,
-            0, 1, 1, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 1]).unwrap();
+        let image = gray_image!(
+            1, 0, 2, 1;
+            0, 1, 1, 0;
+            0, 0, 0, 0;
+            0, 0, 0, 1);
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(4, 4, vec![
@@ -205,11 +205,11 @@ mod test {
 
     #[test]
     fn test_connected_components_eight_white_background() {
-        let image: GrayImage = ImageBuffer::from_raw(4, 4, vec![
-              1, 255,   2,   1,
-            255,   1,   1, 255,
-            255, 255, 255, 255,
-            255, 255, 255,   1]).unwrap();
+        let image = gray_image!(
+              1, 255,   2,   1;
+            255,   1,   1, 255;
+            255, 255, 255, 255;
+            255, 255, 255,   1);
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(4, 4, vec![

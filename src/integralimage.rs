@@ -138,7 +138,6 @@ mod test {
     };
     use image::{
         GenericImage,
-        GrayImage,
         ImageBuffer,
         Luma
     };
@@ -153,9 +152,9 @@ mod test {
 
     #[test]
     fn test_sum_image_pixels() {
-        let image = GrayImage::from_raw(2, 2, vec![
-            1, 2,
-            3, 4]).unwrap();
+        let image = gray_image!(
+            1, 2;
+            3, 4);
 
         let integral = ::integralimage::integral_image(&image);
 
@@ -172,9 +171,9 @@ mod test {
 
     #[test]
     fn test_integral_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1, 2, 3,
-            4, 5, 6]).unwrap();
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6);
 
         let expected: ImageBuffer<Luma<u32>, Vec<u32>>
             = ImageBuffer::from_raw(4, 3, vec![
@@ -234,9 +233,9 @@ mod test {
 
     #[test]
     fn test_row_running_sum() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            1, 2, 3,
-            4, 5, 6]).unwrap();
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6);
 
         let expected = [1, 2, 4, 7, 10];
 
@@ -257,10 +256,10 @@ mod test {
 
     #[test]
     fn test_column_running_sum() {
-        let image: GrayImage = ImageBuffer::from_raw(2, 3, vec![
-            1, 4,
-            2, 5,
-            3, 6]).unwrap();
+        let image = gray_image!(
+            1, 4;
+            2, 5;
+            3, 6);
 
         let expected = [1, 2, 4, 7, 10];
 

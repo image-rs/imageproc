@@ -387,7 +387,6 @@ pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{GrayImage, ImageBuffer};
     use integralimage::{integral_image};
     use utils::gray_bench_image;
     use test;
@@ -440,14 +439,14 @@ mod test {
 
     #[test]
     fn test_two_region_horizontal() {
-        let image = ImageBuffer::from_raw(5, 5, vec![
-            1u8,     2u8, 3u8,     4u8,     5u8,
+        let image = gray_image!(
+            1u8,     2u8, 3u8,     4u8,     5u8;
                  /***+++++++++*****---------***/
-            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8,/**/
-            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8,/**/
-            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8;/**/
+            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8;/**/
+            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8;/**/
                  /***+++++++++*****---------***/
-            6u8,     5u8, 4u8,     2u8, 1u8     ]).unwrap();
+            6u8,     5u8, 4u8,     2u8, 1u8     );
 
         let integral = integral_image(&image);
         let feature = HaarFeature { 
@@ -462,16 +461,16 @@ mod test {
 
     #[test]
     fn test_three_region_vertical() {
-        let image = ImageBuffer::from_raw(5, 5, vec![
+        let image = gray_image!(
         /*****************/
-        /*-*/1u8, 2u8,/*-*/ 3u8, 4u8, 5u8,
+        /*-*/1u8, 2u8,/*-*/ 3u8, 4u8, 5u8;
         /*****************/
-        /*+*/6u8, 7u8,/*+*/ 8u8, 9u8, 0u8,
+        /*+*/6u8, 7u8,/*+*/ 8u8, 9u8, 0u8;
         /*****************/
-        /*-*/9u8, 8u8,/*-*/ 7u8, 6u8, 5u8,
+        /*-*/9u8, 8u8,/*-*/ 7u8, 6u8, 5u8;
         /*****************/
-             4u8, 3u8,      2u8, 1u8, 0u8,
-             6u8, 5u8,      4u8, 2u8, 1u8]).unwrap();
+             4u8, 3u8,      2u8, 1u8, 0u8;
+             6u8, 5u8,      4u8, 2u8, 1u8);
 
         let integral = integral_image(&image);
         let feature = HaarFeature { 
@@ -486,15 +485,15 @@ mod test {
 
     #[test]
     fn test_four_region() {
-        let image = ImageBuffer::from_raw(5, 5, vec![
+        let image = gray_image!(
             /*****************************/
-        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8,/**/
-        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8,/**/ 
+        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8;/**/
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/ 
             /*****************************/
-        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8,/**/
-        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8;/**/
+        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8;/**/
             /*****************************/
-        6u8,    5u8, 4u8,     2u8, 1u8]).unwrap();
+        6u8,    5u8, 4u8,     2u8, 1u8);
 
         let integral = integral_image(&image);
         let feature = HaarFeature { 
@@ -551,14 +550,14 @@ mod test {
 
     #[test]
     fn test_draw_haar_feature_two_region_horizontal() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1u8,     2u8, 3u8,     4u8, 5u8,
+        let image = gray_image!(
+            1u8,     2u8, 3u8,     4u8, 5u8;
                  /***+++++++++*****---------***/
-            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8,/**/
-            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8,/**/
-            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+            6u8, /**/7u8, 8u8,/**/ 9u8, 0u8;/**/
+            9u8, /**/8u8, 7u8,/**/ 6u8, 5u8;/**/
+            4u8, /**/3u8, 2u8,/**/ 1u8, 0u8;/**/
                  /***+++++++++*****---------***/
-            6u8,     5u8, 4u8,     2u8, 1u8     ]).unwrap();
+            6u8,     5u8, 4u8,     2u8, 1u8);
 
         let feature = HaarFeature { 
             sign: Sign::Positive,
@@ -569,29 +568,29 @@ mod test {
         };
         let actual = draw_haar_feature(&image, feature);
 
-        let expected = ImageBuffer::from_raw(5, 5, vec![
-            1u8,     2u8,  3u8,        4u8,     5u8,
+        let expected = gray_image!(
+            1u8,     2u8,  3u8,        4u8,     5u8;
                  /***+++++++++++++*****---------***/
-            6u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
-            9u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
-            4u8, /**/255u8, 255u8,/**/ 0u8, 0u8,/**/
+            6u8, /**/255u8, 255u8,/**/ 0u8, 0u8;/**/
+            9u8, /**/255u8, 255u8,/**/ 0u8, 0u8;/**/
+            4u8, /**/255u8, 255u8,/**/ 0u8, 0u8;/**/
                  /***+++++++++++++*****---------***/
-            6u8,     5u8,   4u8,       2u8,     1u8]).unwrap();
+            6u8,     5u8,   4u8,       2u8,     1u8);
 
         assert_pixels_eq!(actual, expected);
     }
 
     #[test]
     fn test_draw_haar_feature_four_region() {
-        let image: GrayImage = ImageBuffer::from_raw(5, 5, vec![
+        let image = gray_image!(
             /*****************************/
-        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8,/**/
-        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8,/**/ 
+        1u8,/**/2u8, 3u8,/**/ 4u8, 5u8;/**/
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/ 
             /*****************************/
-        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8,/**/
-        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8,/**/
+        9u8,/**/8u8, 7u8,/**/ 6u8, 5u8;/**/
+        4u8,/**/3u8, 2u8,/**/ 1u8, 0u8;/**/
             /*****************************/
-        6u8,    5u8, 4u8,     2u8, 1u8]).unwrap();
+        6u8,    5u8, 4u8,     2u8, 1u8);
 
         let feature = HaarFeature { 
             sign: Sign::Positive,
@@ -603,15 +602,15 @@ mod test {
 
         let actual = draw_haar_feature(&image, feature);
 
-        let expected = ImageBuffer::from_raw(5, 5, vec![
+        let expected = gray_image!(
             /*************************************/
-        1u8,/**/255u8, 255u8,/**/ 0u8,   0u8,  /**/
-        6u8,/**/255u8, 255u8,/**/ 0u8,   0u8,  /**/
+        1u8,/**/255u8, 255u8,/**/ 0u8,   0u8;  /**/
+        6u8,/**/255u8, 255u8,/**/ 0u8,   0u8;  /**/
             /*************************************/
-        9u8,/**/0u8,   0u8,  /**/ 255u8, 255u8,/**/
-        4u8,/**/0u8,   0u8,  /**/ 255u8, 255u8,/**/
+        9u8,/**/0u8,   0u8,  /**/ 255u8, 255u8;/**/
+        4u8,/**/0u8,   0u8,  /**/ 255u8, 255u8;/**/
             /*************************************/
-        6u8,    5u8,   4u8,       2u8,   1u8      ]).unwrap();
+        6u8,    5u8,   4u8,       2u8,   1u8);
 
         assert_pixels_eq!(actual, expected);
     }
