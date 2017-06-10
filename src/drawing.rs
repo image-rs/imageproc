@@ -727,12 +727,12 @@ mod test {
     fn test_draw_corner_inside_bounds() {
       let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-      let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-          1, 1, 1, 1, 1,
-          1, 1, 2, 1, 1,
-          1, 2, 2, 2, 1,
-          1, 1, 2, 1, 1,
-          1, 1, 1, 1, 1]).unwrap();
+      let expected = gray_image!(
+          1, 1, 1, 1, 1;
+          1, 1, 2, 1, 1;
+          1, 2, 2, 2, 1;
+          1, 1, 2, 1, 1;
+          1, 1, 1, 1, 1);
 
       assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 2, 2), expected);
     }
@@ -742,12 +742,12 @@ mod test {
     fn test_draw_corner_partially_outside_left() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            2, 1, 1, 1, 1,
-            2, 2, 1, 1, 1,
-            2, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            2, 1, 1, 1, 1;
+            2, 2, 1, 1, 1;
+            2, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 0, 2), expected);
     }
@@ -757,12 +757,12 @@ mod test {
     fn test_draw_corner_partially_outside_right() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 2,
-            1, 1, 1, 2, 2,
-            1, 1, 1, 1, 2,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 2;
+            1, 1, 1, 2, 2;
+            1, 1, 1, 1, 2;
+            1, 1, 1, 1, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([2u8]), 4, 2), expected);
     }
@@ -772,12 +772,12 @@ mod test {
     fn test_draw_corner_partially_outside_bottom() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 3, 1, 1,
-            1, 3, 3, 3, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 3, 1, 1;
+            1, 3, 3, 3, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([3u8]), 2, 4), expected);
     }
@@ -787,12 +787,12 @@ mod test {
     fn test_draw_corner_partially_outside_top() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 9, 9, 9, 1,
-            1, 1, 9, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 9, 9, 9, 1;
+            1, 1, 9, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([9u8]), 2, 0), expected);
     }
@@ -802,12 +802,12 @@ mod test {
     fn test_draw_corner_outside_bottom() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            9, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            9, 1, 1, 1, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([9u8]), 0, 5), expected);
     }
@@ -817,12 +817,12 @@ mod test {
     fn test_draw_corner_outside_right() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 9,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 9;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         assert_pixels_eq!(draw_cross(&image, Luma([9u8]), 5, 0), expected);
     }
@@ -841,12 +841,12 @@ mod test {
     fn test_draw_line_segment_horizontal() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            4, 4, 4, 4, 4,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            4, 4, 4, 4, 4;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         let right = draw_line_segment(&image, (-3f32, 1f32), (6f32, 1f32), Luma([4u8]));
         assert_pixels_eq!(right, expected);
@@ -860,12 +860,12 @@ mod test {
     fn test_draw_line_segment_oct0_and_oct4() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 9, 9, 1, 1,
-            1, 1, 1, 9, 9,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 9, 9, 1, 1;
+            1, 1, 1, 9, 9;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         let oct0 = draw_line_segment(&image, (1f32, 1f32), (4f32, 2f32), Luma([9u8]));
         assert_pixels_eq!(oct0, expected);
@@ -879,12 +879,12 @@ mod test {
     fn test_draw_line_segment_diagonal() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 6, 1, 1, 1,
-            1, 1, 6, 1, 1,
-            1, 1, 1, 6, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 6, 1, 1, 1;
+            1, 1, 6, 1, 1;
+            1, 1, 1, 6, 1;
+            1, 1, 1, 1, 1);
 
         let down_right = draw_line_segment(&image, (1f32, 1f32), (3f32, 3f32), Luma([6u8]));
         assert_pixels_eq!(down_right, expected);
@@ -898,12 +898,12 @@ mod test {
     fn test_draw_line_segment_oct1_and_oct5() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            5, 1, 1, 1, 1,
-            5, 1, 1, 1, 1,
-            5, 1, 1, 1, 1,
-            1, 5, 1, 1, 1,
-            1, 5, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            5, 1, 1, 1, 1;
+            5, 1, 1, 1, 1;
+            5, 1, 1, 1, 1;
+            1, 5, 1, 1, 1;
+            1, 5, 1, 1, 1);
 
         let oct1 = draw_line_segment(&image, (0f32, 0f32), (1f32, 4f32), Luma([5u8]));
         assert_pixels_eq!(oct1, expected);
@@ -917,12 +917,12 @@ mod test {
     fn test_draw_line_segment_vertical() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 8, 1,
-            1, 1, 1, 8, 1,
-            1, 1, 1, 8, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 8, 1;
+            1, 1, 1, 8, 1;
+            1, 1, 1, 8, 1;
+            1, 1, 1, 1, 1);
 
         let down = draw_line_segment(&image, (3f32, 1f32), (3f32, 3f32), Luma([8u8]));
         assert_pixels_eq!(down, expected);
@@ -936,12 +936,12 @@ mod test {
     fn test_draw_line_segment_oct2_and_oct6() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 4, 1, 1,
-            1, 1, 4, 1, 1,
-            1, 4, 1, 1, 1,
-            1, 4, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 4, 1, 1;
+            1, 1, 4, 1, 1;
+            1, 4, 1, 1, 1;
+            1, 4, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         let oct2 = draw_line_segment(&image, (2f32, 0f32), (1f32, 3f32), Luma([4u8]));
         assert_pixels_eq!(oct2, expected);
@@ -955,12 +955,12 @@ mod test {
     fn test_draw_line_segment_oct3_and_oct7() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 2, 2,
-            2, 2, 2, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 2, 2;
+            2, 2, 2, 1, 1);
 
         let oct3 = draw_line_segment(&image, (0f32, 4f32), (5f32, 3f32), Luma([2u8]));
         assert_pixels_eq!(oct3, expected);
@@ -977,12 +977,12 @@ mod test {
 
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 2, 2, 2, 2,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 2, 2, 2, 2;
+            1, 1, 1, 1, 1);
 
         let color = Luma([2u8]);
         // Deliberately ends one pixel out of bounds
@@ -1010,12 +1010,12 @@ mod test {
 
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 2, 1, 1,
-            1, 2, 1, 1, 1,
-            2, 1, 1, 1, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 2, 1, 1;
+            1, 2, 1, 1, 1;
+            2, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
 
         let color = Luma([2u8]);
         let up_right = draw_antialiased_line_segment(&image, (0, 3), (2, 1), color, interpolate);
@@ -1039,12 +1039,12 @@ mod test {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
         // Gradient is 3/4
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1,  1,  1,  13, 50,
-            1,  1,  25, 37,  1,
-            1,  37, 25,  1,  1,
-            50, 13, 1,   1,  1,
-            1,  1,  1,   1,  1]).unwrap();
+        let expected = gray_image!(
+            1,  1,  1,  13, 50;
+            1,  1,  25, 37,  1;
+            1,  37, 25,  1,  1;
+            50, 13, 1,   1,  1;
+            1,  1,  1,   1,  1);
 
         let color = Luma([50u8]);
         let oct7 = draw_antialiased_line_segment(&image, (0, 3), (4, 0), color, interpolate);
@@ -1151,12 +1151,12 @@ mod test {
     fn test_draw_hollow_rect() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1,
-            1, 1, 4, 4, 4,
-            1, 1, 4, 1, 4,
-            1, 1, 4, 4, 4]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 4, 4, 4;
+            1, 1, 4, 1, 4;
+            1, 1, 4, 4, 4);
 
         let actual = draw_hollow_rect(&image, Rect::at(2, 2).of_size(3, 3), Luma([4u8]));
         assert_pixels_eq!(actual, expected);
@@ -1167,12 +1167,12 @@ mod test {
     fn test_draw_filled_rect() {
         let image: GrayImage = ImageBuffer::from_pixel(5, 5, Luma([1u8]));
 
-        let expected: GrayImage = ImageBuffer::from_raw(5, 5, vec![
-            1, 1, 1, 1, 1,
-            1, 4, 4, 4, 1,
-            1, 4, 4, 4, 1,
-            1, 4, 4, 4, 1,
-            1, 1, 1, 1, 1]).unwrap();
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            1, 4, 4, 4, 1;
+            1, 4, 4, 4, 1;
+            1, 4, 4, 4, 1;
+            1, 1, 1, 1, 1);
 
         let actual = draw_filled_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
         assert_pixels_eq!(actual, expected);

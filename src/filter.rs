@@ -443,19 +443,19 @@ mod test {
 
     #[test]
     fn test_box_filter() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 2, 3,
-            4, 5, 6,
-            7, 8, 9]).unwrap();
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
 
         // For this image we get the same answer from the two 1d
         // convolutions as from doing the 2d convolution in one step
         // (but we needn't in general, as in the former case we're
         // clipping to an integer value twice).
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2, 3, 3,
-            4, 5, 5,
-            6, 7, 7]).unwrap();
+        let expected = gray_image!(
+            2, 3, 3;
+            4, 5, 5;
+            6, 7, 7);
 
         assert_pixels_eq!(box_filter(&image, 1, 1), expected);
     }
@@ -471,16 +471,16 @@ mod test {
 
     #[test]
     fn test_separable_filter() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 2, 3,
-            4, 5, 6,
-            7, 8, 9]).unwrap();
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
 
         // Lazily copying the box_filter test case
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2, 3, 3,
-            4, 5, 5,
-            6, 7, 7]).unwrap();
+        let expected = gray_image!(
+            2, 3, 3;
+            4, 5, 5;
+            6, 7, 7);
 
         let kernel = vec![1f32/3f32; 3];
         let filtered = separable_filter_equal(&image, &kernel);
@@ -490,15 +490,15 @@ mod test {
 
     #[test]
     fn test_separable_filter_integer_kernel() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 2, 3,
-            4, 5, 6,
-            7, 8, 9]).unwrap();
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            21, 27, 33,
-            39, 45, 51,
-            57, 63, 69]).unwrap();
+        let expected = gray_image!(
+            21, 27, 33;
+            39, 45, 51;
+            57, 63, 69);
 
         let kernel = vec![1i32; 3];
         let filtered = separable_filter_equal(&image, &kernel);
@@ -621,15 +621,15 @@ mod test {
 
     #[test]
     fn test_horizontal_filter() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 4, 1,
-            4, 7, 4,
-            1, 4, 1]).unwrap();
+        let image = gray_image!(
+            1, 4, 1;
+            4, 7, 4;
+            1, 4, 1);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2, 2, 2,
-            5, 5, 5,
-            2, 2, 2]).unwrap();
+        let expected = gray_image!(
+            2, 2, 2;
+            5, 5, 5;
+            2, 2, 2);
 
         let kernel = vec![1f32/3f32; 3];
         let filtered = horizontal_filter(&image, &kernel);
@@ -639,10 +639,10 @@ mod test {
 
     #[test]
     fn test_horizontal_filter_with_kernel_wider_than_image_does_not_panic() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 4, 1,
-            4, 7, 4,
-            1, 4, 1]).unwrap();
+        let image = gray_image!(
+            1, 4, 1;
+            4, 7, 4;
+            1, 4, 1);
 
         let kernel = vec![1f32/10f32; 10];
         black_box(horizontal_filter(&image, &kernel));
@@ -660,15 +660,15 @@ mod test {
 
     #[test]
     fn test_vertical_filter() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 4, 1,
-            4, 7, 4,
-            1, 4, 1]).unwrap();
+        let image = gray_image!(
+            1, 4, 1;
+            4, 7, 4;
+            1, 4, 1);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            2, 5, 2,
-            2, 5, 2,
-            2, 5, 2]).unwrap();
+        let expected = gray_image!(
+            2, 5, 2;
+            2, 5, 2;
+            2, 5, 2);
 
         let kernel = vec![1f32/3f32; 3];
         let filtered = vertical_filter(&image, &kernel);
@@ -678,10 +678,10 @@ mod test {
 
     #[test]
     fn test_vertical_filter_with_kernel_taller_than_image_does_not_panic() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            1, 4, 1,
-            4, 7, 4,
-            1, 4, 1]).unwrap();
+        let image = gray_image!(
+            1, 4, 1;
+            4, 7, 4;
+            1, 4, 1);
 
         let kernel = vec![1f32/10f32; 10];
         black_box(vertical_filter(&image, &kernel));
@@ -704,15 +704,16 @@ mod test {
             -2, 0, 2,
             -1, 0, 1];
 
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            3, 2, 1,
-            6, 5, 4,
-            9, 8, 7]).unwrap();
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
 
         let expected = ImageBuffer::from_raw(3, 3, vec![
             -4i16, -8i16, -4i16,
             -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16]).unwrap();
+            -4i16, -8i16, -4i16
+        ]).unwrap();
 
         let filtered = filter3x3(&image, &kernel);
         assert_pixels_eq!(filtered, expected);

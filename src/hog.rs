@@ -411,25 +411,9 @@ fn draw_star_mut<I>(image: &mut I, hist: &[f32], signed: bool)
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-		copy,
-		hog,
-		hog_descriptor_from_hist_grid,
-        HogOptions,
-        HogSpec,
-		Interpolation,
-        num_blocks
-    };
-	use multiarray::{
-		Array3d
-	};
-	use utils::{
-		gray_bench_image
-	};
-	use image::{
-		ImageBuffer
-	};
+    use super::*;
+	use multiarray::Array3d;
+	use utils::gray_bench_image;
 	use test;
 
     #[test]
@@ -566,10 +550,10 @@ mod test {
 
 	#[test]
 	fn test_direction_interpolation_within_bounds() {
-		let image = ImageBuffer::from_raw(3, 3, vec![
-			2, 1, 0,
-			2, 1, 0,
-			2, 1, 0]).unwrap();
+		let image = gray_image!(
+			2, 1, 0;
+			2, 1, 0;
+			2, 1, 0);
 
 		let opts_signed = HogOptions {
 			orientations: 8,

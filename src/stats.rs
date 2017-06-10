@@ -72,8 +72,14 @@ mod test {
 
     #[test]
     fn test_root_mean_squared_error_grayscale() {
-        let left:  GrayImage = ImageBuffer::from_raw(3, 2, vec![1, 2, 3, 4, 5, 6]).unwrap();
-        let right: GrayImage = ImageBuffer::from_raw(3, 2, vec![8, 4, 7, 6, 9, 1]).unwrap();
+        let left = gray_image!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let right = gray_image!(
+            8, 4, 7;
+            6, 9, 1);
+
         let rms = root_mean_squared_error(&left, &right);
         let expected = (114f64 / 6f64).sqrt();
         assert_eq!(rms, expected);
@@ -91,8 +97,8 @@ mod test {
     #[test]
     #[should_panic]
     fn test_root_mean_squares_rejects_mismatched_dimensions() {
-        let left: GrayImage  = ImageBuffer::from_raw(2, 1, vec![1, 2]).unwrap();
-        let right: GrayImage = ImageBuffer::from_raw(1, 2, vec![8, 4]).unwrap();
+        let left = gray_image!(1, 2);
+        let right = gray_image!(8; 4);
         let _ = root_mean_squared_error(&left, &right);
     }
 

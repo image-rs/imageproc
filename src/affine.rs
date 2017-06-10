@@ -292,16 +292,16 @@ mod test {
 
     use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
     use utils::gray_bench_image;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     use nalgebra::{Affine2,Matrix3};
     use test;
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_rotate_nearest_zero_radians() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
         let rotated = rotate_nearest(&image, (1f32, 0f32), 0f32, Luma([99u8]));
         assert_pixels_eq!(rotated, image);
@@ -312,13 +312,13 @@ mod test {
     fn text_rotate_nearest_quarter_turn_clockwise() {
         use std::f32;
 
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            11, 01, 99,
-            12, 02, 99]).unwrap();
+        let expected = gray_image!(
+            11, 01, 99;
+            12, 02, 99);
 
         let rotated
             = rotate_nearest(&image, (1f32, 0f32), f32::consts::PI / 2f32, Luma([99u8]));
@@ -330,16 +330,15 @@ mod test {
     fn text_rotate_nearest_half_turn_anticlockwise() {
         use std::f32;
 
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            12, 11, 10,
-            02, 01, 00]).unwrap();
+        let expected = gray_image!(
+            12, 11, 10;
+            02, 01, 00);
 
-        let rotated
-            = rotate_nearest(&image, (1f32, 0.5f32), -f32::consts::PI, Luma([99u8]));
+        let rotated = rotate_nearest(&image, (1f32, 0.5f32), -f32::consts::PI, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -364,15 +363,15 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_translate_positive_x_positive_y() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 01, 02,
-            10, 11, 12,
-            20, 21, 22,]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 00, 01,
-            00, 00, 01,
-            10, 10, 11,]).unwrap();
+        let expected = gray_image!(
+            00, 00, 01;
+            00, 00, 01;
+            10, 10, 11);
 
         let translated = translate(&image, (1, 1));
         assert_pixels_eq!(translated, expected);
@@ -381,15 +380,15 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_translate_positive_x_negative_y() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 01, 02,
-            10, 11, 12,
-            20, 21, 22,]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            10, 10, 11,
-            20, 20, 21,
-            20, 20, 21,]).unwrap();
+        let expected = gray_image!(
+            10, 10, 11;
+            20, 20, 21;
+            20, 20, 21);
 
         let translated = translate(&image, (1, -1));
         assert_pixels_eq!(translated, expected);
@@ -398,15 +397,15 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_translate_large_x_large_y() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 01, 02,
-            10, 11, 12,
-            20, 21, 22,]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 00, 00,
-            00, 00, 00,
-            00, 00, 00,]).unwrap();
+        let expected = gray_image!(
+            00, 00, 00;
+            00, 00, 00;
+            00, 00, 00);
 
         // Translating by more than the image width and height
         let translated = translate(&image, (5, 5));
@@ -426,22 +425,21 @@ mod test {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_affine() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 01, 02,
-            10, 11, 12,
-            20, 21, 22,]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
 
-        let expected: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            00, 00, 00,
-            00, 00, 01,
-            00, 10, 11,]).unwrap();
+        let expected = gray_image!(
+            00, 00, 00;
+            00, 00, 01;
+            00, 10, 11);
 
         let aff = Affine2::from_matrix_unchecked(Matrix3::new(
             1.0, 0.0, 1.0,
             0.0, 1.0, 1.0,
             0.0, 0.0, 1.0,
         ));
-
 
         if let Some(translated) = affine(&image, aff, Interpolation::Nearest) {
             assert_pixels_eq!(translated, expected);

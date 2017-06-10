@@ -1,14 +1,7 @@
 //! Functions for detecting corners, also known as interest points.
 
-use image::{
-    GrayImage,
-    GenericImage
-};
-
-use definitions::{
-    Position,
-    Score
-};
+use image::{GrayImage, GenericImage};
+use definitions::{Position, Score};
 
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
@@ -291,113 +284,103 @@ fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        fast_corner_score,
-        is_corner_fast9,
-        is_corner_fast12,
-        Fast
-    };
-    use image::{
-        GrayImage,
-        ImageBuffer
-    };
+    use super::*;
     use test::Bencher;
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
     }
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels_large_threshold() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         assert_eq!(is_corner_fast12(&image, 15, 3, 3), false);
     }
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_lighter_pixels() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            00, 00, 10, 10, 10, 00, 00,
-            00, 10, 00, 00, 00, 10, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            00, 10, 00, 00, 00, 00, 00,
-            00, 00, 10, 10, 10, 00, 00]).unwrap();
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            00, 10, 00, 00, 00, 00, 00;
+            00, 00, 10, 10, 10, 00, 00);
 
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
     }
 
     #[test]
     fn test_is_corner_fast12_12_noncontiguous() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 00,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         assert_eq!(is_corner_fast12(&image, 8, 3, 3), false);
     }
 
     #[bench]
     fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 00,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
        b.iter(||is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
     fn test_is_corner_fast12_near_image_boundary() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         assert_eq!(is_corner_fast12(&image, 8, 1, 1), false);
     }
 
     #[test]
     fn test_fast_corner_score_12() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         let score = fast_corner_score(&image, 5, 3, 3, Fast::Twelve);
         assert_eq!(score, 9);
@@ -408,56 +391,56 @@ mod test {
 
     #[test]
     fn test_is_corner_fast9_9_contiguous_darker_pixels() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10);
 
         assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
     }
 
     #[test]
     fn test_is_corner_fast9_9_contiguous_lighter_pixels() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            00, 00, 10, 10, 10, 00, 00,
-            00, 10, 00, 00, 00, 10, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            00, 10, 00, 00, 00, 00, 00,
-            00, 00, 00, 00, 00, 00, 00]).unwrap();
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            00, 10, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00);
 
         assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
     }
 
     #[bench]
     fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            00, 00, 10, 10, 10, 00, 00,
-            00, 10, 00, 00, 00, 10, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            10, 00, 00, 00, 00, 00, 00,
-            00, 10, 00, 00, 00, 00, 00,
-            00, 00, 00, 00, 00, 00, 00]).unwrap();
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            00, 10, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00);
 
         b.iter(|| is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[test]
     fn test_is_corner_fast9_12_noncontiguous() {
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 00,
-            10, 00, 10, 10, 10, 10, 10,
-            10, 10, 00, 00, 00, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
 
         assert_eq!(is_corner_fast9(&image, 8, 3, 3), false);
     }
@@ -465,14 +448,14 @@ mod test {
     #[test]
     fn test_corner_score_fast9() {
         // 8 pixels with an intensity diff of 20, then 1 with a diff of 10
-        let image: GrayImage = ImageBuffer::from_raw(7, 7, vec![
-            10, 10, 00, 00, 00, 10, 10,
-            10, 00, 10, 10, 10, 00, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            00, 10, 10, 20, 10, 10, 10,
-            00, 10, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 10,
-            10, 10, 10, 10, 10, 10, 10]).unwrap();
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 20, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10);
 
         let score = fast_corner_score(&image, 5, 3, 3, Fast::Nine);
         assert_eq!(score, 9);

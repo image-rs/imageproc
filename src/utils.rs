@@ -21,7 +21,8 @@ use rand::Rand;
 use std::fmt;
 use std::path::Path;
 
-/// Provides a more concise way of defining small images.
+/// Provides a more concise way of defining small 8bpp greyscale images. Columns are separated
+/// by commas and rows by semi-colons.
 ///
 /// Calls `GrayImage::from_raw`.
 ///
@@ -350,7 +351,7 @@ impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
 
 #[cfg(test)]
 mod test {
-    use image::{GrayImage, ImageBuffer};
+    use image::GrayImage;
 
     #[test]
     fn gray_image_empty() {
@@ -388,9 +389,9 @@ mod test {
 
     #[test]
     fn test_assert_pixels_eq_passes() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
         assert_pixels_eq!(image, image);
     }
@@ -398,26 +399,26 @@ mod test {
     #[test]
     #[should_panic]
     fn test_assert_pixels_eq_fails() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
-        let diff: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 11, 02,
-            10, 11, 12]).unwrap();
+        let diff = gray_image!(
+            00, 11, 02;
+            10, 11, 12);
 
         assert_pixels_eq!(diff, image);
     }
 
     #[test]
     fn test_assert_pixels_eq_within_passes() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
-        let diff: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 02, 02,
-            10, 11, 12]).unwrap();
+        let diff = gray_image!(
+            00, 02, 02;
+            10, 11, 12);
 
         assert_pixels_eq_within!(diff, image, 1);
     }
@@ -425,13 +426,13 @@ mod test {
     #[test]
     #[should_panic]
     fn test_assert_pixels_eq_within_fails() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 01, 02,
-            10, 11, 12]).unwrap();
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
 
-        let diff: GrayImage = ImageBuffer::from_raw(3, 2, vec![
-            00, 03, 02,
-            10, 11, 12]).unwrap();
+        let diff = gray_image!(
+            00, 03, 02;
+            10, 11, 12);
 
         assert_pixels_eq_within!(diff, image, 1);
     }

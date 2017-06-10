@@ -7,13 +7,8 @@ use image::{
     Luma
 };
 
-use definitions::{
-    Image
-};
-
-use filter::{
-    filter3x3
-};
+use definitions::Image;
+use filter::filter3x3;
 
 /// Sobel filter for vertical gradients.
 static VERTICAL_SOBEL: [i32; 9] = [
@@ -127,10 +122,10 @@ mod test {
 
     #[test]
     fn test_horizontal_sobel_gradient_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            3, 2, 1,
-            6, 5, 4,
-            9, 8, 7]).unwrap();
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
 
         let expected = ImageBuffer::from_raw(3, 3, vec![
             -4i16, -8i16, -4i16,

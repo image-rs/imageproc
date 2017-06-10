@@ -598,7 +598,6 @@ pub static MIN_SHIFT: [u8; 256] = [
 
 #[cfg(test)]
 mod test {
-
     use super::{
         count_transitions,
         local_binary_pattern,
@@ -607,18 +606,16 @@ mod test {
     };
     use image::{
         GrayImage,
-        Luma,
-        ImageBuffer
+        Luma
     };
     use test::{Bencher, black_box};
 
     #[test]
     fn test_local_binary_pattern() {
-
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            06, 11, 14,
-            09, 10, 10,
-            19, 00, 22]).unwrap();
+        let image = gray_image!(
+            06, 11, 14;
+            09, 10, 10;
+            19, 00, 22);
 
         let expected = 0b11010000;
         let pattern = local_binary_pattern(&image, 1, 1).unwrap();
