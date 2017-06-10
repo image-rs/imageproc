@@ -709,11 +709,11 @@ mod test {
             6, 5, 4;
             9, 8, 7);
 
-        let expected = ImageBuffer::from_raw(3, 3, vec![
-            -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16,
+        let expected = gray_image_i16!(
+            -4i16, -8i16, -4i16;
+            -4i16, -8i16, -4i16;
             -4i16, -8i16, -4i16
-        ]).unwrap();
+        );
 
         let filtered = filter3x3(&image, &kernel);
         assert_pixels_eq!(filtered, expected);

@@ -21,7 +21,26 @@ use rand::Rand;
 use std::fmt;
 use std::path::Path;
 
-/// Provides a more concise way of defining small 8bpp greyscale images. Columns are separated
+/// Implementation detail of the gray_image macros.
+#[macro_export]
+macro_rules! image_from_nested_array {
+    // This implementation is copied from the `matrix` macro
+    // from https://github.com/AtheMathmo/rulinalg
+    ($nested_array:tt, $channel_type:ty) => {
+        {
+            use image::{ImageBuffer, Luma};
+            let rows = $nested_array.len();
+            let cols = $nested_array[0].len();
+            let data_as_flat_array: Vec<_> = $nested_array.into_iter()
+                .flat_map(|row| row.into_iter())
+                .cloned()
+                .collect();
+            ImageBuffer::<Luma<$channel_type>, Vec<$channel_type>>::from_raw(cols as u32, rows as u32, data_as_flat_array).unwrap()
+        }
+    }
+}
+
+/// Helper for defining greyscale images with u8 subpixels. Columns are separated
 /// by commas and rows by semi-colons.
 ///
 /// Calls `GrayImage::from_raw`.
@@ -48,27 +67,96 @@ use std::path::Path;
 /// ```
 #[macro_export]
 macro_rules! gray_image {
-    // This implementation is copied from the `matrix` macro
-    // from https://github.com/AtheMathmo/rulinalg
-
-    // No arguments - gray_image![]
     () => {
         {
-            use image::GrayImage;
-            GrayImage::new(0, 0)
+            use image::{ImageBuffer, Luma};
+            ImageBuffer::<Luma<u8>, Vec<u8>>::new(0, 0)
         }
     };
     ($( $( $x: expr ),*);*) => {
         {
-            use image::GrayImage;
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            let rows = data_as_nested_array.len();
-            let cols = data_as_nested_array[0].len();
-            let data_as_flat_array: Vec<_> = data_as_nested_array.into_iter()
-                .flat_map(|row| row.into_iter())
-                .cloned()
-                .collect();
-            GrayImage::from_raw(cols as u32, rows as u32, data_as_flat_array).unwrap()
+            image_from_nested_array!(data_as_nested_array, u8)
+        }
+    }
+}
+
+/// Helper for defining greyscale images with i16 subpixels. Columns are separated
+/// by commas and rows by semi-colons.
+///
+/// See the [`gray_image`](macro.gray_image.html) documentation for examples.
+#[macro_export]
+macro_rules! gray_image_i16 {
+    () => {
+        {
+            use image::{ImageBuffer, Luma};
+            ImageBuffer::<Luma<i16>, Vec<i16>>::new(0, 0)
+        }
+    };
+    ($( $( $x: expr ),*);*) => {
+        {
+            let data_as_nested_array = [ $( [ $($x),* ] ),* ];
+            image_from_nested_array!(data_as_nested_array, i16)
+        }
+    }
+}
+
+/// Helper for defining greyscale images with u16 subpixels. Columns are separated
+/// by commas and rows by semi-colons.
+///
+/// See the [`gray_image`](macro.gray_image.html) documentation for examples.
+#[macro_export]
+macro_rules! gray_image_u16 {
+    () => {
+        {
+            use image::{ImageBuffer, Luma};
+            ImageBuffer::<Luma<u16>, Vec<u16>>::new(0, 0)
+        }
+    };
+    ($( $( $x: expr ),*);*) => {
+        {
+            let data_as_nested_array = [ $( [ $($x),* ] ),* ];
+            image_from_nested_array!(data_as_nested_array, u16)
+        }
+    }
+}
+
+/// Helper for defining greyscale images with i32 subpixels. Columns are separated
+/// by commas and rows by semi-colons.
+///
+/// See the [`gray_image`](macro.gray_image.html) documentation for examples.
+#[macro_export]
+macro_rules! gray_image_i32 {
+    () => {
+        {
+            use image::{ImageBuffer, Luma};
+            ImageBuffer::<Luma<i32>, Vec<i32>>::new(0, 0)
+        }
+    };
+    ($( $( $x: expr ),*);*) => {
+        {
+            let data_as_nested_array = [ $( [ $($x),* ] ),* ];
+            image_from_nested_array!(data_as_nested_array, i32)
+        }
+    }
+}
+
+/// Helper for defining greyscale images with u32 subpixels. Columns are separated
+/// by commas and rows by semi-colons.
+///
+/// See the [`gray_image`](macro.gray_image.html) documentation for examples.
+#[macro_export]
+macro_rules! gray_image_u32 {
+    () => {
+        {
+            use image::{ImageBuffer, Luma};
+            ImageBuffer::<Luma<u32>, Vec<u32>>::new(0, 0)
+        }
+    };
+    ($( $( $x: expr ),*);*) => {
+        {
+            let data_as_nested_array = [ $( [ $($x),* ] ),* ];
+            image_from_nested_array!(data_as_nested_array, u32)
         }
     }
 }
@@ -351,16 +439,30 @@ impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
 
 #[cfg(test)]
 mod test {
-    use image::GrayImage;
+    use image::{GrayImage, ImageBuffer, Luma};
 
     #[test]
-    fn gray_image_empty() {
+    fn test_gray_image_empty() {
         let image = gray_image!();
         assert_eq!(image.dimensions(), (0, 0));
     }
 
     #[test]
-    fn gray_image_multiple_rows_and_columns() {
+    fn test_gray_image_single_element() {
+        let image = gray_image!(1);
+        let expected = GrayImage::from_raw(1, 1, vec![1]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_gray_image_single_row() {
+        let image = gray_image!(1, 2, 3);
+        let expected = GrayImage::from_raw(3, 1, vec![1, 2, 3]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_gray_image_multiple_rows_and_columns() {
         let image = gray_image!(
             1, 2, 3;
             4, 5, 6);
@@ -374,16 +476,58 @@ mod test {
     }
 
     #[test]
-    fn gray_image_single_row() {
-        let image = gray_image!(1, 2, 3);
-        let expected = GrayImage::from_raw(3, 1, vec![1, 2, 3]).unwrap();
+    fn test_gray_image_i16() {
+        let image = gray_image_i16!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = ImageBuffer::<Luma<i16>, Vec<i16>>::from_raw(3, 2, vec![
+            1i16, 2, 3,
+            4, 5, 6
+        ]).unwrap();
+
         assert_pixels_eq!(image, expected);
     }
 
     #[test]
-    fn gray_image_single_element() {
-        let image = gray_image!(1);
-        let expected = GrayImage::from_raw(1, 1, vec![1]).unwrap();
+    fn test_gray_image_u16() {
+        let image = gray_image_u16!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = ImageBuffer::<Luma<u16>, Vec<u16>>::from_raw(3, 2, vec![
+            1u16, 2, 3,
+            4, 5, 6
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+  #[test]
+    fn test_gray_image_i32() {
+        let image = gray_image_i32!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = ImageBuffer::<Luma<i32>, Vec<i32>>::from_raw(3, 2, vec![
+            1i32, 2, 3,
+            4, 5, 6
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_gray_image_u32() {
+        let image = gray_image_u32!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = ImageBuffer::<Luma<u32>, Vec<u32>>::from_raw(3, 2, vec![
+            1u32, 2, 3,
+            4, 5, 6
+        ]).unwrap();
+
         assert_pixels_eq!(image, expected);
     }
 

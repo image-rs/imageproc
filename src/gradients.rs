@@ -96,16 +96,13 @@ fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &
 
 #[cfg(test)]
 mod test {
-
     use super::{
         horizontal_sobel,
         vertical_sobel,
         horizontal_prewitt,
         vertical_prewitt
     };
-
     use image::{
-        GrayImage,
         ImageBuffer,
         Luma
     };
@@ -127,10 +124,10 @@ mod test {
             6, 5, 4;
             9, 8, 7);
 
-        let expected = ImageBuffer::from_raw(3, 3, vec![
-            -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16,
-            -4i16, -8i16, -4i16]).unwrap();
+        let expected = gray_image_i16!(
+            -4i16, -8i16, -4i16;
+            -4i16, -8i16, -4i16;
+            -4i16, -8i16, -4i16);
 
         let filtered = horizontal_sobel(&image);
         assert_pixels_eq!(filtered, expected);
@@ -138,15 +135,15 @@ mod test {
 
     #[test]
     fn test_vertical_sobel_gradient_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            3, 6, 9,
-            2, 5, 8,
-            1, 4, 7]).unwrap();
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
 
-        let expected = ImageBuffer::from_raw(3, 3, vec![
-            -4i16, -4i16, -4i16,
-            -8i16, -8i16, -8i16,
-            -4i16, -4i16, -4i16]).unwrap();
+        let expected = gray_image_i16!(
+            -4i16, -4i16, -4i16;
+            -8i16, -8i16, -8i16;
+            -4i16, -4i16, -4i16);
 
         let filtered = vertical_sobel(&image);
         assert_pixels_eq!(filtered, expected);
@@ -154,15 +151,15 @@ mod test {
 
     #[test]
     fn test_horizontal_prewitt_gradient_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            3, 2, 1,
-            6, 5, 4,
-            9, 8, 7]).unwrap();
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
 
-        let expected = ImageBuffer::from_raw(3, 3, vec![
-            -3i16, -6i16, -3i16,
-            -3i16, -6i16, -3i16,
-            -3i16, -6i16, -3i16]).unwrap();
+        let expected = gray_image_i16!(
+            -3i16, -6i16, -3i16;
+            -3i16, -6i16, -3i16;
+            -3i16, -6i16, -3i16);
 
         let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
@@ -170,15 +167,15 @@ mod test {
 
     #[test]
     fn test_vertical_prewitt_gradient_image() {
-        let image: GrayImage = ImageBuffer::from_raw(3, 3, vec![
-            3, 6, 9,
-            2, 5, 8,
-            1, 4, 7]).unwrap();
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
 
-        let expected = ImageBuffer::from_raw(3, 3, vec![
-            -3i16, -3i16, -3i16,
-            -6i16, -6i16, -6i16,
-            -3i16, -3i16, -3i16]).unwrap();
+        let expected = gray_image_i16!(
+            -3i16, -3i16, -3i16;
+            -6i16, -6i16, -6i16;
+            -3i16, -3i16, -3i16);
 
         let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);

@@ -289,7 +289,6 @@ fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> 
 
 #[cfg(test)]
 mod test {
-
     use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
     use utils::gray_bench_image;
     use image::{GrayImage, Luma};

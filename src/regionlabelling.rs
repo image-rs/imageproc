@@ -173,12 +173,11 @@ mod test {
             0, 0, 0, 0;
             0, 0, 0, 1);
 
-        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(4, 4, vec![
-                1, 0, 2, 3,
-                0, 4, 4, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 5]).unwrap();
+        let expected = gray_image_u32!(
+                1, 0, 2, 3;
+                0, 4, 4, 0;
+                0, 0, 0, 0;
+                0, 0, 0, 5);
 
         let labelled = connected_components(&image, Four, Luma::black());
         assert_pixels_eq!(labelled, expected);
@@ -192,12 +191,11 @@ mod test {
             0, 0, 0, 0;
             0, 0, 0, 1);
 
-        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(4, 4, vec![
-                1, 0, 2, 1,
-                0, 1, 1, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 3]).unwrap();
+        let expected = gray_image_u32!(
+                1, 0, 2, 1;
+                0, 1, 1, 0;
+                0, 0, 0, 0;
+                0, 0, 0, 3);
 
         let labelled = connected_components(&image, Eight, Luma::black());
         assert_pixels_eq!(labelled, expected);
@@ -211,12 +209,11 @@ mod test {
             255, 255, 255, 255;
             255, 255, 255,   1);
 
-        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(4, 4, vec![
-                1, 0, 2, 1,
-                0, 1, 1, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 3]).unwrap();
+        let expected = gray_image_u32!(
+                1, 0, 2, 1;
+                0, 1, 1, 0;
+                0, 0, 0, 0;
+                0, 0, 0, 3);
 
         let labelled = connected_components(&image, Eight, Luma::white());
         assert_pixels_eq!(labelled, expected);

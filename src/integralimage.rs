@@ -175,11 +175,10 @@ mod test {
             1, 2, 3;
             4, 5, 6);
 
-        let expected: ImageBuffer<Luma<u32>, Vec<u32>>
-            = ImageBuffer::from_raw(4, 3, vec![
-            0,  0,  0,  0,
-            0,  1,  3,  6,
-            0,  5, 12, 21]).unwrap();
+        let expected = gray_image_u32!(
+            0,  0,  0,  0;
+            0,  1,  3,  6;
+            0,  5, 12, 21);
 
         assert_pixels_eq!(integral_image(&image), expected);
     }

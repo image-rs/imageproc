@@ -162,9 +162,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected = ImageBuffer::from_raw(2, 2, vec![
-            -2i16, -4i16,
-            -6i16, -8i16]).unwrap();
+        let expected = gray_image_i16!(
+            -2i16, -4i16;
+            -6i16, -8i16);
 
         let mapped = map_subpixels(&image, |x| -2 * (x as i16));
         assert_pixels_eq!(mapped, expected);
