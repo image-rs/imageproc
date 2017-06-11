@@ -59,7 +59,7 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
 
 /// Computes the 2d running sum of the squares of the intensities in a grayscale image.
 ///
-/// See the [`integral_image`](fn.integral_image.html) documentation for more informaton on integral images.
+/// See the [`integral_image`](fn.integral_image.html) documentation for more information on integral images.
 ///
 /// # Examples
 /// ```
@@ -130,11 +130,58 @@ fn integral_image_impl(image: &GrayImage, square: bool) -> Image<Luma<u32>> {
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
 pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
+    // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
     let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
             - integral_image.get_pixel(right + 1, top)[0] as i32
             - integral_image.get_pixel(left, bottom + 1)[0] as i32
             + integral_image.get_pixel(left, top)[0] as i32;
     sum as u32
+}
+
+/// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
+/// integral image of F and `integral_squared_image` is the integral image of the squares of the
+/// pixels in F.
+///
+/// See the [`integral_image`](fn.integral_image.html) documentation for more information on integral images.
+///
+///# Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use std::f64;
+/// use imageproc::integralimage::{integral_image, integral_squared_image, variance};
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// let integral = integral_image(&image);
+/// let integral_squared = integral_squared_image(&image);
+///
+/// // Compute the variance of the pixels in the right two columns
+/// let mean: f64 = (2.0 + 3.0 + 5.0 + 6.0) / 4.0;
+/// let var = ((2.0 - mean).powi(2)
+///     + (3.0 - mean).powi(2)
+///     + (5.0 - mean).powi(2)
+///     + (6.0 - mean).powi(2)) / 4.0;
+///
+/// assert_eq!(variance(&integral, &integral_squared, 1, 0, 2, 1), var);
+/// # }
+/// ```
+pub fn variance(
+    integral_image: &Image<Luma<u32>>,
+    integral_squared_image: &Image<Luma<u32>>,
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32) -> f64 {
+    // TODO: same improvements as for sum_image_pixels, plus check that the given rect is valid.
+    let n = (right - left + 1) as f64 * (bottom - top + 1) as f64;
+    let sum_sq = sum_image_pixels(integral_squared_image, left, top, right, bottom);
+    let sum = sum_image_pixels(integral_image, left, top, right, bottom);
+    (sum_sq as f64 - (sum as f64).powi(2) / n) / n
 }
 
 /// Computes the running sum of one row of image, padded
