@@ -6,7 +6,10 @@ use gradients::{vertical_sobel, horizontal_sobel};
 use definitions::{HasWhite, HasBlack};
 use filter::gaussian_blur_f32;
 
-/// Runs the canny edge detection algorithm on the provided `ImageBuffer`.
+/// Runs the canny edge detection algorithm.
+/// 
+/// Returns a binary image where edge pixels have a value of 255
+///  and non-edge pixels a value of 0.
 ///
 /// # Params
 ///
@@ -17,7 +20,13 @@ use filter::gaussian_blur_f32;
 /// Edges with a strength higher than the high threshold will always
 /// appear as edges in the output image.
 ///
-/// Returns a binary image, where edge pixels have a value of 255 and non-edge pixels a value of 0.
+/// The greatest possible edge strength (and so largest sensible threshold)
+/// is`sqrt(5) * 2 * 255`, or approximately 1140.39.
+///
+/// This odd looking value is the result of using a standard
+/// definition of edge strength: the strength of an edge at a point `p` is
+/// defined to be `sqrt(dx^2 + dy^2)`, where `dx` and `dy` are the values
+/// of the horizontal and vertical Sobel gradients at `p`.
 pub fn canny(image: &GrayImage,
              low_threshold: f32,
              high_threshold: f32)
