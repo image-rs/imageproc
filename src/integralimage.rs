@@ -10,9 +10,7 @@ use image::{
     ImageBuffer
 };
 
-use definitions::{
-    Image
-};
+use definitions::Image;
 
 /// Compute the 2d running sum of a grayscale image.
 ///
@@ -28,9 +26,35 @@ use definitions::{
 /// in constant time. Specifically, given a rectangle [l, r] * [t, b] in F,
 /// the sum of the pixels in this rectangle is
 /// I(r + 1, b + 1) - I(r + 1, t) - I(l, b + 1) + I(l, t).
-// TODO: Support more formats, make faster, add a new IntegralImage type
-// TODO: to make it harder to make off-by-one errors when computing sums of regions.
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::integralimage::{integral_image, sum_image_pixels};
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// let integral = gray_image_u32!(
+///     0,  0,  0,  0;
+///     0,  1,  3,  6;
+///     0,  5, 12, 21);
+///
+/// assert_pixels_eq!(integral_image(&image), integral);
+///
+/// // Compute the sum of all pixels in the right two columns
+/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 2 + 3 + 5 + 6);
+///
+/// // Compute the sum of all pixels in the top row
+/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 2 + 3);
+/// # }
+/// ```
 pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
+    // TODO: Support more formats, make faster, add a new IntegralImage type
+    // TODO: to make it harder to make off-by-one errors when computing sums of regions.
     let (in_width, in_height) = image.dimensions();
     let out_width = in_width + 1;
     let out_height = in_height + 1;
@@ -57,8 +81,10 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
 
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
 /// integral image of F.
-// TODO: better type-safety. It's too easy to pass the original image in here by mistake.
+///
+/// See the [`integral_image`](fn.integral_image.html) documentation for examples.
 pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
+    // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
             - integral_image.get_pixel(right + 1, top)[0] as i32
             - integral_image.get_pixel(left, bottom + 1)[0] as i32
@@ -70,9 +96,8 @@ pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, 
 /// at the beginning and end. The padding is by continuity.
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
-// TODO: faster, more formats
 pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
-
+    // TODO: faster, more formats
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (width + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), width, padding));
