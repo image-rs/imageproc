@@ -12,7 +12,7 @@ use image::{
 
 use definitions::Image;
 
-/// Compute the 2d running sum of a grayscale image.
+/// Computes the 2d running sum of a grayscale image.
 ///
 /// An integral image I has width and height one greater than its source image F,
 /// and is defined by I(x, y) = sum of F(x', y') for x' < x, y' < y, i.e. each pixel
@@ -27,6 +27,7 @@ use definitions::Image;
 /// the sum of the pixels in this rectangle is
 /// I(r + 1, b + 1) - I(r + 1, t) - I(l, b + 1) + I(l, t).
 ///
+/// # Examples
 /// ```
 /// # extern crate image;
 /// # #[macro_use]
@@ -53,6 +54,45 @@ use definitions::Image;
 /// # }
 /// ```
 pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
+    integral_image_impl(image, false)
+}
+
+/// Computes the 2d running sum of the squares of the intensities in a grayscale image.
+///
+/// See the [`integral_image`](fn.integral_image.html) documentation for more informaton on integral images.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::integralimage::{integral_squared_image, sum_image_pixels};
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// let integral = gray_image_u32!(
+///     0,  0,  0,  0;
+///     0,  1,  5, 14;
+///     0, 17, 46, 91);
+///
+/// assert_pixels_eq!(integral_squared_image(&image), integral);
+///
+/// // Compute the sum of the squares of all pixels in the right two columns
+/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 4 + 9 + 25 + 36);
+///
+/// // Compute the sum of the squares of all pixels in the top row
+/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 4 + 9);
+/// # }
+/// ```
+pub fn integral_squared_image(image: &GrayImage) -> Image<Luma<u32>> {
+    integral_image_impl(image, true)
+}
+
+/// Implementation of `integral_image` and `integral_squared_image`.
+fn integral_image_impl(image: &GrayImage, square: bool) -> Image<Luma<u32>> {
     // TODO: Support more formats, make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
     let (in_width, in_height) = image.dimensions();
@@ -69,7 +109,12 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
         let mut sum = 0;
         for x in 1..out_width {
             unsafe {
-                sum += image.unsafe_get_pixel(x - 1, y - 1)[0] as u32;
+                let pix = image.unsafe_get_pixel(x - 1, y - 1)[0] as u32;
+                if square {
+                    sum += pix * pix;
+                } else {
+                    sum += pix;
+                }
                 let above = out.unsafe_get_pixel(x, y - 1)[0];
                 out.unsafe_put_pixel(x, y, Luma([above + sum]))
             }
