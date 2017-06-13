@@ -10,11 +10,9 @@ use image::{
     Rgba
 };
 
-use definitions::{
-    Image
-};
+use definitions::Image;
 
-/// The type obtained by replacing the channel type of a given Pixel type.
+/// The type obtained by replacing the channel type of a given `Pixel` type.
 pub trait WithChannel<C: Primitive>: Pixel {
     /// The new pixel type.
     type Pixel: Pixel<Subpixel=C> + 'static;
@@ -41,7 +39,29 @@ impl<T, U> WithChannel<U> for Luma<T>
     type Pixel = Luma<U>;
 }
 
-/// Applies f to each subpixel of the input image.
+/// Applies `f` to each subpixel of the input image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::map::map_subpixels;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let scaled = gray_image_i16!(
+///     -2i16, -4i16;
+///     -6i16, -8i16);
+///
+/// assert_pixels_eq!(
+///     map_subpixels(&image, |x| -2 * (x as i16)),
+///     scaled);
+/// # }
+/// ```
 pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
     where I: GenericImage<Pixel=P>,
           P: WithChannel<S> + 'static,
@@ -65,7 +85,30 @@ pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
     out
 }
 
-/// Applies f to the color of each pixel in the input image.
+/// Applies `f` to the color of each pixel in the input image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::map::map_colors;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let rgb = rgb_image!(
+///     [1, 2, 3], [2, 4, 6];
+///     [3, 6, 9], [4, 8, 12]);
+///
+/// assert_pixels_eq!(
+///     map_colors(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
+///     rgb);
+/// # }
+/// ```
 pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
           P: Pixel,
@@ -87,7 +130,7 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     out
 }
 
-/// Applies f to the colors of the pixels in the input images.
+/// Applies `f` to the colors of the pixels in the input images.
 ///
 /// Requires `image1` and `image2` to have the same dimensions.
 /// # Examples
@@ -96,7 +139,7 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use image::{GrayImage, Luma};
+/// use image::Luma;
 /// use imageproc::map::map_colors2;
 ///
 /// let image1 = gray_image!(
@@ -146,7 +189,7 @@ pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
     out
 }
 
-/// Applies f to each pixel in the input image.
+/// Applies `f` to each pixel in the input image.
 pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
           P: Pixel,
@@ -198,49 +241,8 @@ implement_channel_extraction!(blue_channel, as_blue_channel, 2);
 
 #[cfg(test)]
 mod test {
-    use super::{
-        map_colors,
-        map_pixels,
-        map_subpixels,
-        red_channel,
-        green_channel,
-        blue_channel,
-        as_red_channel,
-        as_green_channel,
-        as_blue_channel
-    };
+    use super::*;
     use image::Rgb;
-
-    #[test]
-    fn test_map_subpixels() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = gray_image_i16!(
-            -2i16, -4i16;
-            -6i16, -8i16);
-
-        let mapped = map_subpixels(&image, |x| -2 * (x as i16));
-        assert_pixels_eq!(mapped, expected);
-    }
-
-    #[test]
-    fn test_map_colors() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = rgb_image_i16!(
-            [1, 2, 3], [2, 4, 6];
-            [3, 6, 9], [4, 8, 12]);
-
-        let mapped = map_colors(&image, |p| {
-            let intensity = p[0] as i16;
-            Rgb([intensity, (2 * intensity), (3 * intensity)])
-        });
-        assert_pixels_eq!(mapped, expected);
-    }
 
     #[test]
     fn test_map_pixels() {
