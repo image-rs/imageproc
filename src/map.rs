@@ -87,6 +87,65 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     out
 }
 
+/// Applies f to the colors of the pixels in the input images.
+///
+/// Requires `image1` and `image2` to have the same dimensions.
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::{GrayImage, Luma};
+/// use imageproc::map::map_colors2;
+///
+/// let image1 = gray_image!(
+///     1, 2,
+///     3, 4
+/// );
+///
+/// let image2 = gray_image!(
+///     10, 20,
+///     30, 40
+/// );
+///
+/// let sum = gray_image!(
+///     11, 22,
+///     33, 44
+/// );
+///
+/// assert_pixels_eq!(
+///     map_colors2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
+///     sum
+/// );
+/// # }
+/// ```
+pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
+    where I: GenericImage<Pixel=P>,
+          J: GenericImage<Pixel=Q>,
+          P: Pixel,
+          Q: Pixel,
+          R: Pixel + 'static,
+          F: Fn(P, Q) -> R
+{
+    assert_eq!(image1.dimensions(), image2.dimensions());
+
+    let (width, height) = image1.dimensions();
+    let mut out: ImageBuffer<R, Vec<R::Subpixel>> = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            unsafe {
+                let p = image1.unsafe_get_pixel(x, y);
+                let q = image2.unsafe_get_pixel(x, y);
+                out.unsafe_put_pixel(x, y, f(p, q));
+            }
+        }
+    }
+
+    out
+}
+
 /// Applies f to each pixel in the input image.
 pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
