@@ -209,11 +209,7 @@ mod test {
         as_green_channel,
         as_blue_channel
     };
-    use image::{
-        ImageBuffer,
-        Rgb,
-        RgbImage
-    };
+    use image::Rgb;
 
     #[test]
     fn test_map_subpixels() {
@@ -235,9 +231,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected: ImageBuffer<Rgb<i16>, Vec<i16>> = ImageBuffer::from_raw(2, 2, vec![
-            1i16, 2i16, 3i16, 2i16, 4i16, 6i16,
-            3i16, 6i16, 9i16, 4i16, 8i16, 12i16]).unwrap();
+        let expected = rgb_image_i16!(
+            [1, 2, 3], [2, 4, 6];
+            [3, 6, 9], [4, 8, 12]);
 
         let mapped = map_colors(&image, |p| {
             let intensity = p[0] as i16;
@@ -252,9 +248,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected: ImageBuffer<Rgb<i16>, Vec<i16>> = ImageBuffer::from_raw(2, 2, vec![
-            1i16, 2i16, 3i16, 3i16, 5i16, 7i16,
-            4i16, 7i16, 10i16, 6i16, 10i16, 14i16]).unwrap();
+        let expected = rgb_image_i16!(
+            [1, 2, 3], [3, 5, 7];
+            [4, 7, 10], [6, 10, 14]);
 
         let mapped = map_pixels(&image, |x, y, p| {
             let intensity = p[0] as i16;
@@ -266,9 +262,9 @@ mod test {
 
     #[test]
     fn test_red_channel() {
-        let image: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            1, 2, 3, 2, 4, 6,
-            3, 6, 9, 4, 8, 12]).unwrap();
+        let image = rgb_image!(
+            [1, 2, 3], [2, 4, 6];
+            [3, 6, 9], [4, 8, 12]);
 
         let expected = gray_image!(
             1, 2;
@@ -280,9 +276,9 @@ mod test {
 
     #[test]
     fn test_green_channel() {
-        let image: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            1, 2, 3, 2, 4, 6,
-            3, 6, 9, 4, 8, 12]).unwrap();
+        let image = rgb_image!(
+            [1, 2, 3], [2, 4, 6];
+            [3, 6, 9], [4, 8, 12]);
 
         let expected = gray_image!(
             2, 4;
@@ -294,9 +290,9 @@ mod test {
 
     #[test]
     fn test_blue_channel() {
-        let image: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            1, 2, 3, 2, 4, 6,
-            3, 6, 9, 4, 8, 12]).unwrap();
+        let image = rgb_image!(
+            [1, 2, 3], [2, 4, 6];
+            [3, 6, 9], [4, 8, 12]);
 
         let expected = gray_image!(
             3, 6;
@@ -312,9 +308,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            1, 0, 0, 2, 0, 0,
-            3, 0, 0, 4, 0, 0]).unwrap();
+        let expected = rgb_image!(
+            [1, 0, 0], [2, 0, 0];
+            [3, 0, 0], [4, 0, 0]);
 
         let actual = as_red_channel(&image);
         assert_pixels_eq!(actual, expected);
@@ -326,9 +322,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            0, 1, 0, 0, 2, 0,
-            0, 3, 0, 0, 4, 0]).unwrap();
+        let expected = rgb_image!(
+            [0, 1, 0], [0, 2, 0];
+            [0, 3, 0], [0, 4, 0]);
 
         let actual = as_green_channel(&image);
         assert_pixels_eq!(actual, expected);
@@ -340,9 +336,9 @@ mod test {
             1, 2;
             3, 4);
 
-        let expected: RgbImage = ImageBuffer::from_raw(2, 2, vec![
-            0, 0, 1, 0, 0, 2,
-            0, 0, 3, 0, 0, 4]).unwrap();
+        let expected = rgb_image!(
+          [0, 0, 1], [0, 0, 2];
+          [0, 0, 3], [0, 0, 4]);
 
         let actual = as_blue_channel(&image);
         assert_pixels_eq!(actual, expected);

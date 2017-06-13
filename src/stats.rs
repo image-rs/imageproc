@@ -63,7 +63,6 @@ mod test {
     use super::*;
     use image::{
         GrayImage,
-        ImageBuffer,
         RgbImage,
         Luma,
         Rgb
@@ -87,8 +86,8 @@ mod test {
 
     #[test]
     fn test_root_mean_squared_error_rgb() {
-        let left: RgbImage  = ImageBuffer::from_raw(2, 1, vec![1, 2, 3, 4, 5, 6]).unwrap();
-        let right: RgbImage = ImageBuffer::from_raw(2, 1, vec![8, 4, 7, 6, 9, 1]).unwrap();
+        let left = rgb_image!([1, 2, 3], [4, 5, 6]);
+        let right = rgb_image!([8, 4, 7], [6, 9, 1]);
         let rms = root_mean_squared_error(&left, &right);
         let expected = (114f64 / 6f64).sqrt();
         assert_eq!(rms, expected);

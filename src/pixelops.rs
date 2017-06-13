@@ -28,7 +28,6 @@ fn weighted_channel_sum<C>(left: C, right: C, left_weight: f32, right_weight: f3
 
 #[cfg(test)]
 mod test {
-
     use super::*;
     use image::{Rgb, Luma};
     use test::{Bencher, black_box};
