@@ -27,6 +27,7 @@ pub mod filter;
 pub mod gradients;
 pub mod haar;
 pub mod hog;
+pub mod hough;
 pub mod integralimage;
 pub mod localbinarypatterns;
 pub mod map;
