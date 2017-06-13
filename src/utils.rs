@@ -23,19 +23,22 @@ use std::path::Path;
 
 /// Implementation detail of the gray_image macros.
 #[macro_export]
-macro_rules! image_from_nested_array {
+macro_rules! gray_image_from_nested_array {
     // This implementation is copied from the `matrix` macro
     // from https://github.com/AtheMathmo/rulinalg
     ($nested_array:tt, $channel_type:ty) => {
         {
             use image::{ImageBuffer, Luma};
-            let rows = $nested_array.len();
-            let cols = $nested_array[0].len();
-            let data_as_flat_array: Vec<_> = $nested_array.into_iter()
+            let height = $nested_array.len() as u32;
+            let width = $nested_array[0].len() as u32;
+
+            let flat_array: Vec<_> = $nested_array.into_iter()
                 .flat_map(|row| row.into_iter())
                 .cloned()
                 .collect();
-            ImageBuffer::<Luma<$channel_type>, Vec<$channel_type>>::from_raw(cols as u32, rows as u32, data_as_flat_array).unwrap()
+
+            ImageBuffer::<Luma<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+                .unwrap()
         }
     }
 }
@@ -43,7 +46,7 @@ macro_rules! image_from_nested_array {
 /// Helper for defining greyscale images with u8 subpixels. Columns are separated
 /// by commas and rows by semi-colons.
 ///
-/// Calls `GrayImage::from_raw`.
+/// Calls `ImageBuffer::from_raw`.
 ///
 /// # Examples
 /// ```
@@ -76,7 +79,7 @@ macro_rules! gray_image {
     ($( $( $x: expr ),*);*) => {
         {
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            image_from_nested_array!(data_as_nested_array, u8)
+            gray_image_from_nested_array!(data_as_nested_array, u8)
         }
     }
 }
@@ -96,7 +99,7 @@ macro_rules! gray_image_i16 {
     ($( $( $x: expr ),*);*) => {
         {
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            image_from_nested_array!(data_as_nested_array, i16)
+            gray_image_from_nested_array!(data_as_nested_array, i16)
         }
     }
 }
@@ -116,7 +119,7 @@ macro_rules! gray_image_u16 {
     ($( $( $x: expr ),*);*) => {
         {
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            image_from_nested_array!(data_as_nested_array, u16)
+            gray_image_from_nested_array!(data_as_nested_array, u16)
         }
     }
 }
@@ -136,7 +139,7 @@ macro_rules! gray_image_i32 {
     ($( $( $x: expr ),*);*) => {
         {
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            image_from_nested_array!(data_as_nested_array, i32)
+            gray_image_from_nested_array!(data_as_nested_array, i32)
         }
     }
 }
@@ -156,7 +159,149 @@ macro_rules! gray_image_u32 {
     ($( $( $x: expr ),*);*) => {
         {
             let data_as_nested_array = [ $( [ $($x),* ] ),* ];
-            image_from_nested_array!(data_as_nested_array, u32)
+            gray_image_from_nested_array!(data_as_nested_array, u32)
+        }
+    }
+}
+
+/// Implementation detail of the rgb_image macro.
+#[macro_export]
+macro_rules! rgb_image_from_nested_array {
+    ($nested_array:tt, $channel_type:ty) => {
+        {
+            use image::{ImageBuffer, Rgb};
+            let height = $nested_array.len() as u32;
+            let width = $nested_array[0].len() as u32;
+
+            let flat_array: Vec<_> = $nested_array.into_iter()
+                .flat_map(|row| row.into_iter().flat_map(|p| p.into_iter()))
+                .cloned()
+                .collect();
+
+            ImageBuffer::<Rgb<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+                .unwrap()
+        }
+    }
+}
+
+/// Helper for defining RGB images with u8 subpixels. Pixels are delineated by square
+/// brackets, columns are separated by commas and rows are separated by semi-colons.
+///
+/// Calls `ImageBuffer::from_raw`.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::RgbImage;
+///
+/// let image = rgb_image!(
+///     [1,  2,  3], [ 4,  5,  6];
+///     [7,  8,  9], [10, 11, 12]);
+///
+/// let equivalent = RgbImage::from_raw(2, 2, vec![
+///     1,  2,  3,  4,  5,  6,
+///     7,  8,  9, 10, 11, 12
+/// ]).unwrap();
+///
+/// assert_pixels_eq!(image, equivalent);
+/// # }
+/// ```
+#[macro_export]
+macro_rules! rgb_image {
+    () => {
+        {
+            use image::{ImageBuffer, Rgb};
+            ImageBuffer::<Rgb<u8>, Vec<u8>>::new(0, 0)
+        }
+    };
+    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+        {
+            let nested_array = [$( [ $([$r, $g, $b]),*]),*];
+            rgb_image_from_nested_array!(nested_array, u8)
+        }
+    }
+}
+
+
+/// Helper for defining RGB images with i16 subpixels. Pixels are delineated by square
+/// brackets, columns are separated by commas and rows are separated by semi-colons.
+///
+/// See the [`rgb_image`](macro.rgb_image.html) documentation for examples.
+#[macro_export]
+macro_rules! rgb_image_i16 {
+    () => {
+        {
+            use image::{ImageBuffer, Rgb};
+            ImageBuffer::<Rgb<i16>, Vec<i16>>::new(0, 0)
+        }
+    };
+    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+        {
+            let nested_array = [$( [ $([$r, $g, $b]),*]),*];
+            rgb_image_from_nested_array!(nested_array, i16)
+        }
+    }
+}
+
+/// Helper for defining RGB images with u16 subpixels. Pixels are delineated by square
+/// brackets, columns are separated by commas and rows are separated by semi-colons.
+///
+/// See the [`rgb_image`](macro.rgb_image.html) documentation for examples.
+#[macro_export]
+macro_rules! rgb_image_u16 {
+    () => {
+        {
+            use image::{ImageBuffer, Rgb};
+            ImageBuffer::<Rgb<u16>, Vec<u16>>::new(0, 0)
+        }
+    };
+    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+        {
+            let nested_array = [$( [ $([$r, $g, $b]),*]),*];
+            rgb_image_from_nested_array!(nested_array, u16)
+        }
+    }
+}
+
+/// Helper for defining RGB images with i32 subpixels. Pixels are delineated by square
+/// brackets, columns are separated by commas and rows are separated by semi-colons.
+///
+/// See the [`rgb_image`](macro.rgb_image.html) documentation for examples.
+#[macro_export]
+macro_rules! rgb_image_i32 {
+    () => {
+        {
+            use image::{ImageBuffer, Rgb};
+            ImageBuffer::<Rgb<i32>, Vec<i32>>::new(0, 0)
+        }
+    };
+    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+        {
+            let nested_array = [$( [ $([$r, $g, $b]),*]),*];
+            rgb_image_from_nested_array!(nested_array, i32)
+        }
+    }
+}
+
+/// Helper for defining RGB images with u32 subpixels. Pixels are delineated by square
+/// brackets, columns are separated by commas and rows are separated by semi-colons.
+///
+/// See the [`rgb_image`](macro.rgb_image.html) documentation for examples.
+#[macro_export]
+macro_rules! rgb_image_u32 {
+    () => {
+        {
+            use image::{ImageBuffer, Rgb};
+            ImageBuffer::<Rgb<u32>, Vec<u32>>::new(0, 0)
+        }
+    };
+    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+        {
+            let nested_array = [$( [ $([$r, $g, $b]),*]),*];
+            rgb_image_from_nested_array!(nested_array, u32)
         }
     }
 }
@@ -439,7 +584,7 @@ impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
 
 #[cfg(test)]
 mod test {
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, ImageBuffer, Luma, Rgb, RgbImage};
 
     #[test]
     fn test_gray_image_empty() {
@@ -526,6 +671,82 @@ mod test {
         let expected = ImageBuffer::<Luma<u32>, Vec<u32>>::from_raw(3, 2, vec![
             1u32, 2, 3,
             4, 5, 6
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_empty() {
+        let image = rgb_image!();
+        assert_eq!(image.dimensions(), (0, 0));
+    }
+
+    #[test]
+    fn test_rgb_image_single_element() {
+        let image = rgb_image!([1, 2, 3]);
+        let expected = RgbImage::from_raw(1, 1, vec![1, 2, 3]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_single_row() {
+        let image = rgb_image!([1, 2, 3], [4, 5, 6]);
+        let expected = RgbImage::from_raw(2, 1, vec![1, 2, 3, 4, 5, 6]).unwrap();
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_i16() {
+        let image = rgb_image_i16!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]);
+
+        let expected = ImageBuffer::<Rgb<i16>, Vec<i16>>::from_raw(2, 2, vec![
+            1i16, 2, 3, 4, 5, 6,
+            7, 8, 9, 10, 11, 12
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_u16() {
+        let image = rgb_image_u16!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]);
+
+        let expected = ImageBuffer::<Rgb<u16>, Vec<u16>>::from_raw(2, 2, vec![
+            1u16, 2, 3, 4, 5, 6,
+            7, 8, 9, 10, 11, 12
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_i32() {
+        let image = rgb_image_i32!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]);
+
+        let expected = ImageBuffer::<Rgb<i32>, Vec<i32>>::from_raw(2, 2, vec![
+            1i32, 2, 3, 4, 5, 6,
+            7, 8, 9, 10, 11, 12
+        ]).unwrap();
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_rgb_image_u32() {
+        let image = rgb_image_u32!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]);
+
+        let expected = ImageBuffer::<Rgb<u32>, Vec<u32>>::from_raw(2, 2, vec![
+            1u32, 2, 3, 4, 5, 6,
+            7, 8, 9, 10, 11, 12
         ]).unwrap();
 
         assert_pixels_eq!(image, expected);
