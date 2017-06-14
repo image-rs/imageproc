@@ -14,7 +14,7 @@ pub struct PolarLine {
     /// Distance of the line from the origin (top-left of the image), in pixels.
     pub r: f32,
     /// Clockwise angle in degrees between the x-axis and the line.
-    pub theta: u32
+    pub angle_in_degrees: u32
 }
 
 /// Options for Hough line detection.
@@ -81,7 +81,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
             if votes >= options.vote_threshold {
                 let line = PolarLine {
                     r: r as f32,
-                    theta: m
+                    angle_in_degrees: m
                 };
                 lines.push(line);
             }
@@ -116,21 +116,28 @@ pub fn draw_polar_lines_mut<P>(image: &mut Image<P>, lines: &[PolarLine], color:
 fn draw_polar_line<P>(image: &mut Image<P>, line: PolarLine, color: P)
     where P: Pixel + 'static
 {
-    // TODO: make this less of a mess and add tests
+    match intersection_points(line, image.width(), image.height()) {
+        Some((s, e)) => draw_line_segment_mut(image, s, e, color),
+        None => {}
+    };
+}
+
+/// Returns the intersection points of a `PolarLine` with an image of given width and height,
+/// or `None` if the line and image bounding box are disjoint.
+fn intersection_points(line: PolarLine, image_width: u32, image_height: u32) -> Option<((f32, f32), (f32, f32))> {
     let r = line.r;
-    let m = line.theta;
-    let w = image.width() as f32;
-    let h = image.height() as f32;
+    let m = line.angle_in_degrees;
+    let w = image_width as f32;
+    let h = image_height as f32;
 
     // Vertical line
     if m == 0 {
-        draw_line_segment_mut(image, (r, 0.0), (r, h), color);
-        return;
+        return if r < h { Some( ((r, 0.0), (r, h)) ) } else { None };
     }
 
     // Horizontal line
     if m == 90 {
-        draw_line_segment_mut(image, (0.0, r), (w, r), color);
+        return if r < w { Some( ((0.0, r), (w, r)) ) } else { None };
     }
 
     let theta = degrees_to_radians(m);
@@ -143,48 +150,39 @@ fn draw_polar_line<P>(image: &mut Image<P>, line: PolarLine, color: P)
     let top_x = r / cos;
 
     let mut start = None;
-    let mut end = None;
 
     if right_y >= 0.0 && right_y < h {
         let right_intersect = (w, right_y);
-        if start == None {
-            start = Some(right_intersect);
-        } else if end == None {
-            end = Some(right_intersect);
+        if let Some(s) = start {
+            return Some((s, right_intersect));
         }
+        start = Some(right_intersect);
     }
 
     if left_y >= 0.0 && left_y < h {
         let left_intersect = (0.0, left_y);
-        if start == None {
-            start = Some(left_intersect);
-        } else if end == None {
-            end = Some(left_intersect);
+        if let Some(s) = start {
+            return Some((s, left_intersect));
         }
+        start = Some(left_intersect);
     }
 
     if bottom_x >= 0.0 && bottom_x < w {
         let bottom_intersect = (bottom_x, h);
-        if start == None {
-            start = Some(bottom_intersect);
-        } else if end == None {
-            end = Some(bottom_intersect);
+        if let Some(s) = start {
+            return Some((s, bottom_intersect));
         }
+        start = Some(bottom_intersect);
     }
 
     if top_x >= 0.0 && top_x < w {
         let top_intersect = (top_x, 0.0);
-        if start == None {
-            start = Some(top_intersect);
-        } else if end == None {
-            end = Some(top_intersect);
+        if let Some(s) = start {
+            return Some((s, top_intersect));
         }
     }
 
-    match (start, end) {
-        (Some(s), Some(e)) => draw_line_segment_mut(image, s, e, color),
-        _ => {}
-    }
+    None
 }
 
 fn degrees_to_radians(degrees: u32) -> f32 {
@@ -231,7 +229,7 @@ mod test {
         assert_eq!(detected.len(), 1);
         let line = detected[0];
         assert_eq!(line.r, 1f32);
-        assert_eq!(line.theta, 90);
+        assert_eq!(line.angle_in_degrees, 90);
     }
 
     // TODO: This is an exact duplicate of a function in tbe regionlabelling tests.
