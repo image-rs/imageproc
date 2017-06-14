@@ -197,6 +197,43 @@ mod test {
     use image::{GrayImage, ImageBuffer, Luma};
     use test::{Bencher, black_box};
 
+    fn separated_horizontal_line_segment() -> GrayImage {
+        let white = Luma([255u8]);
+        let mut image = GrayImage::new(20, 5);
+        for i in 5..10 {
+            image.put_pixel(i, 2, white);
+        }
+        for i in 12..17 {
+            image.put_pixel(i, 2, white);
+        }
+        image
+    }
+
+    #[test]
+    fn detect_lines_horizontal_below_threshold() {
+        let image = separated_horizontal_line_segment();
+        let options = LineDetectionOptions {
+            vote_threshold: 11,
+            suppression_radius: 0
+        };
+        let detected = detect_lines(&image, options);
+        assert_eq!(detected.len(), 0);
+    }
+
+    #[test]
+    fn detect_lines_horizontal_above_threshold() {
+        let image = separated_horizontal_line_segment();
+        let options = LineDetectionOptions {
+            vote_threshold: 10,
+            suppression_radius: 8
+        };
+        let detected = detect_lines(&image, options);
+        assert_eq!(detected.len(), 1);
+        let line = detected[0];
+        assert_eq!(line.r, 1f32);
+        assert_eq!(line.theta, 90);
+    }
+
     // TODO: This is an exact duplicate of a function in tbe regionlabelling tests.
     // TODO: Add some unit tests and benchmarks of more interesting cases.
     fn chessboard(width: u32, height: u32) -> GrayImage {
