@@ -107,7 +107,7 @@ impl Region<f32> for Rect {
 }
 
 /// Position of the top left of a rectangle.
-/// Only used when building a `Rect`.
+/// Only used when building a [`Rect`](struct.Rect.html).
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct RectPosition {
     left: i32,
