@@ -188,6 +188,27 @@ pub fn variance(
 /// at the beginning and end. The padding is by continuity.
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::integralimage::row_running_sum;
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// // Buffer has length two greater than image width, hence padding of 1
+/// let mut buffer = [0; 5];
+/// row_running_sum(&image, 0, &mut buffer, 1);
+///
+/// // The image is padded by continuity on either side
+/// assert_eq!(buffer, [1, 2, 4, 7, 10]);
+/// # }
+/// ```
 pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
@@ -218,9 +239,30 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// at the top and bottom. The padding is by continuity.
 /// Takes a reference to buffer so that this can be reused
 /// for all columns in an image.
-// TODO: faster, more formats
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::integralimage::column_running_sum;
+///
+/// let image = gray_image!(
+///     1, 4;
+///     2, 5;
+///     3, 6);
+///
+/// // Buffer has length two greater than image height, hence padding of 1
+/// let mut buffer = [0; 5];
+/// column_running_sum(&image, 0, &mut buffer, 1);
+///
+/// // The image is padded by continuity on top and bottom
+/// assert_eq!(buffer, [1, 2, 4, 7, 10]);
+/// # }
+/// ```
 pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
-
+    // TODO: faster, more formats
     let (width, height) = image.dimensions();
     assert!(buffer.len() >= (height + 2 * padding) as usize,
         format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), height, padding));
@@ -347,20 +389,6 @@ mod test {
         quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
-    #[test]
-    fn test_row_running_sum() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6);
-
-        let expected = [1, 2, 4, 7, 10];
-
-        let mut buffer = [0; 5];
-        row_running_sum(&image, 0, &mut buffer, 1);
-
-        assert_eq!(buffer, expected);
-    }
-
     #[bench]
     fn bench_row_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(1000, 1);
@@ -368,21 +396,6 @@ mod test {
         b.iter(|| {
             row_running_sum(&image, 0, &mut buffer, 5);
             });
-    }
-
-    #[test]
-    fn test_column_running_sum() {
-        let image = gray_image!(
-            1, 4;
-            2, 5;
-            3, 6);
-
-        let expected = [1, 2, 4, 7, 10];
-
-        let mut buffer = [0; 5];
-        column_running_sum(&image, 0, &mut buffer, 1);
-
-        assert_eq!(buffer, expected);
     }
 
     #[bench]
