@@ -126,6 +126,7 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 /// the given threshold. Pixels with intensity
 /// equal to the threshold are assigned to the background.
 ///
+/// # Examples
 /// ```
 /// # extern crate image;
 /// # #[macro_use]
@@ -255,13 +256,70 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
     lut
 }
 
+/// Linearly stretches the contrast in an image, sending `lower` to `0u8` and `upper` to `2558u8`.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::contrast::stretch_contrast;
+///
+/// let image = gray_image!(
+///      0,   20,  50;
+///     80,  100, 255);
+///
+/// let lower = 20;
+/// let upper = 100;
+///
+/// // Pixel intensities between 20 and 100 are linearly
+/// // scaled so that 20 is mapped to 0 and 100 is mapped to 255.
+/// // Pixel intensities less than 20 are sent to 0 and pixel
+/// // intensities greater than 100 are sent to 255.
+/// let stretched = stretch_contrast(&image, lower, upper);
+///
+/// let expected = gray_image!(
+///       0,   0,  95;
+///     191, 255, 255);
+///
+/// assert_pixels_eq!(stretched, expected);
+/// # }
+/// ```
+pub fn stretch_contrast(image: &GrayImage, lower: u8, upper: u8) -> GrayImage {
+    let mut out = image.clone();
+    stretch_contrast_mut(&mut out, lower, upper);
+    out
+}
+
+/// Linearly stretches the contrast in an image in place, sending `lower` to `0u8` and `upper` to `2558u8`.
+///
+/// See the [`stretch_contrast`](fn.stretch_contrast.html) documentation for more.
+pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
+    assert!(upper > lower, "upper must be strictly greater than lower");
+    let len = (upper - lower) as u16;
+    for p in image.iter_mut() {
+        if *p >= upper {
+            *p = 255;
+        }
+        else if *p <= lower {
+            *p = 0;
+        }
+        else {
+            let scaled = (255 * (*p as u16 - lower as u16)) / len;
+            *p = scaled as u8;
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use definitions::{HasBlack, HasWhite};
     use utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test;
+    use test::{Bencher, black_box};
 
     #[test]
     fn adaptive_threshold_constant() {
@@ -321,27 +379,27 @@ mod test {
     }
 
     #[bench]
-    fn bench_adaptive_threshold(b: &mut test::Bencher) {
+    fn bench_adaptive_threshold(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         let block_radius = 10;
         b.iter(|| {
             let thresholded = adaptive_threshold(&image, block_radius);
-            test::black_box(thresholded);
+            black_box(thresholded);
         });
     }
 
     #[bench]
-    fn bench_match_histogram(b: &mut test::Bencher) {
+    fn bench_match_histogram(b: &mut Bencher) {
         let target = GrayImage::from_pixel(200, 200, Luma([150]));
         let image = gray_bench_image(200, 200);
         b.iter(|| {
             let matched = match_histogram(&image, &target);
-            test::black_box(matched);
+            black_box(matched);
         });
     }
 
     #[bench]
-    fn bench_match_histogram_mut(b: &mut test::Bencher) {
+    fn bench_match_histogram_mut(b: &mut Bencher) {
         let target = GrayImage::from_pixel(200, 200, Luma([150]));
         let mut image = gray_bench_image(200, 200);
         b.iter(|| {
@@ -373,7 +431,6 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_histogram_lut_source_and_target_equal() {
         let mut histc = [0u32; 256];
         for i in 1..histc.len() {
@@ -387,7 +444,6 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_histogram_lut_gradient_to_step_contrast() {
         let mut grad_histc = [0u32; 256];
         for i in 0..grad_histc.len() {
@@ -447,11 +503,11 @@ mod test {
     }
 
     #[bench]
-    fn bench_otsu_level(b: &mut test::Bencher) {
+    fn bench_otsu_level(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
             let level = otsu_level(&image);
-            test::black_box(level);
+            black_box(level);
         });
     }
 
@@ -493,36 +549,53 @@ mod test {
     }
 
     #[bench]
-    fn bench_equalize_histogram(b: &mut test::Bencher) {
+    fn bench_equalize_histogram(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
             let equalized = equalize_histogram(&image);
-            test::black_box(equalized);
+            black_box(equalized);
         });
     }
 
     #[bench]
-    fn bench_equalize_histogram_mut(b: &mut test::Bencher) {
+    fn bench_equalize_histogram_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            test::black_box(equalize_histogram_mut(&mut image));
+            black_box(equalize_histogram_mut(&mut image));
         });
     }
 
     #[bench]
-    fn bench_threshold(b: &mut test::Bencher) {
+    fn bench_threshold(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
             let thresholded = threshold(&image, 125);
-            test::black_box(thresholded);
+            black_box(thresholded);
         });
     }
 
     #[bench]
-    fn bench_threshold_mut(b: &mut test::Bencher) {
+    fn bench_threshold_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            test::black_box(threshold_mut(&mut image, 125));
+            black_box(threshold_mut(&mut image, 125));
+        });
+    }
+
+    #[bench]
+    fn bench_stretch_contrast(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let stretched = stretch_contrast(&image, 20, 80);
+            black_box(stretched);
+        });
+    }
+
+    #[bench]
+    fn bench_stretch_contrast_mut(b: &mut Bencher) {
+        let mut image = gray_bench_image(500, 500);
+        b.iter(|| {
+            black_box(stretch_contrast_mut(&mut image, 20, 80));
         });
     }
 }
