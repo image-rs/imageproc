@@ -35,6 +35,55 @@ pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
     hist
 }
 
+/// Returns the `p`th percentile of the pixel intensities in an image.
+///
+/// We define the `p`th percentile intensity to be the least `x` such
+/// that at least `p`% of image pixels have intensity less than or
+/// equal to `x`.
+///
+/// # Panics
+/// If `p > 100`.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::stats::percentile;
+///
+/// let image = gray_image!(
+///     1, 2, 3, 4, 5;
+///     6, 7, 8, 9, 10);
+///
+/// // The 0th percentile is always 0
+/// assert_eq!(percentile(&image, 0), 0);
+///
+/// // Exactly 10% of pixels have intensity <= 1.
+/// assert_eq!(percentile(&image, 10), 1);
+///
+/// // Fewer than 15% of pixels have intensity <=1, so the 15th percentile is 2.
+/// assert_eq!(percentile(&image, 15), 2);
+///
+/// // All pixels have intensity <= 10.
+/// assert_eq!(percentile(&image, 100), 10);
+/// # }
+/// ```
+pub fn percentile(image: &GrayImage, p: u8) -> u8 {
+    assert!(p <= 100, "requested percentile must be <= 100");
+
+    let cum_hist = cumulative_histogram(&image);
+    let total = cum_hist[255] as u64;
+
+    for i in 0..256 {
+        if 100 * cum_hist[i] as u64 / total >= p as u64 {
+            return i as u8;
+        }
+    }
+
+    unreachable!();
+}
+
 /// Returns the square root of the mean of the squares of differences
 /// between all subpixels in left and right. All channels are considered
 /// equally. If you do not want this (e.g. if using RGBA) then change

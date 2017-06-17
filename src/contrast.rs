@@ -103,7 +103,6 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use image::Rgb;
 /// use imageproc::contrast::threshold;
 ///
 /// let image = gray_image!(
@@ -133,7 +132,6 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use image::Rgb;
 /// use imageproc::contrast::threshold_mut;
 ///
 /// let mut image = gray_image!(
@@ -241,7 +239,6 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use image::Rgb;
 /// use imageproc::contrast::stretch_contrast;
 ///
 /// let image = gray_image!(
