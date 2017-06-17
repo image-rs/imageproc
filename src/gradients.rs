@@ -10,50 +10,58 @@ use image::{
 use definitions::Image;
 use filter::filter3x3;
 
-/// Sobel filter for vertical gradients.
-static VERTICAL_SOBEL: [i32; 9] = [
+/// Sobel filter for detecting vertical gradients.
+///
+/// Used by the [`vertical_sobel`](fn.vertical_sobel.html) function.
+pub static VERTICAL_SOBEL: [i32; 9] = [
     -1, -2, -1,
      0,  0,  0,
      1,  2,  1];
 
-/// Sobel filter for horizontal gradients.
-static HORIZONTAL_SOBEL: [i32; 9] = [
+/// Sobel filter for detecting horizontal gradients.
+///
+/// Used by the [`horizontal_sobel`](fn.horizontal_sobel.html) function.
+pub static HORIZONTAL_SOBEL: [i32; 9] = [
      -1, 0, 1,
      -2, 0, 2,
      -1, 0, 1];
 
-/// Convolves with the horizontal Sobel kernel to detect horizontal
-/// gradients in an image.
+/// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
+/// kernel to detect horizontal gradients.
 pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &HORIZONTAL_SOBEL)
 }
 
-/// Convolves with the vertical Sobel kernel to detect vertical
-/// gradients in an image.
+/// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
+/// kernel to detect vertical gradients.
 pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_SOBEL)
 }
 
-/// Prewitt filter for vertical gradients.
-static VERTICAL_PREWITT: [i32; 9] = [
+/// Prewitt filter for detecting vertical gradients.
+///
+/// Used by the [`vertical_prewitt`](fn.vertical_prewitt.html) function.
+pub static VERTICAL_PREWITT: [i32; 9] = [
     -1, -1, -1,
      0,  0,  0,
      1,  1,  1];
 
-/// Prewitt filter for horizontal gradients.
-static HORIZONTAL_PREWITT: [i32; 9] = [
+/// Prewitt filter for detecting horizontal gradients.
+///
+/// Used by the [`horizontal_prewitt`](fn.horizontal_prewitt.html) function.
+pub static HORIZONTAL_PREWITT: [i32; 9] = [
      -1, 0, 1,
      -1, 0, 1,
      -1, 0, 1];
 
-/// Convolves with the horizontal Prewitt kernel to detect horizontal
-/// gradients in an image.
+/// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
+/// kernel to detect horizontal gradients.
 pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &HORIZONTAL_PREWITT)
 }
 
-/// Convolves with the vertical Prewitt kernel to detect vertical
-/// gradients in an image.
+/// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
+/// kernel to detect vertical gradients.
 pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_PREWITT)
 }

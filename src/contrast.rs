@@ -95,6 +95,27 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
 /// Returns a binarized image from an input 8bpp grayscale image
 /// obtained by applying the given threshold. Pixels with intensity
 /// equal to the threshold are assigned to the background.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::contrast::threshold;
+///
+/// let image = gray_image!(
+///     10, 80, 20;
+///     50, 90, 70);
+///
+/// let thresholded = gray_image!(
+///     0, 255,   0;
+///     0, 255, 255);
+///
+/// assert_pixels_eq!(threshold(&image, 50), thresholded);
+/// # }
+/// ```
 pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
     let mut out = image.clone();
     threshold_mut(&mut out, thresh);
@@ -104,6 +125,28 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 /// Mutates given image to form a binarized version produced by applying
 /// the given threshold. Pixels with intensity
 /// equal to the threshold are assigned to the background.
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::contrast::threshold_mut;
+///
+/// let mut image = gray_image!(
+///     10, 80, 20;
+///     50, 90, 70);
+///
+/// let thresholded = gray_image!(
+///     0, 255,   0;
+///     0, 255, 255);
+///
+/// threshold_mut(&mut image, 50);
+///
+/// assert_pixels_eq!(image, thresholded);
+/// # }
+/// ```
 pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
     for p in image.iter_mut() {
         *p = if *p <= thresh { 0 } else { 255 };
