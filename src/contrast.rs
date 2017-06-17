@@ -233,6 +233,8 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
 
 /// Linearly stretches the contrast in an image, sending `lower` to `0u8` and `upper` to `2558u8`.
 ///
+/// Is it common to choose `upper` and `lower` values using image percentiles - see [`percentile`](../stats/fn.percentile.html).
+///
 /// # Examples
 /// ```
 /// # extern crate image;
