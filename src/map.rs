@@ -190,6 +190,31 @@ pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
 }
 
 /// Applies `f` to each pixel in the input image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::map::map_pixels;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let rgb = rgb_image!(
+///     [1, 0, 0], [2, 1, 0];
+///     [3, 0, 1], [4, 1, 1]);
+///
+/// assert_pixels_eq!(
+///     map_pixels(&image, |x, y, p| {
+///         Rgb([p[0], x as u8, y as u8])
+///     }),
+///     rgb);
+/// # }
+/// ```
 pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     where I: GenericImage<Pixel=P>,
           P: Pixel,
@@ -211,138 +236,195 @@ pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
     out
 }
 
-macro_rules! implement_channel_extraction {
-    ($extract_name: ident, $embed_name: ident, $idx: expr) => (
-        /// Create a grayscale image by extracting a channel of an RGB image.
-        pub fn $extract_name<I, C>(image: &I) -> Image<Luma<C>>
-            where I: GenericImage<Pixel=Rgb<C>>,
-                  C: Primitive + 'static
-        {
-            map_colors(image, |p| Luma([p[$idx]]))
-        }
-
-        /// Create an RGB image by embedding a grayscale image in a single channel.
-        pub fn $embed_name<I, C>(image: &I) -> Image<Rgb<C>>
-            where I: GenericImage<Pixel=Luma<C>>,
-                  C: Primitive + 'static
-        {
-            map_colors(image, |p| {
-                let mut cs = [C::zero(); 3];
-                cs[$idx] = p[0];
-                Rgb(cs)
-            })
-        }
-    )
+/// Creates a grayscale image by extracting the red channel of an RGB image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::red_channel;
+///
+/// let image = rgb_image!(
+///     [1, 2, 3], [2, 4, 6];
+///     [3, 6, 9], [4, 8, 12]);
+///
+/// let expected = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let actual = red_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
+    where I: GenericImage<Pixel=Rgb<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| Luma([p[0]]))
 }
 
-implement_channel_extraction!(red_channel, as_red_channel, 0);
-implement_channel_extraction!(green_channel, as_green_channel, 1);
-implement_channel_extraction!(blue_channel, as_blue_channel, 2);
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use image::Rgb;
-
-    #[test]
-    fn test_map_pixels() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = rgb_image_i16!(
-            [1, 2, 3], [3, 5, 7];
-            [4, 7, 10], [6, 10, 14]);
-
-        let mapped = map_pixels(&image, |x, y, p| {
-            let intensity = p[0] as i16;
-            let offset = (x + y) as i16;
-            Rgb([intensity + offset, 2 * intensity + offset, 3 * intensity + offset])
-        });
-        assert_pixels_eq!(mapped, expected);
-    }
-
-    #[test]
-    fn test_red_channel() {
-        let image = rgb_image!(
-            [1, 2, 3], [2, 4, 6];
-            [3, 6, 9], [4, 8, 12]);
-
-        let expected = gray_image!(
-            1, 2;
-            3, 4);
-
-        let actual = red_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_green_channel() {
-        let image = rgb_image!(
-            [1, 2, 3], [2, 4, 6];
-            [3, 6, 9], [4, 8, 12]);
-
-        let expected = gray_image!(
-            2, 4;
-            6, 8);
-
-        let actual = green_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_blue_channel() {
-        let image = rgb_image!(
-            [1, 2, 3], [2, 4, 6];
-            [3, 6, 9], [4, 8, 12]);
-
-        let expected = gray_image!(
-            3, 6;
-            9, 12);
-
-        let actual = blue_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_as_red_channel() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = rgb_image!(
-            [1, 0, 0], [2, 0, 0];
-            [3, 0, 0], [4, 0, 0]);
-
-        let actual = as_red_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_as_green_channel() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = rgb_image!(
-            [0, 1, 0], [0, 2, 0];
-            [0, 3, 0], [0, 4, 0]);
-
-        let actual = as_green_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
-
-    #[test]
-    fn test_as_blue_channel() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let expected = rgb_image!(
-          [0, 0, 1], [0, 0, 2];
-          [0, 0, 3], [0, 0, 4]);
-
-        let actual = as_blue_channel(&image);
-        assert_pixels_eq!(actual, expected);
-    }
+/// Creates an RGB image by embedding a grayscale image in its red channel.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::as_red_channel;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let expected = rgb_image!(
+///     [1, 0, 0], [2, 0, 0];
+///     [3, 0, 0], [4, 0, 0]);
+///
+/// let actual = as_red_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
+    where I: GenericImage<Pixel=Luma<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| {
+        let mut cs = [C::zero(); 3];
+        cs[0] = p[0];
+        Rgb(cs)
+    })
 }
+
+/// Creates a grayscale image by extracting the green channel of an RGB image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::green_channel;
+///
+/// let image = rgb_image!(
+///     [1, 2, 3], [2, 4, 6];
+///     [3, 6, 9], [4, 8, 12]);
+///
+/// let expected = gray_image!(
+///     2, 4;
+///     6, 8);
+///
+/// let actual = green_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
+    where I: GenericImage<Pixel=Rgb<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| Luma([p[1]]))
+}
+
+/// Creates an RGB image by embedding a grayscale image in its green channel.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::as_green_channel;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let expected = rgb_image!(
+///     [0, 1, 0], [0, 2, 0];
+///     [0, 3, 0], [0, 4, 0]);
+///
+/// let actual = as_green_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
+    where I: GenericImage<Pixel=Luma<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| {
+        let mut cs = [C::zero(); 3];
+        cs[1] = p[0];
+        Rgb(cs)
+    })
+}
+
+/// Creates a grayscale image by extracting the blue channel of an RGB image.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::blue_channel;
+///
+/// let image = rgb_image!(
+///     [1, 2, 3], [2, 4, 6];
+///     [3, 6, 9], [4, 8, 12]);
+///
+/// let expected = gray_image!(
+///     3, 6;
+///     9, 12);
+///
+/// let actual = blue_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
+    where I: GenericImage<Pixel=Rgb<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| Luma([p[2]]))
+}
+
+/// Creates an RGB image by embedding a grayscale image in its blue channel.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::as_blue_channel;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let expected = rgb_image!(
+///     [0, 0, 1], [0, 0, 2];
+///     [0, 0, 3], [0, 0, 4]);
+///
+/// let actual = as_blue_channel(&image);
+/// assert_pixels_eq!(actual, expected);
+/// # }
+/// ```
+pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
+    where I: GenericImage<Pixel=Luma<C>>,
+          C: Primitive + 'static
+{
+    map_colors(image, |p| {
+        let mut cs = [C::zero(); 3];
+        cs[2] = p[0];
+        Rgb(cs)
+    })
+}
+
