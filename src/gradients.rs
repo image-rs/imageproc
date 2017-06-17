@@ -6,7 +6,6 @@ use image::{
     ImageBuffer,
     Luma
 };
-
 use definitions::Image;
 use filter::filter3x3;
 
@@ -26,18 +25,6 @@ pub static HORIZONTAL_SOBEL: [i32; 9] = [
      -2, 0, 2,
      -1, 0, 1];
 
-/// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
-/// kernel to detect horizontal gradients.
-pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &HORIZONTAL_SOBEL)
-}
-
-/// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
-/// kernel to detect vertical gradients.
-pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &VERTICAL_SOBEL)
-}
-
 /// Prewitt filter for detecting vertical gradients.
 ///
 /// Used by the [`vertical_prewitt`](fn.vertical_prewitt.html) function.
@@ -53,6 +40,18 @@ pub static HORIZONTAL_PREWITT: [i32; 9] = [
      -1, 0, 1,
      -1, 0, 1,
      -1, 0, 1];
+
+/// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
+/// kernel to detect horizontal gradients.
+pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &HORIZONTAL_SOBEL)
+}
+
+/// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
+/// kernel to detect vertical gradients.
+pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &VERTICAL_SOBEL)
+}
 
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
 /// kernel to detect horizontal gradients.
@@ -87,18 +86,23 @@ fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
 
+    // This would be more concise using itertools::multizip, but that increased runtime by around 20%
     for y in 0..height {
         for x in 0..width {
             unsafe {
-                let h = horizontal.unsafe_get_pixel(x, y)[0] as f32;
-                let v = vertical.unsafe_get_pixel(x, y)[0] as f32;
-                let m = (h.powi(2) + v.powi(2)).sqrt() as u16;
+                let h = horizontal.unsafe_get_pixel(x, y)[0];
+                let v = vertical.unsafe_get_pixel(x, y)[0];
+                let m = gradient_magnitude(h as f32, v as f32);
                 out.unsafe_put_pixel(x, y, Luma([m]));
             }
         }
     }
 
     out
+}
+
+fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
+    (dx.powi(2) + dy.powi(2)).sqrt() as u16
 }
 
 #[cfg(test)]
