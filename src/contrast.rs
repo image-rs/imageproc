@@ -4,6 +4,7 @@ use std::cmp::{min, max};
 use image::{GrayImage, ImageBuffer, Luma};
 use definitions::{HasBlack, HasWhite};
 use integralimage::{integral_image, sum_image_pixels};
+use stats::{cumulative_histogram, histogram};
 use rayon::prelude::*;
 
 /// Applies an adaptive threshold to an image.
@@ -152,30 +153,6 @@ pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
     for p in image.iter_mut() {
         *p = if *p <= thresh { 0 } else { 255 };
     }
-}
-
-/// Returns the histogram of grayscale values in an 8bpp
-/// grayscale image.
-pub fn histogram(image: &GrayImage) -> [u32; 256] {
-    let mut hist = [0u32; 256];
-
-    for pix in image.iter() {
-        hist[*pix as usize] += 1;
-    }
-
-    hist
-}
-
-/// Returns the cumulative histogram of grayscale values in an 8bpp
-/// grayscale image.
-pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
-    let mut hist = histogram(image);
-
-    for i in 1..hist.len() {
-        hist[i] += hist[i - 1];
-    }
-
-    hist
 }
 
 /// Equalises the histogram of an 8bpp grayscale image in place. See also
@@ -405,29 +382,6 @@ mod test {
         b.iter(|| {
             match_histogram_mut(&mut image, &target);
         });
-    }
-
-    #[test]
-    fn test_cumulative_histogram() {
-        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
-        let hist = cumulative_histogram(&image);
-
-        assert_eq!(hist[0], 0);
-        assert_eq!(hist[1], 2);
-        assert_eq!(hist[2], 4);
-        assert_eq!(hist[3], 5);
-        assert!(hist.iter().skip(4).all(|x| *x == 5));
-    }
-
-    #[test]
-    fn test_histogram() {
-        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
-        let hist = histogram(&image);
-
-        assert_eq!(hist[0], 0);
-        assert_eq!(hist[1], 2);
-        assert_eq!(hist[2], 2);
-        assert_eq!(hist[3], 1);
     }
 
     #[test]

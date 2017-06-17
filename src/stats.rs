@@ -2,6 +2,7 @@
 
 use image::{
     GenericImage,
+    GrayImage,
     Pixel,
     Primitive
 };
@@ -9,6 +10,30 @@ use image::{
 use num::Bounded;
 use math::cast;
 use conv::ValueInto;
+
+/// Returns the histogram of grayscale values in an 8bpp
+/// grayscale image.
+pub fn histogram(image: &GrayImage) -> [u32; 256] {
+    let mut hist = [0u32; 256];
+
+    for pix in image.iter() {
+        hist[*pix as usize] += 1;
+    }
+
+    hist
+}
+
+/// Returns the cumulative histogram of grayscale values in an 8bpp
+/// grayscale image.
+pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
+    let mut hist = histogram(image);
+
+    for i in 1..hist.len() {
+        hist[i] += hist[i - 1];
+    }
+
+    hist
+}
 
 /// Returns the square root of the mean of the squares of differences
 /// between all subpixels in left and right. All channels are considered
@@ -68,6 +93,29 @@ mod test {
         Rgb
     };
     use test::{Bencher, black_box};
+
+    #[test]
+    fn test_cumulative_histogram() {
+        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
+        let hist = cumulative_histogram(&image);
+
+        assert_eq!(hist[0], 0);
+        assert_eq!(hist[1], 2);
+        assert_eq!(hist[2], 4);
+        assert_eq!(hist[3], 5);
+        assert!(hist.iter().skip(4).all(|x| *x == 5));
+    }
+
+    #[test]
+    fn test_histogram() {
+        let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
+        let hist = histogram(&image);
+
+        assert_eq!(hist[0], 0);
+        assert_eq!(hist[1], 2);
+        assert_eq!(hist[2], 2);
+        assert_eq!(hist[3], 1);
+    }
 
     #[test]
     fn test_root_mean_squared_error_grayscale() {
