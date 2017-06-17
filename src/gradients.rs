@@ -80,10 +80,9 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9])
-    -> Image<Luma<u16>> {
-    let horizontal: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, horizontal_kernel);
-    let vertical: ImageBuffer<Luma<i16>, Vec<i16>> = filter3x3(image, vertical_kernel);
+fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9]) -> Image<Luma<u16>> {
+    let horizontal: Image<Luma<i16>> = filter3x3(image, horizontal_kernel);
+    let vertical: Image<Luma<i16>> = filter3x3(image, vertical_kernel);
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -104,16 +103,13 @@ fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &
 
 #[cfg(test)]
 mod test {
-    use super::{
-        horizontal_sobel,
-        vertical_sobel,
-        horizontal_prewitt,
-        vertical_prewitt
-    };
+    use super::*;
     use image::{
         ImageBuffer,
         Luma
     };
+    use test::{Bencher, black_box};
+    use utils::gray_bench_image;
 
     #[test]
     fn test_gradients_constant_image() {
@@ -187,5 +183,14 @@ mod test {
 
         let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
+    }
+
+    #[bench]
+    fn bench_sobel_gradients(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let gradients = sobel_gradients(&image);
+            black_box(gradients);
+            });
     }
 }
