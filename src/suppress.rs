@@ -1,27 +1,17 @@
 //! Functions for suppressing non-maximal values.
 
 use std::cmp;
-
-use definitions::{
-    Position,
-    Score
-};
-
-use image::{
-    GenericImage,
-    ImageBuffer,
-    Luma,
-    Primitive
-};
-
+use definitions::{Position, Score};
+use image::{GenericImage, ImageBuffer, Luma, Primitive};
 use itertools::Itertools;
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
 /// Ties are resolved lexicographically.
 pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
-    where I: GenericImage<Pixel = Luma<C>>,
-          C: Primitive + Ord + 'static
+where
+    I: GenericImage<Pixel = Luma<C>>,
+    C: Primitive + Ord + 'static,
 {
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<Luma<C>, Vec<C>> = ImageBuffer::new(width, height);
@@ -57,14 +47,14 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
                 }
             }
 
-            let x0 = if radius >= best_x {0} else { best_x - radius };
+            let x0 = if radius >= best_x { 0 } else { best_x - radius };
             let x1 = x;
             let x2 = cmp::min(width, x + radius + 1);
             let x3 = cmp::min(width, best_x + radius + 1);
 
-            let y0 = if radius >= best_y {0} else { best_y - radius };
+            let y0 = if radius >= best_y { 0 } else { best_y - radius };
             let y1 = y;
-            let y2 = cmp::min(height, y + radius + 1);;
+            let y2 = cmp::min(height, y + radius + 1);
             let y3 = cmp::min(height, best_y + radius + 1);
 
             // Above initial r * r block
@@ -90,11 +80,17 @@ pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>
 /// lesser coordinates.
 fn contains_greater_value<I, C>(
     image: &I,
-    x: u32, y: u32, v: C,
-    y_lower: u32, y_upper: u32,
-    x_lower: u32, x_upper: u32) -> bool
-    where I: GenericImage<Pixel = Luma<C>>,
-          C: Primitive + Ord + 'static
+    x: u32,
+    y: u32,
+    v: C,
+    y_lower: u32,
+    y_upper: u32,
+    x_lower: u32,
+    x_upper: u32,
+) -> bool
+where
+    I: GenericImage<Pixel = Luma<C>>,
+    C: Primitive + Ord + 'static,
 {
     for cy in y_lower..y_upper {
         for cx in x_lower..x_upper {
@@ -113,13 +109,14 @@ fn contains_greater_value<I, C>(
 /// Returns all items which have the highest score in the
 /// (2 * radius + 1) square block centred on them. Ties are resolved lexicographically.
 pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
-    where T: Position + Score + Copy
- {
+where
+    T: Position + Score + Copy,
+{
     let mut ordered_ts = ts.to_vec();
-    ordered_ts.sort_by(|c, d| {(c.y(), c.x()).cmp(&(d.y(), d.x()))});
+    ordered_ts.sort_by(|c, d| (c.y(), c.x()).cmp(&(d.y(), d.x())));
     let height = match ordered_ts.last() {
         Some(t) => t.y(),
-        None => 0
+        None => 0,
     };
 
     let mut ts_by_row = vec![vec![]; (height + 1) as usize];
@@ -134,8 +131,12 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
         let cs = t.score();
 
         let mut is_max = true;
-        let row_lower = if radius > cy {0} else {cy - radius};
-        let row_upper = if cy + radius + 1 > height {height} else {cy + radius + 1};
+        let row_lower = if radius > cy { 0 } else { cy - radius };
+        let row_upper = if cy + radius + 1 > height {
+            height
+        } else {
+            cy + radius + 1
+        };
         for y in row_lower..row_upper {
             for c in &ts_by_row[y as usize] {
                 if c.x() + radius < cx {
@@ -172,29 +173,12 @@ pub fn local_maxima<T>(ts: &[T], radius: u32) -> Vec<T>
 
 #[cfg(test)]
 mod test {
-    use super::{
-        local_maxima,
-        suppress_non_maximum
-    };
-    use definitions::{
-        Position,
-        Score
-    };
-    use image::{
-        GenericImage,
-        GrayImage,
-        ImageBuffer,
-        Luma,
-        Primitive
-    };
-    use noise::{
-        gaussian_noise_mut
-    };
+    use super::{local_maxima, suppress_non_maximum};
+    use definitions::{Position, Score};
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
+    use noise::gaussian_noise_mut;
     use std::cmp;
-    use quickcheck::{
-        quickcheck,
-        TestResult
-    };
+    use quickcheck::{quickcheck, TestResult};
     use itertools::Itertools;
     use property_testing::GrayTestImage;
     use utils::pixel_diff_summary;
@@ -204,22 +188,32 @@ mod test {
     struct T {
         x: u32,
         y: u32,
-        score: f32
+        score: f32,
     }
 
     impl T {
         fn new(x: u32, y: u32, score: f32) -> T {
-            T { x: x, y: y, score: score}
+            T {
+                x: x,
+                y: y,
+                score: score,
+            }
         }
     }
 
     impl Position for T {
-        fn x(&self) -> u32 { self.x }
-        fn y(&self) -> u32 { self.y }
+        fn x(&self) -> u32 {
+            self.x
+        }
+        fn y(&self) -> u32 {
+            self.y
+        }
     }
 
     impl Score for T {
-        fn score(&self) -> f32 { self.score }
+        fn score(&self) -> f32 {
+            self.score
+        }
     }
 
     #[test]
@@ -235,13 +229,13 @@ mod test {
             // Tiebreak
             T::new(12, 20, 10f32),
             T::new(13, 20, 10f32),
-            T::new(13, 21, 10f32)
+            T::new(13, 21, 10f32),
         ];
 
         let expected = vec![
             T::new(0, 3, 10f32),
             T::new(7, 5, 15f32),
-            T::new(12, 20, 10f32)
+            T::new(12, 20, 10f32),
         ];
 
         let max = local_maxima(&ts, 3);
@@ -320,9 +314,11 @@ mod test {
     fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
         let width = 40u32;
         let height = 20u32;
-        let img = ImageBuffer::from_fn(width, height, |x, y| {
-            Luma([((width - x) + (height - y)) as u8])
-        });
+        let img = ImageBuffer::from_fn(
+            width,
+            height,
+            |x, y| Luma([((width - x) + (height - y)) as u8]),
+        );
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
@@ -349,10 +345,10 @@ mod test {
 
     /// Reference implementation of suppress_non_maximum. Used to validate
     /// the (presumably faster) actual implementation.
-    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32)
-        -> ImageBuffer<Luma<C>, Vec<C>>
-        where I: GenericImage<Pixel = Luma<C>>,
-              C: Primitive + Ord + 'static
+    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
+    where
+        I: GenericImage<Pixel = Luma<C>>,
+        C: Primitive + Ord + 'static,
     {
         let (width, height) = image.dimensions();
         let mut out = ImageBuffer::new(width, height);
@@ -365,31 +361,31 @@ mod test {
         // We update zero values from out as we go, so to check intensities
         // we need to read values from the input image.
         for y in 0..height {
-           for x in 0..width {
-               let intensity = image.get_pixel(x, y)[0];
-               let mut is_max = true;
+            for x in 0..width {
+                let intensity = image.get_pixel(x, y)[0];
+                let mut is_max = true;
 
-               let y_lower = cmp::max(0, y as i32 - iradius);
-               let y_upper = cmp::min(y as i32 + iradius + 1, iheight);
-               let x_lower = cmp::max(0, x as i32 - iradius);
-               let x_upper = cmp::min(x as i32 + iradius + 1, iwidth);
+                let y_lower = cmp::max(0, y as i32 - iradius);
+                let y_upper = cmp::min(y as i32 + iradius + 1, iheight);
+                let x_lower = cmp::max(0, x as i32 - iradius);
+                let x_upper = cmp::min(x as i32 + iradius + 1, iwidth);
 
-               for py in y_lower..y_upper {
-                   for px in x_lower..x_upper {
-                           let v = image.get_pixel(px as u32, py as u32)[0];
-                           // Handle intensity tiebreaks lexicographically
-                           let candidate_is_lexically_earlier = (px as u32, py as u32) < (x, y);
-                           if v > intensity || (v == intensity && candidate_is_lexically_earlier) {
-                               is_max = false;
-                               break;
-                           }
-                   }
-               }
+                for py in y_lower..y_upper {
+                    for px in x_lower..x_upper {
+                        let v = image.get_pixel(px as u32, py as u32)[0];
+                        // Handle intensity tiebreaks lexicographically
+                        let candidate_is_lexically_earlier = (px as u32, py as u32) < (x, y);
+                        if v > intensity || (v == intensity && candidate_is_lexically_earlier) {
+                            is_max = false;
+                            break;
+                        }
+                    }
+                }
 
-               if !is_max {
-                   out.put_pixel(x, y, Luma([C::zero()]));
-               }
-           }
+                if !is_max {
+                    out.put_pixel(x, y, Luma([C::zero()]));
+                }
+            }
         }
 
         out
@@ -402,7 +398,7 @@ mod test {
             let actual = suppress_non_maximum(&image.0, 3);
             match pixel_diff_summary(&actual, &expected) {
                 None => TestResult::passed(),
-                Some(err) => TestResult::error(err)
+                Some(err) => TestResult::error(err),
             }
         }
         quickcheck(prop as fn(GrayTestImage) -> TestResult);
