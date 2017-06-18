@@ -6,20 +6,24 @@ use definitions::{Position, Score};
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
 /// corner detectors.
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Corner {
     /// x-coordinate of the corner.
     pub x: u32,
     /// y-coordinate of the corner.
     pub y: u32,
     /// Score of the detected corner.
-    pub score: f32
+    pub score: f32,
 }
 
 impl Corner {
     /// A corner at location (x, y) with score `score`.
     pub fn new(x: u32, y: u32, score: f32) -> Corner {
-        Corner {x: x, y: y, score: score}
+        Corner {
+            x: x,
+            y: y,
+            score: score,
+        }
     }
 }
 
@@ -53,7 +57,7 @@ pub enum Fast {
     /// Corners require a section of length as least nine.
     Nine,
     /// Corners require a section of length as least twelve.
-    Twelve
+    Twelve,
 }
 
 /// Finds corners using FAST-12 features. See comment on Fast enum.
@@ -65,7 +69,7 @@ pub fn corners_fast12(image: &GrayImage, threshold: u8) -> Vec<Corner> {
         for x in 0..width {
             if is_corner_fast12(image, threshold, x, y) {
                 let score = fast_corner_score(image, threshold, x, y, Fast::Twelve);
-                corners.push(Corner::new(x,y, score as f32));
+                corners.push(Corner::new(x, y, score as f32));
             }
         }
     }
@@ -82,7 +86,7 @@ pub fn corners_fast9(image: &GrayImage, threshold: u8) -> Vec<Corner> {
         for x in 0..width {
             if is_corner_fast9(image, threshold, x, y) {
                 let score = fast_corner_score(image, threshold, x, y, Fast::Nine);
-                corners.push(Corner::new(x,y, score as f32));
+                corners.push(Corner::new(x, y, score as f32));
             }
         }
     }
@@ -116,8 +120,7 @@ pub fn fast_corner_score(image: &GrayImage, threshold: u8, x: u32, y: u32, varia
 
         if is_corner {
             min = probe;
-        }
-        else {
+        } else {
             max = probe - 1;
         }
     }
@@ -143,24 +146,26 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     }
 
     let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
-    let low_thresh: i16  = c as i16 - threshold as i16;
+    let low_thresh: i16 = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
     let p0 = unsafe { image.unsafe_get_pixel(x, y - 3)[0] as i16 };
     let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
-    let p4  = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
+    let p4 = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
     let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
 
-    let above = (p0  > high_thresh && p4  > high_thresh) ||
-                (p4  > high_thresh && p8  > high_thresh) ||
-                (p8  > high_thresh && p12 > high_thresh) ||
-                (p12 > high_thresh && p0  > high_thresh);
+    let above = 
+        (p0 > high_thresh && p4 > high_thresh) ||
+        (p4 > high_thresh && p8 > high_thresh) ||
+        (p8 > high_thresh && p12 > high_thresh) ||
+        (p12 > high_thresh && p0 > high_thresh);
 
-    let below = (p0  < low_thresh && p4  < low_thresh) ||
-                (p4  < low_thresh && p8  < low_thresh) ||
-                (p8  < low_thresh && p12 < low_thresh) ||
-                (p12 < low_thresh && p0  < low_thresh);
+    let below = 
+        (p0 < low_thresh && p4 < low_thresh) ||
+        (p4 < low_thresh && p8 < low_thresh) ||
+        (p8 < low_thresh && p12 < low_thresh) ||
+        (p12 < low_thresh && p0 < low_thresh);
 
     if !above && !below {
         return false;
@@ -170,18 +175,19 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
 
     // above and below could both be true
     (above && has_bright_span(&pixels, 9, high_thresh)) ||
-    (below && has_dark_span(&pixels, 9, low_thresh))
+        (below && has_dark_span(&pixels, 9, low_thresh))
 }
 
 /// Checks if the given pixel is a corner according to the FAST12 detector.
 fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (width, height) = image.dimensions();
+
     if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
         return false;
     }
 
     let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
-    let low_thresh: i16  = c as i16 - threshold as i16;
+    let low_thresh: i16 = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
@@ -189,17 +195,17 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
 
     let mut above = p0 > high_thresh && p8 > high_thresh;
-    let mut below = p0 < low_thresh  && p8 < low_thresh;
+    let mut below = p0 < low_thresh && p8 < low_thresh;
 
     if !above && !below {
         return false;
     }
 
-    let p4  = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
+    let p4 = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
     let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
 
     above = above && ((p4 > high_thresh) || (p12 > high_thresh));
-    below = below && ((p4 < low_thresh)  || (p12 < low_thresh));
+    below = below && ((p4 < low_thresh) || (p12 < low_thresh));
 
     if !above && !below {
         return false;
@@ -216,15 +222,21 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     // Exactly one of above or below is true
     if above {
         has_bright_span(&pixels, 12, high_thresh)
-    }
-    else {
+    } else {
         has_dark_span(&pixels, 12, low_thresh)
     }
 }
 
 #[inline]
-unsafe fn get_circle(image: &GrayImage, x: u32, y: u32,
-                     p0: i16, p4: i16, p8: i16, p12: i16) -> [i16; 16] {
+unsafe fn get_circle(
+    image: &GrayImage,
+    x: u32,
+    y: u32,
+    p0: i16,
+    p4: i16,
+    p8: i16,
+    p12: i16,
+) -> [i16; 16] {
     [
         p0,
         image.unsafe_get_pixel(x + 1, y - 3)[0] as i16,
@@ -260,9 +272,12 @@ fn has_dark_span(circle: &[i16; 16], length: u8, threshold: i16) -> bool {
 /// True if the circle has a contiguous section of at least the given length, all
 /// of whose pixels match f condition.
 fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool
-    where F: Fn(&i16) -> bool {
-
-    if length > 16 { return false; }
+where
+    F: Fn(&i16) -> bool,
+{
+    if length > 16 {
+        return false;
+    }
 
     let mut nb_ok = 0u8;
     let mut nb_ok_start = None;
@@ -270,7 +285,9 @@ fn search_span<F>(circle: &[i16; 16], length: u8, f: F) -> bool
     for c in circle.iter() {
         if f(c) {
             nb_ok += 1;
-            if nb_ok == length { return true; }
+            if nb_ok == length {
+                return true;
+            }
         } else {
             if nb_ok_start.is_none() {
                 nb_ok_start = Some(nb_ok);
@@ -354,7 +371,7 @@ mod test {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-       b.iter(||is_corner_fast12(&image, 8, 3, 3));
+        b.iter(|| is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
