@@ -290,9 +290,9 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod test {
     use super::*;
+    use property_testing::GrayTestImage;
     use utils::{
         gray_bench_image,
-        GrayTestImage,
         pixel_diff_summary
     };
     use image::{

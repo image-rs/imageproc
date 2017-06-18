@@ -36,6 +36,7 @@ pub mod morphology;
 pub mod multiarray;
 pub mod noise;
 pub mod pixelops;
+pub mod property_testing;
 pub mod rect;
 pub mod regionlabelling;
 pub mod stats;

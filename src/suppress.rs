@@ -196,7 +196,8 @@ mod test {
         TestResult
     };
     use itertools::Itertools;
-    use utils::{GrayTestImage,pixel_diff_summary};
+    use property_testing::GrayTestImage;
+    use utils::pixel_diff_summary;
     use test::Bencher;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
