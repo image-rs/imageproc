@@ -1,11 +1,6 @@
 //! Statistical properties of images.
 
-use image::{
-    GenericImage,
-    GrayImage,
-    Pixel,
-    Primitive
-};
+use image::{GenericImage, GrayImage, Pixel, Primitive};
 
 use num::Bounded;
 use math::cast;
@@ -89,10 +84,11 @@ pub fn percentile(image: &GrayImage, p: u8) -> u8 {
 /// equally. If you do not want this (e.g. if using RGBA) then change
 /// image formats first.
 pub fn root_mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
-    where I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>,
-          P: Pixel,
-          P::Subpixel: ValueInto<f64>
+where
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
+    P: Pixel,
+    P::Subpixel: ValueInto<f64>,
 {
     mean_squared_error(left, right).sqrt()
 }
@@ -102,10 +98,11 @@ pub fn root_mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
 /// (e.g. if using RGBA) then change image formats first.
 /// See also [peak signal-to-noise ratio (wikipedia)](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio).
 pub fn peak_signal_to_noise_ratio<I, J, P>(original: &I, noisy: &J) -> f64
-    where I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>,
-          P: Pixel,
-          P::Subpixel: ValueInto<f64> + Primitive
+where
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
+    P: Pixel,
+    P::Subpixel: ValueInto<f64> + Primitive,
 {
     let max: f64 = cast(<P::Subpixel as Bounded>::max_value());
     let mse = mean_squared_error(original, noisy);
@@ -113,10 +110,11 @@ pub fn peak_signal_to_noise_ratio<I, J, P>(original: &I, noisy: &J) -> f64
 }
 
 fn mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
-    where I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>,
-          P: Pixel,
-          P::Subpixel: ValueInto<f64>
+where
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
+    P: Pixel,
+    P::Subpixel: ValueInto<f64>,
 {
     assert_dimensions_match!(left, right);
     let mut sum_squared_diffs = 0f64;
@@ -135,12 +133,7 @@ fn mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{
-        GrayImage,
-        RgbImage,
-        Luma,
-        Rgb
-    };
+    use image::{GrayImage, RgbImage, Luma, Rgb};
     use test::{Bencher, black_box};
 
     #[test]
@@ -199,15 +192,11 @@ mod test {
     }
 
     fn left_image_rgb(width: u32, height: u32) -> RgbImage {
-        RgbImage::from_fn(width, height, |x, y| {
-            Rgb([x as u8, y as u8, (x + y) as u8])
-        })
+        RgbImage::from_fn(width, height, |x, y| Rgb([x as u8, y as u8, (x + y) as u8]))
     }
 
     fn right_image_rgb(width: u32, height: u32) -> RgbImage {
-        RgbImage::from_fn(width, height, |x, y| {
-            Rgb([(x + y) as u8, x as u8, y as u8])
-        })
+        RgbImage::from_fn(width, height, |x, y| Rgb([(x + y) as u8, x as u8, y as u8]))
     }
 
     #[bench]
@@ -215,22 +204,18 @@ mod test {
         let left = left_image_rgb(50, 50);
         let right = right_image_rgb(50, 50);
 
-        b.iter(||{
+        b.iter(|| {
             let error = root_mean_squared_error(&left, &right);
             test::black_box(error);
         });
     }
 
     fn left_image_gray(width: u32, height: u32) -> GrayImage {
-        GrayImage::from_fn(width, height, |x, _| {
-            Luma([x as u8])
-        })
+        GrayImage::from_fn(width, height, |x, _| Luma([x as u8]))
     }
 
     fn right_image_gray(width: u32, height: u32) -> GrayImage {
-        GrayImage::from_fn(width, height, |_, y| {
-            Luma([y as u8])
-        })
+        GrayImage::from_fn(width, height, |_, y| Luma([y as u8]))
     }
 
     #[bench]
@@ -238,7 +223,7 @@ mod test {
         let left = left_image_gray(50, 50);
         let right = right_image_gray(50, 50);
 
-        b.iter(||{
+        b.iter(|| {
             let error = root_mean_squared_error(&left, &right);
             test::black_box(error);
         });
