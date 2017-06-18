@@ -3,7 +3,6 @@
 //! [Haar-like features]: https://en.wikipedia.org/wiki/Haar-like_features
 
 use definitions::{HasBlack, HasWhite, Image};
-use integralimage;
 use image::{GenericImage, ImageBuffer, Luma};
 use itertools::Itertools;
 use std::marker::PhantomData;
@@ -387,7 +386,7 @@ pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
 #[cfg(test)]
 mod test {
     use super::*;
-    use integralimage::{integral_image};
+    use integral_image::{integral_image, sum_image_pixels};
     use utils::gray_bench_image;
     use test;
 
@@ -523,7 +522,7 @@ mod test {
                 let parity = (w + h + parity_shift) & 1;
                 let multiplier = 1 - 2 * (parity as i32);
 
-                let block_sum = integralimage::sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
+                let block_sum = sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
                 sum += multiplier * block_sum;
             }
         }

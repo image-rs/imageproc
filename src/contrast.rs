@@ -3,7 +3,7 @@
 use std::cmp::{min, max};
 use image::{GrayImage, ImageBuffer, Luma};
 use definitions::{HasBlack, HasWhite};
-use integralimage::{integral_image, sum_image_pixels};
+use integral_image::{integral_image, sum_image_pixels};
 use stats::{cumulative_histogram, histogram};
 use rayon::prelude::*;
 

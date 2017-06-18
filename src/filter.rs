@@ -9,24 +9,10 @@ use image::{
     Primitive
 };
 
-use integralimage::{
-    column_running_sum,
-    row_running_sum
-};
-
-use map::{
-    WithChannel,
-    ChannelMap
-};
-
-use definitions::{
-    Clamp,
-    Image
-};
-
-use num::{
-    Num
-};
+use integral_image::{column_running_sum, row_running_sum};
+use map::{WithChannel, ChannelMap};
+use definitions::{Clamp, Image};
+use num::Num;
 
 use conv::ValueInto;
 use math::cast;
