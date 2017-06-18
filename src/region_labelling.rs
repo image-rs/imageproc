@@ -1,10 +1,6 @@
 //! Functions for finding and labelling connected components of an image.
 
-use image::{
-    GenericImage,
-    ImageBuffer,
-    Luma
-};
+use image::{GenericImage, ImageBuffer, Luma};
 
 use definitions::Image;
 use union_find::DisjointSetForest;
@@ -17,16 +13,21 @@ pub enum Connectivity {
     /// A pixel is connected to its N, S, E and W neighbors.
     Four,
     /// A pixel is connected to all of its neighbors.
-    Eight
+    Eight,
 }
 
 /// Returns an image of the same size as the input, where each pixel
 /// is labelled by the connected foreground component it belongs to,
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they are equal to the provided background pixel.
-pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pixel) -> Image<Luma<u32>>
-    where I: GenericImage,
-          I::Pixel: Eq
+pub fn connected_components<I>(
+    image: &I,
+    conn: Connectivity,
+    background: I::Pixel,
+) -> Image<Luma<u32>>
+where
+    I: GenericImage,
+    I::Pixel: Eq,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -92,15 +93,18 @@ pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pix
             }
 
             if num_adj == 0 {
-                unsafe { out.unsafe_put_pixel(x, y, Luma([next_label])); }
+                unsafe {
+                    out.unsafe_put_pixel(x, y, Luma([next_label]));
+                }
                 next_label += 1;
-            }
-            else {
+            } else {
                 let mut min_label = u32::max_value();
                 for n in 0..num_adj {
                     min_label = cmp::min(min_label, adj_labels[n]);
                 }
-                unsafe { out.unsafe_put_pixel(x, y, Luma([min_label])); }
+                unsafe {
+                    out.unsafe_put_pixel(x, y, Luma([min_label]));
+                }
                 for n in 0..num_adj {
                     forest.union(min_label as usize, adj_labels[n] as usize);
                 }
@@ -138,23 +142,10 @@ pub fn connected_components<I>(image: &I, conn: Connectivity, background: I::Pix
 
 #[cfg(test)]
 mod test {
-
-    use super::{
-        connected_components
-    };
-    use super::Connectivity::{
-        Four,
-        Eight
-    };
-    use definitions::{
-        HasBlack,
-        HasWhite
-    };
-    use image::{
-        GrayImage,
-        ImageBuffer,
-        Luma
-    };
+    use super::connected_components;
+    use super::Connectivity::{Four, Eight};
+    use definitions::{HasBlack, HasWhite};
+    use image::{GrayImage, ImageBuffer, Luma};
     use test;
 
     #[test]
@@ -166,10 +157,10 @@ mod test {
             0, 0, 0, 1);
 
         let expected = gray_image_u32!(
-                1, 0, 2, 3;
-                0, 4, 4, 0;
-                0, 0, 0, 0;
-                0, 0, 0, 5);
+            1, 0, 2, 3;
+            0, 4, 4, 0;
+            0, 0, 0, 0;
+            0, 0, 0, 5);
 
         let labelled = connected_components(&image, Four, Luma::black());
         assert_pixels_eq!(labelled, expected);
@@ -184,10 +175,10 @@ mod test {
             0, 0, 0, 1);
 
         let expected = gray_image_u32!(
-                1, 0, 2, 1;
-                0, 1, 1, 0;
-                0, 0, 0, 0;
-                0, 0, 0, 3);
+            1, 0, 2, 1;
+            0, 1, 1, 0;
+            0, 0, 0, 0;
+            0, 0, 0, 3);
 
         let labelled = connected_components(&image, Eight, Luma::black());
         assert_pixels_eq!(labelled, expected);
@@ -202,10 +193,10 @@ mod test {
             255, 255, 255,   1);
 
         let expected = gray_image_u32!(
-                1, 0, 2, 1;
-                0, 1, 1, 0;
-                0, 0, 0, 0;
-                0, 0, 0, 3);
+            1, 0, 2, 1;
+            0, 1, 1, 0;
+            0, 0, 0, 0;
+            0, 0, 0, 3);
 
         let labelled = connected_components(&image, Eight, Luma::white());
         assert_pixels_eq!(labelled, expected);
@@ -214,9 +205,10 @@ mod test {
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way conectivity.
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| {
-            if (x + y) % 2 == 0 { return Luma([255u8]); }
-            else { return Luma([0u8]); }
+        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
+            return Luma([255u8]);
+        } else {
+            return Luma([0u8]);
         })
     }
 
@@ -242,7 +234,7 @@ mod test {
         b.iter(|| {
             let components = connected_components(&image, Eight, Luma::black());
             test::black_box(components);
-            });
+        });
     }
 
     #[bench]
@@ -251,6 +243,6 @@ mod test {
         b.iter(|| {
             let components = connected_components(&image, Four, Luma::black());
             test::black_box(components);
-            });
+        });
     }
 }
