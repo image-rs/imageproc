@@ -15,7 +15,7 @@ pub enum Norm {
     L1,
     /// Defines d((x1, y1), (x2, y2)) to be max(abs(x1 - x2), abs(y1 - y2)).
     /// Also known as the chessboard norm.
-    LInf
+    LInf,
 }
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
@@ -219,7 +219,10 @@ pub fn distance_transform_mut(image: &mut GrayImage, norm: Norm) {
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
-enum DistanceFrom { Foreground, Background }
+enum DistanceFrom {
+    Foreground,
+    Background,
+}
 
 fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom) {
     let max_distance = Luma([min(image.width() + image.height(), 255u32) as u8]);
@@ -233,8 +236,7 @@ fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom
                         image.unsafe_put_pixel(x, y, Luma([0u8]));
                         continue;
                     }
-                }
-                else {
+                } else {
                     if image.unsafe_get_pixel(x, y)[0] == 0u8 {
                         image.unsafe_put_pixel(x, y, Luma([0u8]));
                         continue;
@@ -289,7 +291,13 @@ fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom
 // Sets image[current_x, current_y] to min(image[current_x, current_y], image[candidate_x, candidate_y] + 1).
 // We avoid overflow by performing the arithmetic at type u16. We could use u8::saturating_add instead, but
 // (based on the benchmarks tests) this appears to be considerably slower.
-unsafe fn check(image: &mut GrayImage, current_x: u32, current_y: u32, candidate_x: u32, candidate_y: u32) {
+unsafe fn check(
+    image: &mut GrayImage,
+    current_x: u32,
+    current_y: u32,
+    candidate_x: u32,
+    candidate_y: u32,
+) {
     let current = image.unsafe_get_pixel(current_x, current_y)[0] as u16;
     let candidate_incr = image.unsafe_get_pixel(candidate_x, candidate_y)[0] as u16 + 1;
     if candidate_incr < current {
@@ -307,17 +315,13 @@ mod test {
     #[test]
     fn test_distance_transform_saturation() {
         // A single foreground pixel in the top-right
-        let image = GrayImage::from_fn(5, 5, |x, y| {
-            match (x, y) {
-                (0, 0) => Luma([255u8]),
-                _ => Luma([0u8])
-            }
+        let image = GrayImage::from_fn(5, 5, |x, y| match (x, y) {
+            (0, 0) => Luma([255u8]),
+            _ => Luma([0u8]),
         });
 
         // Distances should not overflow
-        let expected = GrayImage::from_fn(5, 5, |x, y| {
-            Luma([min(255, max(x, y)) as u8])
-        });
+        let expected = GrayImage::from_fn(5, 5, |x, y| Luma([min(255, max(x, y)) as u8]));
 
         let distances = distance_transform(&image, Norm::LInf);
         assert_pixels_eq!(distances, expected);
@@ -410,7 +414,7 @@ mod test {
 
         assert_pixels_eq!(dilated, expected);
     }
-    
+
     #[test]
     fn test_erode_point_l1_1() {
         let image = gray_image!(
@@ -456,12 +460,10 @@ mod test {
     }
 
     fn square() -> GrayImage {
-        GrayImage::from_fn(500, 500, |x, y|{
-            if min(x, y) > 100 && max(x, y) < 300  {
-                Luma([255u8])
-            } else {
-                Luma([0u8])
-            }
+        GrayImage::from_fn(500, 500, |x, y| if min(x, y) > 100 && max(x, y) < 300 {
+            Luma([255u8])
+        } else {
+            Luma([0u8])
         })
     }
 
