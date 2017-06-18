@@ -1,16 +1,7 @@
 //! Trait definitions and type aliases.
 
-use image::{
-    Rgb,
-    Luma,
-    Pixel,
-    ImageBuffer
-};
-use std::{
-    u8,
-    u16,
-    i16
-};
+use image::{Rgb, Luma, Pixel, ImageBuffer};
+use std::{u8, u16, i16};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather
@@ -108,7 +99,6 @@ implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 
 #[cfg(test)]
 mod test {
-
     use super::Clamp;
 
     #[test]
