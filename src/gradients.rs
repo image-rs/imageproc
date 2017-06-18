@@ -1,11 +1,6 @@
 //! Functions for computing gradients of image intensities.
 
-use image::{
-    GenericImage,
-    GrayImage,
-    ImageBuffer,
-    Luma
-};
+use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use definitions::Image;
 use filter::filter3x3;
 
@@ -21,9 +16,9 @@ pub static VERTICAL_SOBEL: [i32; 9] = [
 ///
 /// Used by the [`horizontal_sobel`](fn.horizontal_sobel.html) function.
 pub static HORIZONTAL_SOBEL: [i32; 9] = [
-     -1, 0, 1,
-     -2, 0, 2,
-     -1, 0, 1];
+    -1, 0, 1,
+    -2, 0, 2,
+    -1, 0, 1];
 
 /// Prewitt filter for detecting vertical gradients.
 ///
@@ -37,9 +32,9 @@ pub static VERTICAL_PREWITT: [i32; 9] = [
 ///
 /// Used by the [`horizontal_prewitt`](fn.horizontal_prewitt.html) function.
 pub static HORIZONTAL_PREWITT: [i32; 9] = [
-     -1, 0, 1,
-     -1, 0, 1,
-     -1, 0, 1];
+    -1, 0, 1,
+    -1, 0, 1,
+    -1, 0, 1];
 
 /// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
 /// kernel to detect horizontal gradients.
@@ -79,7 +74,11 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients(image: &GrayImage, horizontal_kernel: &[i32; 9], vertical_kernel: &[i32; 9]) -> Image<Luma<u16>> {
+fn gradients(
+    image: &GrayImage,
+    horizontal_kernel: &[i32; 9],
+    vertical_kernel: &[i32; 9],
+) -> Image<Luma<u16>> {
     let horizontal: Image<Luma<i16>> = filter3x3(image, horizontal_kernel);
     let vertical: Image<Luma<i16>> = filter3x3(image, vertical_kernel);
 
@@ -108,10 +107,7 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{
-        ImageBuffer,
-        Luma
-    };
+    use image::{ImageBuffer, Luma};
     use test::{Bencher, black_box};
     use utils::gray_bench_image;
 
@@ -195,6 +191,6 @@ mod test {
         b.iter(|| {
             let gradients = sobel_gradients(&image);
             black_box(gradients);
-            });
+        });
     }
 }
