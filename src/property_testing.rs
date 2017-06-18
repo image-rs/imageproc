@@ -46,9 +46,10 @@ pub trait ArbitraryPixel {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 }
 
-fn shrink<I>(image: &I) -> Box<Iterator<Item=Image<I::Pixel>>>
-    where I: GenericImage,
-          I::Pixel: 'static
+fn shrink<I>(image: &I) -> Box<Iterator<Item = Image<I::Pixel>>>
+where
+    I: GenericImage,
+    I::Pixel: 'static,
 {
     let mut subs = vec![];
 
@@ -72,8 +73,9 @@ fn shrink<I>(image: &I) -> Box<Iterator<Item=Image<I::Pixel>>>
 }
 
 fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: 'static
+where
+    I: GenericImage,
+    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(width, height);
     for dy in 0..height {
@@ -88,8 +90,13 @@ fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> Image<I::P
 
 impl<T: fmt::Debug + Pixel + 'static> fmt::Debug for TestBuffer<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "width: {}, height: {}, data: {:?}",
-            self.0.width(), self.0.height(), self.0.enumerate_pixels().collect::<Vec<_>>())
+        write!(
+            f,
+            "width: {}, height: {}, data: {:?}",
+            self.0.width(),
+            self.0.height(),
+            self.0.enumerate_pixels().collect::<Vec<_>>()
+        )
     }
 }
 
