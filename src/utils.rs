@@ -1,15 +1,6 @@
 //! Utils for testing and debugging.
 
-use image::{
-    DynamicImage,
-    GenericImage,
-    GrayImage,
-    Luma,
-    open,
-    Pixel,
-    Rgb,
-    RgbImage
-};
+use image::{DynamicImage, GenericImage, GrayImage, Luma, open, Pixel, Rgb, RgbImage};
 
 use std::fmt;
 use std::path::Path;
@@ -301,11 +292,11 @@ macro_rules! rgb_image_u32 {
 
 /// Human readable description of some of the pixels that differ
 /// between left and right, or None if all pixels match.
-pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J)
-    -> Option<String>
-    where P: Pixel + PartialEq + fmt::Debug,
-          I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>
+pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J) -> Option<String>
+where
+    P: Pixel + PartialEq + fmt::Debug,
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
 {
     significant_pixel_diff_summary(actual, expected, |p, q| p != q)
 }
@@ -313,18 +304,24 @@ pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J)
 /// Human readable description of some of the pixels that differ
 /// signifcantly (according to provided function) between left
 /// and right, or None if all pixels match.
-pub fn significant_pixel_diff_summary<I, J, F, P>(actual: &I,
-                                                  expected: &J,
-                                                  is_significant_diff: F)
-    -> Option<String>
-    where P: Pixel + fmt::Debug,
-          I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>,
-          F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool
+pub fn significant_pixel_diff_summary<I, J, F, P>(
+    actual: &I,
+    expected: &J,
+    is_significant_diff: F,
+) -> Option<String>
+where
+    P: Pixel + fmt::Debug,
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
+    F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool,
 {
     if actual.dimensions() != expected.dimensions() {
-        return Some(format!("dimensions do not match. \
-            actual: {:?}, expected: {:?}", actual.dimensions(), expected.dimensions()));
+        return Some(format!(
+            "dimensions do not match. \
+            actual: {:?}, expected: {:?}",
+            actual.dimensions(),
+            expected.dimensions()
+        ));
     }
     let diffs = pixel_diffs(actual, expected, is_significant_diff);
     if diffs.is_empty() {
@@ -398,12 +395,16 @@ macro_rules! assert_dimensions_match {
 }
 
 /// Lists pixels that differ between left and right images.
-pub fn pixel_diffs<I, J, F, P>(left: &I, right: &J, is_diff: F)
-        -> Vec<((u32, u32, I::Pixel), (u32, u32, I::Pixel))>
-    where P: Pixel,
-          I: GenericImage<Pixel=P>,
-          J: GenericImage<Pixel=P>,
-          F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool
+pub fn pixel_diffs<I, J, F, P>(
+    left: &I,
+    right: &J,
+    is_diff: F,
+) -> Vec<((u32, u32, I::Pixel), (u32, u32, I::Pixel))>
+where
+    P: Pixel,
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
+    F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool,
 {
     if is_empty(left) || is_empty(right) {
         return vec![];
@@ -424,21 +425,24 @@ fn is_empty<I: GenericImage>(image: &I) -> bool {
 
 /// Gives a summary description of a list of pixel diffs for use in error messages.
 pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
-    where I: Iterator<Item=(P, P)>,
-          P: fmt::Debug
+where
+    I: Iterator<Item = (P, P)>,
+    P: fmt::Debug,
 {
     let mut err = "pixels do not match. ".to_owned();
-    err.push_str(&(diffs
-        .take(5)
-        .map(|d| format!("\nactual: {:?}, expected {:?} ", d.0, d.1))
-        .collect::<Vec<_>>()
-        .join("")));
+    err.push_str(
+        &(diffs
+              .take(5)
+              .map(|d| format!("\nactual: {:?}, expected {:?} ", d.0, d.1))
+              .collect::<Vec<_>>()
+              .join("")),
+    );
     err
 }
 
 /// Loads image at given path, panicking on failure.
 pub fn load_image_or_panic<P: AsRef<Path> + fmt::Debug>(path: P) -> DynamicImage {
-     open(path.as_ref()).expect(&format!("Could not load image at {:?}", path.as_ref()))
+    open(path.as_ref()).expect(&format!("Could not load image at {:?}", path.as_ref()))
 }
 
 /// Gray image to use in benchmarks. This is neither noise nor
@@ -502,8 +506,7 @@ mod test {
 
         let expected = GrayImage::from_raw(3, 2, vec![
             1, 2, 3,
-            4, 5, 6
-        ]).unwrap();
+            4, 5, 6]).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -516,8 +519,7 @@ mod test {
 
         let expected = ImageBuffer::<Luma<i16>, Vec<i16>>::from_raw(3, 2, vec![
             1i16, 2, 3,
-            4, 5, 6
-        ]).unwrap();
+            4, 5, 6]).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -530,13 +532,12 @@ mod test {
 
         let expected = ImageBuffer::<Luma<u16>, Vec<u16>>::from_raw(3, 2, vec![
             1u16, 2, 3,
-            4, 5, 6
-        ]).unwrap();
+            4, 5, 6]).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
 
-  #[test]
+    #[test]
     fn test_gray_image_i32() {
         let image = gray_image_i32!(
             1, 2, 3;
@@ -544,8 +545,7 @@ mod test {
 
         let expected = ImageBuffer::<Luma<i32>, Vec<i32>>::from_raw(3, 2, vec![
             1i32, 2, 3,
-            4, 5, 6
-        ]).unwrap();
+            4, 5, 6]).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -558,8 +558,7 @@ mod test {
 
         let expected = ImageBuffer::<Luma<u32>, Vec<u32>>::from_raw(3, 2, vec![
             1u32, 2, 3,
-            4, 5, 6
-        ]).unwrap();
+            4, 5, 6]).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -592,8 +591,8 @@ mod test {
 
         let expected = ImageBuffer::<Rgb<i16>, Vec<i16>>::from_raw(2, 2, vec![
             1i16, 2, 3, 4, 5, 6,
-            7, 8, 9, 10, 11, 12
-        ]).unwrap();
+            7, 8, 9, 10, 11, 12],
+        ).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -606,8 +605,8 @@ mod test {
 
         let expected = ImageBuffer::<Rgb<u16>, Vec<u16>>::from_raw(2, 2, vec![
             1u16, 2, 3, 4, 5, 6,
-            7, 8, 9, 10, 11, 12
-        ]).unwrap();
+            7, 8, 9, 10, 11, 12],
+        ).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -620,8 +619,8 @@ mod test {
 
         let expected = ImageBuffer::<Rgb<i32>, Vec<i32>>::from_raw(2, 2, vec![
             1i32, 2, 3, 4, 5, 6,
-            7, 8, 9, 10, 11, 12
-        ]).unwrap();
+            7, 8, 9, 10, 11, 12],
+        ).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
@@ -634,8 +633,8 @@ mod test {
 
         let expected = ImageBuffer::<Rgb<u32>, Vec<u32>>::from_raw(2, 2, vec![
             1u32, 2, 3, 4, 5, 6,
-            7, 8, 9, 10, 11, 12
-        ]).unwrap();
+            7, 8, 9, 10, 11, 12],
+        ).unwrap();
 
         assert_pixels_eq!(image, expected);
     }
