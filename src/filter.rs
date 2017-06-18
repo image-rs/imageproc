@@ -1,13 +1,6 @@
 //! Functions for filtering images.
 
-use image::{
-    GrayImage,
-    GenericImage,
-    ImageBuffer,
-    Luma,
-    Pixel,
-    Primitive
-};
+use image::{GrayImage, GenericImage, ImageBuffer, Luma, Pixel, Primitive};
 
 use integral_image::{column_running_sum, row_running_sum};
 use map::{WithChannel, ChannelMap};
@@ -29,8 +22,7 @@ use std::f32;
 // TODO: for small kernels we probably want to do the convolution
 // TODO: directly instead of using an integral image.
 // TODO: more formats!
-pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32)
-        -> Image<Luma<u8>> {
+pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -41,28 +33,36 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32)
     let mut row_buffer = vec![0; (width + 2 * x_radius) as usize];
     for y in 0..height {
         row_running_sum(image, y, &mut row_buffer, x_radius);
-        let val = row_buffer[(2 * x_radius) as usize]/kernel_width;
-        unsafe { out.unsafe_put_pixel(0, y, Luma([val as u8])); }
+        let val = row_buffer[(2 * x_radius) as usize] / kernel_width;
+        unsafe {
+            out.unsafe_put_pixel(0, y, Luma([val as u8]));
+        }
         for x in 1..width {
             // TODO: This way we pay rounding errors for each of the
             // TODO: x and y convolutions. Is there a better way?
             let u = (x + 2 * x_radius) as usize;
             let l = (x - 1) as usize;
-            let val = (row_buffer[u] - row_buffer[l])/kernel_width;
-            unsafe { out.unsafe_put_pixel(x, y, Luma([val as u8])); }
+            let val = (row_buffer[u] - row_buffer[l]) / kernel_width;
+            unsafe {
+                out.unsafe_put_pixel(x, y, Luma([val as u8]));
+            }
         }
     }
 
     let mut col_buffer = vec![0; (height + 2 * y_radius) as usize];
     for x in 0..width {
         column_running_sum(&out, x, &mut col_buffer, y_radius);
-        let val = col_buffer[(2 * y_radius) as usize]/kernel_height;
-        unsafe { out.unsafe_put_pixel(x, 0, Luma([val as u8])); }
+        let val = col_buffer[(2 * y_radius) as usize] / kernel_height;
+        unsafe {
+            out.unsafe_put_pixel(x, 0, Luma([val as u8]));
+        }
         for y in 1..height {
             let u = (y + 2 * y_radius) as usize;
             let l = (y - 1) as usize;
-            let val = (col_buffer[u] - col_buffer[l])/kernel_height;
-            unsafe { out.unsafe_put_pixel(x, y, Luma([val as u8])); }
+            let val = (col_buffer[u] - col_buffer[l]) / kernel_height;
+            unsafe {
+                out.unsafe_put_pixel(x, y, Luma([val as u8]));
+            }
         }
     }
 
@@ -77,12 +77,17 @@ pub struct Kernel<'a, K: 'a> {
 }
 
 impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
-
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major form.
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
-        assert!(width * height == data.len() as u32,
-            format!("Invalid kernel len: expecting {}, found {}", width * height, data.len()));
+        assert!(
+            width * height == data.len() as u32,
+            format!(
+                "Invalid kernel len: expecting {}, found {}",
+                width * height,
+                data.len()
+            )
+        );
         Kernel {
             data: data,
             width: width,
@@ -93,10 +98,11 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
-        where P: Pixel + 'static,
-              <P as Pixel>::Subpixel: ValueInto<K>,
-              Q: Pixel + 'static,
-              F: FnMut(&mut Q::Subpixel, K) -> (),
+    where
+        P: Pixel + 'static,
+        <P as Pixel>::Subpixel: ValueInto<K>,
+        Q: Pixel + 'static,
+        F: FnMut(&mut Q::Subpixel, K) -> (),
     {
         let (width, height) = image.dimensions();
         let mut out = Image::<Q>::new(width, height);
@@ -108,14 +114,20 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         for y in 0..height {
             for x in 0..width {
                 for k_y in 0..k_height {
-                    let y_p = cmp::min(height + height - 1,
-                                       cmp::max(height, (height + y + k_y - k_height / 2))) - height;
+                    let y_p = cmp::min(
+                        height + height - 1,
+                        cmp::max(height, (height + y + k_y - k_height / 2)),
+                    ) - height;
                     for k_x in 0..k_width {
-                        let x_p = cmp::min(width + width - 1,
-                                           cmp::max(width, (width + x + k_x - k_width / 2))) - width;
+                        let x_p = cmp::min(
+                            width + width - 1,
+                            cmp::max(width, (width + x + k_x - k_width / 2)),
+                        ) - width;
                         let (p, k) = unsafe {
-                            (image.unsafe_get_pixel(x_p, y_p),
-                             *self.data.get_unchecked((k_y * k_width + k_x) as usize))
+                            (
+                                image.unsafe_get_pixel(x_p, y_p),
+                                *self.data.get_unchecked((k_y * k_width + k_x) as usize),
+                            )
                         };
                         accumulate(&mut acc, &p, k);
                     }
@@ -154,8 +166,9 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 /// at this type.
 // TODO: Integer type kernel, approximations via repeated box filter.
 pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let kernel = gaussian_kernel_f32(sigma);
     separable_filter_equal(image, &kernel)
@@ -163,11 +176,11 @@ pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels `h_kernel` and `v_kernel`.
-pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K])
-        -> Image<P>
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
-          K: Num + Copy
+pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    K: Num + Copy,
 {
     let h = horizontal_filter(image, h_kernel);
     vertical_filter(&h, v_kernel)
@@ -175,21 +188,24 @@ pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K])
 
 /// Returns 2d correlation of an image with the outer product of the 1d
 /// kernel filter with itself.
-pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K])
-        -> Image<P>
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
-          K: Num + Copy {
+pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    K: Num + Copy,
+{
     separable_filter(image, kernel, kernel)
 }
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
-    where P::Subpixel: ValueInto<K>,
-          S: Clamp<K> + Primitive + 'static,
-          P: WithChannel<S> + 'static,
-          K: Num + Copy {
+where
+    P::Subpixel: ValueInto<K>,
+    S: Clamp<K> + Primitive + 'static,
+    P: WithChannel<S> + 'static,
+    K: Num + Copy,
+{
     let kernel = Kernel::new(kernel, 3, 3);
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
@@ -198,9 +214,10 @@ pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P,
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
-          K: Num + Copy
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    K: Num + Copy,
 {
     // Don't replace this with a call to Kernel::filter without
     // checking the benchmark results. At the time of writing this
@@ -280,8 +297,8 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
             for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-               *c = <P as Pixel>::Subpixel::clamp(*a);
-               *a = zero;
+                *c = <P as Pixel>::Subpixel::clamp(*a);
+                *a = zero;
             }
         }
     }
@@ -291,11 +308,12 @@ pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
-pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
-        -> Image<P>
-    where P: Pixel + 'static,
-          <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
-          K: Num + Copy {
+pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    K: Num + Copy,
+{
     // Don't replace this with a call to Kernel::filter without
     // checking the benchmark results. At the time of writing this
     // specialised implementation is faster.
@@ -388,7 +406,11 @@ pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K])
 }
 
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
-    where P: Pixel, <P as Pixel>::Subpixel : ValueInto<K>, K: Num + Copy {
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: ValueInto<K>,
+    K: Num + Copy,
+{
     for i in 0..(P::channel_count() as usize) {
         acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
     }
@@ -396,35 +418,13 @@ fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
 
 #[cfg(test)]
 mod test {
-    use super::{
-        box_filter,
-        filter3x3,
-        gaussian_blur_f32,
-        horizontal_filter,
-        separable_filter,
-        separable_filter_equal,
-        vertical_filter
-    };
-    use utils::{
-        gray_bench_image,
-        rgb_bench_image
-    };
-    use image::{
-        GenericImage,
-        GrayImage,
-        ImageBuffer,
-        Luma,
-        Rgb
-    };
-    use definitions::{
-        Clamp,
-        Image
-    };
+    use super::{box_filter, filter3x3, gaussian_blur_f32, horizontal_filter, separable_filter,
+                separable_filter_equal, vertical_filter};
+    use utils::{gray_bench_image, rgb_bench_image};
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
+    use definitions::{Clamp, Image};
     use image::imageops::blur;
-    use test::{
-        Bencher,
-        black_box
-    };
+    use test::{Bencher, black_box};
     use std::cmp;
 
     #[test]
@@ -452,7 +452,7 @@ mod test {
         b.iter(|| {
             let filtered = box_filter(&image, 7, 7);
             black_box(filtered);
-            });
+        });
     }
 
     #[test]
@@ -468,7 +468,7 @@ mod test {
             4, 5, 5;
             6, 7, 7);
 
-        let kernel = vec![1f32/3f32; 3];
+        let kernel = vec![1f32 / 3f32; 3];
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -495,12 +495,12 @@ mod test {
     #[bench]
     fn bench_separable_filter(b: &mut Bencher) {
         let image = gray_bench_image(300, 300);
-        let h_kernel = vec![1f32/5f32; 5];
+        let h_kernel = vec![1f32 / 5f32; 5];
         let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
         b.iter(|| {
             let filtered = separable_filter(&image, &h_kernel, &v_kernel);
             black_box(filtered);
-            });
+        });
     }
 
     /// Reference implementation of horizontal_filter. Used to validate
@@ -617,7 +617,7 @@ mod test {
             5, 5, 5;
             2, 2, 2);
 
-        let kernel = vec![1f32/3f32; 3];
+        let kernel = vec![1f32 / 3f32; 3];
         let filtered = horizontal_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -630,18 +630,18 @@ mod test {
             4, 7, 4;
             1, 4, 1);
 
-        let kernel = vec![1f32/10f32; 10];
+        let kernel = vec![1f32 / 10f32; 10];
         black_box(horizontal_filter(&image, &kernel));
     }
 
     #[bench]
     fn bench_horizontal_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32/5f32; 5];
+        let kernel = vec![1f32 / 5f32; 5];
         b.iter(|| {
             let filtered = horizontal_filter(&image, &kernel);
             black_box(filtered);
-            });
+        });
     }
 
     #[test]
@@ -656,7 +656,7 @@ mod test {
             2, 5, 2;
             2, 5, 2);
 
-        let kernel = vec![1f32/3f32; 3];
+        let kernel = vec![1f32 / 3f32; 3];
         let filtered = vertical_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -669,18 +669,18 @@ mod test {
             4, 7, 4;
             1, 4, 1);
 
-        let kernel = vec![1f32/10f32; 10];
+        let kernel = vec![1f32 / 10f32; 10];
         black_box(vertical_filter(&image, &kernel));
     }
 
     #[bench]
     fn bench_vertical_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32/5f32; 5];
+        let kernel = vec![1f32 / 5f32; 5];
         b.iter(|| {
             let filtered = vertical_filter(&image, &kernel);
             black_box(filtered);
-            });
+        });
     }
 
     #[test]
@@ -714,16 +714,17 @@ mod test {
             -1, 0, 1];
 
         b.iter(|| {
-            let filtered: ImageBuffer<Luma<i16>, Vec<i16>>
-                = filter3x3::<_, _, i16>(&image, &kernel);
+            let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
+                filter3x3::<_, _, i16>(&image, &kernel);
             black_box(filtered);
-            });
+        });
     }
 
     /// Baseline implementation of Gaussian blur is that provided by image::imageops.
     /// We can also use this to validate correctnes of any implementations we add here.
     fn gaussian_baseline_rgb<I>(image: &I, stdev: f32) -> Image<Rgb<u8>>
-        where I: GenericImage<Pixel=Rgb<u8>> + 'static
+    where
+        I: GenericImage<Pixel = Rgb<u8>> + 'static,
     {
         blur(image, stdev)
     }
@@ -735,7 +736,7 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 1f32);
             black_box(blurred);
-            });
+        });
     }
 
     #[bench]
@@ -745,7 +746,7 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 3f32);
             black_box(blurred);
-            });
+        });
     }
 
     #[bench]
@@ -755,7 +756,7 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_baseline_rgb(&image, 10f32);
             black_box(blurred);
-            });
+        });
     }
 
     #[bench]
@@ -764,7 +765,7 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 1f32);
             black_box(blurred);
-            });
+        });
     }
 
     #[bench]
@@ -773,7 +774,7 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 3f32);
             black_box(blurred);
-            });
+        });
     }
 
     #[bench]
@@ -782,6 +783,6 @@ mod test {
         b.iter(|| {
             let blurred = gaussian_blur_f32(&image, 10f32);
             black_box(blurred);
-            });
+        });
     }
 }
