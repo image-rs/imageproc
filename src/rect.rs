@@ -7,7 +7,7 @@ use std::cmp;
 /// ```
 /// use imageproc::rect::Rect;
 /// use imageproc::rect::Region;
-/// 
+///
 /// // Construct a rectangle with top-left corner at (4, 5), width 6 and height 7.
 /// let rect = Rect::at(4, 5).of_size(6, 7);
 ///
@@ -15,7 +15,7 @@ use std::cmp;
 /// assert_eq!(rect.left(), 4);
 /// assert_eq!(rect.top(), 5);
 /// assert!(rect.contains(rect.left(), rect.top()));
-/// 
+///
 /// // Contains bottom-right point, at (left + width - 1, top + height - 1):
 /// assert_eq!(rect.right(), 9);
 /// assert_eq!(rect.bottom(), 11);
@@ -131,9 +131,7 @@ impl RectPosition {
 
 #[cfg(test)]
 mod test {
-    use super::{
-        Rect, Region
-    };
+    use super::{Rect, Region};
 
     #[test]
     #[should_panic]

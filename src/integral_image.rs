@@ -3,12 +3,7 @@
 
 extern crate image;
 
-use image::{
-    Luma,
-    GrayImage,
-    GenericImage,
-    ImageBuffer
-};
+use image::{Luma, GrayImage, GenericImage, ImageBuffer};
 
 use definitions::Image;
 
@@ -33,7 +28,7 @@ use definitions::Image;
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use imageproc::integralimage::{integral_image, sum_image_pixels};
+/// use imageproc::integral_image::{integral_image, sum_image_pixels};
 ///
 /// let image = gray_image!(
 ///     1, 2, 3;
@@ -67,7 +62,7 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use imageproc::integralimage::{integral_squared_image, sum_image_pixels};
+/// use imageproc::integral_image::{integral_squared_image, sum_image_pixels};
 ///
 /// let image = gray_image!(
 ///     1, 2, 3;
@@ -128,13 +123,19 @@ fn integral_image_impl(image: &GrayImage, square: bool) -> Image<Luma<u32>> {
 /// integral image of F.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
-pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, right: u32, bottom: u32) -> u32 {
+pub fn sum_image_pixels(
+    integral_image: &Image<Luma<u32>>,
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
+) -> u32 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
-            - integral_image.get_pixel(right + 1, top)[0] as i32
-            - integral_image.get_pixel(left, bottom + 1)[0] as i32
-            + integral_image.get_pixel(left, top)[0] as i32;
+    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32 -
+        integral_image.get_pixel(right + 1, top)[0] as i32 -
+        integral_image.get_pixel(left, bottom + 1)[0] as i32 +
+        integral_image.get_pixel(left, top)[0] as i32;
     sum as u32
 }
 
@@ -151,7 +152,7 @@ pub fn sum_image_pixels(integral_image: &Image<Luma<u32>>, left: u32, top: u32, 
 /// # extern crate imageproc;
 /// # fn main() {
 /// use std::f64;
-/// use imageproc::integralimage::{integral_image, integral_squared_image, variance};
+/// use imageproc::integral_image::{integral_image, integral_squared_image, variance};
 ///
 /// let image = gray_image!(
 ///     1, 2, 3;
@@ -176,7 +177,8 @@ pub fn variance(
     left: u32,
     top: u32,
     right: u32,
-    bottom: u32) -> f64 {
+    bottom: u32,
+) -> f64 {
     // TODO: same improvements as for sum_image_pixels, plus check that the given rect is valid.
     let n = (right - left + 1) as f64 * (bottom - top + 1) as f64;
     let sum_sq = sum_image_pixels(integral_squared_image, left, top, right, bottom);
@@ -195,7 +197,7 @@ pub fn variance(
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use imageproc::integralimage::row_running_sum;
+/// use imageproc::integral_image::row_running_sum;
 ///
 /// let image = gray_image!(
 ///     1, 2, 3;
@@ -212,9 +214,19 @@ pub fn variance(
 pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
-    assert!(buffer.len() >= (width + 2 * padding) as usize,
-        format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), width, padding));
-    assert!(row < height, format!("row out of bounds: {} >= {}", row, height));
+    assert!(
+        buffer.len() >= (width + 2 * padding) as usize,
+        format!(
+            "Buffer length {} is less than {} + 2 * {}",
+            buffer.len(),
+            width,
+            padding
+        )
+    );
+    assert!(
+        row < height,
+        format!("row out of bounds: {} >= {}", row, height)
+    );
 
     unsafe {
         let mut sum = 0;
@@ -246,7 +258,7 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// # #[macro_use]
 /// # extern crate imageproc;
 /// # fn main() {
-/// use imageproc::integralimage::column_running_sum;
+/// use imageproc::integral_image::column_running_sum;
 ///
 /// let image = gray_image!(
 ///     1, 4;
@@ -264,9 +276,19 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
-    assert!(buffer.len() >= (height + 2 * padding) as usize,
-        format!("Buffer length {} is less than {} + 2 * {}", buffer.len(), height, padding));
-    assert!(column < width, format!("column out of bounds: {} >= {}", column, width));
+    assert!(
+        buffer.len() >= (height + 2 * padding) as usize,
+        format!(
+            "Buffer length {} is less than {} + 2 * {}",
+            buffer.len(),
+            height,
+            padding
+        )
+    );
+    assert!(
+        column < width,
+        format!("column out of bounds: {} >= {}", column, width)
+    );
 
     unsafe {
         let mut sum = 0;
@@ -290,23 +312,11 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::{
-        gray_bench_image,
-        GrayTestImage,
-        pixel_diff_summary
-    };
-    use image::{
-        GenericImage,
-        ImageBuffer,
-        Luma
-    };
-    use quickcheck::{
-        quickcheck,
-        TestResult
-    };
-    use definitions::{
-        Image
-    };
+    use property_testing::GrayTestImage;
+    use utils::{gray_bench_image, pixel_diff_summary};
+    use image::{GenericImage, ImageBuffer, Luma};
+    use quickcheck::{quickcheck, TestResult};
+    use definitions::Image;
     use test;
 
     #[test]
@@ -315,7 +325,7 @@ mod test {
             1, 2;
             3, 4);
 
-        let integral = ::integralimage::integral_image(&image);
+        let integral = integral_image(&image);
 
         assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), 1);
         assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), 3);
@@ -348,12 +358,13 @@ mod test {
         b.iter(|| {
             let integral = integral_image(&image);
             test::black_box(integral);
-            });
+        });
     }
 
     /// Simple implementation of integral_image to validate faster versions against.
     fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
-        where I: GenericImage<Pixel=Luma<u8>>
+    where
+        I: GenericImage<Pixel = Luma<u8>>,
     {
         let (in_width, in_height) = image.dimensions();
         let (out_width, out_height) = (in_width + 1, in_height + 1);
@@ -383,7 +394,7 @@ mod test {
             let actual = integral_image(&image.0);
             match pixel_diff_summary(&actual, &expected) {
                 None => TestResult::passed(),
-                Some(err) => TestResult::error(err)
+                Some(err) => TestResult::error(err),
             }
         }
         quickcheck(prop as fn(GrayTestImage) -> TestResult);
@@ -393,17 +404,13 @@ mod test {
     fn bench_row_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(1000, 1);
         let mut buffer = [0; 1010];
-        b.iter(|| {
-            row_running_sum(&image, 0, &mut buffer, 5);
-            });
+        b.iter(|| { row_running_sum(&image, 0, &mut buffer, 5); });
     }
 
     #[bench]
     fn bench_column_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(100, 1000);
         let mut buffer = [0; 1010];
-        b.iter(|| {
-            column_running_sum(&image, 0, &mut buffer, 5);
-            });
+        b.iter(|| { column_running_sum(&image, 0, &mut buffer, 5); });
     }
 }

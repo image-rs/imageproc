@@ -13,7 +13,6 @@ pub struct DisjointSetForest {
 }
 
 impl DisjointSetForest {
-
     /// Constructs forest of singletons with count elements.
     pub fn new(count: usize) -> DisjointSetForest {
         let parent: Vec<usize> = (0..count).collect();
@@ -21,15 +20,15 @@ impl DisjointSetForest {
         DisjointSetForest {
             count: count,
             parent: parent,
-            tree_size: tree_size}
+            tree_size: tree_size,
+        }
     }
 
     /// Returns the number of trees in the forest.
     pub fn num_trees(&self) -> usize {
-        self.parent
-            .iter()
-            .enumerate()
-            .fold(0, |acc, (i, p)| acc + if i == *p { 1 } else { 0 })
+        self.parent.iter().enumerate().fold(0, |acc, (i, p)| {
+            acc + if i == *p { 1 } else { 0 }
+        })
     }
 
     /// Returns index of the root of the tree containing i.
@@ -71,8 +70,7 @@ impl DisjointSetForest {
             if p_size < q_size {
                 *self.parent.get_unchecked_mut(p) = q;
                 *self.tree_size.get_unchecked_mut(q) = p_size + q_size;
-            }
-            else {
+            } else {
                 *self.parent.get_unchecked_mut(q) = p;
                 *self.tree_size.get_unchecked_mut(p) = p_size + q_size;
             }
@@ -93,7 +91,7 @@ impl DisjointSetForest {
             match root_sets.get(&root).cloned() {
                 Some(set_idx) => {
                     sets[set_idx].push(i);
-                },
+                }
                 None => {
                     let idx = sets.len();
                     let set = vec![i];
@@ -108,7 +106,6 @@ impl DisjointSetForest {
 
 #[cfg(test)]
 mod test {
-
     use super::DisjointSetForest;
     use test;
     use rand::{SeedableRng, StdRng};
@@ -125,11 +122,10 @@ mod test {
             count: 8,
             // element:     0, 1, 2, 3, 4, 5, 6, 7
             parent:    vec![1, 3, 1, 3, 4, 4, 5, 4],
-            tree_size: vec![1, 3, 1, 4, 4, 2, 1, 1]
+            tree_size: vec![1, 3, 1, 4, 4, 2, 1, 1],
         };
 
-        assert_eq!(forest.trees(),
-            vec![vec![0, 1, 2, 3], vec![4, 5, 6, 7]]);
+        assert_eq!(forest.trees(), vec![vec![0, 1, 2, 3], vec![4, 5, 6, 7]]);
     }
 
     #[test]

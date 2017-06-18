@@ -3,7 +3,7 @@
 use std::cmp::{min, max};
 use image::{GrayImage, ImageBuffer, Luma};
 use definitions::{HasBlack, HasWhite};
-use integralimage::{integral_image, sum_image_pixels};
+use integral_image::{integral_image, sum_image_pixels};
 use stats::{cumulative_histogram, histogram};
 use rayon::prelude::*;
 
@@ -13,28 +13,33 @@ use rayon::prelude::*;
 /// in the (2 * `block_radius` + 1) square block centered on it. If the pixel if at least as bright
 /// as the threshold then it will have a value of 255 in the output image, otherwise 0.
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
-     assert!(block_radius > 0);
-     let integral = integral_image(image);
-     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
-     for y in 0..image.height() {
-         for x in 0..image.width() {
-             let current_pixel = image.get_pixel(x, y);
-             // Traverse all neighbors in (2 * block_radius + 1) x (2 * block_radius + 1)
-             let (y_low, y_high) = (max(0, y as i32 - (block_radius as i32)) as u32,
-                                    min(image.height() - 1, y + block_radius));
-             let (x_low, x_high) = (max(0, x as i32 - (block_radius as i32)) as u32,
-                                    min(image.width() - 1, x + block_radius));
+    assert!(block_radius > 0);
+    let integral = integral_image(image);
+    let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
 
-             // Number of pixels in the block, adjusted for edge cases.
-             let w = (y_high - y_low + 1) * (x_high - x_low + 1);
-             let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high) / w;
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            let current_pixel = image.get_pixel(x, y);
+            // Traverse all neighbors in (2 * block_radius + 1) x (2 * block_radius + 1)
+            let (y_low, y_high) = (
+                max(0, y as i32 - (block_radius as i32)) as u32,
+                min(image.height() - 1, y + block_radius),
+            );
+            let (x_low, x_high) = (
+                max(0, x as i32 - (block_radius as i32)) as u32,
+                min(image.width() - 1, x + block_radius),
+            );
 
-             if current_pixel[0] as u32 >= mean as u32 {
-                 out.put_pixel(x, y, Luma::white());
-             }
-         }
-     }
-     out
+            // Number of pixels in the block, adjusted for edge cases.
+            let w = (y_high - y_low + 1) * (x_high - x_low + 1);
+            let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high) / w;
+
+            if current_pixel[0] as u32 >= mean as u32 {
+                out.put_pixel(x, y, Luma::white());
+            }
+        }
+    }
+    out
 }
 
 /// Returns the [Otsu threshold level] of an 8bpp image.
@@ -46,10 +51,9 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     let total_weight = width * height;
 
     // Sum of all pixel intensities, to use when calculating means.
-    let total_pixel_sum = hist
-        .iter()
-        .enumerate()
-        .fold(0f64, |sum, (t, h)| sum + (t as u32 * h) as f64);
+    let total_pixel_sum = hist.iter().enumerate().fold(0f64, |sum, (t, h)| {
+        sum + (t as u32 * h) as f64
+    });
 
     // Sum of all pixel intensities in the background class.
     let mut background_pixel_sum = 0f64;
@@ -66,12 +70,12 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     for (threshold, hist_count) in hist.iter().enumerate() {
         background_weight = background_weight + hist_count;
         if background_weight == 0 {
-            continue
+            continue;
         };
 
         foreground_weight = total_weight - background_weight;
         if foreground_weight == 0 {
-            break
+            break;
         };
 
         background_pixel_sum += (threshold as u32 * hist_count) as f64;
@@ -81,8 +85,8 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
         let foreground_mean = foreground_pixel_sum / (foreground_weight as f64);
 
         let mean_diff_squared = (background_mean - foreground_mean).powi(2);
-        let intra_class_variance =
-            (background_weight as f64) * (foreground_weight as f64) * mean_diff_squared;
+        let intra_class_variance = (background_weight as f64) * (foreground_weight as f64) *
+            mean_diff_squared;
 
         if intra_class_variance > largest_variance {
             largest_variance = intra_class_variance;
@@ -215,14 +219,12 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
 
         if y == 0 {
             lut[s] = y;
-        }
-        else {
+        } else {
             let prev_dist = f32::abs(prev_target_fraction - source_fraction);
             let dist = f32::abs(target_fraction - source_fraction);
             if prev_dist < dist {
                 lut[s] = y - 1;
-            }
-            else {
+            } else {
                 lut[s] = y;
             }
         }
@@ -278,11 +280,9 @@ pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
     for p in image.iter_mut() {
         if *p >= upper {
             *p = 255;
-        }
-        else if *p <= lower {
+        } else if *p <= lower {
             *p = 0;
-        }
-        else {
+        } else {
             let scaled = (255 * (*p as u16 - lower as u16)) / len;
             *p = scaled as u8;
         }
@@ -335,17 +335,14 @@ mod test {
 
                         let is_light_pixel = xb == x && yb == y;
 
-                        let local_mean_includes_light_pixel =
-                            (yb as i32 - y as i32).abs() <= 1 &&
+                        let local_mean_includes_light_pixel = (yb as i32 - y as i32).abs() <= 1 &&
                             (xb as i32 - x as i32).abs() <= 1;
 
                         if is_light_pixel {
                             assert_eq!(output_intensity, 255);
-                        }
-                        else if local_mean_includes_light_pixel {
+                        } else if local_mean_includes_light_pixel {
                             assert_eq!(output_intensity, 0);
-                        }
-                        else {
+                        } else {
                             assert_eq!(output_intensity, 255);
                         }
                     }
@@ -378,9 +375,7 @@ mod test {
     fn bench_match_histogram_mut(b: &mut Bencher) {
         let target = GrayImage::from_pixel(200, 200, Luma([150]));
         let mut image = gray_bench_image(200, 200);
-        b.iter(|| {
-            match_histogram_mut(&mut image, &target);
-        });
+        b.iter(|| { match_histogram_mut(&mut image, &target); });
     }
 
     #[test]
@@ -490,10 +485,7 @@ mod test {
         let original_contents = (0u8..26u8).map(|x| x * 10u8).collect();
         let original = GrayImage::from_raw(26, 1, original_contents).unwrap();
 
-        let expected_contents = vec![0u8; 13]
-            .into_iter()
-            .chain(vec![255u8; 13])
-            .collect();
+        let expected_contents = vec![0u8; 13].into_iter().chain(vec![255u8; 13]).collect();
 
         let expected = GrayImage::from_raw(26, 1, expected_contents).unwrap();
 
@@ -513,9 +505,7 @@ mod test {
     #[bench]
     fn bench_equalize_histogram_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
-        b.iter(|| {
-            black_box(equalize_histogram_mut(&mut image));
-        });
+        b.iter(|| { black_box(equalize_histogram_mut(&mut image)); });
     }
 
     #[bench]
@@ -530,9 +520,7 @@ mod test {
     #[bench]
     fn bench_threshold_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
-        b.iter(|| {
-            black_box(threshold_mut(&mut image, 125));
-        });
+        b.iter(|| { black_box(threshold_mut(&mut image, 125)); });
     }
 
     #[bench]
@@ -547,8 +535,6 @@ mod test {
     #[bench]
     fn bench_stretch_contrast_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
-        b.iter(|| {
-            black_box(stretch_contrast_mut(&mut image, 20, 80));
-        });
+        b.iter(|| { black_box(stretch_contrast_mut(&mut image, 20, 80)); });
     }
 }

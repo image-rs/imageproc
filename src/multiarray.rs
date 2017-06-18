@@ -7,23 +7,26 @@ pub struct Array3d<T> {
     /// The owned data.
     pub data: Vec<T>,
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
-    pub lengths: [usize; 3]
+    pub lengths: [usize; 3],
 }
 
 /// A view into a 3d array.
 pub struct View3d<'a, T: 'a> {
     /// The underlying data.
-	pub data: &'a mut [T],
+    pub data: &'a mut [T],
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
-    pub lengths: [usize; 3]
+    pub lengths: [usize; 3],
 }
 
 impl<T: Zero + Clone> Array3d<T> {
     /// Allocates a new Array3d with the given dimensions.
-	pub fn new(lengths: [usize; 3]) -> Array3d<T> {
-		let data = vec![Zero::zero(); data_length(lengths)];
-		Array3d { data: data, lengths: lengths }
-	}
+    pub fn new(lengths: [usize; 3]) -> Array3d<T> {
+        let data = vec![Zero::zero(); data_length(lengths)];
+        Array3d {
+            data: data,
+            lengths: lengths,
+        }
+    }
 
     /// Provides a 3d view of the data.
     pub fn view_mut(&mut self) -> View3d<T> {
@@ -32,10 +35,12 @@ impl<T: Zero + Clone> Array3d<T> {
 }
 
 impl<'a, T> View3d<'a, T> {
-
-	/// Constructs index from existing data and the lengths of the desired dimensions.
+    /// Constructs index from existing data and the lengths of the desired dimensions.
     pub fn from_raw(data: &'a mut [T], lengths: [usize; 3]) -> View3d<'a, T> {
-        View3d { data: data, lengths: lengths }
+        View3d {
+            data: data,
+            lengths: lengths,
+        }
     }
 
     /// Immutable access to the raw data.
@@ -62,7 +67,7 @@ impl<'a, T> View3d<'a, T> {
     /// is fastest varying, this is a contiguous slice.
     pub fn inner_slice(&self, x1: usize, x2: usize) -> &[T] {
         let offset = self.offset([0, x1, x2]);
-        & self.data[offset..offset + self.lengths[0]]
+        &self.data[offset..offset + self.lengths[0]]
     }
 
     /// All entries with the given outer dimensions. As the first dimension
