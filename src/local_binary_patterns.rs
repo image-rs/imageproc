@@ -1,15 +1,14 @@
 //! Functions for computing [local binary patterns](https://en.wikipedia.org/wiki/Local_binary_patterns).
 
-use image::{
-    GenericImage,
-    Luma
-};
+use image::{GenericImage, Luma};
 use std::cmp;
 
 /// Computes the basic local binary pattern of a pixel, or None
 /// if it's too close to the image boundary.
 pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
-    where I: GenericImage<Pixel=Luma<u8>> {
+where
+    I: GenericImage<Pixel = Luma<u8>>,
+{
 
     let (width, height) = image.dimensions();
     if width == 0 || height == 0 {
@@ -40,17 +39,19 @@ pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
     // The nth bit of a pattern is 1 if the pixel p
     // is strictly brighter than the neighbor in position n.
     let (center, neighbors) = unsafe {
-        (image.unsafe_get_pixel(x, y)[0],
-         [
-             image.unsafe_get_pixel(x    , y - 1)[0],
-             image.unsafe_get_pixel(x + 1, y - 1)[0],
-             image.unsafe_get_pixel(x + 1, y    )[0],
-             image.unsafe_get_pixel(x + 1, y + 1)[0],
-             image.unsafe_get_pixel(x    , y + 1)[0],
-             image.unsafe_get_pixel(x - 1, y + 1)[0],
-             image.unsafe_get_pixel(x - 1, y    )[0],
-             image.unsafe_get_pixel(x - 1, y - 1)[0]
-         ])
+        (
+            image.unsafe_get_pixel(x, y)[0],
+            [
+                image.unsafe_get_pixel(x, y - 1)[0],
+                image.unsafe_get_pixel(x + 1, y - 1)[0],
+                image.unsafe_get_pixel(x + 1, y)[0],
+                image.unsafe_get_pixel(x + 1, y + 1)[0],
+                image.unsafe_get_pixel(x, y + 1)[0],
+                image.unsafe_get_pixel(x - 1, y + 1)[0],
+                image.unsafe_get_pixel(x - 1, y)[0],
+                image.unsafe_get_pixel(x - 1, y - 1)[0],
+            ],
+        )
     };
 
     for i in 0..8 {
@@ -598,16 +599,8 @@ pub static MIN_SHIFT: [u8; 256] = [
 
 #[cfg(test)]
 mod test {
-    use super::{
-        count_transitions,
-        local_binary_pattern,
-        min_shift,
-        UNIFORM_REPRESENTATIVE_2
-    };
-    use image::{
-        GrayImage,
-        Luma
-    };
+    use super::{count_transitions, local_binary_pattern, min_shift, UNIFORM_REPRESENTATIVE_2};
+    use image::{GrayImage, Luma};
     use test::{Bencher, black_box};
 
     #[test]
@@ -653,15 +646,11 @@ mod test {
 
     #[bench]
     fn bench_local_binary_pattern(b: &mut Bencher) {
-        let image = GrayImage::from_fn(100, 100, |x, y| {
-            Luma([x as u8 % 2 + y as u8 % 2])
-        });
-        b.iter(|| {
-            for y in 0..20 {
-                for x in 0..20 {
-                    let pattern = local_binary_pattern(&image, x, y);
-                    black_box(pattern);
-                }
+        let image = GrayImage::from_fn(100, 100, |x, y| Luma([x as u8 % 2 + y as u8 % 2]));
+        b.iter(|| for y in 0..20 {
+            for x in 0..20 {
+                let pattern = local_binary_pattern(&image, x, y);
+                black_box(pattern);
             }
         });
     }
