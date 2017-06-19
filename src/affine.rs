@@ -125,7 +125,7 @@ pub fn rotate_with_default<P>(
     interpolation: Interpolation,
 ) -> Image<P>
 where
-    P: Pixel + HasBlack + 'static,
+    P: Pixel + 'static,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     match interpolation {
