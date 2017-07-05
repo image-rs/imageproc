@@ -536,11 +536,7 @@ where
         for dx in -r..(r + 1) {
             let px = min(max(0, dx), (width as i32 - 1)) as u32;
 
-            let p = unsafe {
-                image.unsafe_get_pixel(px, py)
-            };
-
-            hist.incr(p.channels());
+            hist.incr(image, px, py);
         }
     }
 
@@ -559,16 +555,8 @@ where
     for dy in -r..(r + 1) {
         let py = min(max(0, y as i32 + dy), (height - 1) as i32) as u32;
 
-        let p = unsafe {
-            image.unsafe_get_pixel(prev_x, py)
-        };
-
-        let q = unsafe {
-            image.unsafe_get_pixel(next_x, py)
-        };
-
-        hist.decr(p.channels());
-        hist.incr(q.channels());
+        hist.decr(image, prev_x, py);
+        hist.incr(image, next_x, py);
     }
 }
 
@@ -577,8 +565,7 @@ where
     P: Pixel<Subpixel=u8> + 'static
 {
     let (width, height) = image.dimensions();
-
-    hist.median(out.get_pixel_mut(x, 0).channels_mut());
+    hist.set_to_median(out, x, 0);
 
     for y in 1..height {
         let prev_y = max(0, y as i32 - r - 1) as u32;
@@ -587,19 +574,11 @@ where
         for dx in -r..(r + 1) {
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
-            let p = unsafe {
-                image.unsafe_get_pixel(px, prev_y)
-            };
-
-            let q = unsafe {
-                image.unsafe_get_pixel(px, next_y)
-            };
-
-            hist.decr(p.channels());
-            hist.incr(q.channels());
+            hist.decr(image, px, prev_y);
+            hist.incr(image, px, next_y);
         }
 
-        hist.median(out.get_pixel_mut(x, y).channels_mut());
+        hist.set_to_median(out, x, y);
     }
 }
 
@@ -608,8 +587,7 @@ where
     P: Pixel<Subpixel=u8> + 'static
 {
     let (width, height) = image.dimensions();
-
-    hist.median(out.get_pixel_mut(x, height - 1).channels_mut());
+    hist.set_to_median(out, x, height - 1);
 
     for y in (0..(height-1)).rev() {
         let prev_y = min(y as i32 + r + 1, height as i32 - 1) as u32;
@@ -618,19 +596,11 @@ where
         for dx in -r..(r + 1) {
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
-            let p = unsafe {
-                image.unsafe_get_pixel(px, prev_y)
-            };
-
-            let q = unsafe {
-                image.unsafe_get_pixel(px, next_y)
-            };
-
-            hist.decr(p.channels());
-            hist.incr(q.channels());
+            hist.decr(image, px, prev_y);
+            hist.incr(image, px, next_y);
         }
 
-        hist.median(out.get_pixel_mut(x, y).channels_mut());
+        hist.set_to_median(out, x, y);
     }
 }
 
@@ -660,30 +630,45 @@ impl HistSet {
         }
     }
 
-    fn incr(&mut self, pixel: &[u8]) {
+    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    where
+        P: Pixel<Subpixel=u8> + 'static
+    {
         unsafe {
-            for c in 0..pixel.len() {
-                let p = *pixel.get_unchecked(c) as usize;
+            let pixel = image.unsafe_get_pixel(x, y);
+            let channels = pixel.channels();
+            for c in 0..channels.len() {
+                let p = *channels.get_unchecked(c) as usize;
                 let hist = self.data.get_unchecked_mut(c);
                 *hist.get_unchecked_mut(p) += 1;
             }
         }
     }
 
-    fn decr(&mut self, pixel: &[u8]) {
+    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    where
+        P: Pixel<Subpixel=u8> + 'static
+    {
         unsafe {
-            for c in 0..pixel.len() {
-                let p = *pixel.get_unchecked(c) as usize;
+            let pixel = image.unsafe_get_pixel(x, y);
+            let channels = pixel.channels();
+            for c in 0..channels.len() {
+                let p = *channels.get_unchecked(c) as usize;
                 let hist = self.data.get_unchecked_mut(c);
                 *hist.get_unchecked_mut(p) -= 1;
             }
         }
     }
 
-    fn median(&self, pixel: &mut [u8]) {
+    fn set_to_median<P>(&self, image: &mut Image<P>, x: u32, y: u32)
+    where
+        P: Pixel<Subpixel=u8> + 'static
+    {
         unsafe {
-            for c in 0..pixel.len() {
-                *pixel.get_unchecked_mut(c) = self.channel_median(c as u8);
+            let target = image.get_pixel_mut(x, y);
+            let channels = target.channels_mut();
+            for c in 0..channels.len() {
+                *channels.get_unchecked_mut(c) = self.channel_median(c as u8);
             }
         }
     }
