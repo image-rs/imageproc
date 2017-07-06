@@ -20,6 +20,100 @@ pub enum Connectivity {
 /// is labelled by the connected foreground component it belongs to,
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they are equal to the provided background pixel.
+///
+/// # Examples
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::region_labelling::{connected_components, Connectivity};
+///
+/// let background_color = Luma([0u8]);
+///
+/// let image = gray_image!(
+///     1, 0, 1, 1;
+///     0, 1, 1, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 1);
+///
+/// // With four-way connectivity the foreground regions which
+/// // are only connected across diagonals belong to different
+/// // connected components.
+/// let components_four = gray_image_u32!(
+///     1, 0, 2, 2;
+///     0, 2, 2, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 3);
+///
+/// assert_pixels_eq!(
+///     connected_components(&image, Connectivity::Four, background_color),
+///     components_four);
+///
+/// // With eight-way connectivity all foreground pixels in the top two rows
+/// // belong to the same connected component.
+/// let components_eight = gray_image_u32!(
+///     1, 0, 1, 1;
+///     0, 1, 1, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 2);
+///
+/// assert_pixels_eq!(
+///     connected_components(&image, Connectivity::Eight, background_color),
+///     components_eight);
+/// # }
+/// ```
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// // This example is like the first, except that not all of the input foreground
+/// // pixels are the same color. Pixels of different color are never counted
+/// // as belonging to the same connected component.
+///
+/// use image::Luma;
+/// use imageproc::region_labelling::{connected_components, Connectivity};
+///
+/// let background_color = Luma([0u8]);
+///
+/// let image = gray_image!(
+///     1, 0, 1, 1;
+///     0, 1, 2, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 1);
+///
+/// let components_four = gray_image_u32!(
+///     1, 0, 2, 2;
+///     0, 3, 4, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 5);
+///
+/// assert_pixels_eq!(
+///     connected_components(&image, Connectivity::Four, background_color),
+///     components_four);
+///
+/// // If this behaviour is not what you want then you can first
+/// // threshold the input image.
+/// use imageproc::contrast::threshold;
+///
+/// // Pixels equal to the threshold are treated as background.
+/// let thresholded = threshold(&image, 0);
+///
+/// let thresholded_components_four = gray_image_u32!(
+///     1, 0, 2, 2;
+///     0, 2, 2, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 3);
+///
+/// assert_pixels_eq!(
+///     connected_components(&thresholded, Connectivity::Four, background_color),
+///     thresholded_components_four);
+/// # }
+/// ```
 pub fn connected_components<I>(
     image: &I,
     conn: Connectivity,
@@ -147,42 +241,6 @@ mod test {
     use definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
     use test;
-
-    #[test]
-    fn test_connected_components_four() {
-        let image = gray_image!(
-            1, 0, 2, 1;
-            0, 1, 1, 0;
-            0, 0, 0, 0;
-            0, 0, 0, 1);
-
-        let expected = gray_image_u32!(
-            1, 0, 2, 3;
-            0, 4, 4, 0;
-            0, 0, 0, 0;
-            0, 0, 0, 5);
-
-        let labelled = connected_components(&image, Four, Luma::black());
-        assert_pixels_eq!(labelled, expected);
-    }
-
-    #[test]
-    fn test_connected_components_eight() {
-        let image = gray_image!(
-            1, 0, 2, 1;
-            0, 1, 1, 0;
-            0, 0, 0, 0;
-            0, 0, 0, 1);
-
-        let expected = gray_image_u32!(
-            1, 0, 2, 1;
-            0, 1, 1, 0;
-            0, 0, 0, 0;
-            0, 0, 0, 3);
-
-        let labelled = connected_components(&image, Eight, Luma::black());
-        assert_pixels_eq!(labelled, expected);
-    }
 
     #[test]
     fn test_connected_components_eight_white_background() {
