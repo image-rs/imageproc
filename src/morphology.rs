@@ -157,6 +157,176 @@ pub fn erode_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     }
 }
 
+/// Erosion followed by dilation.
+///
+/// See the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// documentation for definitions of dilation and erosion.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::morphology::{open, Norm};
+///
+/// // Isolated regions of foreground pixels are removed.
+/// let cross = gray_image!(
+///       0,   0,   0,   0,   0;
+///       0,   0, 255,   0,   0;
+///       0, 255, 255, 255,   0;
+///       0,   0, 255,   0,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// let opened_cross = gray_image!(
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// assert_pixels_eq!(
+///     open(&cross, Norm::LInf, 1),
+///     opened_cross
+/// );
+///
+/// // Large blocks survive unchanged.
+/// let blob = gray_image!(
+///       0,   0,   0,   0,   0;
+///       0, 255, 255, 255,   0;
+///       0, 255, 255, 255,   0;
+///       0, 255, 255, 255,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// assert_pixels_eq!(
+///     open(&blob, Norm::LInf, 1),
+///     blob
+/// );
+/// # }
+/// ```
+pub fn open(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
+    let mut out = image.clone();
+    open_mut(&mut out, norm, k);
+    out
+}
+
+/// Erosion followed by dilation.
+///
+/// See the [`open`](fn.open.html) documentation for examples,
+/// and the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// documentation for definitions of dilation and erosion.
+pub fn open_mut(image: &mut GrayImage, norm: Norm, k: u8) {
+    erode_mut(image, norm, k);
+    dilate_mut(image, norm, k);
+}
+
+/// Dilation followed by erosion.
+///
+/// See the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// documentation for definitions of dilation and erosion.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::morphology::{close, Norm};
+///
+/// // Small holes are closed - hence the name.
+/// let small_hole = gray_image!(
+///     255, 255, 255, 255;
+///     255,   0,   0, 255;
+///     255,   0,   0, 255;
+///     255, 255, 255, 255
+/// );
+///
+/// let closed_small_hole = gray_image!(
+///     255, 255, 255, 255;
+///     255, 255, 255, 255;
+///     255, 255, 255, 255;
+///     255, 255, 255, 255
+/// );
+///
+/// assert_pixels_eq!(
+///     close(&small_hole, Norm::LInf, 1),
+///     closed_small_hole
+/// );
+///
+/// // Large holes survive unchanged.
+/// let large_hole = gray_image!(
+///     255, 255, 255, 255, 255;
+///     255,   0,   0,   0, 255;
+///     255,   0,   0,   0, 255;
+///     255,   0,   0,   0, 255;
+///     255, 255, 255, 255, 255
+/// );
+///
+/// assert_pixels_eq!(
+///     close(&large_hole, Norm::LInf, 1),
+///     large_hole
+/// );
+///
+/// // A dot gains a layer of foreground pixels
+/// // when dilated and loses them again when eroded,
+/// // resulting in no change.
+/// let dot = gray_image!(
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0, 255,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// assert_pixels_eq!(
+///     close(&dot, Norm::LInf, 1),
+///     dot
+/// );
+///
+/// // A dot near the boundary gains pixels in the top-left
+/// // of the image which are not within distance 1 of any
+/// // background pixels, so are not removed by erosion.
+/// let dot_near_boundary = gray_image!(
+///       0,   0,   0,   0,   0;
+///       0, 255,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// let closed_dot_near_boundary = gray_image!(
+///     255, 255,   0,   0,   0;
+///     255, 255,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0;
+///       0,   0,   0,   0,   0
+/// );
+///
+/// assert_pixels_eq!(
+///     close(&dot_near_boundary, Norm::LInf, 1),
+///     closed_dot_near_boundary
+/// );
+/// # }
+/// ```
+pub fn close(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
+    let mut out = image.clone();
+    close_mut(&mut out, norm, k);
+    out
+}
+
+/// Dilation followed by erosion.
+///
+/// See the [`close`](fn.close.html) documentation for examples,
+/// and the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// documentation for definitions of dilation and erosion.
+pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
+    dilate_mut(image, norm, k);
+    erode_mut(image, norm, k);
+}
+
 /// Returns an image showing the distance of each pixel from a foreground pixel in the original image.
 ///
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image
