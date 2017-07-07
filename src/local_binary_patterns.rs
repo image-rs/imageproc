@@ -5,11 +5,40 @@ use std::cmp;
 
 /// Computes the basic local binary pattern of a pixel, or None
 /// if it's too close to the image boundary.
+///
+/// The neighbors of a pixel p are enumerated in the following order:
+///
+/// <pre>
+/// 7  0  1
+/// 6  p  2
+/// 5  4  3
+/// </pre>
+///
+/// The nth most significant bit of the local binary pattern at p is 1
+/// if p is strictly brighter than the neighbor in position n.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::local_binary_patterns::local_binary_pattern;
+///
+/// let image = gray_image!(
+///     06, 11, 14;
+///     09, 10, 10;
+///     19, 00, 22);
+///
+/// let expected = 0b11010000;
+/// let pattern = local_binary_pattern(&image, 1, 1).unwrap();
+/// assert_eq!(pattern, expected);
+/// # }
+/// ```
 pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
 where
     I: GenericImage<Pixel = Luma<u8>>,
 {
-
     let (width, height) = image.dimensions();
     if width == 0 || height == 0 {
         return None;
@@ -28,7 +57,6 @@ where
     // TODO: offsets directly when reading pixels. To do this we'd need some traits
     // TODO: for images whose pixels are stored in contiguous rows/columns.
     let mut pattern = 0u8;
-
 
     // The sampled pixels have the following labels.
     //
@@ -62,6 +90,14 @@ where
 }
 
 /// Returns the least value of all rotations of a byte.
+///
+/// # Examples
+/// ```
+/// use imageproc::local_binary_patterns::min_shift;
+///
+/// let byte = 0b10110100;
+/// assert_eq!(min_shift(byte), 0b00101101);
+/// ```
 pub fn min_shift(byte: u8) -> u8 {
     let mut min = byte;
     for i in 1..8 {
@@ -71,6 +107,20 @@ pub fn min_shift(byte: u8) -> u8 {
 }
 
 /// Number of bit transitions in a byte, counting the last and final bits as adjacent.
+///
+/// # Examples
+/// ```
+/// use imageproc::local_binary_patterns::count_transitions;
+///
+/// let a = 0b11110000;
+/// assert_eq!(count_transitions(a), 2);
+/// let b = 0b00000000;
+/// assert_eq!(count_transitions(b), 0);
+/// let c = 0b10011001;
+/// assert_eq!(count_transitions(c), 4);
+/// let d = 0b10110010;
+/// assert_eq!(count_transitions(d), 6);
+/// ```
 pub fn count_transitions(byte: u8) -> u32 {
     (byte ^ byte.rotate_right(1)).count_ones()
 }
@@ -599,40 +649,9 @@ pub static MIN_SHIFT: [u8; 256] = [
 
 #[cfg(test)]
 mod test {
-    use super::{count_transitions, local_binary_pattern, min_shift, UNIFORM_REPRESENTATIVE_2};
+    use super::*;
     use image::{GrayImage, Luma};
     use test::{Bencher, black_box};
-
-    #[test]
-    fn test_local_binary_pattern() {
-        let image = gray_image!(
-            06, 11, 14;
-            09, 10, 10;
-            19, 00, 22);
-
-        let expected = 0b11010000;
-        let pattern = local_binary_pattern(&image, 1, 1).unwrap();
-
-        assert_eq!(pattern, expected);
-    }
-
-    #[test]
-    fn test_min_shift() {
-        let byte = 0b10110100;
-        assert_eq!(min_shift(byte), 0b00101101);
-    }
-
-    #[test]
-    fn test_count_transitons() {
-        let a = 0b11110000;
-        assert_eq!(count_transitions(a), 2);
-        let b = 0b00000000;
-        assert_eq!(count_transitions(b), 0);
-        let c = 0b10011001;
-        assert_eq!(count_transitions(c), 4);
-        let d = 0b10110010;
-        assert_eq!(count_transitions(d), 6);
-    }
 
     #[test]
     fn test_uniform_representative_2() {
