@@ -3,9 +3,9 @@
 
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use gradients::{horizontal_sobel, vertical_sobel};
-use multiarray::{Array3d, View3d};
 use definitions::{Clamp, Image};
 use math::l2_norm;
+use num::Zero;
 use std::f32;
 
 /// Parameters for HoG descriptors.
@@ -460,10 +460,79 @@ where
     }
 }
 
+/// A 3d array that owns its data.
+pub struct Array3d<T> {
+    /// The owned data.
+    data: Vec<T>,
+    /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
+    lengths: [usize; 3],
+}
+
+/// A view into a 3d array.
+pub struct View3d<'a, T: 'a> {
+    /// The underlying data.
+    data: &'a mut [T],
+    /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
+    lengths: [usize; 3],
+}
+
+impl<T: Zero + Clone> Array3d<T> {
+    /// Allocates a new Array3d with the given dimensions.
+    fn new(lengths: [usize; 3]) -> Array3d<T> {
+        let data = vec![Zero::zero(); data_length(lengths)];
+        Array3d {
+            data: data,
+            lengths: lengths,
+        }
+    }
+
+    /// Provides a 3d view of the data.
+    pub fn view_mut(&mut self) -> View3d<T> {
+        View3d::from_raw(&mut self.data, self.lengths)
+    }
+}
+
+impl<'a, T> View3d<'a, T> {
+    /// Constructs index from existing data and the lengths of the desired dimensions.
+    fn from_raw(data: &'a mut [T], lengths: [usize; 3]) -> View3d<'a, T> {
+        View3d {
+            data: data,
+            lengths: lengths,
+        }
+    }
+
+    /// A mutable reference from a 3d index.
+    fn at_mut(&mut self, indices: [usize; 3]) -> &mut T {
+        &mut self.data[self.offset(indices)]
+    }
+
+    /// All entries with the given outer dimensions. As the first dimension
+    /// is fastest varying, this is a contiguous slice.
+    fn inner_slice(&self, x1: usize, x2: usize) -> &[T] {
+        let offset = self.offset([0, x1, x2]);
+        &self.data[offset..offset + self.lengths[0]]
+    }
+
+    /// All entries with the given outer dimensions. As the first dimension
+    /// is fastest varying, this is a contiguous slice.
+    fn inner_slice_mut(&mut self, x1: usize, x2: usize) -> &mut [T] {
+        let offset = self.offset([0, x1, x2]);
+        &mut self.data[offset..offset + self.lengths[0]]
+    }
+
+    fn offset(&self, indices: [usize; 3]) -> usize {
+        indices[2] * self.lengths[1] * self.lengths[0] + indices[1] * self.lengths[0] + indices[0]
+    }
+}
+
+/// Length of array needed for the given dimensions.
+fn data_length(lengths: [usize; 3]) -> usize {
+    lengths[0] * lengths[1] * lengths[2]
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use multiarray::Array3d;
     use utils::gray_bench_image;
     use test;
 
