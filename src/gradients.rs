@@ -1,8 +1,10 @@
 //! Functions for computing gradients of image intensities.
 
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use definitions::Image;
+use image::{GenericImage, GrayImage, Luma, Pixel};
+use definitions::{HasBlack, Image};
 use filter::filter3x3;
+use itertools::multizip;
+use map::{WithChannel, ChannelMap};
 
 /// Sobel filter for detecting vertical gradients.
 ///
@@ -62,37 +64,125 @@ pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
 pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL)
+    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, |p| p)
+}
+
+/// Computes per-channel gradients using Sobel filters and calls `f`
+/// to compute each output pixel.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::gradients::{sobel_gradient_map};
+/// use image::Luma;
+/// use std::cmp;
+///
+/// // A shallow horizontal gradient in the red
+/// // channel, a steeper vertical gradient in the
+/// // blue channel, constant in the green channel.
+/// let input = rgb_image!(
+///     [0, 5, 0], [1, 5, 0], [2, 5, 0];
+///     [0, 5, 2], [1, 5, 2], [2, 5, 2];
+///     [0, 5, 4], [1, 5, 4], [2, 5, 4]
+/// );
+///
+/// // Computing independent per-channel gradients.
+/// let channel_gradient = rgb_image_u16!(
+///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8];
+///     [ 4,  0, 16], [ 8,  0, 16], [ 4,  0, 16];
+///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
+/// );
+///
+/// assert_pixels_eq!(
+///     sobel_gradient_map(&input, |p| p),
+///     channel_gradient
+/// );
+///
+/// // Defining the gradient of an RGB image to be the
+/// // mean of its per-channel gradients.
+/// let mean_gradient = gray_image_u16!(
+///     4, 5, 4;
+///     6, 8, 6;
+///     4, 5, 4
+/// );
+///
+/// assert_pixels_eq!(
+///     sobel_gradient_map(&input, |p| {
+///         let mean = (p[0] + p[1] + p[2]) / 3;
+///         Luma([mean])
+///     }),
+///     mean_gradient
+/// );
+///
+/// // Defining the gradient of an RGB image to be the pixelwise
+/// // maximum of its per-channel gradients.
+/// let max_gradient = gray_image_u16!(
+///      8,  8,  8;
+///     16, 16, 16;
+///      8,  8,  8
+/// );
+///
+/// assert_pixels_eq!(
+///     sobel_gradient_map(&input, |p| {
+///         let max = cmp::max(cmp::max(p[0], p[1]), p[2]);
+///         Luma([max])
+///     }),
+///     max_gradient
+/// );
+/// # }
+pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
+where
+    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    Q: Pixel + 'static,
+    ChannelMap<P, u16>: HasBlack,
+    F: Fn(ChannelMap<P, u16>) -> Q
+{
+    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, f)
 }
 
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
 pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT)
+    gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT, |p| p)
 }
 
 // TODO: Returns directions as well as magnitudes.
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients(
-    image: &GrayImage,
+fn gradients<P, F, Q>(
+    image: &Image<P>,
     horizontal_kernel: &[i32; 9],
     vertical_kernel: &[i32; 9],
-) -> Image<Luma<u16>> {
-    let horizontal: Image<Luma<i16>> = filter3x3(image, horizontal_kernel);
-    let vertical: Image<Luma<i16>> = filter3x3(image, vertical_kernel);
+    f: F,
+) -> Image<Q>
+where
+    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    Q: Pixel + 'static,
+    ChannelMap<P, u16>: HasBlack,
+    F: Fn(ChannelMap<P, u16>) -> Q
+{
+    let horizontal: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
+    let vertical: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
 
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::<Q>::new(width, height);
 
-    // This would be more concise using itertools::multizip, but that increased runtime by around 20%
+    // This would be more concise using itertools::multizip over image pixels, but that increased runtime by around 20%
     for y in 0..height {
         for x in 0..width {
             unsafe {
-                let h = horizontal.unsafe_get_pixel(x, y)[0];
-                let v = vertical.unsafe_get_pixel(x, y)[0];
-                let m = gradient_magnitude(h as f32, v as f32);
-                out.unsafe_put_pixel(x, y, Luma([m]));
+                let h = horizontal.unsafe_get_pixel(x, y);
+                let v = vertical.unsafe_get_pixel(x, y);
+                let mut p = ChannelMap::<P, u16>::black();
+
+                for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
+                    *p = gradient_magnitude(*h as f32, *v as f32);
+                }
+
+                out.unsafe_put_pixel(x, y, f(p));
             }
         }
     }
