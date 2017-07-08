@@ -33,7 +33,6 @@ pub mod local_binary_patterns;
 pub mod map;
 pub mod math;
 pub mod morphology;
-pub mod multiarray;
 pub mod noise;
 pub mod pixelops;
 pub mod property_testing;
