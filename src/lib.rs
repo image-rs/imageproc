@@ -38,6 +38,7 @@ pub mod pixelops;
 pub mod property_testing;
 pub mod rect;
 pub mod region_labelling;
+pub mod seam_carving;
 pub mod stats;
 pub mod suppress;
 pub mod union_find;
