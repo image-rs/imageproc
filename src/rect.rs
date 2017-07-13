@@ -38,26 +38,36 @@ pub trait Region<T> {
 impl Rect {
     /// Reduces possibility of confusing coordinates and dimensions
     /// when specifying rects.
+    ///
+    /// See the [struct-level documentation](struct.Rect.html) for examples.
     pub fn at(x: i32, y: i32) -> RectPosition {
         RectPosition { left: x, top: y }
     }
 
     /// Smallest y-coordinate reached by rect.
+    ///
+    /// See the [struct-level documentation](struct.Rect.html) for examples.
     pub fn top(&self) -> i32 {
         self.top
     }
 
     /// Smallest x-coordinate reached by rect.
+    ///
+    /// See the [struct-level documentation](struct.Rect.html) for examples.
     pub fn left(&self) -> i32 {
         self.left
     }
 
     /// Greatest y-coordinate reached by rect.
+    ///
+    /// See the [struct-level documentation](struct.Rect.html) for examples.
     pub fn bottom(&self) -> i32 {
         self.top + (self.height as i32) - 1
     }
 
     /// Greatest x-coordinate reached by rect.
+    ///
+    /// See the [struct-level documentation](struct.Rect.html) for examples.
     pub fn right(&self) -> i32 {
         self.left + (self.width as i32) - 1
     }
@@ -73,6 +83,27 @@ impl Rect {
     }
 
     /// Returns the intersection of self and other, or none if they are are disjoint.
+    ///
+    /// # Examples
+    /// ```
+    /// use imageproc::rect::Rect;
+    /// use imageproc::rect::Region;
+    ///
+    /// // Intersecting a rectangle with itself
+    /// let r = Rect::at(4, 5).of_size(6, 7);
+    /// assert_eq!(r.intersect(r), Some(r));
+    ///
+    /// // Intersecting overlapping but non-equal rectangles
+    /// let r = Rect::at(0, 0).of_size(5, 5);
+    /// let s = Rect::at(1, 4).of_size(10, 12);
+    /// let i = Rect::at(1, 4).of_size(4, 1);
+    /// assert_eq!(r.intersect(s), Some(i));
+    ///
+    /// // Intersecting disjoint rectangles
+    /// let r = Rect::at(0, 0).of_size(5, 5);
+    /// let s = Rect::at(10, 10).of_size(100, 12);
+    /// assert_eq!(r.intersect(s), None);
+    /// ```
     pub fn intersect(&self, other: Rect) -> Option<Rect> {
         let left = cmp::max(self.left, other.left);
         let top = cmp::max(self.top, other.top);
@@ -117,6 +148,8 @@ pub struct RectPosition {
 impl RectPosition {
     /// Construct a rectangle from a position and size. Width and height
     /// are required to be strictly positive.
+    ///
+    /// See the [`Rect`](struct.Rect.html) documentation for examples.
     pub fn of_size(self, width: u32, height: u32) -> Rect {
         assert!(width > 0, "width must be strictly positive");
         assert!(height > 0, "height must be strictly positive");
@@ -137,21 +170,6 @@ mod test {
     #[should_panic]
     fn test_rejects_empty_rectangle() {
         Rect::at(1, 2).of_size(0, 1);
-    }
-
-    #[test]
-    fn test_intersect_disjoint() {
-        let r = Rect::at(0, 0).of_size(5, 5);
-        let s = Rect::at(10, 10).of_size(100, 12);
-        assert_eq!(r.intersect(s), None);
-    }
-
-    #[test]
-    fn test_intersect_overlapping() {
-        let r = Rect::at(0, 0).of_size(5, 5);
-        let s = Rect::at(1, 4).of_size(10, 12);
-        let i = Rect::at(1, 4).of_size(4, 1);
-        assert_eq!(r.intersect(s), Some(i));
     }
 
     #[test]

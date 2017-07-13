@@ -15,7 +15,6 @@ where
     I::Pixel: 'static,
     <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
-
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     gaussian_noise_mut(&mut out, mean, stddev, seed);
@@ -29,7 +28,6 @@ where
     I: GenericImage,
     <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
-
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
 
@@ -58,7 +56,6 @@ where
     I: GenericImage,
     I::Pixel: HasBlack + HasWhite + 'static,
 {
-
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
     salt_and_pepper_noise_mut(&mut out, rate, seed);

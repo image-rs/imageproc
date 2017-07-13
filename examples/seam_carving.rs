@@ -1,11 +1,11 @@
 extern crate image;
 extern crate imageproc;
 
-use image::{GrayImage, open, Luma};
+use image::{GrayImage, open, Luma, Pixel};
 use imageproc::seam_carving::*;
 use imageproc::map::map_colors;
 use imageproc::definitions::Clamp;
-use imageproc::gradients::sobel_gradients;
+use imageproc::gradients::sobel_gradient_map;
 use std::env;
 use std::path::Path;
 use std::fs;
@@ -33,11 +33,11 @@ fn main() {
     // Load image and convert to grayscale
     let input_image = open(input_path)
         .expect(&format!("Could not load image at {:?}", input_path))
-        .to_luma();
+        .to_rgb();
 
-    // Save grayscale image in output directory
-    let gray_path = output_dir.join("grey.png");
-    input_image.save(&gray_path).unwrap();
+    // Save original image in output directory
+    let original_path = output_dir.join("original.png");
+    input_image.save(&original_path).unwrap();
     
     // We will reduce the image width by this amount, removing one seam at a time.
     let seams_to_remove = 300;
@@ -54,12 +54,16 @@ fn main() {
     }
 
     // Draw the seams on the original image.
-    let annotated = draw_vertical_seams(&input_image, &seams);
+    let gray_image = map_colors(&input_image, |p| p.to_luma());
+    let annotated = draw_vertical_seams(&gray_image, &seams);
     let annotated_path = output_dir.join("annotated.png");
     annotated.save(&annotated_path).unwrap();
 
     // Draw the seams on the gradient magnitude image.
-    let gradients = sobel_gradients(&input_image);
+    let gradients = sobel_gradient_map(&input_image, |p| {
+        let mean = (p[0] + p[1] + p[2]) / 3;
+        Luma([mean as u32])
+    });
     let clamped_gradients: GrayImage = map_colors(&gradients, |p| Luma([Clamp::clamp(p[0])]));
     let annotated_gradients = draw_vertical_seams(&clamped_gradients, &seams);
     let gradients_path = output_dir.join("gradients.png");

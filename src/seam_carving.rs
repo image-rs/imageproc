@@ -5,8 +5,8 @@
 
 use gradients::sobel_gradient_map;
 use image::{GrayImage, Luma, Pixel, Rgb};
-use definitions::Image;
-use map::map_colors;
+use definitions::{HasBlack, Image};
+use map::{map_colors, WithChannel};
 use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
@@ -19,7 +19,12 @@ pub struct VerticalSeam(Vec<u32>);
 /// extra unnecessary allocations thrown in. Rather than attempting to optimise the implementation
 /// of this inherently slow algorithm, the planned next step is to switch to the algorithm from
 /// https://users.cs.cf.ac.uk/Paul.Rosin/resources/papers/seam-carving-ChinaF.pdf.
-pub fn shrink_width(image: &GrayImage, target_width: u32) -> GrayImage {
+pub fn shrink_width<P>(image: &Image<P>, target_width: u32) -> Image<P>
+// TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
+where
+    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <P as WithChannel<u16>>::Pixel: HasBlack
+{
     assert!(target_width <= image.width(), "target_width must be <= input image width");
 
     let iterations = image.width() - target_width;
@@ -35,11 +40,19 @@ pub fn shrink_width(image: &GrayImage, target_width: u32) -> GrayImage {
 
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
 /// gradient magnitudes is minimal.
-pub fn find_vertical_seam(image: &GrayImage) -> VerticalSeam {
+pub fn find_vertical_seam<P>(image: &Image<P>) -> VerticalSeam
+where
+    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <P as WithChannel<u16>>::Pixel: HasBlack
+{
     let (width, height) = image.dimensions();
     assert!(image.width() >= 2, "Cannot find seams if image width is < 2");
 
-    let mut gradients = sobel_gradient_map(&image, |p| Luma([p[0] as u32]));
+    let mut gradients = sobel_gradient_map(&image, |p| {
+        let gradient_sum: u16 = p.channels().iter().sum();
+        let gradient_mean: u16 = gradient_sum / P::channel_count() as u16;
+        Luma([gradient_mean as u32])
+    });
 
     // Find the least energy path through the gradient image.
     for y in 1..height {
@@ -113,11 +126,14 @@ fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
 // way of talking about views of ImageBuffer without devolving into supporting
 // arbitrary GenericImages. And a lot of other functions don't support those because
 // it would make them a lot slower.
-pub fn remove_vertical_seam(image: &GrayImage, seam: &VerticalSeam) -> GrayImage {
+pub fn remove_vertical_seam<P>(image: &Image<P>, seam: &VerticalSeam) -> Image<P>
+where
+    P: Pixel + 'static
+{
     assert!(seam.0.len() as u32 == image.height(), "seam length does not match image height");
 
     let (width, height) = image.dimensions();
-    let mut out = GrayImage::new(width - 1, height);
+    let mut out = Image::new(width - 1, height);
 
     for y in 0..height {
         let x_seam = seam.0[(height - y - 1) as usize];
