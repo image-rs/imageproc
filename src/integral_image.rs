@@ -1,8 +1,6 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-extern crate image;
-
 use image::{Luma, GrayImage, GenericImage, ImageBuffer};
 
 use definitions::Image;
