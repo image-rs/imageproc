@@ -433,9 +433,9 @@ where
     err.push_str(
         &(diffs
               .take(5)
-              .map(|d| format!("\nactual: {:?}, expected {:?} ", d.0, d.1))
+              .map(|d| format!("\nactual: \x1b[91m{:?}\x1b[0m, expected: \x1b[92m{:?}\x1b[0m ", d.0, d.1))
               .collect::<Vec<_>>()
-              .join("")),
+              .join(""))
     );
     err
 }
