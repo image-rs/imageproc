@@ -2,8 +2,13 @@
 
 use image::{DynamicImage, GenericImage, GrayImage, Luma, open, Pixel, Rgb, RgbImage};
 
+use std::u32;
 use std::fmt;
+use std::fmt::Write;
 use std::path::Path;
+use itertools::Itertools;
+use std::collections::HashSet;
+use std::cmp::{max, min};
 
 /// Implementation detail of the gray_image macros.
 #[macro_export]
@@ -294,7 +299,8 @@ macro_rules! rgb_image_u32 {
 /// between left and right, or None if all pixels match.
 pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J) -> Option<String>
 where
-    P: Pixel + PartialEq + fmt::Debug,
+    P: Pixel + PartialEq,
+    P::Subpixel: fmt::Debug,
     I: GenericImage<Pixel = P>,
     J: GenericImage<Pixel = P>,
 {
@@ -310,7 +316,8 @@ pub fn significant_pixel_diff_summary<I, J, F, P>(
     is_significant_diff: F,
 ) -> Option<String>
 where
-    P: Pixel + fmt::Debug,
+    P: Pixel,
+    P::Subpixel: fmt::Debug,
     I: GenericImage<Pixel = P>,
     J: GenericImage<Pixel = P>,
     F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool,
@@ -327,7 +334,7 @@ where
     if diffs.is_empty() {
         return None;
     }
-    Some(describe_pixel_diffs(diffs.into_iter()))
+    Some(describe_pixel_diffs(actual, expected, &diffs))
 }
 
 /// Panics if any pixels differ between the two input images.
@@ -374,7 +381,7 @@ macro_rules! assert_pixels_eq_within {
             large_diff
         });
         if !diffs.is_empty() {
-            panic!($crate::utils::describe_pixel_diffs(diffs.into_iter()))
+            panic!($crate::utils::describe_pixel_diffs(&$actual, &$expected, &diffs))
         }
     })
 }
@@ -396,26 +403,34 @@ macro_rules! assert_dimensions_match {
 
 /// Lists pixels that differ between left and right images.
 pub fn pixel_diffs<I, J, F, P>(
-    left: &I,
-    right: &J,
+    actual: &I,
+    expected: &J,
     is_diff: F,
-) -> Vec<((u32, u32, I::Pixel), (u32, u32, I::Pixel))>
+) -> Vec<(Diff<I::Pixel>)>
 where
     P: Pixel,
     I: GenericImage<Pixel = P>,
     J: GenericImage<Pixel = P>,
     F: Fn((u32, u32, I::Pixel), (u32, u32, J::Pixel)) -> bool,
 {
-    if is_empty(left) || is_empty(right) {
+    if is_empty(actual) || is_empty(expected) {
         return vec![];
     }
 
     // Can't just call $image.pixels(), as that needn't hit the
     // trait pixels method - ImageBuffer defines its own pixels
     // method with a different signature
-    GenericImage::pixels(left)
-        .zip(GenericImage::pixels(right))
+    GenericImage::pixels(actual)
+        .zip(GenericImage::pixels(expected))
         .filter(|&(p, q)| is_diff(p, q))
+        .map(|(p, q)| {
+            assert!(p.0 == q.0 && p.1 == q.1, "Pixel locations do not match");
+            Diff {
+                x: p.0,
+                y: p.1,
+                actual: p.2,
+                expected: q.2
+        }})
         .collect::<Vec<_>>()
 }
 
@@ -423,21 +438,165 @@ fn is_empty<I: GenericImage>(image: &I) -> bool {
     image.width() == 0 || image.height() == 0
 }
 
+/// A difference between two images
+pub struct Diff<P> {
+    /// x-coordinate of diff.
+    pub x: u32,
+    /// y-coordinate of diff.
+    pub y: u32,
+    /// Pixel value in expected image.
+    pub expected: P,
+    /// Pixel value in actual image.
+    pub actual: P,
+}
+
 /// Gives a summary description of a list of pixel diffs for use in error messages.
-pub fn describe_pixel_diffs<I, P>(diffs: I) -> String
+pub fn describe_pixel_diffs<I, J, P>(actual: &I, expected: &J, diffs: &[Diff<P>]) -> String
 where
-    I: Iterator<Item = (P, P)>,
-    P: fmt::Debug,
+    P: Pixel,
+    P::Subpixel: fmt::Debug,
+    I: GenericImage<Pixel = P>,
+    J: GenericImage<Pixel = P>,
 {
-    let mut err = "pixels do not match. ".to_owned();
+    let mut err = "pixels do not match.\n".to_owned();
+
+    // Find the boundaries of the region containing diffs
+    let top_left = diffs.iter().fold((u32::MAX, u32::MAX), |acc, ref d| {
+        (acc.0.min(d.x), acc.1.min(d.y))
+    });
+    let bottom_right = diffs.iter().fold((0, 0), |acc, ref d| {
+        (acc.0.max(d.x), acc.1.max(d.y))
+    });
+
+    // If all the diffs are contained in a small region of the image then render all of this
+    // region, with a small margin.
+    if max(bottom_right.0 - top_left.0, bottom_right.1 - top_left.1) < 6 {
+        let left = max(0, top_left.0 as i32 - 2) as u32;
+        let top = max(0, top_left.1 as i32 - 2) as u32;
+        let right = min(actual.width() as i32 - 1, bottom_right.0 as i32 + 2) as u32;
+        let bottom = min(actual.height() as i32 - 1, bottom_right.1 as i32 + 2) as u32;
+
+        let diff_locations = diffs.iter().map(|d| (d.x, d.y)).collect::<HashSet<_>>();
+
+        err.push_str(&colored(&"Actual:", Color::Red));
+        let actual_rendered = render_image_region(
+            actual,
+            left,
+            top,
+            right,
+            bottom,
+            |x, y| if diff_locations.contains(&(x, y)) { Color::Red } else { Color::Cyan }
+        );
+        err.push_str(&actual_rendered);
+
+        err.push_str(&colored(&"Expected:", Color::Green));
+        let expected_rendered = render_image_region(
+            expected,
+            left,
+            top,
+            right,
+            bottom,
+            |x, y| if diff_locations.contains(&(x, y)) { Color::Green } else { Color::Cyan }
+        );
+        err.push_str(&expected_rendered);
+
+        return err;
+    }
+
+    // Otherwise just list the first 5 diffs
     err.push_str(
         &(diffs
-              .take(5)
-              .map(|d| format!("\nactual: \x1b[91m{:?}\x1b[0m, expected: \x1b[92m{:?}\x1b[0m ", d.0, d.1))
-              .collect::<Vec<_>>()
-              .join(""))
+            .iter()
+            .take(5)
+            .map(|d| format!(
+                "\nlocation: {}, actual: {}, expected: {} ",
+                colored(&format!("{:?}", (d.x, d.y)), Color::Yellow),
+                colored(&render_pixel(d.actual), Color::Red),
+                colored(&render_pixel(d.expected), Color::Green))
+            )
+            .collect::<Vec<_>>()
+            .join(""))
     );
     err
+}
+
+enum Color { Red, Green, Cyan, Yellow }
+
+fn render_image_region<I, P, C>(image: &I, left: u32, top: u32, right: u32, bottom: u32, color: C) -> String
+where
+    P: Pixel,
+    P::Subpixel: fmt::Debug,
+    I: GenericImage<Pixel = P>,
+    C: Fn(u32, u32) -> Color
+{
+    let mut rendered = String::new();
+
+    // Render all the pixels first, so that we can determine the column width
+    let mut rendered_pixels = vec![];
+    for y in top..bottom + 1 {
+        for x in left..right + 1 {
+            let p = image.get_pixel(x, y);
+            rendered_pixels.push(render_pixel(p));
+        }
+    }
+
+    // Width of a column containing rendered pixels
+    let pixel_column_width = rendered_pixels.iter().map(|p| p.len()).max().unwrap() + 1;
+    // Maximum number of digits required to display a row or column number
+    let max_digits = (max(right, bottom) as f64).log10().ceil() as usize;
+    // Each pixel column is labelled with its column number
+    let pixel_column_width = pixel_column_width.max(max_digits + 1);
+    let num_columns = (right - left + 1) as usize;
+
+    // First row contains the column numbers
+    write!(rendered, "\n{}", " ".repeat(max_digits + 4)).unwrap();
+    for x in left..right + 1 {
+        write!(rendered, "{x:>w$} ", x = x, w = pixel_column_width).unwrap();
+    }
+
+    // +--------------
+    write!(rendered, "\n  {}+{}", " ".repeat(max_digits), "-".repeat((pixel_column_width + 1) * num_columns + 1)).unwrap();
+    // row_number |
+    write!(rendered, "\n  {y:>w$}| ", y = " ", w = max_digits).unwrap();
+
+    let mut count = 0;
+    for y in top..bottom + 1 {
+        // Empty row, except for leading | separating row numbers from pixels
+        write!(rendered, "\n  {y:>w$}| ", y = y, w = max_digits).unwrap();
+
+        for x in left..right + 1 {
+            // Pad pixel string to column width and right align
+            let padded = format!("{c:>w$}", c = rendered_pixels[count], w = pixel_column_width);
+            write!(rendered, "{} ", &colored(&padded, color(x, y))).unwrap();
+            count += 1;
+        }
+        // Empty row, except for leading | separating row numbers from pixels
+        write!(rendered, "\n  {y:>w$}| ", y = " ", w = max_digits).unwrap();
+    }
+    rendered.push_str("\n");
+    rendered
+}
+
+fn render_pixel<P>(p: P) -> String
+where
+    P: Pixel,
+    P::Subpixel: fmt::Debug,
+{
+    let cs = p.channels();
+    match cs.len() {
+        1 => format!("{:?}", cs[0]),
+        _ => format!("[{}]", cs.iter().map(|c| format!("{:?}", c)).join(", "))
+    }
+}
+
+fn colored(s: &str, c: Color) -> String {
+    let escape_sequence = match c {
+        Color::Red => "\x1b[31m",
+        Color::Green => "\x1b[32m",
+        Color::Cyan => "\x1b[36m",
+        Color::Yellow => "\x1b[33m"
+    };
+    format!("{}{}\x1b[0m", escape_sequence, s)
 }
 
 /// Loads image at given path, panicking on failure.
