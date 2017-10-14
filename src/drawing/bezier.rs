@@ -70,7 +70,6 @@ pub fn draw_cubic_bezier_curve_mut<I>(
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;

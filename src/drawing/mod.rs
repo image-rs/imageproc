@@ -57,7 +57,6 @@ pub use self::text::{
 };
 
 use image::GenericImage;
-use std::i32;
 
 // Set pixel at (x, y) to color if this point lies within image bounds,
 // otherwise do nothing.
