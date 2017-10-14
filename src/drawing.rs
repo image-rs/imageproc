@@ -134,6 +134,77 @@ where
     out
 }
 
+/// Iterates over the coordinates in a line segment using
+/// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+pub struct BresenhamLineIter {
+    dx: f32,
+    dy: f32,
+    x: i32,
+    y: i32,
+    error: f32,
+    end_x: i32,
+    is_steep: bool,
+    y_step: f32,
+}
+
+impl BresenhamLineIter {
+    /// Creates a [`BresenhamLineIter`](struct.BresenhamLineIter.html) which will iterate over the integer coordinates
+    /// between `start` and `end`.
+    pub fn new(start: (f32, f32), end: (f32, f32)) -> BresenhamLineIter {
+        let (mut x0, mut y0) = (start.0, start.1);
+        let (mut x1, mut y1) = (end.0, end.1);
+
+        let is_steep = (y1 - y0).abs() > (x1 - x0).abs();
+        if is_steep {
+            swap(&mut x0, &mut y0);
+            swap(&mut x1, &mut y1);
+        }
+
+        if x0 > x1 {
+            swap(&mut x0, &mut x1);
+            swap(&mut y0, &mut y1);
+        }
+
+        let dx = x1 - x0;
+
+        BresenhamLineIter {
+            dx: dx,
+            dy: (y1 - y0).abs(),
+            x: x0 as i32,
+            y: y0 as i32,
+            error: dx / 2f32,
+            end_x: x1 as i32,
+            is_steep: is_steep,
+            y_step: if y0 < y1 { 1f32 } else { -1f32 }
+        }
+    }
+}
+
+impl Iterator for BresenhamLineIter {
+    type Item = (i32, i32);
+
+    fn next(&mut self) -> Option<(i32, i32)> {
+        if self.x > self.end_x {
+            None
+        } else {
+            let ret = if self.is_steep {
+                (self.y, self.x)
+            } else {
+                (self.x, self.y)
+            };
+
+            self.x += 1;
+            self.error -= self.dy;
+            if self.error < 0f32 {
+                self.y = (self.y as f32 + self.y_step) as i32;
+                self.error += self.dx;
+            }
+
+            Some(ret)
+        }
+    }
+}
+
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
 /// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
 pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32), color: I::Pixel)
@@ -144,42 +215,16 @@ where
     let (width, height) = image.dimensions();
     let in_bounds = |x, y| x >= 0 && x < width as i32 && y >= 0 && y < height as i32;
 
-    let (mut x0, mut y0) = (start.0, start.1);
-    let (mut x1, mut y1) = (end.0, end.1);
+    let line_iterator = BresenhamLineIter::new(start, end);
 
-    let is_steep = (y1 - y0).abs() > (x1 - x0).abs();
+    for point in line_iterator {
+        let x = point.0;
+        let y = point.1;
 
-    if is_steep {
-        swap(&mut x0, &mut y0);
-        swap(&mut x1, &mut y1);
-    }
-
-    if x0 > x1 {
-        swap(&mut x0, &mut x1);
-        swap(&mut y0, &mut y1);
-    }
-
-    let dx = x1 - x0;
-    let dy = (y1 - y0).abs();
-    let mut error = dx / 2f32;
-
-    let y_step = if y0 < y1 { 1f32 } else { -1f32 };
-    let mut y = y0 as i32;
-
-    for x in x0 as i32..(x1 + 1f32) as i32 {
-        unsafe {
-            if is_steep {
-                if in_bounds(y, x) {
-                    image.unsafe_put_pixel(y as u32, x as u32, color);
-                }
-            } else if in_bounds(x, y) {
+        if in_bounds(x, y) {
+            unsafe {
                 image.unsafe_put_pixel(x as u32, y as u32, color);
             }
-        }
-        error -= dy;
-        if error < 0f32 {
-            y = (y as f32 + y_step) as i32;
-            error += dx;
         }
     }
 }
