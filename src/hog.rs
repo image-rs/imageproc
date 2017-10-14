@@ -238,7 +238,7 @@ fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
                     let cy = by * spec.options.block_stride + iy;
                     for ix in 0..spec.options.block_side {
                         let cx = bx * spec.options.block_stride + ix;
-                        let mut slice = block.inner_slice_mut(ix, iy);
+                        let slice = block.inner_slice_mut(ix, iy);
                         let hist = grid.inner_slice(cx, cy);
                         copy(hist, slice);
                     }
@@ -250,7 +250,7 @@ fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
             for bx in 0..spec.blocks_wide {
                 let norm = block_norm(&block_view, bx, by);
                 if norm > 0f32 {
-                    let mut block_mut = block_view.inner_slice_mut(bx, by);
+                    let block_mut = block_view.inner_slice_mut(bx, by);
                     for i in 0..block_mut.len() {
                         block_mut[i] /= norm;
                     }
@@ -649,27 +649,27 @@ mod test {
         let mut view = grid.view_mut();
 
         {
-            let mut tl = view.inner_slice_mut(0, 0);
+            let tl = view.inner_slice_mut(0, 0);
             copy(&[1f32, 3f32, 2f32], tl);
         }
         {
-            let mut tm = view.inner_slice_mut(1, 0);
+            let tm = view.inner_slice_mut(1, 0);
             copy(&[2f32, 3f32, 5f32], tm);
         }
         {
-            let mut tr = view.inner_slice_mut(2, 0);
+            let tr = view.inner_slice_mut(2, 0);
             copy(&[0f32, 1f32, 0f32], tr);
         }
         {
-            let mut bl = view.inner_slice_mut(0, 1);
+            let bl = view.inner_slice_mut(0, 1);
             copy(&[5f32, 0f32, 7f32], bl);
         }
         {
-            let mut bm = view.inner_slice_mut(1, 1);
+            let bm = view.inner_slice_mut(1, 1);
             copy(&[3f32, 7f32, 9f32], bm);
         }
         {
-            let mut br = view.inner_slice_mut(2, 1);
+            let br = view.inner_slice_mut(2, 1);
             copy(&[6f32, 1f32, 4f32], br);
         }
 

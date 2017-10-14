@@ -72,7 +72,7 @@ where
 
     for y in 0..height {
         for x in 0..width {
-            let mut out_channels = out.get_pixel_mut(x, y).channels_mut();
+            let out_channels = out.get_pixel_mut(x, y).channels_mut();
             for c in 0..P::channel_count() {
                 out_channels[c as usize] = f(unsafe {
                     *image.unsafe_get_pixel(x, y).channels().get_unchecked(
