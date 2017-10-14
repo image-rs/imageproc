@@ -4,7 +4,7 @@ use image::{GenericImage, ImageBuffer, Pixel};
 use definitions::{Clamp, Image};
 use conv::ValueInto;
 use rect::Rect;
-use std::mem::swap;
+use std::mem::{swap, transmute};
 use std::cmp::{min, max};
 use std::f32;
 use std::i32;
@@ -202,6 +202,76 @@ impl Iterator for BresenhamLineIter {
 
             Some(ret)
         }
+    }
+}
+
+fn clamp(x: f32, upper_bound: u32) -> f32 {
+    if x < 0f32 {
+        return 0f32;
+    }
+    if x > upper_bound as f32 {
+        return upper_bound as f32;
+    }
+    x
+}
+
+fn clamp_point<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
+    (clamp(p.0, image.width()), clamp(p.1, image.height()))
+}
+
+/// Iterates over the image pixels in a line segment using
+/// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+pub struct BresenhamLinePixelIter<'a, P: Pixel + 'static> {
+    iter: BresenhamLineIter,
+    image: &'a Image<P>
+}
+
+impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
+    /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
+    /// the image pixels with coordinates between `start` and `end`.
+    pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<P> {
+        BresenhamLinePixelIter {
+            iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
+            image: image
+        }
+    }
+}
+
+impl <'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
+    type Item = &'a P;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|p| self.image.get_pixel(p.0 as u32, p.1 as u32))
+    }
+}
+
+/// Iterates over the image pixels in a line segment using
+/// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
+    iter: BresenhamLineIter,
+    image: &'a mut Image<P>
+}
+
+impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
+    /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
+    /// the image pixels with coordinates between `start` and `end`.
+    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<P> {
+        BresenhamLinePixelIterMut {
+            iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
+            image: image
+        }
+    }
+}
+
+impl <'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIterMut<'a, P> {
+    type Item = &'a mut P;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self
+            .iter
+            .next()
+            .map(|p| self.image.get_pixel_mut(p.0 as u32, p.1 as u32))
+            .map(|p| unsafe { transmute(p) })
     }
 }
 
