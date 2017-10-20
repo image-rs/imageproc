@@ -51,7 +51,7 @@ where
 ///     1, 2;
 ///     3, 4);
 ///
-/// let scaled = gray_image_i16!(
+/// let scaled = gray_image!(type: i16,
 ///     -2i16, -4i16;
 ///     -6i16, -8i16);
 ///

@@ -697,7 +697,7 @@ mod test {
             6, 5, 4;
             9, 8, 7);
 
-        let expected = gray_image_i16!(
+        let expected = gray_image!(type: i16,
             -4i16, -8i16, -4i16;
             -4i16, -8i16, -4i16;
             -4i16, -8i16, -4i16
