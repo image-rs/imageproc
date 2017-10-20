@@ -32,7 +32,7 @@ use definitions::Image;
 ///     1, 2, 3;
 ///     4, 5, 6);
 ///
-/// let integral = gray_image_u32!(
+/// let integral = gray_image!(type: u32,
 ///     0,  0,  0,  0;
 ///     0,  1,  3,  6;
 ///     0,  5, 12, 21);
@@ -66,7 +66,7 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
 ///     1, 2, 3;
 ///     4, 5, 6);
 ///
-/// let integral = gray_image_u32!(
+/// let integral = gray_image!(type: u32,
 ///     0,  0,  0,  0;
 ///     0,  1,  5, 14;
 ///     0, 17, 46, 91);
@@ -342,7 +342,7 @@ mod test {
             1, 2, 3;
             4, 5, 6);
 
-        let expected = gray_image_u32!(
+        let expected = gray_image!(type: u32,
             0,  0,  0,  0;
             0,  1,  3,  6;
             0,  5, 12, 21);

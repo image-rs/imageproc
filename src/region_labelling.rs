@@ -42,7 +42,7 @@ pub enum Connectivity {
 /// // With four-way connectivity the foreground regions which
 /// // are only connected across diagonals belong to different
 /// // connected components.
-/// let components_four = gray_image_u32!(
+/// let components_four = gray_image!(type: u32,
 ///     1, 0, 2, 2;
 ///     0, 2, 2, 0;
 ///     0, 0, 0, 0;
@@ -54,7 +54,7 @@ pub enum Connectivity {
 ///
 /// // With eight-way connectivity all foreground pixels in the top two rows
 /// // belong to the same connected component.
-/// let components_eight = gray_image_u32!(
+/// let components_eight = gray_image!(type: u32,
 ///     1, 0, 1, 1;
 ///     0, 1, 1, 0;
 ///     0, 0, 0, 0;
@@ -86,7 +86,7 @@ pub enum Connectivity {
 ///     0, 0, 0, 0;
 ///     0, 0, 0, 1);
 ///
-/// let components_four = gray_image_u32!(
+/// let components_four = gray_image!(type: u32,
 ///     1, 0, 2, 2;
 ///     0, 3, 4, 0;
 ///     0, 0, 0, 0;
@@ -103,7 +103,7 @@ pub enum Connectivity {
 /// // Pixels equal to the threshold are treated as background.
 /// let thresholded = threshold(&image, 0);
 ///
-/// let thresholded_components_four = gray_image_u32!(
+/// let thresholded_components_four = gray_image!(type: u32,
 ///     1, 0, 2, 2;
 ///     0, 2, 2, 0;
 ///     0, 0, 0, 0;
@@ -250,7 +250,7 @@ mod test {
             255, 255, 255, 255;
             255, 255, 255,   1);
 
-        let expected = gray_image_u32!(
+        let expected = gray_image!(type: u32,
             1, 0, 2, 1;
             0, 1, 1, 0;
             0, 0, 0, 0;

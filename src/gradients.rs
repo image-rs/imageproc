@@ -90,7 +90,7 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// );
 ///
 /// // Computing independent per-channel gradients.
-/// let channel_gradient = rgb_image_u16!(
+/// let channel_gradient = rgb_image!(type: u16,
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8];
 ///     [ 4,  0, 16], [ 8,  0, 16], [ 4,  0, 16];
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
@@ -103,7 +103,7 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 ///
 /// // Defining the gradient of an RGB image to be the
 /// // mean of its per-channel gradients.
-/// let mean_gradient = gray_image_u16!(
+/// let mean_gradient = gray_image!(type: u16,
 ///     4, 5, 4;
 ///     6, 8, 6;
 ///     4, 5, 4
@@ -119,7 +119,7 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 ///
 /// // Defining the gradient of an RGB image to be the pixelwise
 /// // maximum of its per-channel gradients.
-/// let max_gradient = gray_image_u16!(
+/// let max_gradient = gray_image!(type: u16,
 ///      8,  8,  8;
 ///     16, 16, 16;
 ///      8,  8,  8
@@ -218,7 +218,7 @@ mod test {
             6, 5, 4;
             9, 8, 7);
 
-        let expected = gray_image_i16!(
+        let expected = gray_image!(type: i16,
             -4i16, -8i16, -4i16;
             -4i16, -8i16, -4i16;
             -4i16, -8i16, -4i16);
@@ -234,7 +234,7 @@ mod test {
             2, 5, 8;
             1, 4, 7);
 
-        let expected = gray_image_i16!(
+        let expected = gray_image!(type: i16,
             -4i16, -4i16, -4i16;
             -8i16, -8i16, -8i16;
             -4i16, -4i16, -4i16);
@@ -250,7 +250,7 @@ mod test {
             6, 5, 4;
             9, 8, 7);
 
-        let expected = gray_image_i16!(
+        let expected = gray_image!(type: i16,
             -3i16, -6i16, -3i16;
             -3i16, -6i16, -3i16;
             -3i16, -6i16, -3i16);
@@ -266,7 +266,7 @@ mod test {
             2, 5, 8;
             1, 4, 7);
 
-        let expected = gray_image_i16!(
+        let expected = gray_image!(type: i16,
             -3i16, -3i16, -3i16;
             -6i16, -6i16, -6i16;
             -3i16, -3i16, -3i16);
