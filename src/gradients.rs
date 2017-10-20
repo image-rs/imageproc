@@ -219,9 +219,9 @@ mod test {
             9, 8, 7);
 
         let expected = gray_image!(type: i16,
-            -4i16, -8i16, -4i16;
-            -4i16, -8i16, -4i16;
-            -4i16, -8i16, -4i16);
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4);
 
         let filtered = horizontal_sobel(&image);
         assert_pixels_eq!(filtered, expected);
@@ -235,9 +235,9 @@ mod test {
             1, 4, 7);
 
         let expected = gray_image!(type: i16,
-            -4i16, -4i16, -4i16;
-            -8i16, -8i16, -8i16;
-            -4i16, -4i16, -4i16);
+            -4, -4, -4;
+            -8, -8, -8;
+            -4, -4, -4);
 
         let filtered = vertical_sobel(&image);
         assert_pixels_eq!(filtered, expected);
@@ -251,9 +251,9 @@ mod test {
             9, 8, 7);
 
         let expected = gray_image!(type: i16,
-            -3i16, -6i16, -3i16;
-            -3i16, -6i16, -3i16;
-            -3i16, -6i16, -3i16);
+            -3, -6, -3;
+            -3, -6, -3;
+            -3, -6, -3);
 
         let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
@@ -267,9 +267,9 @@ mod test {
             1, 4, 7);
 
         let expected = gray_image!(type: i16,
-            -3i16, -3i16, -3i16;
-            -6i16, -6i16, -6i16;
-            -3i16, -3i16, -3i16);
+            -3, -3, -3;
+            -6, -6, -6;
+            -3, -3, -3);
 
         let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);

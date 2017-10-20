@@ -698,9 +698,9 @@ mod test {
             9, 8, 7);
 
         let expected = gray_image!(type: i16,
-            -4i16, -8i16, -4i16;
-            -4i16, -8i16, -4i16;
-            -4i16, -8i16, -4i16
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4
         );
 
         let filtered = filter3x3(&image, &kernel);
