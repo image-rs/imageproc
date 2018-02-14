@@ -151,7 +151,7 @@ fn gaussian(x: f32, r: f32) -> f32 {
     ((2.0 * f32::consts::PI).sqrt() * r).recip() * (-x.powi(2) / (2.0 * r.powi(2))).exp()
 }
 
-/// Construct a one dimensional float-valued kernel for performing a Gausian blur
+/// Construct a one dimensional float-valued kernel for performing a Gaussian blur
 /// with standard deviation sigma.
 fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
     let kernel_radius = (2.0 * sigma).ceil() as usize;
@@ -164,7 +164,7 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
     kernel_data
 }
 
-/// Blurs an image using a Gausian of standard deviation sigma.
+/// Blurs an image using a Gaussian of standard deviation sigma.
 /// The kernel used has type f32 and all intermediate calculations are performed
 /// at this type.
 // TODO: Integer type kernel, approximations via repeated box filter.
