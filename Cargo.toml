@@ -17,7 +17,7 @@ num = "0.1.27"
 quickcheck = "0.6"
 rand = "0.4"
 rusttype = "0.3"
-rayon = "0.9"
+rayon = "1.0"
 
 [profile.release]
 opt-level = 3
