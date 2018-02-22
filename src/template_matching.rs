@@ -1,0 +1,1 @@
+//! Functions for performing template matching.
