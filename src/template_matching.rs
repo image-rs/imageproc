@@ -28,7 +28,8 @@ pub fn match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32
             for dy in 0..template_height {
                 for dx in 0..template_width {
                     let image_value = image.get_pixel(x + dx, y + dy)[0] as f32;
-                    let template_value = image.get_pixel(dx, dy)[0] as f32;
+                    let template_value = template.get_pixel(dx, dy)[0] as f32;
+
                     sse += (image_value - template_value).powf(2.0);
                 }
             }
@@ -42,9 +43,44 @@ pub fn match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32
 
 #[cfg(test)]
 mod tests {
+    use image::GrayImage;
     use super::*;
 
-    // TODO test panic for invalid dimensions. test does not panic on boundary condition
-    // TODO test result dimensions
-    // TODO test actual results
+    #[test]
+    #[should_panic]
+    fn match_template_panics_if_image_width_does_not_exceed_template_width() {
+        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(5, 4));
+    }
+
+    #[test]
+    #[should_panic]
+    fn match_template_panics_if_image_height_does_not_exceed_template_height() {
+        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(4, 5));
+    }
+
+    #[test]
+    fn match_template_accepts_valid_template_size() {
+        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(4, 4));
+    }
+
+    #[test]
+    fn match_template_example() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(&image, &template);
+        let expected = gray_image!(type: f32,
+            14.0, 14.0;
+            3.0, 1.0
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
 }
