@@ -43,8 +43,10 @@ pub fn match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32
 
 #[cfg(test)]
 mod tests {
-    use image::GrayImage;
     use super::*;
+    use utils::gray_bench_image;
+    use image::GrayImage;
+    use test::{Bencher, black_box};
 
     #[test]
     #[should_panic]
@@ -83,4 +85,22 @@ mod tests {
 
         assert_pixels_eq!(actual, expected);
     }
+
+    macro_rules! bench_match_template {
+        ($name:ident, image_size: $s:expr, template_size: $t:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image = gray_bench_image($s, $s);
+                let template = gray_bench_image($t, $t);
+                b.iter(|| {
+                    let result = match_template(&image, &template);
+                    black_box(result);
+                })
+            }
+        }
+    }
+
+    bench_match_template!(bench_match_template_s100_t1, image_size: 100, template_size: 1);
+    bench_match_template!(bench_match_template_s100_t4, image_size: 100, template_size: 4);
+    bench_match_template!(bench_match_template_s100_t16, image_size: 100, template_size: 16);
 }
