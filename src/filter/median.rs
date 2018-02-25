@@ -117,10 +117,10 @@ where
     let r = radius as i32;
 
     for dy in -r..(r + 1) {
-        let py = min(max(0, dy), (height as i32 - 1)) as u32;
+        let py = min(max(0, dy), height as i32 - 1) as u32;
 
         for dx in -r..(r + 1) {
-            let px = min(max(0, dx), (width as i32 - 1)) as u32;
+            let px = min(max(0, dx), width as i32 - 1) as u32;
 
             hist.incr(image, px, py);
         }
