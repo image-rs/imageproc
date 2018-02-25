@@ -1,15 +1,12 @@
 //! An example of template matching in a greyscale image.
-//! If running from the root directory of this crate you can test on the
-//! wrench image in /examples by running
-//! `cargo run --example template_matching ./examples/wrench.jpg ./tmp`
 extern crate image;
 extern crate imageproc;
 
 use std::env;
-use std::path::Path;
+use std::path::PathBuf;
 use std::fs;
 use std::f32;
-use image::{open, GenericImage, GrayImage, Luma, Rgb};
+use image::{open, GenericImage, GrayImage, Luma, Rgb, RgbImage};
 use imageproc::definitions::Image;
 use imageproc::template_matching::match_template;
 use imageproc::map::map_colors;
@@ -47,16 +44,52 @@ fn copy_sub_image(image: &GrayImage, x: u32, y: u32, w: u32, h: u32) -> GrayImag
     result
 }
 
-fn main() {
-    if env::args().len() != 3 {
-        panic!("Please enter an input file and a target directory")
+fn draw_green_rect(image: &GrayImage, rect: Rect) -> RgbImage {
+    let mut color_image = map_colors(image, |p| Rgb([p[0], p[0], p[0]]));
+    draw_hollow_rect_mut(&mut color_image, rect, Rgb([0, 255, 0]));
+    color_image
+}
+
+struct TemplateMatchingArgs {
+    input_path: PathBuf,
+    output_dir: PathBuf,
+    template_x: u32,
+    template_y: u32,
+    template_w: u32,
+    template_h: u32
+}
+
+impl TemplateMatchingArgs {
+    fn parse(args: Vec<String>) -> TemplateMatchingArgs {
+        if args.len() != 7 {
+            panic!(r#"
+Usage:
+
+     cargo run --example template_matching input_path output_dir template_x template_y template_w template_h
+
+Loads the image at input_path and extracts a region with the given location and size to use as the matching
+template. Calls match_template on the input image and this template, and saves the results to output_dir.
+"#);
+        }
+
+        let input_path = PathBuf::from(&args[1]);
+        let output_dir = PathBuf::from(&args[2]);
+        let template_x = args[3].parse().unwrap();
+        let template_y = args[4].parse().unwrap();
+        let template_w = args[5].parse().unwrap();
+        let template_h = args[6].parse().unwrap();
+
+        TemplateMatchingArgs {
+            input_path, output_dir, template_x, template_y, template_w, template_h
+        }
     }
+}
 
-    let input_path = env::args().nth(1).unwrap();
-    let output_dir = env::args().nth(2).unwrap();
+fn main() {
+    let args = TemplateMatchingArgs::parse(env::args().collect());
 
-    let input_path = Path::new(&input_path);
-    let output_dir = Path::new(&output_dir);
+    let input_path = &args.input_path;
+    let output_dir = &args.output_dir;
 
     if !output_dir.is_dir() {
         fs::create_dir(output_dir).expect("Failed to create output directory")
@@ -71,37 +104,29 @@ fn main() {
         .expect(&format!("Could not load image at {:?}", input_path))
         .to_luma();
 
-    // Save grayscale image in output directory
-    let gray_path = output_dir.join("image.png");
-    image.save(&gray_path).unwrap();
-
-    // Crop a section of the input image as the template
-    // This will fail if the input image is too small...
-    let template_width = 25;
-    let template_height = 25;
-    let template_x = 157;
-    let template_y = 85;
-    let template = copy_sub_image(&image, template_x, template_y, template_width, template_height);
-    let template_path = output_dir.join("template.png");
-    template.save(&template_path).unwrap();
+    // Extract the requested image sub-region to use as the template
+    let template = copy_sub_image(&image, args.template_x, args.template_y, args.template_w, args.template_h);
 
     // Match the template and convert to u8 depth to display
     let result = match_template(&image, &template);
     let result_scaled = convert_to_gray_image(&result);
 
-    // Pad the result to the same size as the input image, to make
-    // it easier to compare the two
+    // Pad the result to the same size as the input image, to make them easier to compare
     let mut result_padded = GrayImage::new(image.width(), image.height());
-    result_padded.copy_from(&result_scaled, template_width / 2, template_height / 2);
+    result_padded.copy_from(&result_scaled, args.template_w / 2, args.template_h / 2);
 
     // Show location the template was extracted from
-    let mut result_padded = map_colors(&result_padded, |p| Rgb([p[0], p[0], p[0]]));
-    draw_hollow_rect_mut(
-        &mut result_padded,
-        Rect::at(template_x as i32, template_y as i32)
-            .of_size(template_width, template_height),
-        Rgb([0, 255, 0]));
+    let roi = Rect::at(args.template_x as i32, args.template_y as i32)
+        .of_size(args.template_w, args.template_h);
 
+    let image_with_roi = draw_green_rect(&image, roi);
+    let result_with_roi = draw_green_rect(&result_padded, roi);
+
+    // Save images to output_dir
+    let template_path = output_dir.join("template.png");
+    template.save(&template_path).unwrap();
+    let source_path = output_dir.join("image.png");
+    image_with_roi.save(&source_path).unwrap();
     let result_path = output_dir.join("result.png");
-    result_padded.save(&result_path).unwrap();
+    result_with_roi.save(&result_path).unwrap();
 }
