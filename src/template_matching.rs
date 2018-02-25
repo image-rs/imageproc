@@ -1,8 +1,8 @@
 //! Functions for performing template matching.
 use definitions::Image;
-use image::{GrayImage, Luma};
+use image::{GenericImage, GrayImage, Luma};
 
-/// Slides a `template` over an image and computes the sum of squared pixel intensity
+/// Slides a `template` over an `image` and computes the sum of squared pixel intensity
 /// differences at each point.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
@@ -19,7 +19,7 @@ pub fn match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32
     assert!(image_width > template_width, "image width must strictly exceed template width");
     assert!(image_height > template_height, "image height must strictly exceed template height");
 
-    let mut result = Image::<Luma<f32>>::new(image_width - template_width + 1, image_height - template_height + 1);
+    let mut result = Image::new(image_width - template_width + 1, image_height - template_height + 1);
 
     for y in 0..result.height() {
         for x in 0..result.width() {
@@ -27,9 +27,8 @@ pub fn match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32
 
             for dy in 0..template_height {
                 for dx in 0..template_width {
-                    let image_value = image.get_pixel(x + dx, y + dy)[0] as f32;
-                    let template_value = template.get_pixel(dx, dy)[0] as f32;
-
+                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
                     sse += (image_value - template_value).powf(2.0);
                 }
             }
