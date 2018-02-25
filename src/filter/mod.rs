@@ -119,12 +119,12 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                 for k_y in 0..k_height {
                     let y_p = min(
                         height + height - 1,
-                        max(height, (height + y + k_y - k_height / 2)),
+                        max(height, height + y + k_y - k_height / 2),
                     ) - height;
                     for k_x in 0..k_width {
                         let x_p = min(
                             width + width - 1,
-                            max(width, (width + x + k_x - k_width / 2)),
+                            max(width, width + x + k_x - k_width / 2),
                         ) - width;
                         let (p, k) = unsafe {
                             (
