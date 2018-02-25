@@ -33,7 +33,7 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
 
     let should_normalize = method == MatchTemplateMethod::SumOfSquaredErrorsNormalized;
     let image_squared_integral = if should_normalize { Some(integral_squared_image(&image)) } else { None };
-    let template_squared_integral = if should_normalize { Some(integral_squared_image(&template)) } else { None };
+    let template_squared_sum = if should_normalize { Some(sum_squares(&template)) } else { None };
 
     let mut result = Image::new(image_width - template_width + 1, image_height - template_height + 1);
 
@@ -49,7 +49,7 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
                 }
             }
 
-            if let (&Some(ref i), &Some(ref t)) = (&image_squared_integral, &template_squared_integral) {
+            if let (&Some(ref i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
                 let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
                 let norm = normalization_term(i, t, region);
                 score /= norm;
@@ -62,11 +62,15 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
     result
 }
 
+fn sum_squares(template: &GrayImage) -> f32 {
+    template.iter().map(|p| *p as f32 * *p as f32).sum()
+}
+
 /// Returns the square root of the product of the sum of squares of
 /// pixel intensities in template and the provided region of image.
 fn normalization_term(
     image_squared_integral: &Image<Luma<u32>>,
-    template_squared_integral: &Image<Luma<u32>>,
+    template_squared_sum: f32,
     region: Rect) -> f32 {
     let image_sum = sum_image_pixels(
         image_squared_integral,
@@ -75,15 +79,7 @@ fn normalization_term(
         region.right() as u32,
         region.bottom() as u32
     ) as f32;
-    let template_sum = sum_image_pixels(
-        template_squared_integral,
-        0,
-        0,
-        region.width() - 1,
-        region.height() - 1
-    ) as f32;
-
-    (image_sum * template_sum).sqrt()
+    (image_sum * template_squared_sum).sqrt()
 }
 
 #[cfg(test)]
@@ -131,8 +127,30 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[test]
+    fn match_template_sum_of_squared_errors_normalized() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+        let tss = 30f32;
+        let expected = gray_image!(type: f32,
+            14.0 / (22.0 * tss).sqrt(), 14.0 / (30.0 * tss).sqrt();
+            3.0 / (23.0 * tss).sqrt(), 1.0 / (35.0 * tss).sqrt()
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
     macro_rules! bench_match_template {
-        ($name:ident, image_size: $s:expr, template_size: $t:expr) => {
+        ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
@@ -145,7 +163,39 @@ mod tests {
         }
     }
 
-    bench_match_template!(bench_match_template_s100_t1, image_size: 100, template_size: 1);
-    bench_match_template!(bench_match_template_s100_t4, image_size: 100, template_size: 4);
-    bench_match_template!(bench_match_template_s100_t16, image_size: 100, template_size: 16);
+    bench_match_template!(
+        bench_match_template_s100_t1_sse,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template!(
+        bench_match_template_s100_t4_sse,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template!(
+        bench_match_template_s100_t16_sse,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+        bench_match_template!(
+        bench_match_template_s100_t1_sse_norm,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template!(
+        bench_match_template_s100_t4_sse_norm,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template!(
+        bench_match_template_s100_t16_sse_norm,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
 }
