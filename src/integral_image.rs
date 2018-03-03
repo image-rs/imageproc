@@ -1,11 +1,11 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImage, ImageBuffer};
-
+use image::{Luma, GrayImage, GenericImage, Pixel};
 use definitions::Image;
+use map::{ChannelMap, WithChannel};
 
-/// Computes the 2d running sum of a grayscale image.
+/// Computes the 2d running sum of an image. Channels are summed independently.
 ///
 /// An integral image I has width and height one greater than its source image F,
 /// and is defined by I(x, y) = sum of F(x', y') for x' < x, y' < y, i.e. each pixel
@@ -46,11 +46,15 @@ use definitions::Image;
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 2 + 3);
 /// # }
 /// ```
-pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
+pub fn integral_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+where
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+{
     integral_image_impl(image, false)
 }
 
-/// Computes the 2d running sum of the squares of the intensities in a grayscale image.
+/// Computes the 2d running sum of the squares of the intensities in an image. Channels are summed
+/// independently.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for more information on integral images.
 ///
@@ -80,36 +84,50 @@ pub fn integral_image(image: &GrayImage) -> Image<Luma<u32>> {
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 4 + 9);
 /// # }
 /// ```
-pub fn integral_squared_image(image: &GrayImage) -> Image<Luma<u32>> {
+pub fn integral_squared_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+where
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+{
     integral_image_impl(image, true)
 }
 
 /// Implementation of `integral_image` and `integral_squared_image`.
-fn integral_image_impl(image: &GrayImage, square: bool) -> Image<Luma<u32>> {
-    // TODO: Support more formats, make faster, add a new IntegralImage type
+fn integral_image_impl<P>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, u32>>
+where
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+{
+    // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
     let (in_width, in_height) = image.dimensions();
     let out_width = in_width + 1;
     let out_height = in_height + 1;
 
-    let mut out = ImageBuffer::from_pixel(out_width, out_height, Luma([0u32]));
+    let mut out = Image::<ChannelMap<P, u32>>::new(out_width, out_height);
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
     for y in 1..out_height {
-        let mut sum = 0;
+        let mut sum = vec![0u32; P::channel_count() as usize];
         for x in 1..out_width {
             unsafe {
-                let pix = image.unsafe_get_pixel(x - 1, y - 1)[0] as u32;
-                if square {
-                    sum += pix * pix;
-                } else {
-                    sum += pix;
+                for c in 0..P::channel_count() {
+                    let pix = image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize] as u32;
+                    if square {
+                        sum[c as usize] += pix * pix;
+                    } else {
+                        sum[c as usize] += pix;
+                    }
                 }
-                let above = out.unsafe_get_pixel(x, y - 1)[0];
-                out.unsafe_put_pixel(x, y, Luma([above + sum]))
+
+                let above = out.unsafe_get_pixel(x, y - 1);
+                // For some reason there's no unsafe_get_pixel_mut, so to update the existing
+                // pixel here we need to use the method with bounds checking
+                let mut current = out.get_pixel_mut(x, y);
+                for c in 0..P::channel_count() {
+                    current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
+                }
             }
         }
     }
@@ -311,7 +329,7 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 mod test {
     use super::*;
     use property_testing::GrayTestImage;
-    use utils::{gray_bench_image, pixel_diff_summary};
+    use utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
     use definitions::Image;
@@ -337,7 +355,7 @@ mod test {
     }
 
     #[test]
-    fn test_integral_image() {
+    fn test_integral_image_gray() {
         let image = gray_image!(
             1, 2, 3;
             4, 5, 6);
@@ -350,9 +368,32 @@ mod test {
         assert_pixels_eq!(integral_image(&image), expected);
     }
 
+    #[test]
+    fn test_integral_image_rgb() {
+        let image = rgb_image!(
+            [1, 11, 21], [2, 12, 22], [3, 13, 23];
+            [4, 14, 24], [5, 15, 25], [6, 16, 26]);
+
+        let expected = rgb_image!(type: u32,
+            [0, 0, 0],  [0,  0,  0], [ 0,  0,  0], [ 0,  0,   0];
+            [0, 0, 0],  [1, 11, 21], [ 3, 23, 43], [ 6, 36,  66];
+            [0, 0, 0],  [5, 25, 45], [12, 52, 92], [21, 81, 141]);
+
+        assert_pixels_eq!(integral_image(&image), expected);
+    }
+
     #[bench]
-    fn bench_integral_image(b: &mut test::Bencher) {
+    fn bench_integral_image_gray(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let integral = integral_image(&image);
+            test::black_box(integral);
+        });
+    }
+
+    #[bench]
+    fn bench_integral_image_rgb(b: &mut test::Bencher) {
+        let image = rgb_bench_image(500, 500);
         b.iter(|| {
             let integral = integral_image(&image);
             test::black_box(integral);
