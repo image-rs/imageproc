@@ -5,6 +5,8 @@ use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb, Rgba};
 use definitions::Image;
 
 /// The type obtained by replacing the channel type of a given `Pixel` type.
+/// The output type must have the same name of channels as the input type, or
+/// several algorithms will produce incorrect results or panic.
 pub trait WithChannel<C: Primitive>: Pixel {
     /// The new pixel type.
     type Pixel: Pixel<Subpixel = C> + 'static;
