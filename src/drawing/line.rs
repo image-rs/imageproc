@@ -191,6 +191,7 @@ where
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
 /// The parameters of blend are (line color, original color, line weight).
+/// Consider using [`interpolate`](fn.interpolate.html) for blend.
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment<I, B>(
     image: &I,
