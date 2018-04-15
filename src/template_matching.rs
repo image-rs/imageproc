@@ -1,4 +1,5 @@
 //! Functions for performing template matching.
+use image::Primitive;
 use definitions::Image;
 use rect::Rect;
 use integral_image::{integral_squared_image, sum_image_pixels};
@@ -80,6 +81,48 @@ fn normalization_term(
         region.bottom() as u32
     ) as f32;
     (image_sum * template_squared_sum).sqrt()
+}
+
+/// The largest and smallest values in an image,
+/// together with their locations.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Extremes<T> {
+    /// The largest value in an image.
+    pub max_value: T,
+    /// The smallest value in an image.
+    pub min_value: T,
+    /// The coordinates of the largest value in an image.
+    pub max_value_location: (u32, u32),
+    /// The coordinates of the smallest value in an image.
+    pub min_value_location: (u32, u32)
+}
+
+/// Finds the largest and smallest values in an image and their locations.
+/// If there are multiple such values then the lexicographically smallest is returned.
+pub fn find_extremes<T>(image: &Image<Luma<T>>) -> Extremes<T>
+where
+    T : Primitive + 'static
+{
+    assert!(image.width() > 0 && image.height() > 0, "image must be non-empty");
+
+    let mut min_value = image.get_pixel(0, 0)[0];
+    let mut max_value = image.get_pixel(0, 0)[0];
+
+    let mut min_value_location = (0, 0);
+    let mut max_value_location = (0, 0);
+
+    for (x, y, p) in image.enumerate_pixels() {
+        if p[0] < min_value {
+            min_value = p[0];
+            min_value_location = (x, y);
+        }
+        if p[0] > max_value {
+            max_value = p[0];
+            max_value_location = (x, y);
+        }
+    }
+
+    Extremes { max_value, min_value, max_value_location, min_value_location }
 }
 
 #[cfg(test)]
@@ -198,4 +241,21 @@ mod tests {
         image_size: 100,
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    #[test]
+    fn test_find_extremes() {
+        let image = gray_image!(
+            10,  7,  8,  1;
+             9, 15,  4,  2
+        );
+
+        let expected = Extremes {
+            max_value: 15,
+            min_value: 1,
+            max_value_location: (1, 1),
+            min_value_location: (3, 0)
+        };
+
+        assert_eq!(find_extremes(&image), expected);
+    }
 }
