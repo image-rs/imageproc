@@ -23,7 +23,7 @@ fn main() {
     let mut image = RgbImage::new(200, 200);
 
     let font = Vec::from(include_bytes!("DejaVuSans.ttf") as &[u8]);
-    let font = FontCollection::from_bytes(font).into_font().unwrap();
+    let font = FontCollection::from_bytes(font).unwrap().into_font().unwrap();
 
     let height = 12.4;
     let scale = Scale { x: height * 2.0, y: height };
