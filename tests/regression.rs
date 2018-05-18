@@ -15,7 +15,7 @@ extern crate nalgebra;
 use std::ops::Deref;
 use std::path::Path;
 use std::f32;
-use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage};
+use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage, RgbaImage};
 use imageproc::utils::{load_image_or_panic};
 use imageproc::affine::{affine, Interpolation, rotate_about_center};
 use imageproc::edges::canny;
@@ -98,6 +98,14 @@ fn test_rotate_nearest_rgb() {
 }
 
 #[test]
+fn test_rotate_nearest_rgba() {
+    fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+    }
+    compare_to_truth_rgb("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
+}
+
+#[test]
 fn test_equalize_histogram_grayscale() {
     use imageproc::contrast::equalize_histogram;
     compare_to_truth_grayscale("lumaphant.png", "lumaphant_eq.png", equalize_histogram);
@@ -109,6 +117,14 @@ fn test_rotate_bilinear_rgb() {
         rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
     }
     compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 1);
+}
+
+#[test]
+fn test_rotate_bilinear_rgba() {
+    fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+    }
+    compare_to_truth_rgb_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
 }
 
 #[test]
