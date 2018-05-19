@@ -55,6 +55,13 @@ fn compare_to_truth_rgb<F>(input_file_name: &str, truth_file_name: &str, op: F)
     compare_to_truth_rgb_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
 
+/// Load an input image, apply a function to it and check that the results match a 'truth' image.
+fn compare_to_truth_rgba<F>(input_file_name: &str, truth_file_name: &str, op: F)
+    where F: Fn(&RgbImage) -> RgbImage
+{
+    compare_to_truth_rgba_with_tolerance(input_file_name, truth_file_name, op, 0u8);
+}
+
 /// Load an input image, apply a function to it and check that the results
 /// match a 'truth' image to within a given per-pixel tolerance.
 fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
@@ -68,6 +75,23 @@ fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name
     }
     else {
         let truth = load_truth_image(truth_file_name).to_rgb();
+        assert_pixels_eq_within!(actual, truth, tol);
+    }
+}
+
+/// Load an input image, apply a function to it and check that the results
+/// match a 'truth' image to within a given per-pixel tolerance.
+fn compare_to_truth_rgba_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
+    where F: Fn(&RgbImage) -> RgbImage
+{
+    let input = load_input_image(input_file_name).to_rgba();
+    let actual = op.call((&input,));
+
+    if REGENERATE {
+        save_truth_image(&actual, truth_file_name);
+    }
+    else {
+        let truth = load_truth_image(truth_file_name).to_rgba();
         assert_pixels_eq_within!(actual, truth, tol);
     }
 }
@@ -102,7 +126,7 @@ fn test_rotate_nearest_rgba() {
     fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
         rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
     }
-    compare_to_truth_rgb("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
+    compare_to_truth_rgba("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
 }
 
 #[test]
@@ -124,7 +148,7 @@ fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
         rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
     }
-    compare_to_truth_rgb_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
 }
 
 #[test]
