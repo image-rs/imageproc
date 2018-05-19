@@ -145,7 +145,7 @@ fn test_rotate_bilinear_rgb() {
 
 #[test]
 fn test_rotate_bilinear_rgba() {
-    fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
+    fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
         rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
     }
     compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
