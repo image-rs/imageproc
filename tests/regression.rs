@@ -57,7 +57,7 @@ fn compare_to_truth_rgb<F>(input_file_name: &str, truth_file_name: &str, op: F)
 
 /// Load an input image, apply a function to it and check that the results match a 'truth' image.
 fn compare_to_truth_rgba<F>(input_file_name: &str, truth_file_name: &str, op: F)
-    where F: Fn(&RgbImage) -> RgbImage
+    where F: Fn(&RgbaImage) -> RgbaImage
 {
     compare_to_truth_rgba_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
@@ -82,7 +82,7 @@ fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name
 /// Load an input image, apply a function to it and check that the results
 /// match a 'truth' image to within a given per-pixel tolerance.
 fn compare_to_truth_rgba_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
-    where F: Fn(&RgbImage) -> RgbImage
+    where F: Fn(&RgbaImage) -> RgbaImage
 {
     let input = load_input_image(input_file_name).to_rgba();
     let actual = op.call((&input,));
