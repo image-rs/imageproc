@@ -3,6 +3,8 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 
+#![feature(rust_2018_preview)]
+
 #[cfg(test)]
 extern crate test;
 extern crate conv;
