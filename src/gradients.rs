@@ -190,6 +190,7 @@ where
     out
 }
 
+#[inline]
 fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
     (dx.powi(2) + dy.powi(2)).sqrt() as u16
 }
