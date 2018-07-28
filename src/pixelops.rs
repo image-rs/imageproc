@@ -1,9 +1,9 @@
 //! Pixel manipulations.
 
-use image::Pixel;
 use conv::ValueInto;
-use math::cast;
 use definitions::Clamp;
+use image::Pixel;
+use math::cast;
 
 /// Adds pixels with the given weights. Results are clamped to prevent arithmetical overflows.
 ///
@@ -66,8 +66,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{Rgb, Luma};
-    use test::{Bencher, black_box};
+    use image::{Luma, Rgb};
+    use test::{black_box, Bencher};
 
     #[test]
     fn test_weighted_channel_sum() {

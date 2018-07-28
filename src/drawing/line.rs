@@ -1,8 +1,8 @@
-use image::{GenericImage, ImageBuffer, Pixel};
 use definitions::Image;
-use std::mem::{swap, transmute};
+use image::{GenericImage, ImageBuffer, Pixel};
 use std::f32;
 use std::i32;
+use std::mem::{swap, transmute};
 
 /// Iterates over the coordinates in a line segment using
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
@@ -45,7 +45,7 @@ impl BresenhamLineIter {
             error: dx / 2f32,
             end_x: x1 as i32,
             is_steep: is_steep,
-            y_step: if y0 < y1 { 1f32 } else { -1f32 }
+            y_step: if y0 < y1 { 1f32 } else { -1f32 },
         }
     }
 }
@@ -93,26 +93,31 @@ fn clamp_point<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
 pub struct BresenhamLinePixelIter<'a, P: Pixel + 'static> {
     iter: BresenhamLineIter,
-    image: &'a Image<P>
+    image: &'a Image<P>,
 }
 
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
     /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<P> {
-        assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIter does not support empty images");
+        assert!(
+            image.width() >= 1 && image.height() >= 1,
+            "BresenhamLinePixelIter does not support empty images"
+        );
         BresenhamLinePixelIter {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
-            image: image
+            image: image,
         }
     }
 }
 
-impl <'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
+impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
     type Item = &'a P;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|p| self.image.get_pixel(p.0 as u32, p.1 as u32))
+        self.iter
+            .next()
+            .map(|p| self.image.get_pixel(p.0 as u32, p.1 as u32))
     }
 }
 
@@ -120,27 +125,33 @@ impl <'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
 pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
     iter: BresenhamLineIter,
-    image: &'a mut Image<P>
+    image: &'a mut Image<P>,
 }
 
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<P> {
-        assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
+    pub fn new(
+        image: &mut Image<P>,
+        start: (f32, f32),
+        end: (f32, f32),
+    ) -> BresenhamLinePixelIterMut<P> {
+        assert!(
+            image.width() >= 1 && image.height() >= 1,
+            "BresenhamLinePixelIterMut does not support empty images"
+        );
         BresenhamLinePixelIterMut {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
-            image: image
+            image: image,
         }
     }
 }
 
-impl <'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIterMut<'a, P> {
+impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIterMut<'a, P> {
     type Item = &'a mut P;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self
-            .iter
+        self.iter
             .next()
             .map(|p| self.image.get_pixel_mut(p.0 as u32, p.1 as u32))
             .map(|p| unsafe { transmute(p) })
@@ -307,11 +318,8 @@ where
         if self.in_bounds(x_trans, y_trans) {
             let original = self.image.get_pixel(x_trans as u32, y_trans as u32);
             let blended = (self.blend)(line_color, original, line_weight);
-            self.image.put_pixel(
-                x_trans as u32,
-                y_trans as u32,
-                blended,
-            );
+            self.image
+                .put_pixel(x_trans as u32, y_trans as u32, blended);
         }
     }
 }
@@ -320,7 +328,7 @@ where
 mod test {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     // As draw_line_segment is implemented in terms of BresenhamLineIter we
     // haven't bothered wriing any tests specifically for BresenhamLineIter itself.
@@ -545,37 +553,41 @@ mod test {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
             fn $name(b: &mut test::Bencher) {
-                use pixelops::interpolate;
                 use super::draw_antialiased_line_segment_mut;
+                use pixelops::interpolate;
 
                 let mut image = GrayImage::new(500, 500);
                 let color = Luma([50u8]);
                 b.iter(|| {
                     draw_antialiased_line_segment_mut(&mut image, $start, $end, color, interpolate);
                     test::black_box(&image);
-                    });
+                });
             }
-        }
+        };
     }
 
     bench_antialiased_lines!(
         bench_draw_antialiased_line_segment_horizontal,
-        (10, 10), (450, 10)
+        (10, 10),
+        (450, 10)
     );
 
     bench_antialiased_lines!(
         bench_draw_antialiased_line_segment_vertical,
-        (10, 10), (10, 450)
+        (10, 10),
+        (10, 450)
     );
 
     bench_antialiased_lines!(
         bench_draw_antialiased_line_segment_diagonal,
-        (10, 10), (450, 450)
+        (10, 10),
+        (450, 450)
     );
 
     bench_antialiased_lines!(
         bench_draw_antialiased_line_segment_shallow,
-        (10, 10), (450, 80)
+        (10, 10),
+        (450, 80)
     );
 
     #[test]
@@ -591,7 +603,8 @@ mod test {
 
         let mut right = image.clone();
         {
-            let right_iter = BresenhamLinePixelIterMut::new(&mut right, (-3f32, 1f32), (6f32, 1f32));
+            let right_iter =
+                BresenhamLinePixelIterMut::new(&mut right, (-3f32, 1f32), (6f32, 1f32));
             for p in right_iter {
                 *p = Luma([4u8]);
             }

@@ -1,42 +1,30 @@
 //! Functions for computing gradients of image intensities.
 
-use image::{GenericImage, GrayImage, Luma, Pixel};
 use definitions::{HasBlack, Image};
 use filter::filter3x3;
+use image::{GenericImage, GrayImage, Luma, Pixel};
 use itertools::multizip;
-use map::{WithChannel, ChannelMap};
+use map::{ChannelMap, WithChannel};
 
 /// Sobel filter for detecting vertical gradients.
 ///
 /// Used by the [`vertical_sobel`](fn.vertical_sobel.html) function.
-pub static VERTICAL_SOBEL: [i32; 9] = [
-    -1, -2, -1,
-     0,  0,  0,
-     1,  2,  1];
+pub static VERTICAL_SOBEL: [i32; 9] = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
 
 /// Sobel filter for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_sobel`](fn.horizontal_sobel.html) function.
-pub static HORIZONTAL_SOBEL: [i32; 9] = [
-    -1, 0, 1,
-    -2, 0, 2,
-    -1, 0, 1];
+pub static HORIZONTAL_SOBEL: [i32; 9] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
 
 /// Prewitt filter for detecting vertical gradients.
 ///
 /// Used by the [`vertical_prewitt`](fn.vertical_prewitt.html) function.
-pub static VERTICAL_PREWITT: [i32; 9] = [
-    -1, -1, -1,
-     0,  0,  0,
-     1,  1,  1];
+pub static VERTICAL_PREWITT: [i32; 9] = [-1, -1, -1, 0, 0, 0, 1, 1, 1];
 
 /// Prewitt filter for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_prewitt`](fn.horizontal_prewitt.html) function.
-pub static HORIZONTAL_PREWITT: [i32; 9] = [
-    -1, 0, 1,
-    -1, 0, 1,
-    -1, 0, 1];
+pub static HORIZONTAL_PREWITT: [i32; 9] = [-1, 0, 1, -1, 0, 1, -1, 0, 1];
 
 /// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
 /// kernel to detect horizontal gradients.
@@ -135,10 +123,10 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// # }
 pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
     ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    F: Fn(ChannelMap<P, u16>) -> Q,
 {
     gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, f)
 }
@@ -159,10 +147,10 @@ fn gradients<P, F, Q>(
     f: F,
 ) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
     ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    F: Fn(ChannelMap<P, u16>) -> Q,
 {
     let horizontal: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
     let vertical: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
@@ -199,7 +187,7 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 mod test {
     use super::*;
     use image::{ImageBuffer, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
     use utils::gray_bench_image;
 
     #[test]

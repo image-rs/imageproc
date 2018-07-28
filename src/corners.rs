@@ -1,7 +1,7 @@
 //! Functions for detecting corners, also known as interest points.
 
-use image::{GrayImage, GenericImage};
 use definitions::{Position, Score};
+use image::{GenericImage, GrayImage};
 
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
@@ -155,17 +155,15 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let p4 = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
     let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
 
-    let above = 
-        (p0 > high_thresh && p4 > high_thresh) ||
-        (p4 > high_thresh && p8 > high_thresh) ||
-        (p8 > high_thresh && p12 > high_thresh) ||
-        (p12 > high_thresh && p0 > high_thresh);
+    let above = (p0 > high_thresh && p4 > high_thresh)
+        || (p4 > high_thresh && p8 > high_thresh)
+        || (p8 > high_thresh && p12 > high_thresh)
+        || (p12 > high_thresh && p0 > high_thresh);
 
-    let below = 
-        (p0 < low_thresh && p4 < low_thresh) ||
-        (p4 < low_thresh && p8 < low_thresh) ||
-        (p8 < low_thresh && p12 < low_thresh) ||
-        (p12 < low_thresh && p0 < low_thresh);
+    let below = (p0 < low_thresh && p4 < low_thresh)
+        || (p4 < low_thresh && p8 < low_thresh)
+        || (p8 < low_thresh && p12 < low_thresh)
+        || (p12 < low_thresh && p0 < low_thresh);
 
     if !above && !below {
         return false;
@@ -174,8 +172,8 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let pixels = unsafe { get_circle(image, x, y, p0, p4, p8, p12) };
 
     // above and below could both be true
-    (above && has_bright_span(&pixels, 9, high_thresh)) ||
-        (below && has_dark_span(&pixels, 9, low_thresh))
+    (above && has_bright_span(&pixels, 9, high_thresh))
+        || (below && has_dark_span(&pixels, 9, low_thresh))
 }
 
 /// Checks if the given pixel is a corner according to the FAST12 detector.

@@ -1,10 +1,10 @@
 //! Functions for computing distance transforms - the distance of each pixel in an
 //! image from the nearest pixel of interest.
 
-use std::cmp::min;
-use std::{u8, f64};
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use definitions::Image;
+use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use std::cmp::min;
+use std::{f64, u8};
 
 /// How to measure distance between coordinates.
 /// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
@@ -191,7 +191,10 @@ pub fn euclidean_squared_distance_transform(image: &Image<Luma<u8>>) -> Image<Lu
     // Compute 1d transforms of each column
     for x in 0..width {
         let source = Column { image, column: x };
-        let mut sink = ColumnMut { image: &mut result, column: x };
+        let mut sink = ColumnMut {
+            image: &mut result,
+            column: x,
+        };
         distance_transform_1d_mut(&source, &mut sink, &mut column_envelope);
     }
 
@@ -203,7 +206,10 @@ pub fn euclidean_squared_distance_transform(image: &Image<Luma<u8>>) -> Image<Lu
         for x in 0..width {
             row_buffer[x as usize] = result.get_pixel(x, y)[0];
         }
-        let mut sink = Row { image: &mut result, row: y };
+        let mut sink = Row {
+            image: &mut result,
+            row: y,
+        };
         distance_transform_1d_mut(&row_buffer, &mut sink, &mut row_envelope);
     }
 
@@ -224,7 +230,7 @@ impl LowerEnvelope {
     fn new(image_side: usize) -> LowerEnvelope {
         LowerEnvelope {
             locations: vec![0; image_side],
-            boundaries: vec![f64::NAN; image_side + 1]
+            boundaries: vec![f64::NAN; image_side + 1],
         }
     }
 }
@@ -241,12 +247,15 @@ trait Source {
 
 struct Row<'a> {
     image: &'a mut Image<Luma<f64>>,
-    row: u32
+    row: u32,
 }
 
 impl<'a> Sink for Row<'a> {
     fn put(&mut self, idx: usize, value: f64) {
-        unsafe { self.image.unsafe_put_pixel(idx as u32, self.row, Luma([value])); }
+        unsafe {
+            self.image
+                .unsafe_put_pixel(idx as u32, self.row, Luma([value]));
+        }
     }
     fn len(&self) -> usize {
         self.image.width() as usize
@@ -255,12 +264,15 @@ impl<'a> Sink for Row<'a> {
 
 struct ColumnMut<'a> {
     image: &'a mut Image<Luma<f64>>,
-    column: u32
+    column: u32,
 }
 
 impl<'a> Sink for ColumnMut<'a> {
     fn put(&mut self, idx: usize, value: f64) {
-        unsafe { self.image.unsafe_put_pixel(self.column, idx as u32, Luma([value])); }
+        unsafe {
+            self.image
+                .unsafe_put_pixel(self.column, idx as u32, Luma([value]));
+        }
     }
     fn len(&self) -> usize {
         self.image.height() as usize
@@ -287,13 +299,17 @@ impl Source for [f64] {
 
 struct Column<'a> {
     image: &'a Image<Luma<u8>>,
-    column: u32
+    column: u32,
 }
 
 impl<'a> Source for Column<'a> {
     fn get(&self, idx: usize) -> f64 {
         let pixel = unsafe { self.image.unsafe_get_pixel(self.column, idx as u32)[0] as f64 };
-        if pixel > 0f64 { 0f64 } else { f64::INFINITY }
+        if pixel > 0f64 {
+            0f64
+        } else {
+            f64::INFINITY
+        }
     }
     fn len(&self) -> usize {
         self.image.height() as usize
@@ -303,7 +319,7 @@ impl<'a> Source for Column<'a> {
 fn distance_transform_1d_mut<S, T>(f: &S, result: &mut T, envelope: &mut LowerEnvelope)
 where
     S: Source,
-    T: Sink
+    T: Sink,
 {
     assert!(result.len() == f.len());
     assert!(envelope.boundaries.len() == f.len() + 1);
@@ -384,20 +400,20 @@ fn intersection<S: Source + ?Sized>(f: &S, p: usize, q: usize) -> f64 {
     let p = p as f64;
     let q = q as f64;
 
-    ( (fq + q * q) - (fp + p * p) ) / (2.0 * q - 2.0 * p)
+    ((fq + q * q) - (fp + p * p)) / (2.0 * q - 2.0 * p)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{GrayImage, Luma};
-    use std::cmp::max;
     use definitions::Image;
-    use std::f64;
+    use image::{GrayImage, Luma};
     use property_testing::GrayTestImage;
     use quickcheck::{quickcheck, TestResult};
-    use utils::{pixel_diff_summary, gray_bench_image};
-    use test::{Bencher, black_box};
+    use std::cmp::max;
+    use std::f64;
+    use test::{black_box, Bencher};
+    use utils::{gray_bench_image, pixel_diff_summary};
 
     #[test]
     fn test_distance_transform_saturation() {
@@ -464,10 +480,12 @@ mod test {
     fn distance_transform_1d_reference(f: &[f64]) -> Vec<f64> {
         let mut ret = vec![0.0; f.len()];
         for q in 0..f.len() {
-            ret[q] = (0..f.len()).map(|p| {
-                let dist = p as f64 - q as f64;
-                dist * dist + f[p]
-            }).fold(0.0/0.0, f64::min);
+            ret[q] = (0..f.len())
+                .map(|p| {
+                    let dist = p as f64 - q as f64;
+                    dist * dist + f[p]
+                })
+                .fold(0.0 / 0.0, f64::min);
         }
         ret
     }
@@ -545,7 +563,7 @@ mod test {
     }
 
     macro_rules! bench_euclidean_squared_distance_transform {
-        ($name:ident, side: $s:expr) => {
+        ($name:ident,side: $s:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
@@ -554,7 +572,7 @@ mod test {
                     black_box(distance);
                 })
             }
-        }
+        };
     }
 
     bench_euclidean_squared_distance_transform!(bench_euclidean_squared_distance_transform_10, side: 10);
@@ -562,7 +580,7 @@ mod test {
     bench_euclidean_squared_distance_transform!(bench_euclidean_squared_distance_transform_200, side: 200);
 
     macro_rules! bench_distance_transform {
-        ($name:ident, $norm:expr, side: $s:expr) => {
+        ($name:ident, $norm:expr,side: $s:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
@@ -571,7 +589,7 @@ mod test {
                     black_box(distance);
                 })
             }
-        }
+        };
     }
 
     bench_distance_transform!(bench_distance_transform_l1_10, Norm::L1, side: 10);

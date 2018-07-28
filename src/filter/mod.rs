@@ -3,16 +3,16 @@
 mod median;
 pub use self::median::median_filter;
 
-use image::{GrayImage, GenericImage, ImageBuffer, Luma, Pixel, Primitive};
+use image::{GenericImage, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
 
-use integral_image::{column_running_sum, row_running_sum};
-use map::{WithChannel, ChannelMap};
 use definitions::{Clamp, Image};
+use integral_image::{column_running_sum, row_running_sum};
+use map::{ChannelMap, WithChannel};
 use num::Num;
 
 use conv::ValueInto;
 use math::cast;
-use std::cmp::{min, max};
+use std::cmp::{max, min};
 use std::f32;
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
@@ -26,7 +26,6 @@ use std::f32;
 // TODO: directly instead of using an integral image.
 // TODO: more formats!
 pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
-
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
 
@@ -122,10 +121,8 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                         max(height, height + y + k_y - k_height / 2),
                     ) - height;
                     for k_x in 0..k_width {
-                        let x_p = min(
-                            width + width - 1,
-                            max(width, width + x + k_x - k_width / 2),
-                        ) - width;
+                        let x_p = min(width + width - 1, max(width, width + x + k_x - k_width / 2))
+                            - width;
                         let (p, k) = unsafe {
                             (
                                 image.unsafe_get_pixel(x_p, y_p),
@@ -423,12 +420,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::{gray_bench_image, rgb_bench_image};
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
     use definitions::{Clamp, Image};
     use image::imageops::blur;
-    use test::{Bencher, black_box};
-    use std::cmp::{min, max};
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
+    use std::cmp::{max, min};
+    use test::{black_box, Bencher};
+    use utils::{gray_bench_image, rgb_bench_image};
 
     #[test]
     fn test_box_filter() {
@@ -514,11 +511,9 @@ mod test {
 
         for y in 0..height {
             for x in 0..width {
-
                 let mut acc = 0f32;
 
                 for k in 0..kernel.len() {
-
                     let mut x_unchecked = x as i32 + k as i32 - (kernel.len() / 2) as i32;
                     x_unchecked = max(0, x_unchecked);
                     x_unchecked = min(x_unchecked, width as i32 - 1);
@@ -546,11 +541,9 @@ mod test {
 
         for y in 0..height {
             for x in 0..width {
-
                 let mut acc = 0f32;
 
                 for k in 0..kernel.len() {
-
                     let mut y_unchecked = y as i32 + k as i32 - (kernel.len() / 2) as i32;
                     y_unchecked = max(0, y_unchecked);
                     y_unchecked = min(y_unchecked, height as i32 - 1);
@@ -593,7 +586,7 @@ mod test {
                     }
                 }
             }
-        }
+        };
     }
 
     test_against_reference_implementation!(
@@ -688,10 +681,7 @@ mod test {
 
     #[test]
     fn test_filter3x3_with_results_outside_input_channel_range() {
-        let kernel: Vec<i32> = vec![
-            -1, 0, 1,
-            -2, 0, 2,
-            -1, 0, 1];
+        let kernel: Vec<i32> = vec![-1, 0, 1, -2, 0, 2, -1, 0, 1];
 
         let image = gray_image!(
             3, 2, 1;
@@ -711,10 +701,7 @@ mod test {
     #[bench]
     fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel: Vec<i32> = vec![
-            -1, 0, 1,
-            -2, 0, 2,
-            -1, 0, 1];
+        let kernel: Vec<i32> = vec![-1, 0, 1, -2, 0, 2, -1, 0, 1];
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =

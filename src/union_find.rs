@@ -26,9 +26,10 @@ impl DisjointSetForest {
 
     /// Returns the number of trees in the forest.
     pub fn num_trees(&self) -> usize {
-        self.parent.iter().enumerate().fold(0, |acc, (i, p)| {
-            acc + if i == *p { 1 } else { 0 }
-        })
+        self.parent
+            .iter()
+            .enumerate()
+            .fold(0, |acc, (i, p)| acc + if i == *p { 1 } else { 0 })
     }
 
     /// Returns index of the root of the tree containing i.
@@ -107,9 +108,9 @@ impl DisjointSetForest {
 #[cfg(test)]
 mod test {
     use super::DisjointSetForest;
-    use test;
-    use rand::{SeedableRng, StdRng};
     use rand::distributions::{IndependentSample, Range};
+    use rand::{SeedableRng, StdRng};
+    use test;
 
     #[test]
     fn test_trees() {
@@ -121,7 +122,7 @@ mod test {
         let mut forest = DisjointSetForest {
             count: 8,
             // element:     0, 1, 2, 3, 4, 5, 6, 7
-            parent:    vec![1, 3, 1, 3, 4, 4, 5, 4],
+            parent: vec![1, 3, 1, 3, 4, 4, 5, 4],
             tree_size: vec![1, 3, 1, 4, 4, 2, 1, 1],
         };
 
@@ -130,7 +131,6 @@ mod test {
 
     #[test]
     fn test_union_find_sequence() {
-
         let mut forest = DisjointSetForest::new(6);
         // 0  1  2  3  4  5
 
