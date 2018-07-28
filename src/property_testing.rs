@@ -34,7 +34,7 @@ impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
         TestBuffer(image)
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=TestBuffer<T>>> {
+    fn shrink(&self) -> Box<dyn Iterator<Item=TestBuffer<T>>> {
         Box::new(shrink(&self.0).map(TestBuffer))
     }
 }
@@ -46,7 +46,7 @@ pub trait ArbitraryPixel {
     fn arbitrary<G: Gen>(g: &mut G) -> Self;
 }
 
-fn shrink<I>(image: &I) -> Box<Iterator<Item = Image<I::Pixel>>>
+fn shrink<I>(image: &I) -> Box<dyn Iterator<Item = Image<I::Pixel>>>
 where
     I: GenericImage,
     I::Pixel: 'static,
@@ -89,7 +89,7 @@ where
 }
 
 impl<T: fmt::Debug + Pixel + 'static> fmt::Debug for TestBuffer<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "width: {}, height: {}, data: {:?}",

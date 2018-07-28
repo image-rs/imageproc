@@ -4,18 +4,10 @@
 #![cfg_attr(test, feature(test))]
 
 #![feature(rust_2018_preview)]
+#![warn(rust_2018_idioms)]
 
 #[cfg(test)]
 extern crate test;
-extern crate conv;
-extern crate image;
-extern crate itertools;
-extern crate nalgebra;
-extern crate num;
-extern crate quickcheck;
-extern crate rand;
-extern crate rusttype;
-extern crate rayon;
 
 #[macro_use]
 pub mod utils;

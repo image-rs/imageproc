@@ -24,7 +24,7 @@ pub fn draw_text_mut<'a, I>(
     let v_metrics = font.v_metrics(scale);
     let offset = point(0.0, v_metrics.ascent);
 
-    let glyphs: Vec<PositionedGlyph> = font.layout(text, scale, offset).collect();
+    let glyphs: Vec<PositionedGlyph<'_>> = font.layout(text, scale, offset).collect();
 
     for g in glyphs {
         if let Some(bb) = g.pixel_bounding_box() {

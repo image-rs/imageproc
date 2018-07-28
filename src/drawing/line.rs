@@ -99,7 +99,7 @@ pub struct BresenhamLinePixelIter<'a, P: Pixel + 'static> {
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
     /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<P> {
+    pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIter does not support empty images");
         BresenhamLinePixelIter {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
@@ -126,7 +126,7 @@ pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<P> {
+    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
         BresenhamLinePixelIterMut {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
@@ -257,7 +257,7 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
 }
 
 fn plot_wu_line<I, T, B>(
-    mut plotter: Plotter<I, T, B>,
+    mut plotter: Plotter<'_, I, T, B>,
     start: (i32, i32),
     end: (i32, i32),
     color: I::Pixel,
@@ -302,7 +302,7 @@ where
         x >= 0 && x < self.image.width() as i32 && y >= 0 && y < self.image.height() as i32
     }
 
-    pub fn plot(&mut self, x: i32, y: i32, line_color: I::Pixel, line_weight: f32) {
+    crate fn plot(&mut self, x: i32, y: i32, line_color: I::Pixel, line_weight: f32) {
         let (x_trans, y_trans) = (self.transform)(x, y);
         if self.in_bounds(x_trans, y_trans) {
             let original = self.image.get_pixel(x_trans as u32, y_trans as u32);
