@@ -12,17 +12,17 @@ extern crate test;
 extern crate imageproc;
 extern crate nalgebra;
 
-use std::ops::Deref;
-use std::path::Path;
-use std::f32;
-use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage, RgbaImage};
-use imageproc::utils::{load_image_or_panic};
-use imageproc::affine::{affine, Interpolation, rotate_about_center};
+use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, RgbImage, RgbaImage};
+use imageproc::affine::{affine, rotate_about_center, Interpolation};
+use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
-use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::gradients;
-use nalgebra::{Affine2,Matrix3};
+use imageproc::utils::load_image_or_panic;
+use nalgebra::{Affine2, Matrix3};
+use std::f32;
+use std::ops::Deref;
+use std::path::Path;
 
 // If set to true then all calls to any compare_to_truth function will regenerate
 // the truth image.
@@ -31,9 +31,13 @@ const REGENERATE: bool = false;
 /// Save an image with the given name to the truth data directory "./tests/data/truth".
 /// Used when manually (re)generating test data, e.g. when REGENERATE is set to true.
 fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
-    where P: Pixel<Subpixel=u8> + 'static, Container: Deref<Target=[u8]>
+where
+    P: Pixel<Subpixel = u8> + 'static,
+    Container: Deref<Target = [u8]>,
 {
-    image.save(Path::new("./tests/data/truth").join(file_name)).unwrap();
+    image
+        .save(Path::new("./tests/data/truth").join(file_name))
+        .unwrap();
 }
 
 /// Load an image with the given name from the input data directory "./tests/data/".
@@ -50,30 +54,36 @@ fn load_truth_image(file_name: &str) -> DynamicImage {
 
 /// Load an input image, apply a function to it and check that the results match a 'truth' image.
 fn compare_to_truth_rgb<F>(input_file_name: &str, truth_file_name: &str, op: F)
-    where F: Fn(&RgbImage) -> RgbImage
+where
+    F: Fn(&RgbImage) -> RgbImage,
 {
     compare_to_truth_rgb_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
 
 /// Load an input image, apply a function to it and check that the results match a 'truth' image.
 fn compare_to_truth_rgba<F>(input_file_name: &str, truth_file_name: &str, op: F)
-    where F: Fn(&RgbaImage) -> RgbaImage
+where
+    F: Fn(&RgbaImage) -> RgbaImage,
 {
     compare_to_truth_rgba_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
 
 /// Load an input image, apply a function to it and check that the results
 /// match a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
-    where F: Fn(&RgbImage) -> RgbImage
+fn compare_to_truth_rgb_with_tolerance<F>(
+    input_file_name: &str,
+    truth_file_name: &str,
+    op: F,
+    tol: u8,
+) where
+    F: Fn(&RgbImage) -> RgbImage,
 {
     let input = load_input_image(input_file_name).to_rgb();
     let actual = op.call((&input,));
 
     if REGENERATE {
         save_truth_image(&actual, truth_file_name);
-    }
-    else {
+    } else {
         let truth = load_truth_image(truth_file_name).to_rgb();
         assert_pixels_eq_within!(actual, truth, tol);
     }
@@ -81,16 +91,20 @@ fn compare_to_truth_rgb_with_tolerance<F>(input_file_name: &str, truth_file_name
 
 /// Load an input image, apply a function to it and check that the results
 /// match a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_rgba_with_tolerance<F>(input_file_name: &str, truth_file_name: &str, op: F, tol: u8)
-    where F: Fn(&RgbaImage) -> RgbaImage
+fn compare_to_truth_rgba_with_tolerance<F>(
+    input_file_name: &str,
+    truth_file_name: &str,
+    op: F,
+    tol: u8,
+) where
+    F: Fn(&RgbaImage) -> RgbaImage,
 {
     let input = load_input_image(input_file_name).to_rgba();
     let actual = op.call((&input,));
 
     if REGENERATE {
         save_truth_image(&actual, truth_file_name);
-    }
-    else {
+    } else {
         let truth = load_truth_image(truth_file_name).to_rgba();
         assert_pixels_eq_within!(actual, truth, tol);
     }
@@ -99,15 +113,15 @@ fn compare_to_truth_rgba_with_tolerance<F>(input_file_name: &str, truth_file_nam
 /// Load an input image, apply a function to it and check that the results
 /// match a 'truth' image.
 fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, op: F)
-    where F: Fn(&GrayImage) -> GrayImage
+where
+    F: Fn(&GrayImage) -> GrayImage,
 {
     let input = load_input_image(input_file_name).to_luma();
     let actual = op.call((&input,));
 
     if REGENERATE {
         save_truth_image(&actual, truth_file_name);
-    }
-    else {
+    } else {
         let truth = load_truth_image(truth_file_name).to_luma();
         assert_pixels_eq!(actual, truth);
     }
@@ -116,17 +130,25 @@ fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, o
 #[test]
 fn test_rotate_nearest_rgb() {
     fn rotate_nearest_about_center(image: &RgbImage) -> RgbImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+        rotate_about_center(image, std::f32::consts::PI / 4f32, Interpolation::Nearest)
     }
-    compare_to_truth_rgb("elephant.png", "elephant_rotate_nearest.png", rotate_nearest_about_center);
+    compare_to_truth_rgb(
+        "elephant.png",
+        "elephant_rotate_nearest.png",
+        rotate_nearest_about_center,
+    );
 }
 
 #[test]
 fn test_rotate_nearest_rgba() {
     fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+        rotate_about_center(image, std::f32::consts::PI / 4f32, Interpolation::Nearest)
     }
-    compare_to_truth_rgba("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
+    compare_to_truth_rgba(
+        "elephant_rgba.png",
+        "elephant_rotate_nearest_rgba.png",
+        rotate_nearest_about_center,
+    );
 }
 
 #[test]
@@ -138,46 +160,76 @@ fn test_equalize_histogram_grayscale() {
 #[test]
 fn test_rotate_bilinear_rgb() {
     fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+        rotate_about_center(image, std::f32::consts::PI / 4f32, Interpolation::Bilinear)
     }
-    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgb_with_tolerance(
+        "elephant.png",
+        "elephant_rotate_bilinear.png",
+        rotate_bilinear_about_center,
+        1,
+    );
 }
 
 #[test]
 fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+        rotate_about_center(image, std::f32::consts::PI / 4f32, Interpolation::Bilinear)
     }
-    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgba_with_tolerance(
+        "elephant_rgba.png",
+        "elephant_rotate_bilinear_rgba.png",
+        rotate_bilinear_about_center,
+        1,
+    );
 }
 
 #[test]
 fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
-        let root_two_inv = 1f32/2f32.sqrt()*2.0;
+        let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         let trans = Affine2::from_matrix_unchecked(Matrix3::new(
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-            0.0         , 0.0          , 1.0,
+            root_two_inv,
+            -root_two_inv,
+            50.0,
+            root_two_inv,
+            root_two_inv,
+            -70.0,
+            0.0,
+            0.0,
+            1.0,
         ));
         affine(image, trans, Interpolation::Nearest).unwrap()
     }
-    compare_to_truth_rgb("elephant.png", "elephant_affine_nearest.png", affine_nearest);
+    compare_to_truth_rgb(
+        "elephant.png",
+        "elephant_affine_nearest.png",
+        affine_nearest,
+    );
 }
 
 #[test]
 fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
-        let root_two_inv = 1f32/2f32.sqrt()*2.0;
+        let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         let trans = Affine2::from_matrix_unchecked(Matrix3::new(
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-            0.0         , 0.0          , 1.0,
+            root_two_inv,
+            -root_two_inv,
+            50.0,
+            root_two_inv,
+            root_two_inv,
+            -70.0,
+            0.0,
+            0.0,
+            1.0,
         ));
 
         affine(image, trans, Interpolation::Bilinear).unwrap()
     }
-    compare_to_truth_rgb("elephant.png", "elephant_affine_bilinear.png", affine_bilinear);
+    compare_to_truth_rgb(
+        "elephant.png",
+        "elephant_affine_bilinear.png",
+        affine_bilinear,
+    );
 }
 
 #[test]
@@ -194,28 +246,40 @@ fn test_match_histograms() {
         let zebra = load_input_image("zebra.png").to_luma();
         imageproc::contrast::match_histogram(image, &zebra)
     }
-    compare_to_truth_grayscale("elephant.png", "elephant_matched.png", match_to_zebra_histogram);
+    compare_to_truth_grayscale(
+        "elephant.png",
+        "elephant_matched.png",
+        match_to_zebra_histogram,
+    );
 }
 
 #[test]
 fn test_canny() {
-    compare_to_truth_grayscale("zebra.png", "zebra_canny.png", |image| canny(image, 250.0, 300.0));
+    compare_to_truth_grayscale("zebra.png", "zebra_canny.png", |image| {
+        canny(image, 250.0, 300.0)
+    });
 }
 
 #[test]
 fn test_gaussian_blur_stdev_3() {
-    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_3.png", |image| gaussian_blur_f32(image, 3f32));
+    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_3.png", |image| {
+        gaussian_blur_f32(image, 3f32)
+    });
 }
 
 #[test]
 fn test_gaussian_blur_stdev_10() {
-    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_10.png", |image| gaussian_blur_f32(image, 10f32));
+    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_10.png", |image| {
+        gaussian_blur_f32(image, 10f32)
+    });
 }
 
 #[test]
 fn test_adaptive_threshold() {
     use imageproc::contrast::adaptive_threshold;
-    compare_to_truth_grayscale("zebra.png", "zebra_adaptive_threshold.png", |image| adaptive_threshold(image, 41));
+    compare_to_truth_grayscale("zebra.png", "zebra_adaptive_threshold.png", |image| {
+        adaptive_threshold(image, 41)
+    });
 }
 
 #[test]
@@ -230,7 +294,7 @@ fn test_otsu_threshold() {
 
 #[test]
 fn test_draw_antialiased_line_segment_rgb() {
-    use image::{Rgb};
+    use image::Rgb;
     use imageproc::drawing::draw_antialiased_line_segment_mut;
     use imageproc::pixelops::interpolate;
 
@@ -261,13 +325,11 @@ fn test_draw_antialiased_line_segment_rgb() {
 
     if REGENERATE {
         save_truth_image(&image, "antialiased_lines_rgb.png");
-    }
-    else {
+    } else {
         let truth = load_truth_image("antialiased_lines_rgb.png").to_rgb();
         assert_pixels_eq!(image, truth);
     }
 }
-
 
 #[test]
 fn test_draw_convex_polygon() {
@@ -277,23 +339,22 @@ fn test_draw_convex_polygon() {
     let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let white = Luma::white();
 
-    let triangle = vec![
-        Point::new(35, 50),
-        Point::new(145, 80),
-        Point::new(5, 60)];
+    let triangle = vec![Point::new(35, 50), Point::new(145, 80), Point::new(5, 60)];
     draw_convex_polygon_mut(&mut image, &triangle, white);
 
     let partially_out_of_bounds_triangle = vec![
         Point::new(250, 50),
         Point::new(350, 100),
-        Point::new(250, 90)];
+        Point::new(250, 90),
+    ];
     draw_convex_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
 
     let quad = vec![
         Point::new(190, 250),
         Point::new(240, 210),
         Point::new(270, 200),
-        Point::new(220, 280)];
+        Point::new(220, 280),
+    ];
     draw_convex_polygon_mut(&mut image, &quad, white);
 
     let hex: Vec<Point<i32>> = (0..6)
@@ -305,8 +366,7 @@ fn test_draw_convex_polygon() {
 
     if REGENERATE {
         save_truth_image(&image, "polygon.png");
-    }
-    else {
+    } else {
         let truth = load_truth_image("polygon.png").to_luma();
         assert_pixels_eq!(image, truth);
     }
@@ -314,7 +374,7 @@ fn test_draw_convex_polygon() {
 
 #[test]
 fn test_draw_cubic_bezier_curve() {
-    use image::{Rgb};
+    use image::Rgb;
     use imageproc::drawing::draw_cubic_bezier_curve_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -323,20 +383,54 @@ fn test_draw_cubic_bezier_curve() {
     let mut image = RgbImage::from_pixel(200, 200, Rgb([255, 255, 255]));
 
     // Straight line
-    draw_cubic_bezier_curve_mut(&mut image, (0.0, 100.0), (200.0, 100.0), (-10.0, 100.0), (210.0, 100.0), red);
+    draw_cubic_bezier_curve_mut(
+        &mut image,
+        (0.0, 100.0),
+        (200.0, 100.0),
+        (-10.0, 100.0),
+        (210.0, 100.0),
+        red,
+    );
     // Straight line off screen
-    draw_cubic_bezier_curve_mut(&mut image, (30.0, -30.0), (40.0, 250.0), (30.0, -30.0), (40.0, 250.0), red);
+    draw_cubic_bezier_curve_mut(
+        &mut image,
+        (30.0, -30.0),
+        (40.0, 250.0),
+        (30.0, -30.0),
+        (40.0, 250.0),
+        red,
+    );
     // Basic curve horizontal
-    draw_cubic_bezier_curve_mut(&mut image, (20.0, 150.0), (180.0, 150.0), (100.0, 100.0), (150.0, 80.0), blue);
+    draw_cubic_bezier_curve_mut(
+        &mut image,
+        (20.0, 150.0),
+        (180.0, 150.0),
+        (100.0, 100.0),
+        (150.0, 80.0),
+        blue,
+    );
     // Curve with inflection
-    draw_cubic_bezier_curve_mut(&mut image, (100.0, 0.0), (120.0, 200.0), (300.0, 20.0), (-100.0, 150.0), green);
+    draw_cubic_bezier_curve_mut(
+        &mut image,
+        (100.0, 0.0),
+        (120.0, 200.0),
+        (300.0, 20.0),
+        (-100.0, 150.0),
+        green,
+    );
     // Curve that makes a lopsided loop
-    draw_cubic_bezier_curve_mut(&mut image, (150.0, 50.0), (150.0, 50.0), (200.0, 20.0), (50.0, 20.0), red);
+    draw_cubic_bezier_curve_mut(
+        &mut image,
+        (150.0, 50.0),
+        (150.0, 50.0),
+        (200.0, 20.0),
+        (50.0, 20.0),
+        red,
+    );
 
     if REGENERATE {
         save_truth_image(&image, "cubic_bezier_curve.png");
-    }
-    else {
+    } else {
         let truth = load_truth_image("cubic_bezier_curve.png").to_rgb();
         assert_pixels_eq!(image, truth);
     }
@@ -344,7 +438,7 @@ fn test_draw_cubic_bezier_curve() {
 
 #[test]
 fn test_draw_hollow_ellipse() {
-    use image::{Rgb};
+    use image::Rgb;
     use imageproc::drawing::draw_hollow_ellipse_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -363,8 +457,7 @@ fn test_draw_hollow_ellipse() {
 
     if REGENERATE {
         save_truth_image(&image, "hollow_ellipse.png");
-    }
-    else {
+    } else {
         let truth = load_truth_image("hollow_ellipse.png").to_rgb();
         assert_pixels_eq!(image, truth);
     }
@@ -372,7 +465,7 @@ fn test_draw_hollow_ellipse() {
 
 #[test]
 fn test_draw_filled_ellipse() {
-    use image::{Rgb};
+    use image::Rgb;
     use imageproc::drawing::draw_filled_ellipse_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -391,8 +484,7 @@ fn test_draw_filled_ellipse() {
 
     if REGENERATE {
         save_truth_image(&image, "filled_ellipse.png");
-    }
-    else {
+    } else {
         let truth = load_truth_image("filled_ellipse.png").to_rgb();
         assert_pixels_eq!(image, truth);
     }

@@ -1,9 +1,9 @@
-use image::{GenericImage, ImageBuffer};
 use definitions::Image;
-use std::f32;
-use std::i32;
 use drawing::draw_if_in_bounds;
 use drawing::line::draw_line_segment_mut;
+use image::{GenericImage, ImageBuffer};
+use std::f32;
+use std::i32;
 
 /// Draw as much of an ellipse as lies inside the image bounds.
 /// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
@@ -288,7 +288,7 @@ where
 mod test {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
@@ -299,11 +299,17 @@ mod test {
                 let mut image = GrayImage::new(500, 500);
                 let color = Luma([50u8]);
                 b.iter(|| {
-                    draw_hollow_ellipse_mut(&mut image, $center, $width_radius, $height_radius, color);
+                    draw_hollow_ellipse_mut(
+                        &mut image,
+                        $center,
+                        $width_radius,
+                        $height_radius,
+                        color,
+                    );
                     test::black_box(&image);
-                    });
+                });
             }
-        }
+        };
     }
 
     bench_hollow_ellipse!(bench_bench_hollow_ellipse_circle, (200, 200), 80, 80);
@@ -319,11 +325,17 @@ mod test {
                 let mut image = GrayImage::new(500, 500);
                 let color = Luma([50u8]);
                 b.iter(|| {
-                    draw_filled_ellipse_mut(&mut image, $center, $width_radius, $height_radius, color);
+                    draw_filled_ellipse_mut(
+                        &mut image,
+                        $center,
+                        $width_radius,
+                        $height_radius,
+                        color,
+                    );
                     test::black_box(&image);
-                    });
+                });
             }
-        }
+        };
     }
 
     bench_filled_ellipse!(bench_bench_filled_ellipse_circle, (200, 200), 80, 80);

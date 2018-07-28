@@ -3,8 +3,8 @@
 use image::{GenericImage, ImageBuffer, Luma};
 
 use definitions::Image;
-use union_find::DisjointSetForest;
 use std::cmp;
+use union_find::DisjointSetForest;
 
 /// Determines which neighbors of a pixel we consider
 /// to be connected to it.
@@ -237,7 +237,7 @@ where
 #[cfg(test)]
 mod test {
     use super::connected_components;
-    use super::Connectivity::{Four, Eight};
+    use super::Connectivity::{Eight, Four};
     use definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
     use test;
@@ -263,10 +263,12 @@ mod test {
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way conectivity.
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
-            return Luma([255u8]);
-        } else {
-            return Luma([0u8]);
+        ImageBuffer::from_fn(width, height, |x, y| {
+            if (x + y) % 2 == 0 {
+                return Luma([255u8]);
+            } else {
+                return Luma([0u8]);
+            }
         })
     }
 

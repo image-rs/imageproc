@@ -2,16 +2,16 @@
 extern crate image;
 extern crate imageproc;
 
-use std::env;
-use std::path::PathBuf;
-use std::fs;
-use std::f32;
 use image::{open, GenericImage, GrayImage, Luma, Rgb, RgbImage};
 use imageproc::definitions::Image;
-use imageproc::template_matching::{match_template, MatchTemplateMethod};
+use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::map::map_colors;
 use imageproc::rect::Rect;
-use imageproc::drawing::draw_hollow_rect_mut;
+use imageproc::template_matching::{match_template, MatchTemplateMethod};
+use std::env;
+use std::f32;
+use std::fs;
+use std::path::PathBuf;
 
 struct TemplateMatchingArgs {
     input_path: PathBuf,
@@ -19,7 +19,7 @@ struct TemplateMatchingArgs {
     template_x: u32,
     template_y: u32,
     template_w: u32,
-    template_h: u32
+    template_h: u32,
 }
 
 impl TemplateMatchingArgs {
@@ -43,7 +43,12 @@ template. Calls match_template on the input image and this template, and saves t
         let template_h = args[6].parse().unwrap();
 
         TemplateMatchingArgs {
-            input_path, output_dir, template_x, template_y, template_w, template_h
+            input_path,
+            output_dir,
+            template_x,
+            template_y,
+            template_w,
+            template_h,
         }
     }
 }
@@ -61,13 +66,14 @@ fn convert_to_gray_image(image: &Image<Luma<f32>>) -> GrayImage {
 
     let range = hi - lo;
     let scale = |x| (255.0 * (x - lo) / range) as u8;
-    map_colors(image, |p| {
-        Luma([scale(p[0])])
-    })
+    map_colors(image, |p| Luma([scale(p[0])]))
 }
 
 fn copy_sub_image(image: &GrayImage, x: u32, y: u32, w: u32, h: u32) -> GrayImage {
-    assert!(x + w < image.width() && y + h < image.height(), "invalid sub-image");
+    assert!(
+        x + w < image.width() && y + h < image.height(),
+        "invalid sub-image"
+    );
 
     let mut result = GrayImage::new(w, h);
     for sy in 0..h {
@@ -89,7 +95,8 @@ fn run_match_template(
     args: &TemplateMatchingArgs,
     image: &GrayImage,
     template: &GrayImage,
-    method: MatchTemplateMethod) -> RgbImage {
+    method: MatchTemplateMethod,
+) -> RgbImage {
     // Match the template and convert to u8 depth to display
     let result = match_template(&image, &template, method);
     let result_scaled = convert_to_gray_image(&result);
@@ -125,18 +132,34 @@ fn main() {
         .to_luma();
 
     // Extract the requested image sub-region to use as the template
-    let template = copy_sub_image(&image, args.template_x, args.template_y, args.template_w, args.template_h);
+    let template = copy_sub_image(
+        &image,
+        args.template_x,
+        args.template_y,
+        args.template_w,
+        args.template_h,
+    );
 
     // Match using all available match methods
-    let sse = run_match_template(&args, &image, &template, MatchTemplateMethod::SumOfSquaredErrors);
-    let sse_norm = run_match_template(&args, &image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+    let sse = run_match_template(
+        &args,
+        &image,
+        &template,
+        MatchTemplateMethod::SumOfSquaredErrors,
+    );
+    let sse_norm = run_match_template(
+        &args,
+        &image,
+        &template,
+        MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+    );
 
     // Show location the template was extracted from
     let roi = Rect::at(args.template_x as i32, args.template_y as i32)
         .of_size(args.template_w, args.template_h);
 
     let image_with_roi = draw_green_rect(&image, roi);
-  
+
     // Save images to output_dir
     let template_path = output_dir.join("template.png");
     template.save(&template_path).unwrap();

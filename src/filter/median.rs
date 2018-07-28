@@ -1,6 +1,6 @@
-use image::{GenericImage, Pixel};
 use definitions::Image;
-use std::cmp::{min, max};
+use image::{GenericImage, Pixel};
+use std::cmp::{max, min};
 
 /// Applies a median filter of given `radius` to an image. Each output pixel is the median
 /// of the pixels in a `2 * radius + 1` square of pixels in the input image.
@@ -77,7 +77,7 @@ use std::cmp::{min, max};
 /// ```
 pub fn median_filter<P>(image: &Image<P>, radius: u32) -> Image<P>
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
 
@@ -95,8 +95,7 @@ where
         if x % 2 == 0 {
             slide_right(&mut hist, &image, x, 0, r);
             slide_down_column(&mut hist, &image, &mut out, x, r);
-        }
-        else {
+        } else {
             slide_right(&mut hist, &image, x, height - 1, r);
             slide_up_column(&mut hist, &image, &mut out, x, r);
         }
@@ -107,7 +106,7 @@ where
 
 fn initialise_histogram_for_top_left_pixel<P>(image: &Image<P>, radius: u32) -> HistSet
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
     let kernel_size = (2 * radius + 1) * (2 * radius + 1);
@@ -131,7 +130,7 @@ where
 
 fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, r: i32)
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
 
@@ -148,7 +147,7 @@ where
 
 fn slide_down_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, r: i32)
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
     hist.set_to_median(out, x, 0);
@@ -170,12 +169,12 @@ where
 
 fn slide_up_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, r: i32)
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
     hist.set_to_median(out, x, height - 1);
 
-    for y in (0..(height-1)).rev() {
+    for y in (0..(height - 1)).rev() {
         let prev_y = min(y as i32 + r + 1, height as i32 - 1) as u32;
         let next_y = max(0, y as i32 - r) as u32;
 
@@ -212,13 +211,13 @@ impl HistSet {
 
         HistSet {
             data: data,
-            expected_count: expected_count
+            expected_count: expected_count,
         }
     }
 
-    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let pixel = image.unsafe_get_pixel(x, y);
@@ -231,9 +230,9 @@ impl HistSet {
         }
     }
 
-    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let pixel = image.unsafe_get_pixel(x, y);
@@ -248,7 +247,7 @@ impl HistSet {
 
     fn set_to_median<P>(&self, image: &mut Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let target = image.get_pixel_mut(x, y);
@@ -260,9 +259,7 @@ impl HistSet {
     }
 
     fn channel_median(&self, c: u8) -> u8 {
-        let hist = unsafe {
-            self.data.get_unchecked(c as usize)
-        };
+        let hist = unsafe { self.data.get_unchecked(c as usize) };
 
         let mut count = 0;
 
@@ -283,16 +280,16 @@ impl HistSet {
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
     use property_testing::GrayTestImage;
+    use quickcheck::{quickcheck, TestResult};
+    use std::cmp::{max, min};
+    use test::{black_box, Bencher};
+    use utils::gray_bench_image;
     use utils::pixel_diff_summary;
-    use test::{Bencher, black_box};
-    use std::cmp::{min, max};
 
     macro_rules! bench_median_filter {
-        ($name:ident, side: $s:expr, radius: $r:expr) => {
+        ($name:ident,side: $s:expr,radius: $r:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
@@ -301,7 +298,7 @@ mod test {
                     black_box(filtered);
                 })
             }
-        }
+        };
     }
 
     bench_median_filter!(bench_median_filter_s100_r1, side: 100, radius: 1);

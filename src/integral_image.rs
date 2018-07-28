@@ -1,8 +1,8 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImage, Pixel};
 use definitions::Image;
+use image::{GenericImage, GrayImage, Luma, Pixel};
 use map::{ChannelMap, WithChannel};
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
@@ -48,7 +48,7 @@ use map::{ChannelMap, WithChannel};
 /// ```
 pub fn integral_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static,
 {
     integral_image_impl(image, false)
 }
@@ -86,7 +86,7 @@ where
 /// ```
 pub fn integral_squared_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static,
 {
     integral_image_impl(image, true)
 }
@@ -94,7 +94,7 @@ where
 /// Implementation of `integral_image` and `integral_squared_image`.
 fn integral_image_impl<P>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, u32>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static,
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -126,7 +126,8 @@ where
                 // pixel here we need to use the method with bounds checking
                 let mut current = out.get_pixel_mut(x, y);
                 for c in 0..P::channel_count() {
-                    current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
+                    current.channels_mut()[c as usize] =
+                        above.channels()[c as usize] + sum[c as usize];
                 }
             }
         }
@@ -148,10 +149,10 @@ pub fn sum_image_pixels(
 ) -> u32 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32 -
-        integral_image.get_pixel(right + 1, top)[0] as i32 -
-        integral_image.get_pixel(left, bottom + 1)[0] as i32 +
-        integral_image.get_pixel(left, top)[0] as i32;
+    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32
+        - integral_image.get_pixel(right + 1, top)[0] as i32
+        - integral_image.get_pixel(left, bottom + 1)[0] as i32
+        + integral_image.get_pixel(left, top)[0] as i32;
     sum as u32
 }
 
@@ -328,12 +329,12 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod test {
     use super::*;
-    use property_testing::GrayTestImage;
-    use utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
-    use image::{GenericImage, ImageBuffer, Luma};
-    use quickcheck::{quickcheck, TestResult};
     use definitions::Image;
+    use image::{GenericImage, ImageBuffer, Luma};
+    use property_testing::GrayTestImage;
+    use quickcheck::{quickcheck, TestResult};
     use test;
+    use utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
 
     #[test]
     fn test_sum_image_pixels() {
@@ -443,13 +444,17 @@ mod test {
     fn bench_row_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(1000, 1);
         let mut buffer = [0; 1010];
-        b.iter(|| { row_running_sum(&image, 0, &mut buffer, 5); });
+        b.iter(|| {
+            row_running_sum(&image, 0, &mut buffer, 5);
+        });
     }
 
     #[bench]
     fn bench_column_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(100, 1000);
         let mut buffer = [0; 1010];
-        b.iter(|| { column_running_sum(&image, 0, &mut buffer, 5); });
+        b.iter(|| {
+            column_running_sum(&image, 0, &mut buffer, 5);
+        });
     }
 }

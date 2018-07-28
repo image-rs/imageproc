@@ -2,9 +2,9 @@
 
 use image::{GenericImage, GrayImage, Pixel, Primitive};
 
-use num::Bounded;
-use math::cast;
 use conv::ValueInto;
+use math::cast;
+use num::Bounded;
 
 /// Returns the histogram of grayscale values in an 8bpp
 /// grayscale image.
@@ -133,8 +133,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use image::{GrayImage, RgbImage, Luma, Rgb};
-    use test::{Bencher, black_box};
+    use image::{GrayImage, Luma, Rgb, RgbImage};
+    use test::{black_box, Bencher};
 
     #[test]
     fn test_cumulative_histogram() {

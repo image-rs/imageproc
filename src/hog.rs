@@ -1,9 +1,9 @@
 //! [HoG features](https://en.wikipedia.org/wiki/Histogram_of_oriented_gradients)
 //! and helpers for visualizing them.
 
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use gradients::{horizontal_sobel, vertical_sobel};
 use definitions::{Clamp, Image};
+use gradients::{horizontal_sobel, vertical_sobel};
+use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use math::l2_norm;
 use num::Zero;
 use std::f32;
@@ -68,9 +68,7 @@ impl HogSpec {
             options,
         ));
         let (blocks_wide, blocks_high) = try!(Self::checked_block_dimensions(
-            cells_wide,
-            cells_high,
-            options,
+            cells_wide, cells_high, options,
         ));
         Ok(HogSpec {
             options: options,
@@ -95,15 +93,13 @@ impl HogSpec {
         if width % options.cell_side != 0 {
             errors.push(format!(
                 "cell side {} does not evenly divide width {}",
-                options.cell_side,
-                width
+                options.cell_side, width
             ));
         }
         if height % options.cell_side != 0 {
             errors.push(format!(
                 "cell side {} does not evenly divide height {}",
-                options.cell_side,
-                height
+                options.cell_side, height
             ));
         }
         if !errors.is_empty() {
@@ -123,33 +119,21 @@ impl HogSpec {
         if (cells_wide - options.block_side) % options.block_stride != 0 {
             errors.push(format!(
                 "block stride {} does not evenly divide (cells wide {} - block side {})",
-                options.block_stride,
-                cells_wide,
-                options.block_side
+                options.block_stride, cells_wide, options.block_side
             ));
         }
         if (cells_high - options.block_side) % options.block_stride != 0 {
             errors.push(format!(
                 "block stride {} does not evenly divide (cells high {} - block side {})",
-                options.block_stride,
-                cells_high,
-                options.block_side
+                options.block_stride, cells_high, options.block_side
             ));
         }
         if !errors.is_empty() {
             return Err(Self::invalid_options_message(&errors));
         }
         Ok((
-            num_blocks(
-                cells_wide,
-                options.block_side,
-                options.block_stride,
-            ),
-            num_blocks(
-                cells_high,
-                options.block_side,
-                options.block_stride,
-            ),
+            num_blocks(cells_wide, options.block_side, options.block_stride),
+            num_blocks(cells_high, options.block_side, options.block_stride),
         ))
     }
 
@@ -223,14 +207,12 @@ pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
 /// Computes the HoG descriptor of an image. Assumes that the spec and grid
 /// dimensions are consistent.
 fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
-
     let mut descriptor = Array3d::new(spec.block_grid_lengths());
     {
         let mut block_view = descriptor.view_mut();
 
         for by in 0..spec.blocks_high {
             for bx in 0..spec.blocks_wide {
-
                 let mut block_data = block_view.inner_slice_mut(bx, by);
                 let mut block = View3d::from_raw(&mut block_data, spec.block_internal_lengths());
 
@@ -422,9 +404,8 @@ where
     I: GenericImage,
     I::Pixel: 'static,
 {
-
-    use std::cmp;
     use drawing::draw_line_segment_mut;
+    use std::cmp;
 
     let (width, height) = image.dimensions();
     let scale = cmp::max(width, height) as f32 / 2f32;
@@ -533,8 +514,8 @@ fn data_length(lengths: [usize; 3]) -> usize {
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::gray_bench_image;
     use test;
+    use utils::gray_bench_image;
 
     #[test]
     fn test_num_blocks() {
@@ -629,7 +610,6 @@ mod test {
 
     #[test]
     fn test_hog_descriptor_from_hist_grid() {
-
         // A grid of cells 3 wide and 2 high. Each cell contains a histogram of 2 items.
         // There are two blocks, the left covering the leftmost 2x2 region, and the
         // right covering the rightmost 2x2 region. These regions overlap by one cell column.

@@ -2,11 +2,11 @@
 //!
 //! [Hough transform]: https://en.wikipedia.org/wiki/Hough_transform
 
-use image::{GenericImage, GrayImage, Luma, ImageBuffer, Pixel};
-use drawing::draw_line_segment_mut;
 use definitions::Image;
-use suppress::suppress_non_maximum;
+use drawing::draw_line_segment_mut;
+use image::{GenericImage, GrayImage, ImageBuffer, Luma, Pixel};
 use std::f32;
+use suppress::suppress_non_maximum;
 
 /// A detected line, in polar coordinates.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -57,8 +57,9 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
                     let fx = x as f32;
 
                     let r = unsafe {
-                        (fx * *cos_lut.get_unchecked(m as usize) +
-                             fy * *sin_lut.get_unchecked(m as usize)) as i32
+                        (fx * *cos_lut.get_unchecked(m as usize)
+                            + fy * *sin_lut.get_unchecked(m as usize))
+                            as i32
                     };
 
                     if r < rmax && r >= 0 {
@@ -209,7 +210,7 @@ fn degrees_to_radians(degrees: u32) -> f32 {
 mod test {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     fn separated_horizontal_line_segment() -> GrayImage {
         let white = Luma([255u8]);
@@ -251,10 +252,12 @@ mod test {
     // TODO: This is an exact duplicate of a function in tbe regionlabelling tests.
     // TODO: Add some unit tests and benchmarks of more interesting cases.
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
-            return Luma([255u8]);
-        } else {
-            return Luma([0u8]);
+        ImageBuffer::from_fn(width, height, |x, y| {
+            if (x + y) % 2 == 0 {
+                return Luma([255u8]);
+            } else {
+                return Luma([0u8]);
+            }
         })
     }
 

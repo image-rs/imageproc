@@ -1,11 +1,11 @@
 //! Functions for adding synthetic noise to images.
 
-use image::{GenericImage, ImageBuffer, Pixel};
-use rand::{SeedableRng, StdRng};
-use rand::distributions::{IndependentSample, Normal, Range};
-use definitions::{Clamp, HasBlack, HasWhite, Image};
 use conv::ValueInto;
+use definitions::{Clamp, HasBlack, HasWhite, Image};
+use image::{GenericImage, ImageBuffer, Pixel};
 use math::cast;
+use rand::distributions::{IndependentSample, Normal, Range};
+use rand::{SeedableRng, StdRng};
 
 /// Adds independent additive Gaussian noise to all channels
 /// of an image, with the given mean and standard deviation.
@@ -69,7 +69,6 @@ where
     I: GenericImage,
     I::Pixel: HasBlack + HasWhite,
 {
-
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
 
@@ -77,7 +76,6 @@ where
 
     for y in 0..image.height() {
         for x in 0..image.width() {
-
             if uniform.ind_sample(&mut rng) > rate {
                 continue;
             }
@@ -97,19 +95,23 @@ where
 mod test {
     use super::*;
     use image::GrayImage;
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_gaussian_noise_mut(b: &mut Bencher) {
         let mut image = GrayImage::new(100, 100);
-        b.iter(|| { gaussian_noise_mut(&mut image, 30.0, 40.0, 1usize); });
+        b.iter(|| {
+            gaussian_noise_mut(&mut image, 30.0, 40.0, 1usize);
+        });
         black_box(image);
     }
 
     #[bench]
     fn bench_salt_and_pepper_noise_mut(b: &mut Bencher) {
         let mut image = GrayImage::new(100, 100);
-        b.iter(|| { salt_and_pepper_noise_mut(&mut image, 0.3, 1usize); });
+        b.iter(|| {
+            salt_and_pepper_noise_mut(&mut image, 0.3, 1usize);
+        });
         black_box(image);
     }
 }

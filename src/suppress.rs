@@ -1,9 +1,9 @@
 //! Functions for suppressing non-maximal values.
 
-use std::cmp;
 use definitions::{Position, Score};
 use image::{GenericImage, ImageBuffer, Luma, Primitive};
 use itertools::Itertools;
+use std::cmp;
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
@@ -176,13 +176,13 @@ mod test {
     use super::{local_maxima, suppress_non_maximum};
     use definitions::{Position, Score};
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
-    use noise::gaussian_noise_mut;
-    use std::cmp;
-    use quickcheck::{quickcheck, TestResult};
     use itertools::Itertools;
+    use noise::gaussian_noise_mut;
     use property_testing::GrayTestImage;
-    use utils::pixel_diff_summary;
+    use quickcheck::{quickcheck, TestResult};
+    use std::cmp;
     use test::Bencher;
+    use utils::pixel_diff_summary;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
     struct T {
@@ -314,11 +314,9 @@ mod test {
     fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
         let width = 40u32;
         let height = 20u32;
-        let img = ImageBuffer::from_fn(
-            width,
-            height,
-            |x, y| Luma([((width - x) + (height - y)) as u8]),
-        );
+        let img = ImageBuffer::from_fn(width, height, |x, y| {
+            Luma([((width - x) + (height - y)) as u8])
+        });
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
