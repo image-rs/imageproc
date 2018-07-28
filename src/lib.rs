@@ -3,8 +3,6 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 
-#[cfg(test)]
-extern crate test;
 extern crate conv;
 extern crate image;
 extern crate itertools;
@@ -12,8 +10,10 @@ extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
 extern crate rand;
-extern crate rusttype;
 extern crate rayon;
+extern crate rusttype;
+#[cfg(test)]
+extern crate test;
 
 #[macro_use]
 pub mod utils;

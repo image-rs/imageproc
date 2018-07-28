@@ -1,8 +1,8 @@
-use image::{GenericImage, ImageBuffer};
 use definitions::Image;
+use drawing::line::draw_line_segment_mut;
+use image::{GenericImage, ImageBuffer};
 use std::f32;
 use std::i32;
-use drawing::line::draw_line_segment_mut;
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
 pub fn draw_cubic_bezier_curve<I>(
@@ -42,10 +42,14 @@ pub fn draw_cubic_bezier_curve_mut<I>(
         let mt = 1.0 - t;
         let mt2 = mt * mt;
         let mt3 = mt2 * mt;
-        let x = (start.0 * mt3) + (3.0 * control_a.0 * mt2 * t) + (3.0 * control_b.0 * mt * t2) +
-            (end.0 * t3);
-        let y = (start.1 * mt3) + (3.0 * control_a.1 * mt2 * t) + (3.0 * control_b.1 * mt * t2) +
-            (end.1 * t3);
+        let x = (start.0 * mt3)
+            + (3.0 * control_a.0 * mt2 * t)
+            + (3.0 * control_b.0 * mt * t2)
+            + (end.0 * t3);
+        let y = (start.1 * mt3)
+            + (3.0 * control_a.1 * mt2 * t)
+            + (3.0 * control_b.1 * mt * t2)
+            + (end.1 * t3);
         (x.round(), y.round()) // round to nearest pixel, to avoid ugly line artifacts
     };
 
@@ -54,8 +58,8 @@ pub fn draw_cubic_bezier_curve_mut<I>(
     };
 
     // Approximate curve's length by adding distance between control points.
-    let curve_length_bound: f32 = distance(start, control_a) + distance(control_a, control_b) +
-        distance(control_b, end);
+    let curve_length_bound: f32 =
+        distance(start, control_a) + distance(control_a, control_b) + distance(control_b, end);
 
     // Use hyperbola function to give shorter curves a bias in number of line segments.
     let num_segments: i32 = ((curve_length_bound.powi(2) + 800.0).sqrt() / 8.0) as i32;
@@ -74,7 +78,7 @@ pub fn draw_cubic_bezier_curve_mut<I>(
 mod test {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     macro_rules! bench_cubic_bezier_curve {
         ($name:ident, $start:expr, $end:expr, $control_a:expr, $control_b:expr) => {
@@ -85,20 +89,28 @@ mod test {
                 let mut image = GrayImage::new(500, 500);
                 let color = Luma([50u8]);
                 b.iter(|| {
-                    draw_cubic_bezier_curve_mut(&mut image, $start, $end, $control_a, $control_b, color);
+                    draw_cubic_bezier_curve_mut(
+                        &mut image, $start, $end, $control_a, $control_b, color,
+                    );
                     test::black_box(&image);
-                    });
+                });
             }
-        }
+        };
     }
 
     bench_cubic_bezier_curve!(
         bench_draw_cubic_bezier_curve_short,
-        (100.0, 100.0), (130.0, 130.0), (110.0, 100.0), (120.0, 130.0)
+        (100.0, 100.0),
+        (130.0, 130.0),
+        (110.0, 100.0),
+        (120.0, 130.0)
     );
 
     bench_cubic_bezier_curve!(
         bench_draw_cubic_bezier_curve_long,
-        (100.0, 100.0), (400.0, 400.0), (500.0, 0.0), (0.0, 500.0)
+        (100.0, 100.0),
+        (400.0, 400.0),
+        (500.0, 0.0),
+        (0.0, 500.0)
     );
 }

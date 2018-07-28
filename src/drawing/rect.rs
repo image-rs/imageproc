@@ -1,8 +1,8 @@
-use image::{GenericImage, ImageBuffer};
 use definitions::Image;
+use drawing::line::draw_line_segment_mut;
+use image::{GenericImage, ImageBuffer};
 use rect::Rect;
 use std::f32;
-use drawing::line::draw_line_segment_mut;
 
 /// Draws as much of the boundary of a rectangle as lies inside the image bounds.
 pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
@@ -68,9 +68,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use image::{GrayImage, Luma, Rgb, RgbImage};
     use rect::Rect;
-    use image::{GrayImage, Luma, RgbImage, Rgb};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {

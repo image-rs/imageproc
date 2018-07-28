@@ -3,11 +3,11 @@
 //!
 //! [quickcheck]: https://github.com/BurntSushi/quickcheck
 
-use std::fmt;
-use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
-use rand::Rand;
-use quickcheck::{Arbitrary, Gen};
 use definitions::Image;
+use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
+use quickcheck::{Arbitrary, Gen};
+use rand::Rand;
+use std::fmt;
 
 /// Wrapper for image buffers to allow us to write an Arbitrary instance.
 #[derive(Clone)]
@@ -20,7 +20,8 @@ pub type GrayTestImage = TestBuffer<Luma<u8>>;
 pub type RgbTestImage = TestBuffer<Rgb<u8>>;
 
 impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
-    where <T as Pixel>::Subpixel: Send
+where
+    <T as Pixel>::Subpixel: Send,
 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let (width, height) = small_image_dimensions(g);
@@ -34,7 +35,7 @@ impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
         TestBuffer(image)
     }
 
-    fn shrink(&self) -> Box<Iterator<Item=TestBuffer<T>>> {
+    fn shrink(&self) -> Box<Iterator<Item = TestBuffer<T>>> {
         Box::new(shrink(&self.0).map(TestBuffer))
     }
 }

@@ -1,7 +1,7 @@
 //! Trait definitions and type aliases.
 
-use image::{Rgb, Rgba, Luma, Pixel, ImageBuffer};
-use std::{u8, u16, i16};
+use image::{ImageBuffer, Luma, Pixel, Rgb, Rgba};
+use std::{i16, u16, u8};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather
@@ -28,7 +28,7 @@ pub trait HasWhite {
 }
 
 macro_rules! impl_black_white {
-    ($for_:ty, $min:expr, $max:expr) => (
+    ($for_:ty, $min:expr, $max:expr) => {
         impl HasBlack for $for_ {
             fn black() -> Self {
                 $min
@@ -40,15 +40,23 @@ macro_rules! impl_black_white {
                 $max
             }
         }
-    )
+    };
 }
 
 impl_black_white!(Luma<u8>, Luma([u8::MIN]), Luma([u8::MAX]));
 impl_black_white!(Luma<u16>, Luma([u16::MIN]), Luma([u16::MAX]));
 impl_black_white!(Rgb<u8>, Rgb([u8::MIN; 3]), Rgb([u8::MAX; 3]));
 impl_black_white!(Rgb<u16>, Rgb([u16::MIN; 3]), Rgb([u16::MAX; 3]));
-impl_black_white!(Rgba<u8>, Rgba([u8::MIN, u8::MIN, u8::MIN, u8::MAX]), Rgba([u8::MAX, u8::MAX, u8::MAX, u8::MAX]));
-impl_black_white!(Rgba<u16>, Rgba([u16::MIN, u16::MIN, u16::MIN, u16::MAX]), Rgba([u16::MAX, u16::MAX, u16::MAX, u16::MAX]));
+impl_black_white!(
+    Rgba<u8>,
+    Rgba([u8::MIN, u8::MIN, u8::MIN, u8::MAX]),
+    Rgba([u8::MAX, u8::MAX, u8::MAX, u8::MAX])
+);
+impl_black_white!(
+    Rgba<u16>,
+    Rgba([u16::MIN, u16::MIN, u16::MIN, u16::MAX]),
+    Rgba([u16::MAX, u16::MAX, u16::MAX, u16::MAX])
+);
 
 /// Something with a 2d position.
 pub trait Position {
@@ -73,7 +81,7 @@ pub trait Clamp<T> {
 
 /// Creates an implementation of Clamp<From> for type To.
 macro_rules! implement_clamp {
-    ($from:ty, $to:ty, $min:expr, $max:expr, $min_from:expr, $max_from:expr) => (
+    ($from:ty, $to:ty, $min:expr, $max:expr, $min_from:expr, $max_from:expr) => {
         impl Clamp<$from> for $to {
             fn clamp(x: $from) -> $to {
                 if x < $max_from as $from {
@@ -87,17 +95,45 @@ macro_rules! implement_clamp {
                 }
             }
         }
-    )
+    };
 }
 
 implement_clamp!(f32, u8, u8::MIN, u8::MAX, u8::MIN as f32, u8::MAX as f32);
-implement_clamp!(f32, u16, u16::MIN, u16::MAX, u16::MIN as f32, u16::MAX as f32);
+implement_clamp!(
+    f32,
+    u16,
+    u16::MIN,
+    u16::MAX,
+    u16::MIN as f32,
+    u16::MAX as f32
+);
 implement_clamp!(f64, u8, u8::MIN, u8::MAX, u8::MIN as f64, u8::MAX as f64);
-implement_clamp!(f64, u16, u16::MIN, u16::MAX, u16::MIN as f64, u16::MAX as f64);
+implement_clamp!(
+    f64,
+    u16,
+    u16::MIN,
+    u16::MAX,
+    u16::MIN as f64,
+    u16::MAX as f64
+);
 implement_clamp!(i32, u8, u8::MIN, u8::MAX, u8::MIN as i32, u8::MAX as i32);
 implement_clamp!(u32, u8, u8::MIN, u8::MAX, u8::MIN as u32, u8::MAX as u32);
-implement_clamp!(i32, u16, u16::MIN, u16::MAX, u16::MIN as i32, u16::MAX as i32);
-implement_clamp!(i32, i16, i16::MIN, i16::MAX, i16::MIN as i32, i16::MAX as i32);
+implement_clamp!(
+    i32,
+    u16,
+    u16::MIN,
+    u16::MAX,
+    u16::MIN as i32,
+    u16::MAX as i32
+);
+implement_clamp!(
+    i32,
+    i16,
+    i16::MIN,
+    i16::MAX,
+    i16::MIN as i32,
+    i16::MAX as i32
+);
 implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 
 #[cfg(test)]
