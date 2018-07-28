@@ -1,5 +1,5 @@
 use image::{GenericImage, ImageBuffer, Pixel};
-use definitions::Image;
+use crate::definitions::Image;
 use std::mem::{swap, transmute};
 use std::f32;
 use std::i32;

@@ -1,10 +1,10 @@
 //! Functions for computing gradients of image intensities.
 
 use image::{GenericImage, GrayImage, Luma, Pixel};
-use definitions::{HasBlack, Image};
-use filter::filter3x3;
+use crate::definitions::{HasBlack, Image};
+use crate::filter::filter3x3;
 use itertools::multizip;
-use map::{WithChannel, ChannelMap};
+use crate::map::{WithChannel, ChannelMap};
 
 /// Sobel filter for detecting vertical gradients.
 ///
@@ -200,7 +200,7 @@ mod test {
     use super::*;
     use image::{ImageBuffer, Luma};
     use test::{Bencher, black_box};
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
 
     #[test]
     fn test_gradients_constant_image() {

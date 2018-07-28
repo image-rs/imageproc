@@ -1,8 +1,8 @@
 //! Functions for performing template matching.
 use image::Primitive;
-use definitions::Image;
-use rect::Rect;
-use integral_image::{integral_squared_image, sum_image_pixels};
+use crate::definitions::Image;
+use crate::rect::Rect;
+use crate::integral_image::{integral_squared_image, sum_image_pixels};
 use image::{GenericImage, GrayImage, Luma};
 
 /// Method used to compute the matching score between a template and an image region.
@@ -128,7 +128,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use image::GrayImage;
     use test::{Bencher, black_box};
 

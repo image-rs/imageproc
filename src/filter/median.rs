@@ -1,5 +1,5 @@
 use image::{GenericImage, Pixel};
-use definitions::Image;
+use crate::definitions::Image;
 use std::cmp::{min, max};
 
 /// Applies a median filter of given `radius` to an image. Each output pixel is the median
@@ -283,11 +283,11 @@ impl HistSet {
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
     use quickcheck::{quickcheck, TestResult};
-    use property_testing::GrayTestImage;
-    use utils::pixel_diff_summary;
+    use crate::property_testing::GrayTestImage;
+    use crate::utils::pixel_diff_summary;
     use test::{Bencher, black_box};
     use std::cmp::{min, max};
 

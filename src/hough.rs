@@ -3,9 +3,9 @@
 //! [Hough transform]: https://en.wikipedia.org/wiki/Hough_transform
 
 use image::{GenericImage, GrayImage, Luma, ImageBuffer, Pixel};
-use drawing::draw_line_segment_mut;
-use definitions::Image;
-use suppress::suppress_non_maximum;
+use crate::drawing::draw_line_segment_mut;
+use crate::definitions::Image;
+use crate::suppress::suppress_non_maximum;
 use std::f32;
 
 /// A detected line, in polar coordinates.

@@ -5,13 +5,13 @@ pub use self::median::median_filter;
 
 use image::{GrayImage, GenericImage, ImageBuffer, Luma, Pixel, Primitive};
 
-use integral_image::{column_running_sum, row_running_sum};
-use map::{WithChannel, ChannelMap};
-use definitions::{Clamp, Image};
+use crate::integral_image::{column_running_sum, row_running_sum};
+use crate::map::{WithChannel, ChannelMap};
+use crate::definitions::{Clamp, Image};
 use num::Num;
 
 use conv::ValueInto;
-use math::cast;
+use crate::math::cast;
 use std::cmp::{min, max};
 use std::f32;
 
@@ -423,9 +423,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::{gray_bench_image, rgb_bench_image};
+    use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
-    use definitions::{Clamp, Image};
+    use crate::definitions::{Clamp, Image};
     use image::imageops::blur;
     use test::{Bencher, black_box};
     use std::cmp::{min, max};

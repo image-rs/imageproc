@@ -1,8 +1,8 @@
 use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use crate::definitions::Image;
 use std::f32;
 use std::i32;
-use drawing::line::draw_line_segment_mut;
+use crate::drawing::line::draw_line_segment_mut;
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
 pub fn draw_cubic_bezier_curve<I>(

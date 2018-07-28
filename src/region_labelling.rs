@@ -2,8 +2,8 @@
 
 use image::{GenericImage, ImageBuffer, Luma};
 
-use definitions::Image;
-use union_find::DisjointSetForest;
+use crate::definitions::Image;
+use crate::union_find::DisjointSetForest;
 use std::cmp;
 
 /// Determines which neighbors of a pixel we consider
@@ -238,7 +238,7 @@ where
 mod test {
     use super::connected_components;
     use super::Connectivity::{Four, Eight};
-    use definitions::{HasBlack, HasWhite};
+    use crate::definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
     use test;
 

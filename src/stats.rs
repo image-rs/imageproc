@@ -3,7 +3,7 @@
 use image::{GenericImage, GrayImage, Pixel, Primitive};
 
 use num::Bounded;
-use math::cast;
+use crate::math::cast;
 use conv::ValueInto;
 
 /// Returns the histogram of grayscale values in an 8bpp

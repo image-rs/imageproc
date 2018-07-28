@@ -1,8 +1,8 @@
 //! Functions for affine transformations of images.
 
 use image::{Pixel, GenericImage, ImageBuffer};
-use definitions::{Clamp, HasBlack, Image};
-use math::cast;
+use crate::definitions::{Clamp, HasBlack, Image};
+use crate::math::cast;
 use nalgebra::{Affine2, Point2};
 use conv::ValueInto;
 
@@ -302,7 +302,7 @@ fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> 
 #[cfg(test)]
 mod test {
     use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
     use nalgebra::{Affine2, Matrix3};
     use test;

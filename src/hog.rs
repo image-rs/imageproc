@@ -2,9 +2,9 @@
 //! and helpers for visualizing them.
 
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use gradients::{horizontal_sobel, vertical_sobel};
-use definitions::{Clamp, Image};
-use math::l2_norm;
+use crate::gradients::{horizontal_sobel, vertical_sobel};
+use crate::definitions::{Clamp, Image};
+use crate::math::l2_norm;
 use num::Zero;
 use std::f32;
 
@@ -424,7 +424,7 @@ where
 {
 
     use std::cmp;
-    use drawing::draw_line_segment_mut;
+    use crate::drawing::draw_line_segment_mut;
 
     let (width, height) = image.dimensions();
     let scale = cmp::max(width, height) as f32 / 2f32;
@@ -533,7 +533,7 @@ fn data_length(lengths: [usize; 3]) -> usize {
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use test;
 
     #[test]

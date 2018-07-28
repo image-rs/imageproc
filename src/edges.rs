@@ -2,9 +2,9 @@
 
 use std::f32;
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use gradients::{vertical_sobel, horizontal_sobel};
-use definitions::{HasWhite, HasBlack};
-use filter::gaussian_blur_f32;
+use crate::gradients::{vertical_sobel, horizontal_sobel};
+use crate::definitions::{HasWhite, HasBlack};
+use crate::filter::gaussian_blur_f32;
 
 /// Runs the canny edge detection algorithm.
 ///
@@ -164,8 +164,8 @@ fn hysteresis(
 #[cfg(test)]
 mod test {
     use super::canny;
-    use drawing::draw_filled_rect_mut;
-    use rect::Rect;
+    use crate::drawing::draw_filled_rect_mut;
+    use crate::rect::Rect;
     use image::{GrayImage, Luma};
     use test;
 

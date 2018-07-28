@@ -2,8 +2,8 @@
 
 use image::Pixel;
 use conv::ValueInto;
-use math::cast;
-use definitions::Clamp;
+use crate::math::cast;
+use crate::definitions::Clamp;
 
 /// Adds pixels with the given weights. Results are clamped to prevent arithmetical overflows.
 ///
