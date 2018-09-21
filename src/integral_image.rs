@@ -1,7 +1,7 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImage, Pixel};
+use image::{Luma, GrayImage, GenericImageView, Pixel};
 use definitions::Image;
 use map::{ChannelMap, WithChannel};
 

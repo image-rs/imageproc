@@ -1,6 +1,6 @@
 //! Functions for affine transformations of images.
 
-use image::{Pixel, GenericImage, ImageBuffer};
+use image::{Pixel, GenericImage, GenericImageView, ImageBuffer};
 use definitions::{Clamp, HasBlack, Image};
 use math::cast;
 use nalgebra::{Affine2, Point2};

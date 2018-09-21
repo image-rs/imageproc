@@ -3,7 +3,7 @@ use image::Primitive;
 use definitions::Image;
 use rect::Rect;
 use integral_image::{integral_squared_image, sum_image_pixels};
-use image::{GenericImage, GrayImage, Luma};
+use image::{GrayImage, Luma};
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -26,6 +26,8 @@ pub enum MatchTemplateMethod {
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
 pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemplateMethod) -> Image<Luma<f32>> {
+    use image::GenericImageView;
+
     let (image_width, image_height) = image.dimensions();
     let (template_width, template_height) = template.dimensions();
 

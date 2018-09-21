@@ -1,4 +1,4 @@
-use image::{GenericImage, Pixel};
+use image::{GenericImageView, Pixel};
 use definitions::Image;
 use std::cmp::{min, max};
 
