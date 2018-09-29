@@ -3,7 +3,7 @@
 
 use std::cmp::min;
 use std::{u8, f64};
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
 use definitions::Image;
 
 /// How to measure distance between coordinates.

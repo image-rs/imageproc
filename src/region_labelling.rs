@@ -1,6 +1,6 @@
 //! Functions for finding and labelling connected components of an image.
 
-use image::{GenericImage, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 
 use definitions::Image;
 use union_find::DisjointSetForest;

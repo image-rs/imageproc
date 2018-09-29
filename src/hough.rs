@@ -2,7 +2,7 @@
 //!
 //! [Hough transform]: https://en.wikipedia.org/wiki/Hough_transform
 
-use image::{GenericImage, GrayImage, Luma, ImageBuffer, Pixel};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, ImageBuffer, Pixel};
 use drawing::draw_line_segment_mut;
 use definitions::Image;
 use suppress::suppress_non_maximum;
