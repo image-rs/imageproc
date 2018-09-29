@@ -8,7 +8,6 @@ extern crate test;
 extern crate conv;
 extern crate image;
 extern crate itertools;
-extern crate nalgebra;
 extern crate num;
 extern crate quickcheck;
 extern crate rand;

@@ -3,8 +3,87 @@
 use image::{Pixel, GenericImage, GenericImageView, ImageBuffer};
 use definitions::{Clamp, HasBlack, Image};
 use math::cast;
-use nalgebra::{Affine2, Point2};
 use conv::ValueInto;
+use std::ops::Mul;
+
+/// A 2d affine transform, stored as a row major 3x3 matrix.
+#[derive(Copy, Clone, Debug)]
+pub struct Affine2 {
+    transform: [f32; 9]
+}
+
+impl Affine2 {
+    /// Create a 2d affine transform from a row-major 3x3 matrix in homogeneous coordinates.
+    /// The provided matrix is not checked to be affine.
+    pub fn from_matrix_unchecked(transform: [f32; 9]) -> Affine2 {
+        Affine2 { transform }
+    }
+}
+
+impl Affine2 {
+    fn try_inverse(&self) -> Option<Self> {
+        let t = &self.transform;
+        let (
+            t00, t01, t02,
+            t10, t11, t12,
+            t20, t21, t22
+        ) = (
+            t[0], t[1], t[2],
+            t[3], t[4], t[5],
+            t[6], t[7], t[8]
+        );
+
+        let m00 = t11 * t22 - t12 * t21;
+        let m01 = t10 * t22 - t12 * t20;
+        let m02 = t10 * t21 - t11 * t20;
+
+        let det = t00 * m00 - t01 * m01 + t02 * m02;
+
+        if det == 0.0 {
+            return None;
+        }
+
+        let m10 = t01 * t22 - t02 * t21;
+        let m11 = t00 * t22 - t02 * t20;
+        let m12 = t00 * t21 - t01 * t20;
+        let m20 = t01 * t12 - t02 * t11;
+        let m21 = t00 * t12 - t02 * t10;
+        let m22 = t00 * t11 - t01 * t10;
+
+        let inv = [
+             m00 / det, -m10 / det,  m20 / det,
+            -m01 / det,  m11 / det, -m21 / det,
+             m02 / det, -m12 / det,  m22 / det
+        ];
+
+        Some(Self::from_matrix_unchecked(inv))
+    }
+}
+
+impl Mul<Point2> for Affine2 {
+    type Output = Point2;
+
+    fn mul(self, rhs: Point2) -> Point2 {
+        let t = &self.transform;
+        Point2 {
+            x: t[0] * rhs.x + t[1] * rhs.y + t[2],
+            y: t[3] * rhs.x + t[4] * rhs.y + t[5]
+        }
+    }
+}
+
+/// A 2d point.
+#[derive(Copy, Clone, Debug, PartialEq)]
+struct Point2 {
+    x: f32,
+    y: f32
+}
+
+impl Point2 {
+    fn new(x: f32, y: f32) -> Point2 {
+        Point2 { x, y }
+    }
+}
 
 /// How to handle pixels whose pre-image lies between input pixels.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -23,7 +102,7 @@ pub enum Interpolation {
 /// whose pre-image lies outside the input image are set to black.
 pub fn affine<P>(
     image: &Image<P>,
-    affine: Affine2<f32>,
+    affine: Affine2,
     interpolation: Interpolation,
 ) -> Option<Image<P>>
 where
@@ -39,7 +118,7 @@ where
 /// whose pre-image lies outside the input image are set to default.
 pub fn affine_with_default<P>(
     image: &Image<P>,
-    affine: Affine2<f32>,
+    affine: Affine2,
     default: P,
     interpolation: Interpolation,
 ) -> Option<Image<P>>
@@ -47,7 +126,7 @@ where
     P: Pixel + 'static,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let inverse: Affine2<f32>;
+    let inverse: Affine2;
     match affine.try_inverse() {
         None => return None,
         Some(inv) => inverse = inv,
@@ -58,10 +137,9 @@ where
 
     for y in 0..height {
         for x in 0..width {
-
             let preimage = inverse * Point2::new(x as f32, y as f32);
-            let px = preimage[0];
-            let py = preimage[1];
+            let px = preimage.x;
+            let py = preimage.y;
 
             let pix = match interpolation {
                 Interpolation::Nearest => nearest(image, px, py, default),
@@ -301,10 +379,9 @@ fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> 
 
 #[cfg(test)]
 mod test {
-    use super::{affine, rotate_bilinear, rotate_nearest, translate, Interpolation};
+    use super::*;
     use utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use nalgebra::{Affine2, Matrix3};
     use test;
 
     #[test]
@@ -437,12 +514,11 @@ mod test {
             00, 00, 01;
             00, 10, 11);
 
-        let aff = Affine2::from_matrix_unchecked(
-            Matrix3::new(
-                1.0, 0.0, 1.0,
-                0.0, 1.0, 1.0,
-                0.0, 0.0, 1.0),
-        );
+        let aff = Affine2::from_matrix_unchecked([
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ]);
 
         if let Some(translated) = affine(&image, aff, Interpolation::Nearest) {
             assert_pixels_eq!(translated, expected);
@@ -455,12 +531,11 @@ mod test {
     fn bench_affine_nearest(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
-        let aff = Affine2::from_matrix_unchecked(
-            Matrix3::new(
-                1.0, 0.0, 1.0,
-                0.0, 1.0, 1.0,
-                0.0, 0.0, 1.0),
-        );
+        let aff = Affine2::from_matrix_unchecked([
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ]);
 
         b.iter(|| {
             let transformed = affine(&image, aff, Interpolation::Nearest);
@@ -472,12 +547,11 @@ mod test {
     fn bench_affine_bilinear(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
-        let aff = Affine2::from_matrix_unchecked(
-            Matrix3::new(
-                1.0, 0.0, 1.0,
-                0.0, 1.0, 1.0,
-                0.0, 0.0, 1.0),
-        );
+        let aff = Affine2::from_matrix_unchecked([
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0,
+        ]);
 
         b.iter(|| {
             let transformed = affine(&image, aff, Interpolation::Bilinear);

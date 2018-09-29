@@ -10,19 +10,17 @@ extern crate image;
 extern crate test;
 #[macro_use]
 extern crate imageproc;
-extern crate nalgebra;
 
 use std::ops::Deref;
 use std::path::Path;
 use std::f32;
 use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage, RgbaImage};
 use imageproc::utils::{load_image_or_panic};
-use imageproc::affine::{affine, Interpolation, rotate_about_center};
+use imageproc::affine::{affine, Affine2, Interpolation, rotate_about_center};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::gradients;
-use nalgebra::{Affine2,Matrix3};
 
 // If set to true then all calls to any compare_to_truth function will regenerate
 // the truth image.
@@ -155,11 +153,11 @@ fn test_rotate_bilinear_rgba() {
 fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32/2f32.sqrt()*2.0;
-        let trans = Affine2::from_matrix_unchecked(Matrix3::new(
+        let trans = Affine2::from_matrix_unchecked([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
             0.0         , 0.0          , 1.0,
-        ));
+        ]);
         affine(image, trans, Interpolation::Nearest).unwrap()
     }
     compare_to_truth_rgb("elephant.png", "elephant_affine_nearest.png", affine_nearest);
@@ -169,11 +167,11 @@ fn test_affine_nearest_rgb() {
 fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32/2f32.sqrt()*2.0;
-        let trans = Affine2::from_matrix_unchecked(Matrix3::new(
+        let trans = Affine2::from_matrix_unchecked([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
             0.0         , 0.0          , 1.0,
-        ));
+        ]);
 
         affine(image, trans, Interpolation::Bilinear).unwrap()
     }
