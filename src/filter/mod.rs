@@ -3,7 +3,7 @@
 mod median;
 pub use self::median::median_filter;
 
-use image::{GrayImage, GenericImage, ImageBuffer, Luma, Pixel, Primitive};
+use image::{GrayImage, GenericImage, GenericImageView, ImageBuffer, Luma, Pixel, Primitive};
 
 use integral_image::{column_running_sum, row_running_sum};
 use map::{WithChannel, ChannelMap};

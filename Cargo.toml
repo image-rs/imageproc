@@ -1,6 +1,6 @@
 [package]
 name = "imageproc"
-version = "0.15.0"
+version = "0.16.0"
 authors = ["theotherphil"]
 license = "MIT"
 description = "Image processing operations"
@@ -10,12 +10,12 @@ exclude = ["examples/*.ttf"]
 
 [dependencies]
 conv = "0.3.1"
-image = "0.19.0"
+image = "0.20.0"
 itertools = "0.7.0"
 nalgebra = "0.16.0"
-num = "0.1.27"
+num = "0.2.0"
 quickcheck = "0.6"
-rand = "0.4"
+rand = "0.4.0"
 rusttype = "0.5"
 rayon = "1.0"
 

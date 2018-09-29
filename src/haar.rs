@@ -3,7 +3,7 @@
 //! [Haar-like features]: https://en.wikipedia.org/wiki/Haar-like_features
 
 use definitions::{HasBlack, HasWhite, Image};
-use image::{GenericImage, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 use itertools::Itertools;
 use std::marker::PhantomData;
 use std::ops::Range;

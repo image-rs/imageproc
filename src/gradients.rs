@@ -1,6 +1,6 @@
 //! Functions for computing gradients of image intensities.
 
-use image::{GenericImage, GrayImage, Luma, Pixel};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use definitions::{HasBlack, Image};
 use filter::filter3x3;
 use itertools::multizip;

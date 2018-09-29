@@ -1,6 +1,6 @@
 //! Functions for detecting corners, also known as interest points.
 
-use image::{GrayImage, GenericImage};
+use image::{GrayImage, GenericImageView};
 use definitions::{Position, Score};
 
 /// A location and score for a detected corner.

@@ -1,6 +1,6 @@
 //! Utils for testing and debugging.
 
-use image::{DynamicImage, GenericImage, GrayImage, Luma, open, Pixel, Rgb, RgbImage};
+use image::{DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, open, Pixel, Rgb, RgbImage};
 
 use std::u32;
 use std::fmt;
@@ -341,8 +341,8 @@ where
     // Can't just call $image.pixels(), as that needn't hit the
     // trait pixels method - ImageBuffer defines its own pixels
     // method with a different signature
-    GenericImage::pixels(actual)
-        .zip(GenericImage::pixels(expected))
+    GenericImageView::pixels(actual)
+        .zip(GenericImageView::pixels(expected))
         .filter(|&(p, q)| is_diff(p, q))
         .map(|(p, q)| {
             assert!(p.0 == q.0 && p.1 == q.1, "Pixel locations do not match");

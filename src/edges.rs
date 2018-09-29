@@ -1,7 +1,7 @@
 //! Functions for detecting edges in images.
 
 use std::f32;
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use gradients::{vertical_sobel, horizontal_sobel};
 use definitions::{HasWhite, HasBlack};
 use filter::gaussian_blur_f32;
