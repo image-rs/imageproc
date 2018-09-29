@@ -13,7 +13,7 @@ use std::{u8, u16, i16};
 // TODO: This produces a compiler warning about trait bounds
 // TODO: not being enforced in type definitions. In this case
 // TODO: they are. Can we get rid of the warning?
-pub type Image<P: Pixel> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
+pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 
 /// Pixels which have a named Black value.
 pub trait HasBlack {
