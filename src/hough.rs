@@ -128,21 +128,22 @@ where
 }
 
 /// Returns the intersection points of a `PolarLine` with an image of given width and height,
-/// or `None` if the line and image bounding box are disjoint.
+/// or `None` if the line and image bounding box are disjoint. The x value of an intersection
+/// point lies within the closed interval [0, image_width] and the y value within the closed
+/// interval [0, image_height].
 fn intersection_points(
     line: PolarLine,
     image_width: u32,
     image_height: u32,
 ) -> Option<((f32, f32), (f32, f32))> {
-    // FIXME: handle this properly
-    let r = if line.r == 0.0 { line.r + 0.0001 } else { line.r };
+    let r = line.r;
     let m = line.angle_in_degrees;
     let w = image_width as f32;
     let h = image_height as f32;
 
     // Vertical line
     if m == 0 {
-        return if r < h {
+        return if r >= 0.0 && r <= w {
             Some(((r, 0.0), (r, h)))
         } else {
             None
@@ -151,7 +152,7 @@ fn intersection_points(
 
     // Horizontal line
     if m == 90 {
-        return if r < w {
+        return if r >= 0.0 && r <= h {
             Some(((0.0, r), (w, r)))
         } else {
             None
@@ -169,7 +170,7 @@ fn intersection_points(
 
     let mut start = None;
 
-    if right_y >= 0.0 && right_y < h {
+    if right_y >= 0.0 && right_y <= h {
         let right_intersect = (w, right_y);
         if let Some(s) = start {
             return Some((s, right_intersect));
@@ -177,7 +178,7 @@ fn intersection_points(
         start = Some(right_intersect);
     }
 
-    if left_y >= 0.0 && left_y < h {
+    if left_y >= 0.0 && left_y <= h {
         let left_intersect = (0.0, left_y);
         if let Some(s) = start {
             return Some((s, left_intersect));
@@ -185,7 +186,7 @@ fn intersection_points(
         start = Some(left_intersect);
     }
 
-    if bottom_x >= 0.0 && bottom_x < w {
+    if bottom_x >= 0.0 && bottom_x <= w {
         let bottom_intersect = (bottom_x, h);
         if let Some(s) = start {
             return Some((s, bottom_intersect));
@@ -193,7 +194,7 @@ fn intersection_points(
         start = Some(bottom_intersect);
     }
 
-    if top_x >= 0.0 && top_x < w {
+    if top_x >= 0.0 && top_x <= w {
         let top_intersect = (top_x, 0.0);
         if let Some(s) = start {
             return Some((s, top_intersect));
@@ -212,6 +213,105 @@ mod test {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
     use test::{Bencher, black_box};
+
+    fn assert_points_eq(actual: Option<((f32, f32), (f32, f32))>, expected: Option<((f32, f32), (f32, f32))>) {
+        match (actual, expected) {
+            (None, None) => {}
+            (Some(ps), Some(qs)) => {
+                let points_eq = |p: (f32, f32), q: (f32, f32)| { (p.0 - q.0).abs() < 1.0e-6 && (p.1 - q.1).abs() < 1.0e-6 };
+                match (points_eq(ps.0, qs.0), points_eq(ps.1, qs.1)) {
+                    (true, true) => {},
+                    _ => {
+                        panic!("Expected {:?}, got {:?}", expected, actual);
+                    }
+                };
+            },
+            (Some(_), None) => {
+                panic!("Expected None, got {:?}", actual);
+            },
+            (None, Some(_)) => {
+                panic!("Expected {:?}, got None", expected);
+            }
+        }
+    }
+
+    #[test]
+    fn intersection_points_zero_signed_distance() {
+        // Vertical
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 0}, 10, 5),
+            Some(((0.0, 0.0), (0.0, 5.0)))
+        );
+        // Horizontal
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 90}, 10, 5),
+            Some(((0.0, 0.0), (10.0, 0.0)))
+        );
+        // Bottom left to top right
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 45}, 10, 5),
+            Some(((0.0, 0.0), (0.0, 0.0)))
+        );
+        // Top left to bottom right
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 5),
+            Some(((0.0, 0.0), (5.0, 5.0)))
+        );
+        // Top left to bottom right, square image (because a previous version of the code
+        // got this case wrong)
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 10),
+            Some(((10.0, 10.0), (0.0, 0.0)))
+        );
+    }
+
+    #[test]
+    fn intersection_points_positive_signed_distance() {
+        // Vertical intersecting image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 0}, 10, 5),
+            Some(((9.0, 0.0), (9.0, 5.0)))
+        );
+        // Vertical outside image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 0}, 5, 10),
+            None
+        );
+        // Horizontal intersecting image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 90}, 5, 10),
+            Some(((0.0, 9.0), (5.0, 9.0)))
+        );
+        // Horizontal outside image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 90}, 10, 5),
+            None
+        );
+        // Positive gradient
+        assert_points_eq(
+            intersection_points(PolarLine { r: 5.0, angle_in_degrees: 45}, 10, 5),
+            Some(((50f32.sqrt() - 5.0, 5.0), (50f32.sqrt(), 0.0)))
+        );
+    }
+
+    #[test]
+    fn intersection_points_negative_signed_distance() {
+        // Vertical
+        assert_points_eq(
+            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 0}, 10, 5),
+            None
+        );
+        // Horizontal
+        assert_points_eq(
+            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 90}, 5, 10),
+            None
+        );
+        // Negative gradient
+        assert_points_eq(
+            intersection_points(PolarLine { r: -5.0, angle_in_degrees: 135}, 10, 5),
+            Some(((10.0, 10.0 - 50f32.sqrt()), (50f32.sqrt(), 0.0)))
+        );
+    }
 
     //  --------------------
     // |                    |
