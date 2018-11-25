@@ -55,14 +55,11 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
             let p = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
             if p > 0 {
-                for m in 0..180u32 {
+                for (m, (c, s)) in cos_lut.iter().zip(&sin_lut).enumerate() {
+                    let m = m as u32;
                     let fy = y as f32;
                     let fx = x as f32;
-
-                    let r = unsafe {
-                        (fx * *cos_lut.get_unchecked(m as usize) +
-                             fy * *sin_lut.get_unchecked(m as usize)) as i32
-                    };
+                    let r = (fx * c + fy * s) as i32;
 
                     let d = r + rmax;
                     if d <= 2 * rmax && d >= 0 {
