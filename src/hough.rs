@@ -47,25 +47,25 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
     // negative for angles in [180, 360).
     let mut acc: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(2 * rmax as u32 + 1, 180u32);
 
-    let cos_lut: Vec<f32> = (0..180u32).map(|m| degrees_to_radians(m).cos()).collect();
-    let sin_lut: Vec<f32> = (0..180u32).map(|m| degrees_to_radians(m).sin()).collect();
+    // Precalculate values of (cos(m), sin(m))
+    let lut: Vec<(f32, f32)> = (0..180u32)
+        .map(degrees_to_radians)
+        .map(|t| (t.cos(), t.sin()))
+        .collect();
 
     for y in 0..height {
         for x in 0..width {
             let p = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
             if p > 0 {
-                for (m, (c, s)) in cos_lut.iter().zip(&sin_lut).enumerate() {
-                    let m = m as u32;
-                    let fy = y as f32;
-                    let fx = x as f32;
-                    let r = (fx * c + fy * s) as i32;
+                for (m, (c, s)) in lut.iter().enumerate() {
+                    let r = (x as f32) * c + (y as f32) * s;
+                    let d = r as i32 + rmax;
 
-                    let d = r + rmax;
                     if d <= 2 * rmax && d >= 0 {
                         unsafe {
-                            let vote_incr = acc.unsafe_get_pixel(d as u32, m)[0] + 1;
-                            acc.unsafe_put_pixel(d as u32, m, Luma([vote_incr]));
+                            let vote_incr = acc.unsafe_get_pixel(d as u32, m as u32)[0] + 1;
+                            acc.unsafe_put_pixel(d as u32, m as u32, Luma([vote_incr]));
                         }
                     }
                 }
@@ -82,7 +82,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
             let votes = unsafe { acc_sup.unsafe_get_pixel(r, m)[0] };
             if votes >= options.vote_threshold {
                 let line = PolarLine {
-                    r: r as f32 - rmax as f32,
+                    r: (r as i32 - rmax) as f32,
                     angle_in_degrees: m,
                 };
                 lines.push(line);
@@ -162,9 +162,9 @@ fn intersection_points(
     let sin = theta.sin();
     let cos = theta.cos();
 
-    let right_y = (r - w * cos) / sin;
+    let right_y = cos.mul_add(-w, r) / sin;
     let left_y = r / sin;
-    let bottom_x = (r - h * sin) / cos;
+    let bottom_x = sin.mul_add(-h, r) / cos;
     let top_x = r / cos;
 
     let mut start = None;
@@ -257,56 +257,58 @@ mod test {
         assert_eq!(line.angle_in_degrees, 90);
     }
 
+    fn image_with_polar_line(width: u32, height: u32, r: f32, angle_in_degrees: u32, color: Luma<u8>) -> GrayImage {
+        let mut image = GrayImage::new(width, height);
+        draw_polar_line(&mut image, PolarLine { r, angle_in_degrees }, color);
+        image
+    }
+
     #[test]
     fn draw_polar_line_horizontal() {
-        let mut image = GrayImage::new(5, 5);
-        draw_polar_line(&mut image, PolarLine { r: 2f32, angle_in_degrees: 90}, Luma([1u8]));
+        let actual = image_with_polar_line(5, 5, 2.0, 90, Luma([1]));
         let expected = gray_image!(
             0, 0, 0, 0, 0;
             0, 0, 0, 0, 0;
             1, 1, 1, 1, 1;
             0, 0, 0, 0, 0;
             0, 0, 0, 0, 0);
-        assert_pixels_eq!(image, expected);
+        assert_pixels_eq!(actual, expected);
     }
 
     #[test]
     fn draw_polar_line_vertical() {
-        let mut image = GrayImage::new(5, 5);
-        draw_polar_line(&mut image, PolarLine { r: 2f32, angle_in_degrees: 0}, Luma([1u8]));
+        let actual = image_with_polar_line(5, 5, 2.0, 0, Luma([1]));
         let expected = gray_image!(
             0, 0, 1, 0, 0;
             0, 0, 1, 0, 0;
             0, 0, 1, 0, 0;
             0, 0, 1, 0, 0;
             0, 0, 1, 0, 0);
-        assert_pixels_eq!(image, expected);
+        assert_pixels_eq!(actual, expected);
     }
 
     #[test]
     fn draw_polar_line_bottom_left_to_top_right() {
-        let mut image = GrayImage::new(5, 5);
-        draw_polar_line(&mut image, PolarLine { r: 3.0, angle_in_degrees: 45}, Luma([1u8]));
+        let actual = image_with_polar_line(5, 5, 3.0, 45, Luma([1]));
         let expected = gray_image!(
             0, 0, 0, 0, 1;
             0, 0, 0, 1, 0;
             0, 0, 1, 0, 0;
             0, 1, 0, 0, 0;
             1, 0, 0, 0, 0);
-        assert_pixels_eq!(image, expected);
+        assert_pixels_eq!(actual, expected);
     }
 
     #[test]
     fn draw_polar_line_top_left_to_bottom_right() {
-        let mut image = GrayImage::new(5, 5);
-        draw_polar_line(&mut image, PolarLine { r: 0.0, angle_in_degrees: 135}, Luma([1u8]));
+        let actual = image_with_polar_line(5, 5, 0.0, 135, Luma([1]));
         let expected = gray_image!(
             1, 0, 0, 0, 0;
             0, 1, 0, 0, 0;
             0, 0, 1, 0, 0;
             0, 0, 0, 1, 0;
             0, 0, 0, 0, 1);
-        assert_pixels_eq!(image, expected);
+        assert_pixels_eq!(actual, expected);
     }
 
     macro_rules! test_detect_line {
@@ -317,9 +319,7 @@ mod test {
                     vote_threshold: 10,
                     suppression_radius: 8,
                 };
-                let mut image = GrayImage::new(100, 100);
-                draw_polar_line(&mut image, PolarLine { r: $r, angle_in_degrees: $angle}, Luma([255u8]));
-
+                let image = image_with_polar_line(100, 100, $r, $angle, Luma([255]));
                 let detected = detect_lines(&image, options);
                 assert_eq!(detected.len(), 1);
 
@@ -335,19 +335,40 @@ mod test {
     // https://github.com/PistonDevelopers/imageproc/issues/280
     test_detect_line!(detect_line_neg10_120, -10.0, 120);
 
-    // TODO: This is an exact duplicate of a function in tbe regionlabelling tests.
-    // TODO: Add some unit tests and benchmarks of more interesting cases.
+    macro_rules! bench_detect_lines {
+        ($name:ident, $r:expr, $angle:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let options = LineDetectionOptions {
+                    vote_threshold: 10,
+                    suppression_radius: 8,
+                };
+                let mut image = GrayImage::new(100, 100);
+                draw_polar_line(&mut image, PolarLine { r: $r, angle_in_degrees: $angle}, Luma([255u8]));
+
+                b.iter(|| {
+                    let lines = detect_lines(&image, options);
+                    black_box(lines);
+                });
+            }
+        };
+    }
+
+    bench_detect_lines!(bench_detect_line_50_45, 50.0, 45);
+    bench_detect_lines!(bench_detect_line_eps_135, 0.001, 135);
+    bench_detect_lines!(bench_detect_line_neg10_120, -10.0, 120);
+
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
-            return Luma([255u8]);
-        } else {
-            return Luma([0u8]);
-        })
+        ImageBuffer::from_fn(
+            width,
+            height,
+            |x, y| if (x + y) % 2 == 0 { Luma([255u8]) } else { Luma([0u8]) }
+        )
     }
 
     #[bench]
     fn bench_detect_lines(b: &mut Bencher) {
-        let image = chessboard(200, 200);
+        let image = chessboard(100, 100);
 
         let options = LineDetectionOptions {
             vote_threshold: 10,
