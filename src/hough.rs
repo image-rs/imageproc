@@ -11,9 +11,10 @@ use std::f32;
 /// A detected line, in polar coordinates.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PolarLine {
-    /// Distance of the line from the origin (top-left of the image), in pixels.
+    /// Signed distance of the line from the origin (top-left of the image), in pixels.
     pub r: f32,
     /// Clockwise angle in degrees between the x-axis and the line.
+    /// Always between 0 and 180.
     pub angle_in_degrees: u32,
 }
 
@@ -42,29 +43,29 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
     let rmax = ((width * width + height * height) as f64).sqrt() as i32;
 
     // Measure angles in degrees, and use bins of width 1 pixel and height 1 degree.
-    let mut acc: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(rmax as u32, 180u32);
+    // We use the convention that distances are positive for angles in (0, 180] and
+    // negative for angles in [180, 360).
+    let mut acc: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(2 * rmax as u32 + 1, 180u32);
 
-    let cos_lut: Vec<f32> = (0..180u32).map(|m| degrees_to_radians(m).cos()).collect();
-    let sin_lut: Vec<f32> = (0..180u32).map(|m| degrees_to_radians(m).sin()).collect();
+    // Precalculate values of (cos(m), sin(m))
+    let lut: Vec<(f32, f32)> = (0..180u32)
+        .map(degrees_to_radians)
+        .map(|t| (t.cos(), t.sin()))
+        .collect();
 
     for y in 0..height {
         for x in 0..width {
             let p = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
             if p > 0 {
-                for m in 0..180u32 {
-                    let fy = y as f32;
-                    let fx = x as f32;
+                for (m, (c, s)) in lut.iter().enumerate() {
+                    let r = (x as f32) * c + (y as f32) * s;
+                    let d = r as i32 + rmax;
 
-                    let r = unsafe {
-                        (fx * *cos_lut.get_unchecked(m as usize) +
-                             fy * *sin_lut.get_unchecked(m as usize)) as i32
-                    };
-
-                    if r < rmax && r >= 0 {
+                    if d <= 2 * rmax && d >= 0 {
                         unsafe {
-                            let vote_incr = acc.unsafe_get_pixel(r as u32, m)[0] + 1;
-                            acc.unsafe_put_pixel(r as u32, m, Luma([vote_incr]));
+                            let vote_incr = acc.unsafe_get_pixel(d as u32, m as u32)[0] + 1;
+                            acc.unsafe_put_pixel(d as u32, m as u32, Luma([vote_incr]));
                         }
                     }
                 }
@@ -81,7 +82,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
             let votes = unsafe { acc_sup.unsafe_get_pixel(r, m)[0] };
             if votes >= options.vote_threshold {
                 let line = PolarLine {
-                    r: r as f32,
+                    r: (r as i32 - rmax) as f32,
                     angle_in_degrees: m,
                 };
                 lines.push(line);
@@ -127,7 +128,9 @@ where
 }
 
 /// Returns the intersection points of a `PolarLine` with an image of given width and height,
-/// or `None` if the line and image bounding box are disjoint.
+/// or `None` if the line and image bounding box are disjoint. The x value of an intersection
+/// point lies within the closed interval [0, image_width] and the y value within the closed
+/// interval [0, image_height].
 fn intersection_points(
     line: PolarLine,
     image_width: u32,
@@ -140,7 +143,7 @@ fn intersection_points(
 
     // Vertical line
     if m == 0 {
-        return if r < h {
+        return if r >= 0.0 && r <= w {
             Some(((r, 0.0), (r, h)))
         } else {
             None
@@ -149,7 +152,7 @@ fn intersection_points(
 
     // Horizontal line
     if m == 90 {
-        return if r < w {
+        return if r >= 0.0 && r <= h {
             Some(((0.0, r), (w, r)))
         } else {
             None
@@ -160,14 +163,14 @@ fn intersection_points(
     let sin = theta.sin();
     let cos = theta.cos();
 
-    let right_y = (r - w * cos) / sin;
+    let right_y = cos.mul_add(-w, r) / sin;
     let left_y = r / sin;
-    let bottom_x = (r - h * sin) / cos;
+    let bottom_x = sin.mul_add(-h, r) / cos;
     let top_x = r / cos;
 
     let mut start = None;
 
-    if right_y >= 0.0 && right_y < h {
+    if right_y >= 0.0 && right_y <= h {
         let right_intersect = (w, right_y);
         if let Some(s) = start {
             return Some((s, right_intersect));
@@ -175,7 +178,7 @@ fn intersection_points(
         start = Some(right_intersect);
     }
 
-    if left_y >= 0.0 && left_y < h {
+    if left_y >= 0.0 && left_y <= h {
         let left_intersect = (0.0, left_y);
         if let Some(s) = start {
             return Some((s, left_intersect));
@@ -183,7 +186,7 @@ fn intersection_points(
         start = Some(left_intersect);
     }
 
-    if bottom_x >= 0.0 && bottom_x < w {
+    if bottom_x >= 0.0 && bottom_x <= w {
         let bottom_intersect = (bottom_x, h);
         if let Some(s) = start {
             return Some((s, bottom_intersect));
@@ -191,7 +194,7 @@ fn intersection_points(
         start = Some(bottom_intersect);
     }
 
-    if top_x >= 0.0 && top_x < w {
+    if top_x >= 0.0 && top_x <= w {
         let top_intersect = (top_x, 0.0);
         if let Some(s) = start {
             return Some((s, top_intersect));
@@ -211,6 +214,115 @@ mod test {
     use image::{GrayImage, ImageBuffer, Luma};
     use test::{Bencher, black_box};
 
+    fn assert_points_eq(actual: Option<((f32, f32), (f32, f32))>, expected: Option<((f32, f32), (f32, f32))>) {
+        match (actual, expected) {
+            (None, None) => {}
+            (Some(ps), Some(qs)) => {
+                let points_eq = |p: (f32, f32), q: (f32, f32)| {
+                    (p.0 - q.0).abs() < 1.0e-6 && (p.1 - q.1).abs() < 1.0e-6
+                };
+
+                match (points_eq(ps.0, qs.0), points_eq(ps.1, qs.1)) {
+                    (true, true) => {},
+                    _ => {
+                        panic!("Expected {:?}, got {:?}", expected, actual);
+                    }
+                };
+            },
+            (Some(_), None) => {
+                panic!("Expected None, got {:?}", actual);
+            },
+            (None, Some(_)) => {
+                panic!("Expected {:?}, got None", expected);
+            }
+        }
+    }
+
+    #[test]
+    fn intersection_points_zero_signed_distance() {
+        // Vertical
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 0}, 10, 5),
+            Some(((0.0, 0.0), (0.0, 5.0)))
+        );
+        // Horizontal
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 90}, 10, 5),
+            Some(((0.0, 0.0), (10.0, 0.0)))
+        );
+        // Bottom left to top right
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 45}, 10, 5),
+            Some(((0.0, 0.0), (0.0, 0.0)))
+        );
+        // Top left to bottom right
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 5),
+            Some(((0.0, 0.0), (5.0, 5.0)))
+        );
+        // Top left to bottom right, square image (because a previous version of the code
+        // got this case wrong)
+        assert_points_eq(
+            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 10),
+            Some(((10.0, 10.0), (0.0, 0.0)))
+        );
+    }
+
+    #[test]
+    fn intersection_points_positive_signed_distance() {
+        // Vertical intersecting image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 0}, 10, 5),
+            Some(((9.0, 0.0), (9.0, 5.0)))
+        );
+        // Vertical outside image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 0}, 5, 10),
+            None
+        );
+        // Horizontal intersecting image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 90}, 5, 10),
+            Some(((0.0, 9.0), (5.0, 9.0)))
+        );
+        // Horizontal outside image
+        assert_points_eq(
+            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 90}, 10, 5),
+            None
+        );
+        // Positive gradient
+        assert_points_eq(
+            intersection_points(PolarLine { r: 5.0, angle_in_degrees: 45}, 10, 5),
+            Some(((50f32.sqrt() - 5.0, 5.0), (50f32.sqrt(), 0.0)))
+        );
+    }
+
+    #[test]
+    fn intersection_points_negative_signed_distance() {
+        // Vertical
+        assert_points_eq(
+            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 0}, 10, 5),
+            None
+        );
+        // Horizontal
+        assert_points_eq(
+            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 90}, 5, 10),
+            None
+        );
+        // Negative gradient
+        assert_points_eq(
+            intersection_points(PolarLine { r: -5.0, angle_in_degrees: 135}, 10, 5),
+            Some(((10.0, 10.0 - 50f32.sqrt()), (50f32.sqrt(), 0.0)))
+        );
+    }
+
+    //  --------------------
+    // |                    |
+    // |                    |
+    // |    *****  *****    |
+    // |                    |
+    // |                    |
+    //  --------------------
     fn separated_horizontal_line_segment() -> GrayImage {
         let white = Luma([255u8]);
         let mut image = GrayImage::new(20, 5);
@@ -248,19 +360,118 @@ mod test {
         assert_eq!(line.angle_in_degrees, 90);
     }
 
-    // TODO: This is an exact duplicate of a function in tbe regionlabelling tests.
-    // TODO: Add some unit tests and benchmarks of more interesting cases.
+    fn image_with_polar_line(width: u32, height: u32, r: f32, angle_in_degrees: u32, color: Luma<u8>) -> GrayImage {
+        let mut image = GrayImage::new(width, height);
+        draw_polar_line(&mut image, PolarLine { r, angle_in_degrees }, color);
+        image
+    }
+
+    #[test]
+    fn draw_polar_line_horizontal() {
+        let actual = image_with_polar_line(5, 5, 2.0, 90, Luma([1]));
+        let expected = gray_image!(
+            0, 0, 0, 0, 0;
+            0, 0, 0, 0, 0;
+            1, 1, 1, 1, 1;
+            0, 0, 0, 0, 0;
+            0, 0, 0, 0, 0);
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn draw_polar_line_vertical() {
+        let actual = image_with_polar_line(5, 5, 2.0, 0, Luma([1]));
+        let expected = gray_image!(
+            0, 0, 1, 0, 0;
+            0, 0, 1, 0, 0;
+            0, 0, 1, 0, 0;
+            0, 0, 1, 0, 0;
+            0, 0, 1, 0, 0);
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn draw_polar_line_bottom_left_to_top_right() {
+        let actual = image_with_polar_line(5, 5, 3.0, 45, Luma([1]));
+        let expected = gray_image!(
+            0, 0, 0, 0, 1;
+            0, 0, 0, 1, 0;
+            0, 0, 1, 0, 0;
+            0, 1, 0, 0, 0;
+            1, 0, 0, 0, 0);
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn draw_polar_line_top_left_to_bottom_right() {
+        let actual = image_with_polar_line(5, 5, 0.0, 135, Luma([1]));
+        let expected = gray_image!(
+            1, 0, 0, 0, 0;
+            0, 1, 0, 0, 0;
+            0, 0, 1, 0, 0;
+            0, 0, 0, 1, 0;
+            0, 0, 0, 0, 1);
+        assert_pixels_eq!(actual, expected);
+    }
+
+    macro_rules! test_detect_line {
+        ($name:ident, $r:expr, $angle:expr) => {
+            #[test]
+            fn $name() {
+                let options = LineDetectionOptions {
+                    vote_threshold: 10,
+                    suppression_radius: 8,
+                };
+                let image = image_with_polar_line(100, 100, $r, $angle, Luma([255]));
+                let detected = detect_lines(&image, options);
+                assert_eq!(detected.len(), 1);
+
+                let line = detected[0];
+                assert_approx_eq!(line.r, $r, 1.1);
+                assert_approx_eq!(line.angle_in_degrees as f32, $angle as f32, 5.0);
+            }
+        };
+    }
+
+    test_detect_line!(detect_line_50_45, 50.0, 45);
+    test_detect_line!(detect_line_eps_135, 0.001, 135);
+    // https://github.com/PistonDevelopers/imageproc/issues/280
+    test_detect_line!(detect_line_neg10_120, -10.0, 120);
+
+    macro_rules! bench_detect_lines {
+        ($name:ident, $r:expr, $angle:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let options = LineDetectionOptions {
+                    vote_threshold: 10,
+                    suppression_radius: 8,
+                };
+                let mut image = GrayImage::new(100, 100);
+                draw_polar_line(&mut image, PolarLine { r: $r, angle_in_degrees: $angle}, Luma([255u8]));
+
+                b.iter(|| {
+                    let lines = detect_lines(&image, options);
+                    black_box(lines);
+                });
+            }
+        };
+    }
+
+    bench_detect_lines!(bench_detect_line_50_45, 50.0, 45);
+    bench_detect_lines!(bench_detect_line_eps_135, 0.001, 135);
+    bench_detect_lines!(bench_detect_line_neg10_120, -10.0, 120);
+
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
-            return Luma([255u8]);
-        } else {
-            return Luma([0u8]);
-        })
+        ImageBuffer::from_fn(
+            width,
+            height,
+            |x, y| if (x + y) % 2 == 0 { Luma([255u8]) } else { Luma([0u8]) }
+        )
     }
 
     #[bench]
     fn bench_detect_lines(b: &mut Bencher) {
-        let image = chessboard(200, 200);
+        let image = chessboard(100, 100);
 
         let options = LineDetectionOptions {
             vote_threshold: 10,
