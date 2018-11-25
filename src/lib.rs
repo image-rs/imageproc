@@ -13,6 +13,9 @@ extern crate quickcheck;
 extern crate rand;
 extern crate rusttype;
 extern crate rayon;
+#[cfg(test)]
+#[macro_use]
+extern crate assert_approx_eq;
 
 #[macro_use]
 pub mod utils;

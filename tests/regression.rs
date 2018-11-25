@@ -14,7 +14,7 @@ extern crate imageproc;
 use std::ops::Deref;
 use std::path::Path;
 use std::f32;
-use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, RgbImage, RgbaImage};
+use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, Rgb, RgbImage, RgbaImage};
 use imageproc::utils::{load_image_or_panic};
 use imageproc::affine::{affine, Affine2, Interpolation, rotate_about_center};
 use imageproc::edges::canny;
@@ -312,7 +312,6 @@ fn test_draw_convex_polygon() {
 
 #[test]
 fn test_draw_cubic_bezier_curve() {
-    use image::{Rgb};
     use imageproc::drawing::draw_cubic_bezier_curve_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -342,7 +341,6 @@ fn test_draw_cubic_bezier_curve() {
 
 #[test]
 fn test_draw_hollow_ellipse() {
-    use image::{Rgb};
     use imageproc::drawing::draw_hollow_ellipse_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -370,7 +368,6 @@ fn test_draw_hollow_ellipse() {
 
 #[test]
 fn test_draw_filled_ellipse() {
-    use image::{Rgb};
     use imageproc::drawing::draw_filled_ellipse_mut;
 
     let red = Rgb([255, 0, 0]);
@@ -393,5 +390,50 @@ fn test_draw_filled_ellipse() {
     else {
         let truth = load_truth_image("filled_ellipse.png").to_rgb();
         assert_pixels_eq!(image, truth);
+    }
+}
+
+#[test]
+fn test_hough_line_detection() {
+    use imageproc::map::map_colors;
+    use imageproc::hough::{
+        detect_lines,
+        draw_polar_lines,
+        LineDetectionOptions,
+        PolarLine
+    };
+
+    let white = Rgb([255u8, 255u8, 255u8]);
+    let black = Rgb([0u8, 0u8, 0u8]);
+    let green = Rgb([0u8, 255u8, 0u8]);
+
+    let image = GrayImage::new(100, 100);
+    let image = draw_polar_lines(
+        &image,
+        &vec![
+            PolarLine { r: 50.0, angle_in_degrees: 0 },
+            PolarLine { r: 50.0, angle_in_degrees: 45 },
+            PolarLine { r: 50.0, angle_in_degrees: 90 },
+            PolarLine { r: -10.0, angle_in_degrees: 120 },
+            PolarLine { r: 0.01, angle_in_degrees: 135 }
+        ],
+        Luma([255u8])
+    );
+    let options = LineDetectionOptions {
+        vote_threshold: 40,
+        suppression_radius: 8
+    };
+    let lines: Vec<PolarLine> = detect_lines(&image, options);
+    let color_edges = map_colors(&image, |p| if p[0] > 0 { white } else { black });
+
+    // Draw detected lines on top of original image
+    let lines_image = draw_polar_lines(&color_edges, &lines, green);
+
+    if REGENERATE {
+        save_truth_image(&lines_image, "hough_lines.png");
+    }
+    else {
+        let truth = load_truth_image("hough_lines.png").to_rgb();
+        assert_pixels_eq!(lines_image, truth);
     }
 }
