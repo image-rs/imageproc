@@ -218,7 +218,10 @@ mod test {
         match (actual, expected) {
             (None, None) => {}
             (Some(ps), Some(qs)) => {
-                let points_eq = |p: (f32, f32), q: (f32, f32)| { (p.0 - q.0).abs() < 1.0e-6 && (p.1 - q.1).abs() < 1.0e-6 };
+                let points_eq = |p: (f32, f32), q: (f32, f32)| {
+                    (p.0 - q.0).abs() < 1.0e-6 && (p.1 - q.1).abs() < 1.0e-6
+                };
+
                 match (points_eq(ps.0, qs.0), points_eq(ps.1, qs.1)) {
                     (true, true) => {},
                     _ => {
