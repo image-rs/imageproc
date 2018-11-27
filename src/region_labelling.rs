@@ -21,6 +21,10 @@ pub enum Connectivity {
 /// or 0 if it's in the background. Input pixels are treated as belonging
 /// to the background if and only if they are equal to the provided background pixel.
 ///
+/// # Panics
+/// Panics if the image contains 2<sup>32</sup> or more pixels. If this limitation causes you
+/// problems then open an issue and we can rewrite this function to support larger images.
+///
 /// # Examples
 ///
 /// ```
@@ -124,6 +128,11 @@ where
     I::Pixel: Eq,
 {
     let (width, height) = image.dimensions();
+    let image_size = width as usize * height as usize;
+    if image_size >= 2usize.pow(32) {
+        panic!("Images with 2^32 or more pixels are not supported");
+    }
+
     let mut out = ImageBuffer::new(width, height);
 
     // TODO: add macro to abandon early if either dimension is zero
@@ -131,7 +140,7 @@ where
         return out;
     }
 
-    let image_size = (width * height) as usize;
+    
     let mut forest = DisjointSetForest::new(image_size);
     let mut adj_labels = [0u32; 4];
     let mut next_label = 1;
