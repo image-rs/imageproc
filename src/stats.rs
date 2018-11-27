@@ -1,33 +1,53 @@
 //! Statistical properties of images.
 
 use image::{GenericImage, GrayImage, Pixel, Primitive};
-
+use definitions::Image;
 use num::Bounded;
 use math::cast;
 use conv::ValueInto;
 
-/// Returns the histogram of grayscale values in an 8bpp
-/// grayscale image.
-pub fn histogram(image: &GrayImage) -> [u32; 256] {
-    let mut hist = [0u32; 256];
-
-    for pix in image.iter() {
-        hist[*pix as usize] += 1;
-    }
-
-    hist
+/// A set of per-channel histograms from an image with 8 bits per channel.
+pub struct ChannelHistogram {
+    /// Per-channel histograms.
+    pub channels: Vec<[u32; 256]>
 }
 
-/// Returns the cumulative histogram of grayscale values in an 8bpp
-/// grayscale image.
-pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
-    let mut hist = histogram(image);
+/// Returns a vector of per-channel histograms.
+pub fn histogram<P>(image: &Image<P>) -> ChannelHistogram
+where
+    P: Pixel<Subpixel=u8> + 'static
+{
+    let mut hist = vec![[0u32; 256]; P::channel_count() as usize];
 
-    for i in 1..hist.len() {
-        hist[i] += hist[i - 1];
+    for pix in image.pixels() {
+        for (i, c) in pix.channels().iter().enumerate() {
+            hist[i][*c as usize] += 1;
+        }
     }
 
-    hist
+    ChannelHistogram { channels: hist }
+}
+
+/// A set of per-channel cumulative histograms from an image with 8 bits per channel.
+pub struct CumulativeChannelHistogram {
+    /// Per-channel cumulative histograms.
+    pub channels: Vec<[u32; 256]>
+}
+
+/// Returns per-channel cumulative histograms.
+pub fn cumulative_histogram<P>(image: &Image<P>) -> CumulativeChannelHistogram
+where
+    P: Pixel<Subpixel=u8> + 'static
+{
+    let mut hist = histogram(image);
+
+    for c in 0..hist.channels.len() {
+        for i in 1..hist.channels[c].len() {
+            hist.channels[c][i] += hist.channels[c][i - 1];
+        }
+    }
+
+    CumulativeChannelHistogram { channels: hist.channels }
 }
 
 /// Returns the `p`th percentile of the pixel intensities in an image.
@@ -67,7 +87,7 @@ pub fn cumulative_histogram(image: &GrayImage) -> [u32; 256] {
 pub fn percentile(image: &GrayImage, p: u8) -> u8 {
     assert!(p <= 100, "requested percentile must be <= 100");
 
-    let cum_hist = cumulative_histogram(&image);
+    let cum_hist = cumulative_histogram(&image).channels[0];
     let total = cum_hist[255] as u64;
 
     for i in 0..256 {
@@ -139,24 +159,68 @@ mod test {
     #[test]
     fn test_cumulative_histogram() {
         let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
-        let hist = cumulative_histogram(&image);
+        let hist = cumulative_histogram(&image).channels[0];
 
-        assert_eq!(hist[0], 0);
-        assert_eq!(hist[1], 2);
-        assert_eq!(hist[2], 4);
-        assert_eq!(hist[3], 5);
+        assert_eq!(hist[0..4], [0, 2, 4, 5]);
         assert!(hist.iter().skip(4).all(|x| *x == 5));
+    }
+
+    #[test]
+    fn test_cumulative_histogram_rgb() {
+        let image = rgb_image!(
+            [1u8, 10u8, 1u8], [2u8, 20u8, 2u8], [3u8, 30u8, 3u8], [2u8, 20u8, 2u8], [1u8, 10u8, 1u8]
+        );
+
+        let hist = cumulative_histogram(&image);
+        let r = hist.channels[0];
+        let g = hist.channels[1];
+        let b = hist.channels[2];
+
+        assert_eq!(r[0..4], [0, 2, 4, 5]);
+        assert!(r.iter().skip(4).all(|x| *x == 5));
+
+        assert_eq!(g[0..10], [0; 10]);
+        assert_eq!(g[10..20], [2; 10]);
+        assert_eq!(g[20..30], [4; 10]);
+        assert_eq!(g[30], 5);
+        assert!(b.iter().skip(30).all(|x| *x == 5));
+
+        assert_eq!(b[0..4], [0, 2, 4, 5]);
+        assert!(b.iter().skip(4).all(|x| *x == 5));
     }
 
     #[test]
     fn test_histogram() {
         let image = gray_image!(1u8, 2u8, 3u8, 2u8, 1u8);
-        let hist = histogram(&image);
+        let hist = histogram(&image).channels[0];
 
-        assert_eq!(hist[0], 0);
-        assert_eq!(hist[1], 2);
-        assert_eq!(hist[2], 2);
-        assert_eq!(hist[3], 1);
+        assert_eq!(hist[0..4], [0, 2, 2, 1]);
+    }
+
+    #[test]
+    fn test_histogram_rgb() {
+        let image = rgb_image!(
+            [1u8, 10u8, 1u8], [2u8, 20u8, 2u8], [3u8, 30u8, 3u8], [2u8, 20u8, 2u8], [1u8, 10u8, 1u8]
+        );
+
+        let hist = histogram(&image);
+        let r = hist.channels[0];
+        let g = hist.channels[1];
+        let b = hist.channels[2];
+
+        assert_eq!(r[0..4], [0, 2, 2, 1]);
+        assert!(r.iter().skip(4).all(|x| *x == 0));
+
+        assert_eq!(g[0..10], [0; 10]);
+        assert_eq!(g[10], 2);
+        assert_eq!(g[11..20], [0; 9]);
+        assert_eq!(g[20], 2);
+        assert_eq!(g[21..30], [0; 9]);
+        assert_eq!(g[30], 1);
+        assert!(b.iter().skip(30).all(|x| *x == 0));
+
+        assert_eq!(b[0..4], [0, 2, 2, 1]);
+        assert!(b.iter().skip(4).all(|x| *x == 0));
     }
 
     #[test]
