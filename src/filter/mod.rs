@@ -26,9 +26,11 @@ use std::f32;
 // TODO: directly instead of using an integral image.
 // TODO: more formats!
 pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
-
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
+    if width == 0 || height == 0 {
+        return out;
+    }
 
     let kernel_width = 2 * x_radius + 1;
     let kernel_height = 2 * y_radius + 1;
@@ -429,6 +431,13 @@ mod test {
     use image::imageops::blur;
     use test::{Bencher, black_box};
     use std::cmp::{min, max};
+
+    #[test]
+    fn test_box_filter_handles_empty_images() {
+        let _ = box_filter(&GrayImage::new(0, 0), 3, 3);
+        let _ = box_filter(&GrayImage::new(1, 0), 3, 3);
+        let _ = box_filter(&GrayImage::new(0, 1), 3, 3);
+    }
 
     #[test]
     fn test_box_filter() {
