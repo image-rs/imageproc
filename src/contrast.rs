@@ -51,7 +51,7 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     let total_weight = width * height;
 
     // Sum of all pixel intensities, to use when calculating means.
-    let total_pixel_sum = hist.iter().enumerate().fold(0f64, |sum, (t, h)| {
+    let total_pixel_sum = hist.channels[0].iter().enumerate().fold(0f64, |sum, (t, h)| {
         sum + (t as u32 * h) as f64
     });
 
@@ -67,7 +67,7 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     let mut largest_variance = 0f64;
     let mut best_threshold = 0u8;
 
-    for (threshold, hist_count) in hist.iter().enumerate() {
+    for (threshold, hist_count) in hist.channels[0].iter().enumerate() {
         background_weight = background_weight + hist_count;
         if background_weight == 0 {
             continue;
@@ -160,7 +160,7 @@ pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
 /// Equalises the histogram of an 8bpp grayscale image in place. See also
 /// [histogram equalization (wikipedia)](https://en.wikipedia.org/wiki/Histogram_equalization).
 pub fn equalize_histogram_mut(image: &mut GrayImage) {
-    let hist = cumulative_histogram(image);
+    let hist = cumulative_histogram(image).channels[0];
     let total = hist[255] as f32;
 
     image.par_iter_mut().for_each(|p| {
@@ -180,8 +180,8 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
 /// histogram is as close as possible to that of the target image.
 pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
-    let image_histc = cumulative_histogram(image);
-    let target_histc = cumulative_histogram(target);
+    let image_histc = cumulative_histogram(image).channels[0];
+    let target_histc = cumulative_histogram(target).channels[0];
     let lut = histogram_lut(&image_histc, &target_histc);
 
     for p in image.iter_mut() {
