@@ -1,5 +1,12 @@
-//! An image processing library, based on the
-//! [image](https://github.com/PistonDevelopers/image) crate.
+//! An image processing library based on the
+//! [image] crate.
+//!
+//! Note that the image crate contains some image
+//! processing functions (including image resizing) in its
+//! `imageops` module, so check there if you cannot find
+//! a standard image processing function in this crate.
+//!
+//! [image]: https://github.com/PistonDevelopers/image
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 
