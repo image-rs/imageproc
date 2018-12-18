@@ -245,7 +245,7 @@ mod tests {
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrors);
 
-        bench_match_template!(
+    bench_match_template!(
         bench_match_template_s100_t1_sse_norm,
         image_size: 100,
         template_size: 1,
