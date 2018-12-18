@@ -1,9 +1,10 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImageView, Pixel};
+use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive};
 use definitions::Image;
 use map::{ChannelMap, WithChannel};
+use std::ops::AddAssign;
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
 ///
@@ -92,9 +93,10 @@ where
 }
 
 /// Implementation of `integral_image` and `integral_squared_image`.
-fn integral_image_impl<P>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, u32>>
+fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -102,18 +104,18 @@ where
     let out_width = in_width + 1;
     let out_height = in_height + 1;
 
-    let mut out = Image::<ChannelMap<P, u32>>::new(out_width, out_height);
+    let mut out = Image::<ChannelMap<P, T>>::new(out_width, out_height);
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
     for y in 1..out_height {
-        let mut sum = vec![0u32; P::channel_count() as usize];
+        let mut sum = vec![T::zero(); P::channel_count() as usize];
         for x in 1..out_width {
             unsafe {
                 for c in 0..P::channel_count() {
-                    let pix = image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize] as u32;
+                    let pix: T = (image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize]).into();
                     if square {
                         sum[c as usize] += pix * pix;
                     } else {
