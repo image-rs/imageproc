@@ -139,13 +139,21 @@ mod tests {
     #[test]
     #[should_panic]
     fn match_template_panics_if_image_width_does_is_less_than_template_width() {
-        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(6, 5), MatchTemplateMethod::SumOfSquaredErrors);
+        let _ = match_template(
+            &GrayImage::new(5, 5),
+            &GrayImage::new(6, 5),
+            MatchTemplateMethod::SumOfSquaredErrors
+        );
     }
 
     #[test]
     #[should_panic]
     fn match_template_panics_if_image_height_is_less_than_template_height() {
-        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(5, 6), MatchTemplateMethod::SumOfSquaredErrors);
+        let _ = match_template(
+            &GrayImage::new(5, 5),
+            &GrayImage::new(5, 6), 
+            MatchTemplateMethod::SumOfSquaredErrors
+        );
     }
 
     #[test]
