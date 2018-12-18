@@ -464,7 +464,7 @@ where
     // Width of a column containing rendered pixels
     let pixel_column_width = rendered_pixels.iter().map(|p| p.len()).max().unwrap() + 1;
     // Maximum number of digits required to display a row or column number
-    let max_digits = (max(right, bottom) as f64).log10().ceil() as usize;
+    let max_digits = (max(1, max(right, bottom)) as f64).log10().ceil() as usize;
     // Each pixel column is labelled with its column number
     let pixel_column_width = pixel_column_width.max(max_digits + 1);
     let num_columns = (right - left + 1) as usize;
@@ -556,7 +556,8 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
 
 #[cfg(test)]
 mod test {
-    
+    use super::*;
+
     #[test]
     fn test_assert_pixels_eq_passes() {
         let image = gray_image!(
@@ -605,5 +606,13 @@ mod test {
             10, 11, 12);
 
         assert_pixels_eq_within!(diff, image, 1);
+    }
+
+    #[test]
+    fn test_pixel_diff_summary_handles_1x1_image() {
+        let summary = pixel_diff_summary(&gray_image!(1), &gray_image!(0));
+        assert_eq!(
+            &summary.unwrap()[0..19],
+            "pixels do not match");
     }
 }
