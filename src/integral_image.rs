@@ -38,7 +38,7 @@ use std::ops::AddAssign;
 ///     0,  1,  3,  6;
 ///     0,  5, 12, 21);
 ///
-/// assert_pixels_eq!(integral_image(&image), integral);
+/// assert_pixels_eq!(integral_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of all pixels in the right two columns
 /// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 2 + 3 + 5 + 6);
@@ -47,9 +47,10 @@ use std::ops::AddAssign;
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 2 + 3);
 /// # }
 /// ```
-pub fn integral_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     integral_image_impl(image, false)
 }
@@ -76,7 +77,7 @@ where
 ///     0,  1,  5, 14;
 ///     0, 17, 46, 91);
 ///
-/// assert_pixels_eq!(integral_squared_image(&image), integral);
+/// assert_pixels_eq!(integral_squared_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of the squares of all pixels in the right two columns
 /// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 4 + 9 + 25 + 36);
@@ -85,9 +86,10 @@ where
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 4 + 9);
 /// # }
 /// ```
-pub fn integral_squared_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     integral_image_impl(image, true)
 }
@@ -367,7 +369,7 @@ mod test {
             0,  1,  3,  6;
             0,  5, 12, 21);
 
-        assert_pixels_eq!(integral_image(&image), expected);
+        assert_pixels_eq!(integral_image::<_, u32>(&image), expected);
     }
 
     #[test]
@@ -381,14 +383,14 @@ mod test {
             [0, 0, 0],  [1, 11, 21], [ 3, 23, 43], [ 6, 36,  66];
             [0, 0, 0],  [5, 25, 45], [12, 52, 92], [21, 81, 141]);
 
-        assert_pixels_eq!(integral_image(&image), expected);
+        assert_pixels_eq!(integral_image::<_, u32>(&image), expected);
     }
 
     #[bench]
     fn bench_integral_image_gray(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let integral = integral_image(&image);
+            let integral = integral_image::<_, u32>(&image);
             test::black_box(integral);
         });
     }
@@ -397,7 +399,7 @@ mod test {
     fn bench_integral_image_rgb(b: &mut test::Bencher) {
         let image = rgb_bench_image(500, 500);
         b.iter(|| {
-            let integral = integral_image(&image);
+            let integral = integral_image::<_, u32>(&image);
             test::black_box(integral);
         });
     }
