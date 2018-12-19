@@ -10,7 +10,6 @@ homepage = "https://github.com/PistonDevelopers/imageproc"
 exclude = ["examples/*.ttf"]
 
 [dependencies]
-assert_approx_eq = "1.0.0"
 conv = "0.3.1"
 image = "0.20.0"
 itertools = "0.7.0"
@@ -20,6 +19,7 @@ rusttype = "0.7"
 rayon = "1.0"
 
 [dev-dependencies]
+assert_approx_eq = "1.0.0"
 quickcheck = "0.6"
 
 [profile.release]
