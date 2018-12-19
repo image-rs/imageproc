@@ -2,7 +2,7 @@
 //!
 //! [Haar-like features]: https://en.wikipedia.org/wiki/Haar-like_features
 
-use definitions::{HasBlack, HasWhite, Image};
+use crate::definitions::{HasBlack, HasWhite, Image};
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 use itertools::Itertools;
 use std::marker::PhantomData;
@@ -395,11 +395,11 @@ pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use integral_image::{integral_image, sum_image_pixels};
-    use utils::gray_bench_image;
-    use test;
+    use crate::integral_image::{integral_image, sum_image_pixels};
+    use crate::utils::gray_bench_image;
+    use ::test;
 
     #[test]
     fn test_block_sizes() {

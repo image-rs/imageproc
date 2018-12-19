@@ -2,8 +2,8 @@
 
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 
-use definitions::Image;
-use union_find::DisjointSetForest;
+use crate::definitions::Image;
+use crate::union_find::DisjointSetForest;
 use std::cmp;
 
 /// Determines which neighbors of a pixel we consider
@@ -244,12 +244,12 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::connected_components;
     use super::Connectivity::{Four, Eight};
-    use definitions::{HasBlack, HasWhite};
+    use crate::definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
-    use test;
+    use ::test;
 
     #[test]
     fn test_connected_components_eight_white_background() {

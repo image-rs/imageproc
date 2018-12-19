@@ -4,7 +4,7 @@
 use std::cmp::min;
 use std::{u8, f64};
 use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
-use definitions::Image;
+use crate::definitions::Image;
 
 /// How to measure distance between coordinates.
 /// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
@@ -388,15 +388,15 @@ fn intersection<S: Source + ?Sized>(f: &S, p: usize, q: usize) -> f64 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use std::cmp::max;
-    use definitions::Image;
+    use crate::definitions::Image;
     use std::f64;
-    use property_testing::GrayTestImage;
+    use crate::property_testing::GrayTestImage;
     use quickcheck::{quickcheck, TestResult};
-    use utils::{pixel_diff_summary, gray_bench_image};
+    use crate::utils::{pixel_diff_summary, gray_bench_image};
     use test::{Bencher, black_box};
 
     #[test]

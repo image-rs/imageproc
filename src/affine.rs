@@ -1,8 +1,8 @@
 //! Functions for affine transformations of images.
 
 use image::{Pixel, GenericImage, GenericImageView, ImageBuffer};
-use definitions::{Clamp, HasBlack, Image};
-use math::cast;
+use crate::definitions::{Clamp, HasBlack, Image};
+use crate::math::cast;
 use conv::ValueInto;
 use std::ops::Mul;
 
@@ -378,11 +378,11 @@ fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> 
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test;
+    use ::test;
 
     #[test]
     fn test_rotate_nearest_zero_radians() {

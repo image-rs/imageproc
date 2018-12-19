@@ -4,7 +4,7 @@
 
 use std::u8;
 use image::GrayImage;
-use distance_transform::{DistanceFrom, distance_transform_impl, distance_transform_mut, Norm};
+use crate::distance_transform::{DistanceFrom, distance_transform_impl, distance_transform_mut, Norm};
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -320,10 +320,10 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::*;
+    use ::test::*;
     use std::cmp::{max, min};
 
     #[test]

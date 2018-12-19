@@ -2,8 +2,6 @@
 //! If running from the root directory of this crate you can test on the
 //! wrench image in /examples by running
 //! `cargo run --example hough ./examples/wrench.jpg ./tmp`
-extern crate image;
-extern crate imageproc;
 
 use std::env;
 use std::path::Path;

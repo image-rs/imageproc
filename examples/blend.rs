@@ -1,8 +1,5 @@
 //! Demonstrates the current incorrect handling of gamma for RGB images
 
-extern crate image;
-extern crate imageproc;
-
 use image::{ImageBuffer, Rgb};
 use imageproc::pixelops::interpolate;
 

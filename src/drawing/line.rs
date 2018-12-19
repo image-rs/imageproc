@@ -1,5 +1,5 @@
 use image::{GenericImage, ImageBuffer, Pixel};
-use definitions::Image;
+use crate::definitions::Image;
 use std::mem::{swap, transmute};
 use std::f32;
 use std::i32;
@@ -99,7 +99,7 @@ pub struct BresenhamLinePixelIter<'a, P: Pixel + 'static> {
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
     /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<P> {
+    pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIter does not support empty images");
         BresenhamLinePixelIter {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
@@ -126,7 +126,7 @@ pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<P> {
+    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
         BresenhamLinePixelIterMut {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
@@ -257,7 +257,7 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
 }
 
 fn plot_wu_line<I, T, B>(
-    mut plotter: Plotter<I, T, B>,
+    mut plotter: Plotter<'_, I, T, B>,
     start: (i32, i32),
     end: (i32, i32),
     color: I::Pixel,
@@ -279,7 +279,7 @@ fn plot_wu_line<I, T, B>(
     }
 }
 
-struct Plotter<'a, I: 'a, T, B>
+struct Plotter<'a, I, T, B>
 where
     I: GenericImage,
     I::Pixel: 'static,
@@ -317,10 +317,9 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     // As draw_line_segment is implemented in terms of BresenhamLineIter we
     // haven't bothered wriing any tests specifically for BresenhamLineIter itself.
@@ -462,7 +461,7 @@ mod test {
     #[test]
     fn test_draw_antialiased_line_segment_horizontal_and_vertical() {
         use image::imageops::rotate270;
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -494,7 +493,7 @@ mod test {
     #[test]
     fn test_draw_antialiased_line_segment_diagonal() {
         use image::imageops::rotate90;
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -521,7 +520,7 @@ mod test {
 
     #[test]
     fn test_draw_antialiased_line_segment_oct7_and_oct3() {
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -545,7 +544,7 @@ mod test {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
             fn $name(b: &mut test::Bencher) {
-                use pixelops::interpolate;
+                use crate::pixelops::interpolate;
                 use super::draw_antialiased_line_segment_mut;
 
                 let mut image = GrayImage::new(500, 500);

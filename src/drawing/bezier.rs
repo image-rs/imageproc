@@ -1,8 +1,8 @@
 use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use crate::definitions::Image;
 use std::f32;
 use std::i32;
-use drawing::line::draw_line_segment_mut;
+use crate::drawing::line::draw_line_segment_mut;
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
 pub fn draw_cubic_bezier_curve<I>(
@@ -71,10 +71,8 @@ pub fn draw_cubic_bezier_curve_mut<I>(
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod tests {
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     macro_rules! bench_cubic_bezier_curve {
         ($name:ident, $start:expr, $end:expr, $control_a:expr, $control_b:expr) => {

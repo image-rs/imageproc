@@ -3,9 +3,9 @@
 use image::{GenericImage, ImageBuffer, Pixel};
 use rand::{SeedableRng, StdRng};
 use rand::distributions::{IndependentSample, Normal, Range};
-use definitions::{Clamp, HasBlack, HasWhite, Image};
+use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
 use conv::ValueInto;
-use math::cast;
+use crate::math::cast;
 
 /// Adds independent additive Gaussian noise to all channels
 /// of an image, with the given mean and standard deviation.
@@ -94,7 +94,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::GrayImage;
     use test::{Bencher, black_box};

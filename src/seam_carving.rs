@@ -3,10 +3,10 @@
 //!
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
-use gradients::sobel_gradient_map;
+use crate::gradients::sobel_gradient_map;
 use image::{GrayImage, Luma, Pixel, Rgb};
-use definitions::{HasBlack, Image};
-use map::{map_colors, WithChannel};
+use crate::definitions::{HasBlack, Image};
+use crate::map::{map_colors, WithChannel};
 use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
@@ -173,10 +173,10 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use test::{Bencher, black_box};
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
 
     macro_rules! bench_shrink_width {
         ($name:ident, side: $s:expr, shrink_by: $m:expr) => {

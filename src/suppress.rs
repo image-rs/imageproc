@@ -1,7 +1,7 @@
 //! Functions for suppressing non-maximal values.
 
 use std::cmp;
-use definitions::{Position, Score};
+use crate::definitions::{Position, Score};
 use image::{GenericImage, ImageBuffer, Luma, Primitive};
 use itertools::Itertools;
 
@@ -172,16 +172,16 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{local_maxima, suppress_non_maximum};
-    use definitions::{Position, Score};
+    use crate::definitions::{Position, Score};
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
-    use noise::gaussian_noise_mut;
+    use crate::noise::gaussian_noise_mut;
     use std::cmp;
     use quickcheck::{quickcheck, TestResult};
     use itertools::Itertools;
-    use property_testing::GrayTestImage;
-    use utils::pixel_diff_summary;
+    use crate::property_testing::GrayTestImage;
+    use crate::utils::pixel_diff_summary;
     use test::Bencher;
 
     #[derive(PartialEq, Debug, Copy, Clone)]

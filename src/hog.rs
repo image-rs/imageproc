@@ -2,9 +2,9 @@
 //! and helpers for visualizing them.
 
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use gradients::{horizontal_sobel, vertical_sobel};
-use definitions::{Clamp, Image};
-use math::l2_norm;
+use crate::gradients::{horizontal_sobel, vertical_sobel};
+use crate::definitions::{Clamp, Image};
+use crate::math::l2_norm;
 use num::Zero;
 use std::f32;
 
@@ -62,12 +62,12 @@ pub struct HogSpec {
 impl HogSpec {
     /// Returns an error message if image dimensions aren't compatible with the provided options.
     pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
-        let (cells_wide, cells_high) = try!(Self::checked_cell_dimensions(
+        let (cells_wide, cells_high) = r#try!(Self::checked_cell_dimensions(
             width as usize,
             height as usize,
             options,
         ));
-        let (blocks_wide, blocks_high) = try!(Self::checked_block_dimensions(
+        let (blocks_wide, blocks_high) = r#try!(Self::checked_block_dimensions(
             cells_wide,
             cells_high,
             options,
@@ -222,7 +222,7 @@ pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
 
 /// Computes the HoG descriptor of an image. Assumes that the spec and grid
 /// dimensions are consistent.
-fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
+fn hog_descriptor_from_hist_grid(grid: View3d<'_, f32>, spec: HogSpec) -> Vec<f32> {
 
     let mut descriptor = Array3d::new(spec.block_grid_lengths());
     {
@@ -263,7 +263,7 @@ fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
 }
 
 /// L2 norm of the block descriptor at given location within an image descriptor.
-fn block_norm(view: &View3d<f32>, bx: usize, by: usize) -> f32 {
+fn block_norm(view: &View3d<'_, f32>, bx: usize, by: usize) -> f32 {
     let block_data = view.inner_slice(bx, by);
     l2_norm(block_data)
 }
@@ -335,7 +335,7 @@ pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
 }
 
 /// True if the given outer two indices into a view are within bounds.
-fn contains_outer<T>(view: &View3d<T>, u: usize, v: usize) -> bool {
+fn contains_outer<T>(view: &View3d<'_, T>, u: usize, v: usize) -> bool {
     u < view.lengths[1] && v < view.lengths[2]
 }
 
@@ -396,7 +396,7 @@ impl Interpolation {
 /// Note that we ignore block-level aggregation or normalisation here.
 /// Each rendered star has side length `star_side`, so the image will have
 /// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
-pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Image<Luma<u8>> {
+pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) -> Image<Luma<u8>> {
     let width = grid.lengths[1] as u32 * star_side;
     let height = grid.lengths[2] as u32 * star_side;
     let mut out = ImageBuffer::new(width, height);
@@ -424,7 +424,7 @@ where
 {
 
     use std::cmp;
-    use drawing::draw_line_segment_mut;
+    use crate::drawing::draw_line_segment_mut;
 
     let (width, height) = image.dimensions();
     let scale = cmp::max(width, height) as f32 / 2f32;
@@ -469,7 +469,7 @@ pub struct Array3d<T> {
 }
 
 /// A view into a 3d array.
-pub struct View3d<'a, T: 'a> {
+pub struct View3d<'a, T> {
     /// The underlying data.
     data: &'a mut [T],
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
@@ -487,7 +487,7 @@ impl<T: Zero + Clone> Array3d<T> {
     }
 
     /// Provides a 3d view of the data.
-    pub fn view_mut(&mut self) -> View3d<T> {
+    pub fn view_mut(&mut self) -> View3d<'_, T> {
         View3d::from_raw(&mut self.data, self.lengths)
     }
 }
@@ -531,10 +531,10 @@ fn data_length(lengths: [usize; 3]) -> usize {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use utils::gray_bench_image;
-    use test;
+    use crate::utils::gray_bench_image;
+    use ::test;
 
     #[test]
     fn test_num_blocks() {

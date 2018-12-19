@@ -1,9 +1,9 @@
 use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use crate::definitions::Image;
 use std::f32;
 use std::i32;
-use drawing::draw_if_in_bounds;
-use drawing::line::draw_line_segment_mut;
+use crate::drawing::draw_if_in_bounds;
+use crate::drawing::line::draw_line_segment_mut;
 
 /// Draw as much of an ellipse as lies inside the image bounds.
 /// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
@@ -285,10 +285,8 @@ where
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod tests {
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {

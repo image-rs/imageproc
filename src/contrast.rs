@@ -2,9 +2,9 @@
 
 use std::cmp::{min, max};
 use image::{GrayImage, ImageBuffer, Luma};
-use definitions::{HasBlack, HasWhite};
-use integral_image::{integral_image, sum_image_pixels};
-use stats::{cumulative_histogram, histogram};
+use crate::definitions::{HasBlack, HasWhite};
+use crate::integral_image::{integral_image, sum_image_pixels};
+use crate::stats::{cumulative_histogram, histogram};
 use rayon::prelude::*;
 
 /// Applies an adaptive threshold to an image.
@@ -290,10 +290,10 @@ pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    use definitions::{HasBlack, HasWhite};
-    use utils::gray_bench_image;
+    use crate::definitions::{HasBlack, HasWhite};
+    use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
     use test::{Bencher, black_box};
 

@@ -12,14 +12,6 @@
 
 #[cfg(test)]
 extern crate test;
-extern crate conv;
-extern crate image;
-extern crate itertools;
-extern crate num;
-extern crate quickcheck;
-extern crate rand;
-extern crate rusttype;
-extern crate rayon;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_approx_eq;

@@ -2,8 +2,8 @@
 
 use image::Pixel;
 use conv::ValueInto;
-use math::cast;
-use definitions::Clamp;
+use crate::math::cast;
+use crate::definitions::Clamp;
 
 /// Adds pixels with the given weights. Results are clamped to prevent arithmetical overflows.
 ///
@@ -64,7 +64,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{Rgb, Luma};
     use test::{Bencher, black_box};
