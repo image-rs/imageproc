@@ -71,7 +71,7 @@ pub fn draw_cubic_bezier_curve_mut<I>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use test::{Bencher, black_box};

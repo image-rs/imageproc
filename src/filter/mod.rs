@@ -423,7 +423,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};

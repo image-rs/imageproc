@@ -172,7 +172,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{local_maxima, suppress_non_maximum};
     use crate::definitions::{Position, Score};
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};

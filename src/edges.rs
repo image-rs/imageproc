@@ -162,7 +162,7 @@ fn hysteresis(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;

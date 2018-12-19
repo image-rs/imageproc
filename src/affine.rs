@@ -378,7 +378,7 @@ fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> 
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};

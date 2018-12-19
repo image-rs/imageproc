@@ -388,7 +388,7 @@ fn intersection<S: Source + ?Sized>(f: &S, p: usize, q: usize) -> f64 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use std::cmp::max;

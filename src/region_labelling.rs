@@ -244,7 +244,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::connected_components;
     use super::Connectivity::{Four, Eight};
     use crate::definitions::{HasBlack, HasWhite};

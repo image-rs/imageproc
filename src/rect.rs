@@ -163,7 +163,7 @@ impl RectPosition {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{Rect, Region};
 
     #[test]

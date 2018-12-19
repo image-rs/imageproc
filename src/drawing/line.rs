@@ -317,7 +317,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use test::{Bencher, black_box};

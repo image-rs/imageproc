@@ -128,7 +128,7 @@ where
                 let above = out.unsafe_get_pixel(x, y - 1);
                 // For some reason there's no unsafe_get_pixel_mut, so to update the existing
                 // pixel here we need to use the method with bounds checking
-                let mut current = out.get_pixel_mut(x, y);
+                let current = out.get_pixel_mut(x, y);
                 for c in 0..P::channel_count() {
                     current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
                 }
@@ -331,7 +331,7 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::property_testing::GrayTestImage;
     use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};

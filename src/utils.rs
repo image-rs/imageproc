@@ -555,7 +555,7 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]

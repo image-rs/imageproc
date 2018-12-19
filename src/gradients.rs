@@ -196,7 +196,7 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{ImageBuffer, Luma};
     use test::{Bencher, black_box};

@@ -648,7 +648,7 @@ pub static MIN_SHIFT: [u8; 256] = [
 ];
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use test::{Bencher, black_box};

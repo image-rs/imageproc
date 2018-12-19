@@ -395,7 +395,7 @@ pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::integral_image::{integral_image, sum_image_pixels};
     use crate::utils::gray_bench_image;

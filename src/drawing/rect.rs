@@ -66,7 +66,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::rect::Rect;
     use image::{GrayImage, Luma, RgbImage, Rgb};

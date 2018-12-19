@@ -173,7 +173,7 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use test::{Bencher, black_box};
     use crate::utils::gray_bench_image;

@@ -209,7 +209,7 @@ fn degrees_to_radians(degrees: u32) -> f32 {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
     use test::{Bencher, black_box};

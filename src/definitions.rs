@@ -98,7 +98,7 @@ implement_clamp!(i32, i16, i16::MIN, i16::MAX, i16::MIN as i32, i16::MAX as i32)
 implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::Clamp;
 
     #[test]

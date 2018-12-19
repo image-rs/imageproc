@@ -290,7 +290,7 @@ pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::definitions::{HasBlack, HasWhite};
     use crate::utils::gray_bench_image;

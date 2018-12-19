@@ -64,7 +64,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{Rgb, Luma};
     use test::{Bencher, black_box};

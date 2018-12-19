@@ -320,7 +320,7 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use test::*;

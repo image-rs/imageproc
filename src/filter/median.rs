@@ -281,7 +281,7 @@ impl HistSet {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};

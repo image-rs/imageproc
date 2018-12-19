@@ -531,7 +531,7 @@ fn data_length(lengths: [usize; 3]) -> usize {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use test;
