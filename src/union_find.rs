@@ -107,7 +107,7 @@ impl DisjointSetForest {
 #[cfg(test)]
 mod tests {
     use super::DisjointSetForest;
-    use test;
+    use ::test;
     use rand::{SeedableRng, StdRng};
     use rand::distributions::{IndependentSample, Range};
 

@@ -286,9 +286,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {

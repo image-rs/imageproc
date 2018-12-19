@@ -320,7 +320,6 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     // As draw_line_segment is implemented in terms of BresenhamLineIter we
     // haven't bothered wriing any tests specifically for BresenhamLineIter itself.

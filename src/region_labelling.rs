@@ -249,7 +249,7 @@ mod tests {
     use super::Connectivity::{Four, Eight};
     use crate::definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
-    use test;
+    use ::test;
 
     #[test]
     fn test_connected_components_eight_white_background() {

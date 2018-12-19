@@ -382,7 +382,7 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test;
+    use ::test;
 
     #[test]
     fn test_rotate_nearest_zero_radians() {

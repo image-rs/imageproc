@@ -167,7 +167,7 @@ mod tests {
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;
     use image::{GrayImage, Luma};
-    use test;
+    use ::test;
 
     fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
         let mut image = GrayImage::new(width, height);

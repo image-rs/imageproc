@@ -72,9 +72,7 @@ pub fn draw_cubic_bezier_curve_mut<I>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
 
     macro_rules! bench_cubic_bezier_curve {
         ($name:ident, $start:expr, $end:expr, $control_a:expr, $control_b:expr) => {

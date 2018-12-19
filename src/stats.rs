@@ -154,7 +154,7 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, RgbImage, Luma, Rgb};
-    use test::{Bencher, black_box};
+    use test::Bencher;
 
     #[test]
     fn test_cumulative_histogram() {

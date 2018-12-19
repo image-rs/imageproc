@@ -534,7 +534,7 @@ fn data_length(lengths: [usize; 3]) -> usize {
 mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test;
+    use ::test;
 
     #[test]
     fn test_num_blocks() {

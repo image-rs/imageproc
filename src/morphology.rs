@@ -323,7 +323,7 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::*;
+    use ::test::*;
     use std::cmp::{max, min};
 
     #[test]

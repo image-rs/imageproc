@@ -338,7 +338,7 @@ mod tests {
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
     use crate::definitions::Image;
-    use test;
+    use ::test;
 
     #[test]
     fn test_sum_image_pixels() {

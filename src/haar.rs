@@ -399,7 +399,7 @@ mod tests {
     use super::*;
     use crate::integral_image::{integral_image, sum_image_pixels};
     use crate::utils::gray_bench_image;
-    use test;
+    use ::test;
 
     #[test]
     fn test_block_sizes() {
