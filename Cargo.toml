@@ -15,10 +15,12 @@ conv = "0.3.1"
 image = "0.20.0"
 itertools = "0.7.0"
 num = "0.2.0"
-quickcheck = "0.6"
 rand = "0.4.0"
 rusttype = "0.7"
 rayon = "1.0"
+
+[dev-dependencies]
+quickcheck = "0.6"
 
 [profile.release]
 opt-level = 3
