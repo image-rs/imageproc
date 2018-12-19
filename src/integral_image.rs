@@ -143,20 +143,21 @@ where
 /// integral image of F.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
-pub fn sum_image_pixels(
-    integral_image: &Image<Luma<u32>>,
+pub fn sum_image_pixels<T>(
+    integral_image: &Image<Luma<T>>,
     left: u32,
     top: u32,
     right: u32,
     bottom: u32,
-) -> u32 {
+) -> T
+where T: Primitive + 'static
+{
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32 -
-        integral_image.get_pixel(right + 1, top)[0] as i32 -
-        integral_image.get_pixel(left, bottom + 1)[0] as i32 +
-        integral_image.get_pixel(left, top)[0] as i32;
-    sum as u32
+    integral_image.get_pixel(right + 1, bottom + 1)[0]
+    + integral_image.get_pixel(left, top)[0]
+    - integral_image.get_pixel(right + 1, top)[0]
+    - integral_image.get_pixel(left, bottom + 1)[0]
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -345,7 +346,7 @@ mod test {
             1, 2;
             3, 4);
 
-        let integral = integral_image(&image);
+        let integral = integral_image::<_, u32>(&image);
 
         assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), 1);
         assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), 3);
