@@ -1,5 +1,5 @@
 use image::{GenericImage, ImageBuffer, Pixel};
-use definitions::Image;
+use crate::definitions::Image;
 use std::mem::{swap, transmute};
 use std::f32;
 use std::i32;
@@ -462,7 +462,7 @@ mod test {
     #[test]
     fn test_draw_antialiased_line_segment_horizontal_and_vertical() {
         use image::imageops::rotate270;
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -494,7 +494,7 @@ mod test {
     #[test]
     fn test_draw_antialiased_line_segment_diagonal() {
         use image::imageops::rotate90;
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -521,7 +521,7 @@ mod test {
 
     #[test]
     fn test_draw_antialiased_line_segment_oct7_and_oct3() {
-        use pixelops::interpolate;
+        use crate::pixelops::interpolate;
 
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
@@ -545,7 +545,7 @@ mod test {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
             fn $name(b: &mut test::Bencher) {
-                use pixelops::interpolate;
+                use crate::pixelops::interpolate;
                 use super::draw_antialiased_line_segment_mut;
 
                 let mut image = GrayImage::new(500, 500);

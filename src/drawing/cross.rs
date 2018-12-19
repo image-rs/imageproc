@@ -1,5 +1,5 @@
 use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use crate::definitions::Image;
 use std::i32;
 
 /// Draws a colored cross on an image in place. Handles coordinates outside image bounds.

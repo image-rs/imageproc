@@ -2,7 +2,7 @@
 
 use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb, Rgba};
 
-use definitions::Image;
+use crate::definitions::Image;
 
 /// The type obtained by replacing the channel type of a given `Pixel` type.
 /// The output type must have the same name of channels as the input type, or

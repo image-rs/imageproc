@@ -1,10 +1,10 @@
 use image::{GenericImage, ImageBuffer};
-use definitions::Image;
+use crate::definitions::Image;
 use std::cmp::{min, max};
 use std::f32;
 use std::i32;
-use drawing::draw_if_in_bounds;
-use drawing::line::draw_line_segment_mut;
+use crate::drawing::draw_if_in_bounds;
+use crate::drawing::line::draw_line_segment_mut;
 
 /// A 2D point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

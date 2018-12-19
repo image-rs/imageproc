@@ -2,9 +2,9 @@
 //! and helpers for visualizing them.
 
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
-use gradients::{horizontal_sobel, vertical_sobel};
-use definitions::{Clamp, Image};
-use math::l2_norm;
+use crate::gradients::{horizontal_sobel, vertical_sobel};
+use crate::definitions::{Clamp, Image};
+use crate::math::l2_norm;
 use num::Zero;
 use std::f32;
 
@@ -62,12 +62,12 @@ pub struct HogSpec {
 impl HogSpec {
     /// Returns an error message if image dimensions aren't compatible with the provided options.
     pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
-        let (cells_wide, cells_high) = try!(Self::checked_cell_dimensions(
+        let (cells_wide, cells_high) = r#try!(Self::checked_cell_dimensions(
             width as usize,
             height as usize,
             options,
         ));
-        let (blocks_wide, blocks_high) = try!(Self::checked_block_dimensions(
+        let (blocks_wide, blocks_high) = r#try!(Self::checked_block_dimensions(
             cells_wide,
             cells_high,
             options,
@@ -424,7 +424,7 @@ where
 {
 
     use std::cmp;
-    use drawing::draw_line_segment_mut;
+    use crate::drawing::draw_line_segment_mut;
 
     let (width, height) = image.dimensions();
     let scale = cmp::max(width, height) as f32 / 2f32;
@@ -533,7 +533,7 @@ fn data_length(lengths: [usize; 3]) -> usize {
 #[cfg(test)]
 mod test {
     use super::*;
-    use utils::gray_bench_image;
+    use crate::utils::gray_bench_image;
     use test;
 
     #[test]

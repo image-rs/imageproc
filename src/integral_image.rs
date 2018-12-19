@@ -2,8 +2,8 @@
 //! and running sums of rows and columns.
 
 use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive};
-use definitions::Image;
-use map::{ChannelMap, WithChannel};
+use crate::definitions::Image;
+use crate::map::{ChannelMap, WithChannel};
 use std::ops::AddAssign;
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
@@ -333,11 +333,11 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod test {
     use super::*;
-    use property_testing::GrayTestImage;
-    use utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
+    use crate::property_testing::GrayTestImage;
+    use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
-    use definitions::Image;
+    use crate::definitions::Image;
     use test;
 
     #[test]

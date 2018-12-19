@@ -7,7 +7,7 @@ use std::fmt;
 use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
 use rand::Rand;
 use quickcheck::{Arbitrary, Gen};
-use definitions::Image;
+use crate::definitions::Image;
 
 /// Wrapper for image buffers to allow us to write an Arbitrary instance.
 #[derive(Clone)]

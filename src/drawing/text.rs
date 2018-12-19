@@ -1,11 +1,11 @@
 
 use image::{GenericImage, ImageBuffer, Pixel};
-use definitions::{Clamp, Image};
+use crate::definitions::{Clamp, Image};
 use conv::ValueInto;
 use std::f32;
 use std::i32;
 
-use pixelops::weighted_sum;
+use crate::pixelops::weighted_sum;
 use rusttype::{Font, Scale, point, PositionedGlyph};
 
 /// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually

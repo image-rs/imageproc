@@ -1,9 +1,9 @@
 //! Statistical properties of images.
 
 use image::{GenericImage, GrayImage, Pixel, Primitive};
-use definitions::Image;
+use crate::definitions::Image;
 use num::Bounded;
-use math::cast;
+use crate::math::cast;
 use conv::ValueInto;
 
 /// A set of per-channel histograms from an image with 8 bits per channel.
