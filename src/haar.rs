@@ -97,6 +97,17 @@ impl HaarFeatureType {
 impl HaarFeature {
     /// Evaluates the Haar-like feature on an integral image.
     pub fn evaluate(&self, integral: &Image<Luma<u32>>) -> i32 {
+        // This check increases the run time of bench_evaluate_all_features_10x10
+        // by approximately 16%. Without it this function is unsafe as insufficiently
+        // large input images result in out of bounds accesses.
+        //
+        // We could alternatively create a new API where an image and a set of filters
+        // are validated to be compatible up front, or just mark the function
+        // as unsafe and document the requirement on image size.
+        let size = feature_size(self.feature_type, self.block_size);
+        assert!(integral.width() >= size.width as u32 + self.left as u32 + 1);
+        assert!(integral.height() >= size.height as u32 + self.top as u32 + 1);
+
         // The corners of each block are lettered. Not all letters are evaluated for each feature type.
         // A   B   C   D
         //
@@ -434,6 +445,66 @@ mod test {
                 assert_eq!(actual, expected, "w = {}, h = {}", w, h);
             }
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_haar_invalid_image_size_top_left() {
+        let image = gray_image!(type: u32, 0, 0; 0, 1);
+        let feature = HaarFeature {
+            sign: Sign::Positive,
+            feature_type: HaarFeatureType::TwoRegionHorizontal,
+            block_size: Size::new(1, 1),
+            left: 0,
+            top: 0
+        };
+        // For a haar feature of width 2 the input image needs to have width
+        // at least 2, and so its integral image needs to have width at least 3.
+        let _ = feature.evaluate(&image);
+    }
+
+    #[test]
+    fn test_haar_valid_image_size_top_left() {
+        let image = gray_image!(type: u32, 0, 0, 0; 0, 1, 1);
+        let feature = HaarFeature {
+            sign: Sign::Positive,
+            feature_type: HaarFeatureType::TwoRegionHorizontal,
+            block_size: Size::new(1, 1),
+            left: 0,
+            top: 0
+        };
+        let x = feature.evaluate(&image);
+        assert_eq!(x, 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_haar_invalid_image_size_with_offset_feature() {
+        let image = gray_image!(type: u32, 0, 0, 0; 0, 1, 1);
+        let feature = HaarFeature {
+            sign: Sign::Positive,
+            feature_type: HaarFeatureType::TwoRegionHorizontal,
+            block_size: Size::new(1, 1),
+            left: 1,
+            top: 0
+        };
+        // The feature's left offset would result in attempting to
+        // read outside the image boundaries
+        let _ = feature.evaluate(&image);
+    }
+
+    #[test]
+    fn test_haar_valid_image_size_with_offset_feature() {
+        let image = gray_image!(type: u32, 0, 0, 0, 0; 0, 1, 1, 1);
+        let feature = HaarFeature {
+            sign: Sign::Positive,
+            feature_type: HaarFeatureType::TwoRegionHorizontal,
+            block_size: Size::new(1, 1),
+            left: 1,
+            top: 0
+        };
+        let x = feature.evaluate(&image);
+        assert_eq!(x, 0);
     }
 
     #[test]
