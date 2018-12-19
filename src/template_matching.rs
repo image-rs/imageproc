@@ -31,8 +31,8 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
     let (image_width, image_height) = image.dimensions();
     let (template_width, template_height) = template.dimensions();
 
-    assert!(image_width > template_width, "image width must strictly exceed template width");
-    assert!(image_height > template_height, "image height must strictly exceed template height");
+    assert!(image_width >= template_width, "image width must be greater than or equal to template width");
+    assert!(image_height >= template_height, "image height must be greater than or equal to template height");
 
     let should_normalize = method == MatchTemplateMethod::SumOfSquaredErrorsNormalized;
     let image_squared_integral = if should_normalize { Some(integral_squared_image(&image)) } else { None };
@@ -55,7 +55,9 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
             if let (&Some(ref i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
                 let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
                 let norm = normalization_term(i, t, region);
-                score /= norm;
+                if norm > 0.0 {
+                    score /= norm;
+                }
             }
 
             result.put_pixel(x, y, Luma([score]));
@@ -72,7 +74,7 @@ fn sum_squares(template: &GrayImage) -> f32 {
 /// Returns the square root of the product of the sum of squares of
 /// pixel intensities in template and the provided region of image.
 fn normalization_term(
-    image_squared_integral: &Image<Luma<u32>>,
+    image_squared_integral: &Image<Luma<u64>>,
     template_squared_sum: f32,
     region: Rect) -> f32 {
     let image_sum = sum_image_pixels(
@@ -136,19 +138,44 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn match_template_panics_if_image_width_does_not_exceed_template_width() {
-        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(5, 4), MatchTemplateMethod::SumOfSquaredErrors);
+    fn match_template_panics_if_image_width_does_is_less_than_template_width() {
+        let _ = match_template(
+            &GrayImage::new(5, 5),
+            &GrayImage::new(6, 5),
+            MatchTemplateMethod::SumOfSquaredErrors
+        );
     }
 
     #[test]
     #[should_panic]
-    fn match_template_panics_if_image_height_does_not_exceed_template_height() {
-        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(4, 5), MatchTemplateMethod::SumOfSquaredErrors);
+    fn match_template_panics_if_image_height_is_less_than_template_height() {
+        let _ = match_template(
+            &GrayImage::new(5, 5),
+            &GrayImage::new(5, 6), 
+            MatchTemplateMethod::SumOfSquaredErrors
+        );
     }
 
     #[test]
-    fn match_template_accepts_valid_template_size() {
-        let _ = match_template(&GrayImage::new(5, 5), &GrayImage::new(4, 4), MatchTemplateMethod::SumOfSquaredErrors);
+    fn match_template_handles_template_of_same_size_as_image() {
+        assert_pixels_eq!(
+            match_template(
+                &GrayImage::new(5, 5),
+                &GrayImage::new(5, 5),
+                MatchTemplateMethod::SumOfSquaredErrors),
+            gray_image!(type: f32, 0.0)
+        );
+    }
+
+    #[test]
+    fn match_template_normalization_handles_zero_norm() {
+        assert_pixels_eq!(
+            match_template(
+                &GrayImage::new(1, 1),
+                &GrayImage::new(1, 1),
+                MatchTemplateMethod::SumOfSquaredErrorsNormalized),
+            gray_image!(type: f32, 0.0)
+        );
     }
 
     #[test]
@@ -226,7 +253,7 @@ mod tests {
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrors);
 
-        bench_match_template!(
+    bench_match_template!(
         bench_match_template_s100_t1_sse_norm,
         image_size: 100,
         template_size: 1,

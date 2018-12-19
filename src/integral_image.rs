@@ -1,9 +1,10 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImageView, Pixel};
+use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive};
 use definitions::Image;
 use map::{ChannelMap, WithChannel};
+use std::ops::AddAssign;
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
 ///
@@ -37,7 +38,7 @@ use map::{ChannelMap, WithChannel};
 ///     0,  1,  3,  6;
 ///     0,  5, 12, 21);
 ///
-/// assert_pixels_eq!(integral_image(&image), integral);
+/// assert_pixels_eq!(integral_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of all pixels in the right two columns
 /// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 2 + 3 + 5 + 6);
@@ -46,9 +47,10 @@ use map::{ChannelMap, WithChannel};
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 2 + 3);
 /// # }
 /// ```
-pub fn integral_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     integral_image_impl(image, false)
 }
@@ -75,7 +77,7 @@ where
 ///     0,  1,  5, 14;
 ///     0, 17, 46, 91);
 ///
-/// assert_pixels_eq!(integral_squared_image(&image), integral);
+/// assert_pixels_eq!(integral_squared_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of the squares of all pixels in the right two columns
 /// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 4 + 9 + 25 + 36);
@@ -84,17 +86,19 @@ where
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 4 + 9);
 /// # }
 /// ```
-pub fn integral_squared_image<P>(image: &Image<P>) -> Image<ChannelMap<P, u32>>
+pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     integral_image_impl(image, true)
 }
 
 /// Implementation of `integral_image` and `integral_squared_image`.
-fn integral_image_impl<P>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, u32>>
+fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u32> + 'static
+    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    T: From<u8> + Primitive + AddAssign + 'static
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -102,18 +106,18 @@ where
     let out_width = in_width + 1;
     let out_height = in_height + 1;
 
-    let mut out = Image::<ChannelMap<P, u32>>::new(out_width, out_height);
+    let mut out = Image::<ChannelMap<P, T>>::new(out_width, out_height);
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
     for y in 1..out_height {
-        let mut sum = vec![0u32; P::channel_count() as usize];
+        let mut sum = vec![T::zero(); P::channel_count() as usize];
         for x in 1..out_width {
             unsafe {
                 for c in 0..P::channel_count() {
-                    let pix = image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize] as u32;
+                    let pix: T = (image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize]).into();
                     if square {
                         sum[c as usize] += pix * pix;
                     } else {
@@ -139,20 +143,21 @@ where
 /// integral image of F.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
-pub fn sum_image_pixels(
-    integral_image: &Image<Luma<u32>>,
+pub fn sum_image_pixels<T>(
+    integral_image: &Image<Luma<T>>,
     left: u32,
     top: u32,
     right: u32,
     bottom: u32,
-) -> u32 {
+) -> T
+where T: Primitive + 'static
+{
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    let sum = integral_image.get_pixel(right + 1, bottom + 1)[0] as i32 -
-        integral_image.get_pixel(right + 1, top)[0] as i32 -
-        integral_image.get_pixel(left, bottom + 1)[0] as i32 +
-        integral_image.get_pixel(left, top)[0] as i32;
-    sum as u32
+    integral_image.get_pixel(right + 1, bottom + 1)[0]
+    + integral_image.get_pixel(left, top)[0]
+    - integral_image.get_pixel(right + 1, top)[0]
+    - integral_image.get_pixel(left, bottom + 1)[0]
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -341,7 +346,7 @@ mod test {
             1, 2;
             3, 4);
 
-        let integral = integral_image(&image);
+        let integral = integral_image::<_, u32>(&image);
 
         assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), 1);
         assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), 3);
@@ -365,7 +370,7 @@ mod test {
             0,  1,  3,  6;
             0,  5, 12, 21);
 
-        assert_pixels_eq!(integral_image(&image), expected);
+        assert_pixels_eq!(integral_image::<_, u32>(&image), expected);
     }
 
     #[test]
@@ -379,14 +384,14 @@ mod test {
             [0, 0, 0],  [1, 11, 21], [ 3, 23, 43], [ 6, 36,  66];
             [0, 0, 0],  [5, 25, 45], [12, 52, 92], [21, 81, 141]);
 
-        assert_pixels_eq!(integral_image(&image), expected);
+        assert_pixels_eq!(integral_image::<_, u32>(&image), expected);
     }
 
     #[bench]
     fn bench_integral_image_gray(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let integral = integral_image(&image);
+            let integral = integral_image::<_, u32>(&image);
             test::black_box(integral);
         });
     }
@@ -395,7 +400,7 @@ mod test {
     fn bench_integral_image_rgb(b: &mut test::Bencher) {
         let image = rgb_bench_image(500, 500);
         b.iter(|| {
-            let integral = integral_image(&image);
+            let integral = integral_image::<_, u32>(&image);
             test::black_box(integral);
         });
     }

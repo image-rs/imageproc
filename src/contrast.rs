@@ -14,7 +14,7 @@ use rayon::prelude::*;
 /// as the threshold then it will have a value of 255 in the output image, otherwise 0.
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
     assert!(block_radius > 0);
-    let integral = integral_image(image);
+    let integral = integral_image::<_, u32>(image);
     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
 
     for y in 0..image.height() {
