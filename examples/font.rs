@@ -1,9 +1,5 @@
 //! An example of drawing text. Writes to the user-provided target file.
 
-extern crate image;
-extern crate imageproc;
-extern crate rusttype;
-
 use std::path::Path;
 use std::env;
 use imageproc::drawing::draw_text_mut;

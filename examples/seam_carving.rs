@@ -1,5 +1,3 @@
-extern crate image;
-extern crate imageproc;
 
 use image::{GrayImage, open, Luma, Pixel};
 use imageproc::seam_carving::*;

@@ -1,6 +1,4 @@
 //! An example of template matching in a greyscale image.
-extern crate image;
-extern crate imageproc;
 
 use std::env;
 use std::path::PathBuf;

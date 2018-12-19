@@ -1,8 +1,5 @@
 //! Demonstrates computing and visualising HoG gradients.
 
-extern crate image;
-extern crate imageproc;
-
 use std::env;
 use std::path::Path;
 use image::{open, ImageBuffer};

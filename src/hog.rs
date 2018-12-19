@@ -222,7 +222,7 @@ pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
 
 /// Computes the HoG descriptor of an image. Assumes that the spec and grid
 /// dimensions are consistent.
-fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
+fn hog_descriptor_from_hist_grid(grid: View3d<'_, f32>, spec: HogSpec) -> Vec<f32> {
 
     let mut descriptor = Array3d::new(spec.block_grid_lengths());
     {
@@ -263,7 +263,7 @@ fn hog_descriptor_from_hist_grid(grid: View3d<f32>, spec: HogSpec) -> Vec<f32> {
 }
 
 /// L2 norm of the block descriptor at given location within an image descriptor.
-fn block_norm(view: &View3d<f32>, bx: usize, by: usize) -> f32 {
+fn block_norm(view: &View3d<'_, f32>, bx: usize, by: usize) -> f32 {
     let block_data = view.inner_slice(bx, by);
     l2_norm(block_data)
 }
@@ -335,7 +335,7 @@ pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
 }
 
 /// True if the given outer two indices into a view are within bounds.
-fn contains_outer<T>(view: &View3d<T>, u: usize, v: usize) -> bool {
+fn contains_outer<T>(view: &View3d<'_, T>, u: usize, v: usize) -> bool {
     u < view.lengths[1] && v < view.lengths[2]
 }
 
@@ -396,7 +396,7 @@ impl Interpolation {
 /// Note that we ignore block-level aggregation or normalisation here.
 /// Each rendered star has side length `star_side`, so the image will have
 /// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
-pub fn render_hist_grid(star_side: u32, grid: &View3d<f32>, signed: bool) -> Image<Luma<u8>> {
+pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) -> Image<Luma<u8>> {
     let width = grid.lengths[1] as u32 * star_side;
     let height = grid.lengths[2] as u32 * star_side;
     let mut out = ImageBuffer::new(width, height);
@@ -469,7 +469,7 @@ pub struct Array3d<T> {
 }
 
 /// A view into a 3d array.
-pub struct View3d<'a, T: 'a> {
+pub struct View3d<'a, T> {
     /// The underlying data.
     data: &'a mut [T],
     /// Lengths of the dimensions, from innermost (i.e. fastest-varying) to outermost.
@@ -487,7 +487,7 @@ impl<T: Zero + Clone> Array3d<T> {
     }
 
     /// Provides a 3d view of the data.
-    pub fn view_mut(&mut self) -> View3d<T> {
+    pub fn view_mut(&mut self) -> View3d<'_, T> {
         View3d::from_raw(&mut self.data, self.lengths)
     }
 }

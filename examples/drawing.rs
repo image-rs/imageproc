@@ -1,8 +1,5 @@
 //! An example using the drawing functions. Writes to the user-provided target file.
 
-extern crate image;
-extern crate imageproc;
-
 use std::env;
 use std::path::Path;
 use image::{Rgb, RgbImage};

@@ -1,8 +1,5 @@
 //! Demonstrates adding a color tint and applying a color gradient to a grayscale image.
 
-extern crate image;
-extern crate imageproc;
-
 use std::env;
 use std::path::Path;
 use image::{Luma, open, Rgb};
