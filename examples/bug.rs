@@ -40,8 +40,8 @@ fn main() {
     let img = match_template(
         &image1,
         &template1,
-        //MatchTemplateMethod::SumOfSquaredErrorsNormalized,
-        MatchTemplateMethod::SumOfSquaredErrors
+        MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+        //MatchTemplateMethod::SumOfSquaredErrors
     );
 
     let img = convert_to_gray_image(&img);

@@ -74,7 +74,7 @@ fn sum_squares(template: &GrayImage) -> f32 {
 /// Returns the square root of the product of the sum of squares of
 /// pixel intensities in template and the provided region of image.
 fn normalization_term(
-    image_squared_integral: &Image<Luma<u32>>,
+    image_squared_integral: &Image<Luma<u64>>,
     template_squared_sum: f32,
     region: Rect) -> f32 {
     let image_sum = sum_image_pixels(
