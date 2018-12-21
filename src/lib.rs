@@ -37,6 +37,7 @@ pub mod math;
 pub mod morphology;
 pub mod noise;
 pub mod pixelops;
+#[cfg(any(feature = "property-testing", test))]
 pub mod property_testing;
 pub mod rect;
 pub mod region_labelling;
