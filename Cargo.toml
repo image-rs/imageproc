@@ -9,6 +9,11 @@ readme = "README.md"
 homepage = "https://github.com/PistonDevelopers/imageproc"
 exclude = ["examples/*.ttf"]
 
+
+[features]
+default = []
+property-testing = [ "quickcheck" ]
+
 [dependencies]
 conv = "0.3.1"
 image = "0.20.0"
@@ -17,6 +22,7 @@ num = "0.2.0"
 rand = "0.4.0"
 rusttype = "0.7"
 rayon = "1.0"
+quickcheck = { version = "0.6", optional = true }
 
 [dev-dependencies]
 assert_approx_eq = "1.0.0"
