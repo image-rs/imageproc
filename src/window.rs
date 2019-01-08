@@ -5,9 +5,9 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::surface::Surface;
 
-pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_height: i32) {
+pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_height: u32) {
 
-    fn get_scale(win_width: i32, win_height: i32, image_width: u32, image_height: u32) -> f32{
+    fn get_scale(win_width: u32, win_height: u32, image_width: u32, image_height: u32) -> f32{
         let width_scale = win_width as f32 / image_width as f32; 
         let height_scale = win_height as f32 / image_height as f32;
         if  width_scale < height_scale {
@@ -28,7 +28,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_h
     let image_height = image.height();
 
     let (width, height, output_image) = 
-        if image_height < window_height as u32 && image_width < window_width as u32 {
+        if image_height < window_height && image_width < window_width {
             (image_width, image_height, image.clone())
         } else {
             let scale = get_scale(window_width, window_height, image_width, image_height);
