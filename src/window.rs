@@ -1,13 +1,8 @@
-// extern crate sdl2; 
-// extern crate image;
-
 use image::RgbaImage;
-use sdl2::event::WindowEvent;
+use sdl2::event::{WindowEvent, Event};
 use sdl2::rect::Rect;
-use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use sdl2::pixels::PixelFormatEnum;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::surface::Surface;
 
 pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_height: i32) {
@@ -50,6 +45,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_h
         pitch, 
         PixelFormatEnum::ABGR8888  // this format is necessary because sdl2 expects bits from highest to lowest
     ).expect("couldn't converted image to surface");
+
     let sdl = sdl2::init().expect("couldn't create sdl2 context");
     let video_subsystem = sdl.video().expect("couldn't create video subsystem");
     let mut window = video_subsystem
@@ -72,6 +68,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_h
     canvas.clear();
     canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
     canvas.present();
+
     let mut event_pump = sdl.event_pump().unwrap();
     event_pump.enable_event(sdl2::event::EventType::Window);
     'running: loop {
@@ -105,7 +102,6 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_h
                     texture = texture_creator.create_texture_from_surface(surface_img)
                         .expect("couldn't create texture from surface");
                 
-                    println!("x: {}, y: {}\nwidth: {}, height: {}", x, y, width, height);
                     let center_x = ((x as u32 - width) as f32 / 2.0_f32) as i32;
                     let center_y = ((y as u32 - height) as f32 / 2.0_f32) as i32; 
                     canvas.clear(); 
