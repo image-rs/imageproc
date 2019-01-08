@@ -116,27 +116,5 @@ fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_heigh
             }
         }
     }
-    // #[cfg(test)]
-    // mod tests {
-        // use super::display_image;
-        // use super::display_image;
-
-        #[test]
-        fn test_get_scale() {
-        
-            let img_path = {
-                std::env::args().nth(1).expect("no argument provided for image path")
-            };
-
-            let img = image::open("images/colors.jpg")
-                .expect("couldn't read image from that file path").to_rgba();
-            let width = 1000;
-            let height = 900;
-            // let temp_img = image::imageops::resize(&img, 500, 500, image::FilterType::Triangle); 
-            display_image("ma image", &img, width, height);
-            assert_eq!(get_scale(5, 5, 5, 5), 1.0);
-        }    
-
-    // }
 }
 
