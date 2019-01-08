@@ -1,5 +1,5 @@
-extern crate sdl2; 
-extern crate image;
+// extern crate sdl2; 
+// extern crate image;
 
 use image::RgbaImage;
 use sdl2::event::WindowEvent;
@@ -10,7 +10,7 @@ use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::surface::Surface;
 
-fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_height: i32) {
+pub fn display_image(title: &str, image: &RgbaImage, window_width: i32, window_height: i32) {
 
     fn get_scale(win_width: i32, win_height: i32, image_width: u32, image_height: u32) -> f32{
         let width_scale = win_width as f32 / image_width as f32; 

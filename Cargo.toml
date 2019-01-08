@@ -23,8 +23,7 @@ rand = "0.4.0"
 rusttype = "0.7"
 rayon = "1.0"
 quickcheck = { version = "0.6", optional = true }
-sdl2 = { version = "0.32", optional = true, default-features = false,
-		features = ["bundled"] }
+sdl2 = { version = "0.32", optional = true, default-features = false, features = ["bundled"] }
 # [dependencies.sdl2]
 # version = "0.32"
 # optional = true
