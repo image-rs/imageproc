@@ -1,3 +1,5 @@
+//! Displays an image in a window created by sdl2.
+
 use image::RgbaImage;
 use sdl2::event::{WindowEvent, Event};
 use sdl2::rect::Rect;
@@ -5,8 +7,11 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::surface::Surface;
 
+/// Displays the provided RGBA image in a new window.
 pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_height: u32) {
 
+    // scale is used to determine how small an image has to be resized to fit within
+    // the provided window dimensions
     fn get_scale(win_width: u32, win_height: u32, image_width: u32, image_height: u32) -> f32{
         let width_scale = win_width as f32 / image_width as f32; 
         let height_scale = win_height as f32 / image_height as f32;
@@ -17,6 +22,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
         }
     };
 
+    // resizes and/or returns the image that will be used to display in the window
     fn get_output_image(scale: f32, img: &RgbaImage) -> (u32, u32, RgbaImage) {
         let height = (scale * img.height() as f32) as u32;
         let width = (scale * img.width() as f32) as u32;
@@ -49,7 +55,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
     let sdl = sdl2::init().expect("couldn't create sdl2 context");
     let video_subsystem = sdl.video().expect("couldn't create video subsystem");
     let mut window = video_subsystem
-        .window(title, window_width as u32, window_height as u32)
+        .window(title, window_width, window_height)
         .position_centered()
         .resizable()
         .build()
@@ -62,13 +68,20 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
     let mut texture = texture_creator.create_texture_from_surface(surface_img)
         .expect("couldn't create texture from surface");
 
-    let center_x = ((window_width as u32 - width) as f32 / 2.0_f32) as i32;
-    let center_y = ((window_height as u32 - height) as f32 / 2.0_f32) as i32; 
+    // calculates new location for surface from window origin so that
+    // the image is centered in the window
+    let center_x = ((window_width - width) as f32 / 2.0_f32) as i32;
+    let center_y = ((window_height - height) as f32 / 2.0_f32) as i32; 
+    
+    // makes background white
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
+
+    // displays image in the window
     canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
     canvas.present();
 
+    // create and start events loop to keep window open until Esc 
     let mut event_pump = sdl.event_pump().unwrap();
     event_pump.enable_event(sdl2::event::EventType::Window);
     'running: loop {
