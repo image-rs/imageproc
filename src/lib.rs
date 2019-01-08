@@ -46,3 +46,4 @@ pub mod stats;
 pub mod suppress;
 pub mod template_matching;
 pub mod union_find;
+pub mod window;

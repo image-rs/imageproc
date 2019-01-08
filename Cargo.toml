@@ -12,6 +12,7 @@ exclude = ["examples/*.ttf"]
 [features]
 default = []
 property-testing = [ "quickcheck" ]
+display-window = ["sdl2"]
 
 [dependencies]
 conv = "0.3.1"
@@ -22,6 +23,11 @@ rand = "0.4.0"
 rusttype = "0.7"
 rayon = "1.0"
 quickcheck = { version = "0.6", optional = true }
+sdl2 = { version = "0.32.0", optional = true }
+
+[dependencies.sdl2]
+default-features = false
+features = ["bundled"]
 
 [dev-dependencies]
 assert_approx_eq = "1.0.0"
