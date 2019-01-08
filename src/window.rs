@@ -22,7 +22,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
         }
     };
 
-    // resizes and/or returns the image that will be used to display in the window
+    // resizes and returns the image that will be used to display in the window
     fn get_output_image(scale: f32, img: &RgbaImage) -> (u32, u32, RgbaImage) {
         let height = (scale * img.height() as f32) as u32;
         let width = (scale * img.width() as f32) as u32;
