@@ -81,8 +81,10 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                 Event::Window { win_event: WindowEvent::Resized(x, y), .. } => {
                     
                     // resize image if necessary to fit into the window
+                    let x = x as u32;
+                    let y = y as u32;
                     let (width, height, output_image) = 
-                        if image_height < y as u32 && image_width < x as u32 {
+                        if image_height < y && image_width < x {
                             (image_width, image_height, image.clone())
                         } else {
                             let scale = get_scale(x, y, image_width, image_height);
@@ -102,11 +104,10 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     texture = texture_creator.create_texture_from_surface(surface_img)
                         .expect("couldn't create texture from surface");
                 
-                    let center_x = ((x as u32 - width) as f32 / 2.0_f32) as i32;
-                    let center_y = ((y as u32 - height) as f32 / 2.0_f32) as i32; 
+                    let center_x = ((x - width) as f32 / 2.0_f32) as i32;
+                    let center_y = ((y - height) as f32 / 2.0_f32) as i32; 
                     canvas.clear(); 
                     canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
-                    canvas.present();
                 },           
                 _ => {}
             }
