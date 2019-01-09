@@ -121,6 +121,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     let center_y = ((y - height) as f32 / 2.0_f32) as i32; 
                     canvas.clear(); 
                     canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
+                    canvas.present();
                 },           
                 _ => {}
             }
