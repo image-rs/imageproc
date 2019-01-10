@@ -52,7 +52,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
             let output_image = image::imageops::resize(image, width, height, image::FilterType::Triangle);
             (width, height, output_image)
                     // get_output_image(scale, image)
-         }
+         
     };
 
     const CHANNEL_COUNT: u32 = 4;
