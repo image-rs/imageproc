@@ -111,9 +111,9 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     },
                 Event::Window { win_event: WindowEvent::Resized(x, y), .. } => {
                     
-                    // resize image if necessary to fit into the window
                     let x = x as u32;
                     let y = y as u32;
+                    // resize image if necessary to fit into the window
                     let (output_image_width, output_image_height, output_image) = 
                         if image_height < y && image_width < x {
                             (image_width, image_height, image.clone())
@@ -138,6 +138,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                             (width, height, output_image)
                             // get_output_image(scale, image)
                         };
+                    
 
                     let pitch  = output_image_width * CHANNEL_COUNT;
                     let mut img_raw = output_image.into_raw();
@@ -158,7 +159,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     canvas.copy(
                         &texture, 
                         None, 
-                        Rect::new(center_x, center_y, width, height))
+                        Rect::new(center_x, center_y, output_image_width, output_image_height))
                         .unwrap();
                     canvas.present();
                 },           
