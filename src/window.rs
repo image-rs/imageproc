@@ -33,21 +33,35 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
     let image_width = image.width();
     let image_height = image.height();
 
-    let (width, height, output_image) = 
+    let (output_image_width, output_image_height, output_image) = 
         if image_height < window_height && image_width < window_width {
             (image_width, image_height, image.clone())
         } else {
-            let scale = get_scale(window_width, window_height, image_width, image_height);
-            get_output_image(scale, image)
-        };
+            // let scale = get_scale(window_width, window_height, image_width, image_height);
+            let scale = {
+                let width_scale = window_width as f32 / image_width as f32; 
+                let height_scale = window_height as f32 / image_height as f32;
+                if  width_scale < height_scale {
+                    width_scale
+                } else {
+                    height_scale
+                }
+            };
+            let height = (scale * image_height as f32) as u32;
+            let width = (scale * image_width as f32) as u32;
+            let output_image = image::imageops::resize(image, width, height, image::FilterType::Triangle);
+            (width, height, output_image)
+                    // get_output_image(scale, image)
+         }
+    };
 
     const CHANNEL_COUNT: u32 = 4;
-    let pitch  = width * CHANNEL_COUNT;
+    let pitch  = output_image_width * CHANNEL_COUNT;
     let mut img_raw = output_image.into_raw();
     let surface_img = Surface::from_data(
         &mut img_raw, 
-        width, 
-        height,
+        output_image_width, 
+        output_image_height,
         pitch, 
         PixelFormatEnum::ABGR8888  // this format is necessary because sdl2 expects bits from highest to lowest
     ).expect("couldn't converted image to surface");
@@ -70,15 +84,19 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
 
     // calculates new location for surface from window origin so that
     // the image is centered in the window
-    let center_x = ((window_width - width) as f32 / 2.0_f32) as i32;
-    let center_y = ((window_height - height) as f32 / 2.0_f32) as i32; 
+    let center_x = ((window_width - output_image_width) as f32 / 2.0_f32) as i32;
+    let center_y = ((window_height - output_image_height) as f32 / 2.0_f32) as i32; 
     
     // makes background white
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
     // displays image in the window
-    canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
+    canvas.copy(
+        &texture, 
+        None, 
+        Rect::new(center_x, center_y, output_image_width, output_image_height))
+        .unwrap();
     canvas.present();
 
     // create and start events loop to keep window open until Esc 
@@ -96,20 +114,37 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     // resize image if necessary to fit into the window
                     let x = x as u32;
                     let y = y as u32;
-                    let (width, height, output_image) = 
+                    let (output_image_width, output_image_height, output_image) = 
                         if image_height < y && image_width < x {
                             (image_width, image_height, image.clone())
                         } else {
-                            let scale = get_scale(x, y, image_width, image_height);
-                            get_output_image(scale, image)
+                            // let scale = get_scale(x, y, image_width, image_height);
+                            let scale = {
+                                let width_scale = x as f32 / image_width as f32; 
+                                let height_scale = y as f32 / image_height as f32;
+                                if  width_scale < height_scale {
+                                    width_scale
+                                } else {
+                                    height_scale
+                                }
+                            };
+                            let height = (scale * image_height as f32) as u32;
+                            let width = (scale * image_width as f32) as u32;
+                            let output_image = image::imageops::resize(
+                                image, 
+                                width, 
+                                height, 
+                                image::FilterType::Triangle);
+                            (width, height, output_image)
+                            // get_output_image(scale, image)
                         };
 
-                    let pitch  = width * CHANNEL_COUNT;
+                    let pitch  = output_image_width * CHANNEL_COUNT;
                     let mut img_raw = output_image.into_raw();
                     let surface_img = Surface::from_data(
                         &mut img_raw, 
-                        width, 
-                        height,
+                        output_image_width, 
+                        output_image_height,
                         pitch, 
                         PixelFormatEnum::ABGR8888  // this format is necessary because sdl2 expects bits from highest to lowest
                     ).expect("couldn't converted image to surface");
@@ -117,10 +152,14 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     texture = texture_creator.create_texture_from_surface(surface_img)
                         .expect("couldn't create texture from surface");
                 
-                    let center_x = ((x - width) as f32 / 2.0_f32) as i32;
-                    let center_y = ((y - height) as f32 / 2.0_f32) as i32; 
+                    let center_x = ((x - output_image_width) as f32 / 2.0_f32) as i32;
+                    let center_y = ((y - output_image_height) as f32 / 2.0_f32) as i32; 
                     canvas.clear(); 
-                    canvas.copy(&texture, None, Rect::new(center_x, center_y, width, height)).unwrap();
+                    canvas.copy(
+                        &texture, 
+                        None, 
+                        Rect::new(center_x, center_y, width, height))
+                        .unwrap();
                     canvas.present();
                 },           
                 _ => {}
