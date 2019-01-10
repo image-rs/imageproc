@@ -10,34 +10,16 @@ use sdl2::surface::Surface;
 /// Displays the provided RGBA image in a new window.
 pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_height: u32) {
 
-    // scale is used to determine how small an image has to be resized to fit within
-    // the provided window dimensions
-    fn get_scale(win_width: u32, win_height: u32, image_width: u32, image_height: u32) -> f32{
-        let width_scale = win_width as f32 / image_width as f32; 
-        let height_scale = win_height as f32 / image_height as f32;
-        if  width_scale < height_scale {
-            width_scale
-        } else {
-            height_scale
-        }
-    };
-
-    // resizes and returns the image that will be used to display in the window
-    fn get_output_image(scale: f32, img: &RgbaImage) -> (u32, u32, RgbaImage) {
-        let height = (scale * img.height() as f32) as u32;
-        let width = (scale * img.width() as f32) as u32;
-        let output_image = image::imageops::resize(img, width, height, image::FilterType::Triangle); 
-        (width, height, output_image)
-    };
-
     let image_width = image.width();
     let image_height = image.height();
 
+    // resizes and returns the image that will be used to display in the window
     let (output_image_width, output_image_height, output_image) = 
         if image_height < window_height && image_width < window_width {
             (image_width, image_height, image.clone())
         } else {
-            // let scale = get_scale(window_width, window_height, image_width, image_height);
+            // scale is used to determine how small an image has to be resized to fit within
+            // the provided window dimensions
             let scale = {
                 let width_scale = window_width as f32 / image_width as f32; 
                 let height_scale = window_height as f32 / image_height as f32;
@@ -51,8 +33,6 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
             let width = (scale * image_width as f32) as u32;
             let output_image = image::imageops::resize(image, width, height, image::FilterType::Triangle);
             (width, height, output_image)
-                    // get_output_image(scale, image)
-         
     };
 
     const CHANNEL_COUNT: u32 = 4;
@@ -118,7 +98,6 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                         if image_height < y && image_width < x {
                             (image_width, image_height, image.clone())
                         } else {
-                            // let scale = get_scale(x, y, image_width, image_height);
                             let scale = {
                                 let width_scale = x as f32 / image_width as f32; 
                                 let height_scale = y as f32 / image_height as f32;
@@ -136,7 +115,6 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                                 height, 
                                 image::FilterType::Triangle);
                             (width, height, output_image)
-                            // get_output_image(scale, image)
                         };
                     
 
