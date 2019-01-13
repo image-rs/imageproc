@@ -8,6 +8,7 @@ use sdl2::rect::Rect;
 use sdl2::surface::Surface;
 
 /// Displays the provided RGBA image in a new window.
+/// Minimum window size is 150 x 150.
 pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_height: u32) {
     const MIN_WINDOW_DIMENSION: u32 = 150;
     // ensures window size is minimum size, so that image resizing calculations for the window are correct
