@@ -1,19 +1,30 @@
-use imageproc::window::display_image;
-use std::env;
+//! An example of displaying an image in a window using the display_image function.
+//! Run this example from your root directory, enabled the display_image feature and
+//! provide a path to an image file as an argument.
+//!
+//! `cargo run --release --features display-window --example display_image examples/wrench.jpg`
 
-// run this example from your root directory, use the "--features" flag and
-// provide a path to an image file as an argument
-// "cargo run --release --features "display-window" --example display_image examples/wrench.jpg" from your root directory
+#[cfg(feature = "display-window")]
 fn main() {
-    let img_path = match env::args().nth(1) {
+    use imageproc::window::display_image;
+    use std::env;
+
+    let image_path = match env::args().nth(1) {
         Some(path) => path,
         None => {
             println!("No image path provided. Using default image.");
             "examples/wrench.jpg".to_owned()
         }
     };
-    let img = image::open(&img_path)
-        .expect("no image found at that path")
+
+    let image = image::open(&image_path)
+        .expect("No image found at provided path")
         .to_rgba();
-    display_image("", &img, 10, 10);
+
+    display_image("", &image, 10, 10);
+}
+
+#[cfg(not(feature = "display-window"))]
+fn main() {
+    panic!("Displaying images is only supported if the display-window feature is enabled.");
 }
