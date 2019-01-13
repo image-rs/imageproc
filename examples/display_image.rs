@@ -8,10 +8,12 @@ fn main() {
     let img_path = match env::args().nth(1) {
         Some(path) => path,
         None => {
-            println!("No image path provided. Using default image."); 
+            println!("No image path provided. Using default image.");
             "examples/wrench.jpg".to_owned()
         }
     };
-    let img = image::open(&img_path).expect("no image found at that path").to_rgba();    
+    let img = image::open(&img_path)
+        .expect("no image found at that path")
+        .to_rgba();
     display_image("", &img, 10, 10);
 }

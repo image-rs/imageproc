@@ -12,7 +12,7 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
     const MIN_WINDOW_DIMENSION: u32 = 150;
     // ensures window size is minimum size, so that image resizing calculations for the window are correct
     let window_width: u32 = if window_width < MIN_WINDOW_DIMENSION {
-        MIN_WINDOW_DIMENSION 
+        MIN_WINDOW_DIMENSION
     } else {
         window_width
     };
@@ -23,7 +23,11 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
     };
 
     // resizes and returns the image that will be used to display in the window
-    fn create_display_image(image: &RgbaImage, window_width: u32, window_height: u32) -> (u32, u32, RgbaImage) {
+    fn create_display_image(
+        image: &RgbaImage,
+        window_width: u32,
+        window_height: u32,
+    ) -> (u32, u32, RgbaImage) {
         if image.height() < window_height && image.width() < window_width {
             (image.width(), image.height(), image.clone())
         } else {
@@ -45,8 +49,9 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
             (width, height, output_image)
         }
     }
-    
-    let (output_image_width, output_image_height, output_image) = create_display_image(image, window_width, window_height);
+
+    let (output_image_width, output_image_height, output_image) =
+        create_display_image(image, window_width, window_height);
 
     const CHANNEL_COUNT: u32 = 4;
     let pitch = output_image_width * CHANNEL_COUNT;
@@ -119,7 +124,8 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
                     let x = x as u32;
                     let y = y as u32;
                     // resize image if necessary to fit into the window
-                    let (output_image_width, output_image_height, output_image) = create_display_image(image, x, y);
+                    let (output_image_width, output_image_height, output_image) =
+                        create_display_image(image, x, y);
 
                     let pitch = output_image_width * CHANNEL_COUNT;
                     let mut img_raw = output_image.into_raw();
