@@ -14,7 +14,7 @@ pub struct BresenhamLineIter {
     error: f32,
     end_x: i32,
     is_steep: bool,
-    y_step: f32,
+    y_step: i32,
 }
 
 impl BresenhamLineIter {
@@ -45,7 +45,7 @@ impl BresenhamLineIter {
             error: dx / 2f32,
             end_x: x1 as i32,
             is_steep: is_steep,
-            y_step: if y0 < y1 { 1f32 } else { -1f32 }
+            y_step: if y0 < y1 { 1 } else { -1 }
         }
     }
 }
@@ -66,7 +66,7 @@ impl Iterator for BresenhamLineIter {
             self.x += 1;
             self.error -= self.dy;
             if self.error < 0f32 {
-                self.y = (self.y as f32 + self.y_step) as i32;
+                self.y = self.y + self.y_step;
                 self.error += self.dx;
             }
 
