@@ -17,11 +17,7 @@ impl DisjointSetForest {
     pub fn new(count: usize) -> DisjointSetForest {
         let parent: Vec<usize> = (0..count).collect();
         let tree_size = vec![1 as usize; count];
-        DisjointSetForest {
-            count: count,
-            parent: parent,
-            tree_size: tree_size,
-        }
+        DisjointSetForest { count, parent, tree_size }
     }
 
     /// Returns the number of trees in the forest.

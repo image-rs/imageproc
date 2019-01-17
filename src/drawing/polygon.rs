@@ -16,7 +16,7 @@ pub struct Point<T: Copy + PartialEq + Eq> {
 impl<T: Copy + PartialEq + Eq> Point<T> {
     /// Construct a point at (x, y).
     pub fn new(x: T, y: T) -> Point<T> {
-        Point::<T> { x: x, y: y }
+        Point::<T> { x, y }
     }
 }
 
@@ -46,7 +46,7 @@ where
     I: GenericImage,
     I::Pixel: 'static,
 {
-    if poly.len() == 0 {
+    if poly.is_empty() {
         return;
     }
     if poly[0] == poly[poly.len() - 1] {
