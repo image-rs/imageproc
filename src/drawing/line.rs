@@ -128,6 +128,7 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
+        assert!(P::channel_count() > 0); // https://github.com/PistonDevelopers/imageproc/issues/281
         BresenhamLinePixelIterMut {
             iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
             image: image
