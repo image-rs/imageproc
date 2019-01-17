@@ -121,10 +121,9 @@ fn draw_polar_line<P>(image: &mut Image<P>, line: PolarLine, color: P)
 where
     P: Pixel + 'static,
 {
-    match intersection_points(line, image.width(), image.height()) {
-        Some((s, e)) => draw_line_segment_mut(image, s, e, color),
-        None => {}
-    };
+    if let Some((s, e)) = intersection_points(line, image.width(), image.height()) {
+        draw_line_segment_mut(image, s, e, color);
+    }
 }
 
 /// Returns the intersection points of a `PolarLine` with an image of given width and height,

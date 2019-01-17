@@ -19,11 +19,7 @@ pub struct Corner {
 impl Corner {
     /// A corner at location (x, y) with score `score`.
     pub fn new(x: u32, y: u32, score: f32) -> Corner {
-        Corner {
-            x: x,
-            y: y,
-            score: score,
-        }
+        Corner { x, y, score }
     }
 }
 

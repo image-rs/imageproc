@@ -193,11 +193,7 @@ mod tests {
 
     impl T {
         fn new(x: u32, y: u32, score: f32) -> T {
-            T {
-                x: x,
-                y: y,
-                score: score,
-            }
+            T { x, y, score }
         }
     }
 

@@ -68,7 +68,7 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     let mut best_threshold = 0u8;
 
     for (threshold, hist_count) in hist.channels[0].iter().enumerate() {
-        background_weight = background_weight + hist_count;
+        background_weight += hist_count;
         if background_weight == 0 {
             continue;
         };

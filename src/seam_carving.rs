@@ -32,7 +32,7 @@ where
 
     for _ in 0..iterations {
         let seam = find_vertical_seam(&result);
-        result = remove_vertical_seam(&mut result, &seam);
+        result = remove_vertical_seam(&result, &seam);
     }
 
     result

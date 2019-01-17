@@ -105,8 +105,8 @@ impl HaarFeature {
         // are validated to be compatible up front, or just mark the function
         // as unsafe and document the requirement on image size.
         let size = feature_size(self.feature_type, self.block_size);
-        assert!(integral.width() >= size.width as u32 + self.left as u32 + 1);
-        assert!(integral.height() >= size.height as u32 + self.top as u32 + 1);
+        assert!(integral.width() > size.width as u32 + self.left as u32);
+        assert!(integral.height() > size.height as u32 + self.top as u32);
 
         // The corners of each block are lettered. Not all letters are evaluated for each feature type.
         // A   B   C   D
@@ -298,8 +298,8 @@ struct Size<T> {
 impl<T> Size<T> {
     fn new(width: u8, height: u8) -> Size<T> {
         Size { 
-            width: width,
-            height: height,
+            width,
+            height,
             units: PhantomData
         }
     }

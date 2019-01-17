@@ -107,11 +107,9 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                         image.unsafe_put_pixel(x, y, Luma([0u8]));
                         continue;
                     }
-                } else {
-                    if image.unsafe_get_pixel(x, y)[0] == 0u8 {
-                        image.unsafe_put_pixel(x, y, Luma([0u8]));
-                        continue;
-                    }
+                } else if image.unsafe_get_pixel(x, y)[0] == 0u8 {
+                    image.unsafe_put_pixel(x, y, Luma([0u8]));
+                    continue;
                 }
 
                 image.unsafe_put_pixel(x, y, max_distance);
@@ -354,7 +352,7 @@ where
             s = intersection(f, envelope.locations[k], q);
         }
 
-        k = k + 1;
+        k += 1;
         envelope.locations[k] = q;
         envelope.boundaries[k] = s;
         envelope.boundaries[k + 1] = f64::INFINITY;
@@ -363,7 +361,7 @@ where
     let mut k = 0;
     for q in 0..f.len() {
         while envelope.boundaries[k + 1] < q as f64 {
-            k = k + 1;
+            k += 1;
         }
         let dist = q as f64 - envelope.locations[k] as f64;
         result.put(q, dist * dist + f.get(envelope.locations[k]));

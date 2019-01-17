@@ -93,11 +93,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                 data.len()
             )
         );
-        Kernel {
-            data: data,
-            width: width,
-            height: height,
-        }
+        Kernel { data, width, height }
     }
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
