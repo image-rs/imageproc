@@ -9,11 +9,10 @@ use crate::math::cast;
 
 /// Adds independent additive Gaussian noise to all channels
 /// of an image, with the given mean and standard deviation.
-pub fn gaussian_noise<I>(image: &I, mean: f64, stddev: f64, seed: usize) -> Image<I::Pixel>
+pub fn gaussian_noise<P>(image: &Image<P>, mean: f64, stddev: f64, seed: usize) -> Image<P>
 where
-    I: GenericImage,
-    I::Pixel: 'static,
-    <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64>,
+    P: Pixel + 'static,
+    P::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -23,38 +22,30 @@ where
 
 /// Adds independent additive Gaussian noise to all channels
 /// of an image in place, with the given mean and standard deviation.
-pub fn gaussian_noise_mut<I>(image: &mut I, mean: f64, stddev: f64, seed: usize)
+pub fn gaussian_noise_mut<P>(image: &mut Image<P>, mean: f64, stddev: f64, seed: usize)
 where
-    I: GenericImage,
-    <I::Pixel as Pixel>::Subpixel: ValueInto<f64> + Clamp<f64>,
+    P: Pixel + 'static,
+    P::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
-
     let normal = Normal::new(mean, stddev);
+    let num_channels = P::channel_count() as usize;
 
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-            let mut pix = unsafe { image.unsafe_get_pixel(x, y) };
-            let num_channels = I::Pixel::channel_count() as usize;
-
-            for c in 0..num_channels {
-                let noise = normal.ind_sample(&mut rng);
-                let channel: f64 = cast(pix.channels()[c]);
-                pix.channels_mut()[c] = <I::Pixel as Pixel>::Subpixel::clamp(channel + noise);
-            }
-
-            unsafe { image.unsafe_put_pixel(x, y, pix) };
+    for p in image.pixels_mut() {
+        for c in 0..num_channels {
+            let noise = normal.ind_sample(&mut rng);
+            let channel: f64 = cast(p.channels()[c]);
+            p.channels_mut()[c] = P::Subpixel::clamp(channel + noise);
         }
     }
 }
 
 /// Converts pixels to black or white at the given `rate` (between 0.0 and 1.0).
 /// Black and white occur with equal probability.
-pub fn salt_and_pepper_noise<I>(image: &I, rate: f64, seed: usize) -> Image<I::Pixel>
+pub fn salt_and_pepper_noise<P>(image: &Image<P>, rate: f64, seed: usize) -> Image<P>
 where
-    I: GenericImage,
-    I::Pixel: HasBlack + HasWhite + 'static,
+    P: Pixel + HasBlack + HasWhite + 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -64,32 +55,20 @@ where
 
 /// Converts pixels to black or white in place at the given `rate` (between 0.0 and 1.0).
 /// Black and white occur with equal probability.
-pub fn salt_and_pepper_noise_mut<I>(image: &mut I, rate: f64, seed: usize)
+pub fn salt_and_pepper_noise_mut<P>(image: &mut Image<P>, rate: f64, seed: usize)
 where
-    I: GenericImage,
-    I::Pixel: HasBlack + HasWhite,
+    P: Pixel + HasBlack + HasWhite + 'static,
 {
-
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
-
     let uniform = Range::new(0.0, 1.0);
 
-    for y in 0..image.height() {
-        for x in 0..image.width() {
-
-            if uniform.ind_sample(&mut rng) > rate {
-                continue;
-            }
-
-            unsafe {
-                if uniform.ind_sample(&mut rng) >= 0.5 {
-                    image.unsafe_put_pixel(x, y, I::Pixel::white());
-                } else {
-                    image.unsafe_put_pixel(x, y, I::Pixel::black());
-                }
-            }
+    for p in image.pixels_mut() {
+        if uniform.ind_sample(&mut rng) > rate {
+            continue;
         }
+        let r = uniform.ind_sample(&mut rng);
+        *p = if r >= 0.5 { P::white() } else { P::black() };
     }
 }
 
