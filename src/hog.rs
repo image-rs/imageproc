@@ -33,11 +33,11 @@ impl HogOptions {
         block_stride: usize,
     ) -> HogOptions {
         HogOptions {
-            orientations: orientations,
-            signed: signed,
-            cell_side: cell_side,
-            block_side: block_side,
-            block_stride: block_stride,
+            orientations,
+            signed,
+            cell_side,
+            block_side,
+            block_stride,
         }
     }
 }
@@ -72,13 +72,7 @@ impl HogSpec {
             cells_high,
             options,
         ));
-        Ok(HogSpec {
-            options: options,
-            cells_wide: cells_wide,
-            cells_high: cells_high,
-            blocks_wide: blocks_wide,
-            blocks_high: blocks_high,
-        })
+        Ok(HogSpec { options, cells_wide, cells_high, blocks_wide, blocks_high })
     }
 
     fn invalid_options_message(errors: &[String]) -> String {
@@ -268,11 +262,8 @@ fn block_norm(view: &View3d<'_, f32>, bx: usize, by: usize) -> f32 {
     l2_norm(block_data)
 }
 
-// TODO: more general, more efficient slice copying and mapping
 fn copy<T: Copy>(from: &[T], to: &mut [T]) {
-    for i in 0..to.len() {
-        to[i] = from[i];
-    }
+    to.clone_from_slice(&from[..to.len()]);
 }
 
 /// Computes orientation histograms for each cell of an image. Assumes that
@@ -363,10 +354,7 @@ struct Interpolation {
 impl Interpolation {
     /// Creates new interpolation with provided indices and weights.
     fn new(indices: [usize; 2], weights: [f32; 2]) -> Interpolation {
-        Interpolation {
-            indices: indices,
-            weights: weights,
-        }
+        Interpolation { indices, weights }
     }
 
     /// Interpolates between two indices, without wrapping.
@@ -480,10 +468,7 @@ impl<T: Zero + Clone> Array3d<T> {
     /// Allocates a new Array3d with the given dimensions.
     fn new(lengths: [usize; 3]) -> Array3d<T> {
         let data = vec![Zero::zero(); data_length(lengths)];
-        Array3d {
-            data: data,
-            lengths: lengths,
-        }
+        Array3d { data, lengths }
     }
 
     /// Provides a 3d view of the data.
@@ -495,10 +480,7 @@ impl<T: Zero + Clone> Array3d<T> {
 impl<'a, T> View3d<'a, T> {
     /// Constructs index from existing data and the lengths of the desired dimensions.
     fn from_raw(data: &'a mut [T], lengths: [usize; 3]) -> View3d<'a, T> {
-        View3d {
-            data: data,
-            lengths: lengths,
-        }
+        View3d { data, lengths }
     }
 
     /// A mutable reference from a 3d index.

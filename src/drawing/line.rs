@@ -38,13 +38,13 @@ impl BresenhamLineIter {
         let dx = x1 - x0;
 
         BresenhamLineIter {
-            dx: dx,
+            dx,
             dy: (y1 - y0).abs(),
             x: x0 as i32,
             y: y0 as i32,
             error: dx / 2f32,
             end_x: x1 as i32,
-            is_steep: is_steep,
+            is_steep,
             y_step: if y0 < y1 { 1 } else { -1 }
         }
     }
@@ -101,10 +101,8 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(image: &Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIter<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIter does not support empty images");
-        BresenhamLinePixelIter {
-            iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
-            image: image
-        }
+        let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
+        BresenhamLinePixelIter { iter, image }
     }
 }
 
@@ -129,10 +127,8 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<'_, P> {
         assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
         assert!(P::channel_count() > 0); // https://github.com/PistonDevelopers/imageproc/issues/281
-        BresenhamLinePixelIterMut {
-            iter: BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image)),
-            image: image
-        }
+        let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
+        BresenhamLinePixelIterMut { iter, image }
     }
 }
 
@@ -238,9 +234,9 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
             swap(&mut y0, &mut y1);
         }
         let plotter = Plotter {
-            image: image,
+            image,
             transform: |x, y| (y, x),
-            blend: blend,
+            blend,
         };
         plot_wu_line(plotter, (y0, x0), (y1, x1), color);
     } else {
@@ -249,9 +245,9 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
             swap(&mut y0, &mut y1);
         }
         let plotter = Plotter {
-            image: image,
+            image,
             transform: |x, y| (x, y),
-            blend: blend,
+            blend,
         };
         plot_wu_line(plotter, (x0, y0), (x1, y1), color);
     };

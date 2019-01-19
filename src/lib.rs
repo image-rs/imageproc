@@ -9,6 +9,12 @@
 //! [image]: https://github.com/PistonDevelopers/image
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
+#![allow(
+    clippy::cast_lossless, clippy::too_many_arguments, clippy::needless_range_loop,
+    clippy::useless_let_if_seq, clippy::match_wild_err_arm, clippy::range_plus_one,
+    clippy::trivially_copy_pass_by_ref, clippy::nonminimal_bool, clippy::expect_fun_call,
+    clippy::many_single_char_names
+)]
 
 #[cfg(test)]
 extern crate test;
@@ -46,5 +52,5 @@ pub mod stats;
 pub mod suppress;
 pub mod template_matching;
 pub mod union_find;
-#[cfg(feature="display-window")]
+#[cfg(feature = "display-window")]
 pub mod window;

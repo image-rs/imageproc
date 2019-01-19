@@ -115,8 +115,8 @@ impl Rect {
         }
 
         Some(Rect {
-            left: left,
-            top: top,
+            left,
+            top,
             width: (right - left) as u32 + 1,
             height: (bottom - top) as u32 + 1,
         })
@@ -156,8 +156,8 @@ impl RectPosition {
         Rect {
             left: self.left,
             top: self.top,
-            width: width,
-            height: height,
+            width,
+            height
         }
     }
 }

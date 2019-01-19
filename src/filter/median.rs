@@ -210,10 +210,7 @@ impl HistSet {
             data.push([0u32; 256]);
         }
 
-        HistSet {
-            data: data,
-            expected_count: expected_count
-        }
+        HistSet { data, expected_count }
     }
 
     fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
