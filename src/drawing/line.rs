@@ -124,9 +124,21 @@ pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
 impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
-    pub fn new(image: &mut Image<P>, start: (f32, f32), end: (f32, f32)) -> BresenhamLinePixelIterMut<'_, P> {
-        assert!(image.width() >= 1 && image.height() >= 1, "BresenhamLinePixelIterMut does not support empty images");
-        assert!(P::channel_count() > 0); // https://github.com/PistonDevelopers/imageproc/issues/281
+    pub fn new(
+        image: &mut Image<P>,
+        start: (f32, f32),
+        end: (f32, f32)
+    ) -> BresenhamLinePixelIterMut<'_, P> {
+        assert!(
+            image.width() >= 1 && image.height() >= 1,
+            "BresenhamLinePixelIterMut does not support empty images"
+        );
+        // The next two assertions are for https://github.com/PistonDevelopers/imageproc/issues/281
+        assert!(P::channel_count() > 0);
+        assert!(
+            image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
+            "Image dimensions are too large"
+        );
         let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
         BresenhamLinePixelIterMut { iter, image }
     }
