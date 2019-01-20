@@ -1,6 +1,6 @@
 //! Functions for adding synthetic noise to images.
 
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::Pixel;
 use rand::{SeedableRng, StdRng};
 use rand::distributions::{IndependentSample, Normal, Range};
 use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
@@ -14,8 +14,7 @@ where
     P: Pixel + 'static,
     P::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    let mut out = image.clone();
     gaussian_noise_mut(&mut out, mean, stddev, seed);
     out
 }
@@ -30,13 +29,11 @@ where
     let seed_array: &[_] = &[seed];
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
     let normal = Normal::new(mean, stddev);
-    let num_channels = P::channel_count() as usize;
 
     for p in image.pixels_mut() {
-        for c in 0..num_channels {
+        for c in p.channels_mut() {
             let noise = normal.ind_sample(&mut rng);
-            let channel: f64 = cast(p.channels()[c]);
-            p.channels_mut()[c] = P::Subpixel::clamp(channel + noise);
+            *c = P::Subpixel::clamp(cast(*c) + noise);
         }
     }
 }
@@ -47,8 +44,7 @@ pub fn salt_and_pepper_noise<P>(image: &Image<P>, rate: f64, seed: usize) -> Ima
 where
     P: Pixel + HasBlack + HasWhite + 'static,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    let mut out = image.clone();
     salt_and_pepper_noise_mut(&mut out, rate, seed);
     out
 }
