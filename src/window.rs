@@ -1,12 +1,12 @@
 //! Displays an image in a window created by sdl2.
 
-use image::{RgbaImage, imageops::resize};
+use image::{imageops::resize, RgbaImage};
 use sdl2::{
     event::{Event, WindowEvent},
     keyboard::Keycode,
     pixels::{Color, PixelFormatEnum},
     rect::Rect,
-    surface::Surface
+    surface::Surface,
 };
 
 /// Displays the provided RGBA image in a new window.
@@ -34,7 +34,8 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
         .set_minimum_size(MIN_WINDOW_DIMENSION, MIN_WINDOW_DIMENSION)
         .expect("invalid minimum size for window");
 
-    let mut canvas = window.into_canvas()
+    let mut canvas = window
+        .into_canvas()
         .build()
         .expect("couldn't create canvas");
 
@@ -53,8 +54,9 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
             image_width,
             image_height,
             image_width * CHANNEL_COUNT,
-            PixelFormatEnum::ABGR8888 // sdl2 expects bits from highest to lowest
-        ).expect("couldn't create surface");
+            PixelFormatEnum::ABGR8888, // sdl2 expects bits from highest to lowest
+        )
+        .expect("couldn't create surface");
 
         let texture = texture_creator
             .create_texture_from_surface(surface)
@@ -65,7 +67,13 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
 
         let left = ((window_width - image_width) as f32 / 2f32) as i32;
         let top = ((window_height - image_height) as f32 / 2f32) as i32;
-        canvas.copy(&texture, None, Rect::new(left, top, image_width, image_height)).unwrap();
+        canvas
+            .copy(
+                &texture,
+                None,
+                Rect::new(left, top, image_width, image_height),
+            )
+            .unwrap();
         canvas.present();
     };
 
@@ -97,7 +105,18 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
 ///
 /// The minimum window width or height is 150 pixels - input values less than this
 /// will be rounded up to the minimum.
-pub fn display_multiple_images(title: &str, image: Vec<RgbaImage>, window_width: u32, window_height: u32) {
+pub fn display_multiple_images(
+    title: &str,
+    images: &Vec<&RgbaImage>,
+    window_width: u32,
+    window_height: u32,
+) {
+    use sdl2::render::Canvas;
+    use sdl2::render::TextureCreator;
+    use sdl2::render::WindowCanvas;
+    use sdl2::video::Window;
+    use sdl2::video::WindowContext;
+
     // Enforce minimum window size
     const MIN_WINDOW_DIMENSION: u32 = 150;
     let window_width = window_width.max(MIN_WINDOW_DIMENSION);
@@ -107,12 +126,9 @@ pub fn display_multiple_images(title: &str, image: Vec<RgbaImage>, window_width:
     let sdl = sdl2::init().expect("couldn't create sdl2 context");
     let video_subsystem = sdl.video().expect("couldn't create video subsystem");
 
-    use sdl2::video::Window;
-    use sdl2::render::WindowCanvas;
-    use sdl2::video::WindowContext;
-
-    let mut windows: Vec<sdl2::video::Window> = Vec::new();
-    for _i in 0..image.len() {
+    let mut windows: Vec<sdl2::video::Window> = Vec::with_capacity(images.len());
+    let mut window_visibility: Vec<bool> = Vec::with_capacity(images.len());
+    for _ in 0..images.len() {
         let mut window = video_subsystem
             .window(title, window_width, window_height)
             .position_centered()
@@ -124,79 +140,80 @@ pub fn display_multiple_images(title: &str, image: Vec<RgbaImage>, window_width:
             .set_minimum_size(MIN_WINDOW_DIMENSION, MIN_WINDOW_DIMENSION)
             .expect("invalid minimum size for window");
         windows.push(window);
+        window_visibility.push(true);
     }
-    // let mut window = video_subsystem
-    //     .window(title, window_width, window_height)
-    //     .position_centered()
-    //     .resizable()
-    //     .build()
-    //     .expect("couldn't create window");
-    //
-    // window
-    //     .set_minimum_size(MIN_WINDOW_DIMENSION, MIN_WINDOW_DIMENSION)
-    //     .expect("invalid minimum size for window");
-    let mut canvases: Vec<WindowCanvas> = Vec::new();
-    // for i in 0..windows.len() {
+
+    let mut canvases: Vec<WindowCanvas> = Vec::with_capacity(images.len());
     for window in windows.into_iter() {
-        // let mut canvas = windows[i as usize].into_canvas()
-        let mut canvas = window.into_canvas()
+        let canvas = window
+            .into_canvas()
+            .software()
             .build()
-            .expect("couldn't creat canvas");
+            .expect("couldn't create canvas");
         canvases.push(canvas);
     }
 
-
-    // let mut canvas = window.into_canvas()
-    //     .build()
-    //     .expect("couldn't create canvas");
-
-    let mut texture_creators: Vec<sdl2::render::TextureCreator<WindowContext>> = Vec::new();
-    for i in 0..canvases.len() {
-        let texture_creator = canvases[i as usize].texture_creator();
+    let mut texture_creators: Vec<sdl2::render::TextureCreator<WindowContext>> =
+        Vec::with_capacity(images.len());
+    for canvas in canvases.iter() {
+        let texture_creator = canvas.texture_creator();
         texture_creators.push(texture_creator);
     }
-    // let texture_creator = canvas.texture_creator();
-    use sdl2::render::TextureCreator;
-    use sdl2::render::Canvas;
 
     // Shrinks input image to fit if required and renders to the sdl canvas
-    // let mut render_image_to_canvas = |image, window_width, window_height| {
-    let mut render_image_to_canvas = |image, window_width, window_height, canvas: &mut Canvas<Window>, texture_creator: &TextureCreator<WindowContext>| {
-    // fn render_image_to_canvas(image: &RgbaImage, window_width: u32, window_height: u32, canvas: &mut Canvas<Window>, texture_creator: &TextureCreator<WindowContext>) {
-        let scaled_image = resize_to_fit(image, window_width, window_height);
-        
-        let (image_width, image_height) = scaled_image.dimensions();
-        let mut buffer = scaled_image.into_raw();
-        const CHANNEL_COUNT: u32 = 4;
-        let surface = Surface::from_data(
-            &mut buffer,
-            image_width,
-            image_height,
-            image_width * CHANNEL_COUNT,
-            PixelFormatEnum::ABGR8888 // sdl2 expects bits from highest to lowest
-        ).expect("couldn't create surface");
+    let render_image_to_canvas =
+        |image,
+         window_width,
+         window_height,
+         canvas: &mut Canvas<Window>,
+         texture_creator: &TextureCreator<WindowContext>| {
+            let scaled_image = resize_to_fit(image, window_width, window_height);
 
-        let texture = texture_creator
-            .create_texture_from_surface(surface)
-            .expect("couldn't create texture from surface");
+            let (image_width, image_height) = scaled_image.dimensions();
+            let mut buffer = scaled_image.into_raw();
+            const CHANNEL_COUNT: u32 = 4;
+            let surface = Surface::from_data(
+                &mut buffer,
+                image_width,
+                image_height,
+                image_width * CHANNEL_COUNT,
+                PixelFormatEnum::ABGR8888, // sdl2 expects bits from highest to lowest
+            )
+            .expect("couldn't create surface");
 
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
-        canvas.clear();
+            let texture = texture_creator
+                .create_texture_from_surface(surface)
+                .expect("couldn't create texture from surface");
 
-        let left = ((window_width - image_width) as f32 / 2f32) as i32;
-        let top = ((window_height - image_height) as f32 / 2f32) as i32;
-        canvas.copy(&texture, None, Rect::new(left, top, image_width, image_height)).unwrap();
-        canvas.present();
+            canvas.set_draw_color(Color::RGB(255, 255, 255));
+            canvas.clear();
 
-    };
-    // for (canvas, texture_creator) in canvases.iter().zip(texture_creators.iter()) {
-    for (i, (mut canvas, texture_creator)) in canvases.into_iter().zip(texture_creators.iter()).enumerate() {
-        let i = i as usize;
-        render_image_to_canvas(&image[i], window_width, window_height, &mut canvas, texture_creator);
-        // render_image_to_canvas(&image[i], window_width, window_height, canvases[i], texture_creators[i]); 
-        // render_image_to_canvas(image, window_width, window_height, &canvas, &texture_creator);
+            let left = ((window_width - image_width) as f32 / 2f32) as i32;
+            let top = ((window_height - image_height) as f32 / 2f32) as i32;
+            canvas
+                .copy(
+                    &texture,
+                    None,
+                    Rect::new(left, top, image_width, image_height),
+                )
+                .unwrap();
+            canvas.present();
+        };
+
+    for (i, (canvas, texture_creator)) in
+        canvases.iter_mut().zip(texture_creators.iter()).enumerate()
+    {
+        render_image_to_canvas(
+            images[i],
+            window_width,
+            window_height,
+            canvas,
+            texture_creator,
+        );
     }
-    
+
+    let mut hidden_count = 0;
+
     // Create and start event loop to keep window open until Esc
     let mut event_pump = sdl.event_pump().unwrap();
     event_pump.enable_event(sdl2::event::EventType::Window);
@@ -208,11 +225,56 @@ pub fn display_multiple_images(title: &str, image: Vec<RgbaImage>, window_width:
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-                Event::Window {
-                    win_event: WindowEvent::Resized(w, h),
+                Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    window_id,
                     ..
                 } => {
-                    // render_image_to_canvas(image, w as u32, h as u32);
+                    for (i, canvas) in canvases.iter_mut().enumerate() {
+                        if window_id == canvas.window().id() {
+                            canvas.window_mut().hide();
+                            window_visibility[i] = false;
+                            hidden_count += 1;
+                        }
+                        if hidden_count == images.len() {
+                            break 'running;
+                        }
+                    }
+                }
+                Event::Window {
+                    win_event: WindowEvent::Close,
+                    window_id,
+                    ..
+                } => {
+                    for (i, canvas) in canvases.iter_mut().enumerate() {
+                        if window_id == canvas.window().id() {
+                            canvas.window_mut().hide();
+                            window_visibility[i] = false;
+                            hidden_count += 1;
+                        }
+                        if hidden_count == images.len() {
+                            break 'running;
+                        }
+                    }
+                }
+                Event::Window {
+                    win_event: WindowEvent::Resized(w, h),
+                    window_id,
+                    ..
+                } => {
+                    for (i, (canvas, texture_creator)) in
+                        canvases.iter_mut().zip(texture_creators.iter()).enumerate()
+                    {
+                        if window_id == canvas.window().id() {
+                            render_image_to_canvas(
+                                images[i],
+                                w as u32,
+                                h as u32,
+                                canvas,
+                                texture_creator,
+                            );
+                        }
+                    }
                 }
                 _ => {}
             }
