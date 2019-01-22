@@ -21,7 +21,7 @@ fn main() {
         .expect("No image found at provided path")
         .to_rgba();
 
-    display_image("", &image, 10, 10);
+    display_image("", &image, 500, 500);
 }
 
 #[cfg(not(feature = "display-window"))]
