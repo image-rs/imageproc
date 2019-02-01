@@ -13,6 +13,10 @@ pub enum MatchTemplateMethod {
     SumOfSquaredErrors,
     /// Divides the sum computed using `SumOfSquaredErrors` by a normalization term.
     SumOfSquaredErrorsNormalized,
+    /// Cross Correlation
+    CrossCorrelation,
+    /// Divides the sum computed using `CrossCorrelation` by a normalization term.
+    CrossCorrelationNormalized,
 }
 
 /// Slides a `template` over an `image` and scores the match at each point using
@@ -34,7 +38,7 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
     assert!(image_width >= template_width, "image width must be greater than or equal to template width");
     assert!(image_height >= template_height, "image height must be greater than or equal to template height");
 
-    let should_normalize = method == MatchTemplateMethod::SumOfSquaredErrorsNormalized;
+    let should_normalize = match method { MatchTemplateMethod::SumOfSquaredErrorsNormalized | MatchTemplateMethod::CrossCorrelationNormalized => true, _ => false };
     let image_squared_integral = if should_normalize { Some(integral_squared_image(&image)) } else { None };
     let template_squared_sum = if should_normalize { Some(sum_squares(&template)) } else { None };
 
@@ -48,7 +52,13 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
                 for dx in 0..template_width {
                     let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
                     let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-                    score += (image_value - template_value).powf(2.0);
+
+                    use MatchTemplateMethod::*;
+
+                    score += match method {
+                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => (image_value - template_value).powf(2.0),
+                        CrossCorrelation | CrossCorrelationNormalized => (image_value * template_value),
+                    };
                 }
             }
 
