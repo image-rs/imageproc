@@ -235,6 +235,53 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[test]
+    fn match_template_cross_correlation() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelation);
+        let expected = gray_image!(type: f32,
+            19.0, 23.0;
+            25.0, 32.0
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_cross_correlation_normalized() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+        );
+        let tss = 30f32;
+        let expected = gray_image!(type: f32,
+            19.0 / (22.0 * tss).sqrt(), 23.0 / (30.0 * tss).sqrt();
+            25.0 / (23.0 * tss).sqrt(), 32.0 / (35.0 * tss).sqrt()
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
     macro_rules! bench_match_template {
         ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
             #[bench]
