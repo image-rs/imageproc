@@ -16,10 +16,10 @@ pub enum MatchTemplateMethod {
     /// Divides the sum computed using `SumOfSquaredErrors` by a normalization term.
     SumOfSquaredErrorsNormalized,
     /// Cross Correlation
-    CrossCorrelation,
-    /// Divides the sum computed using `CrossCorrelation` by a normalization term.
     ///
     /// Higher values are better.
+    CrossCorrelation,
+    /// Divides the sum computed using `CrossCorrelation` by a normalization term.
     CrossCorrelationNormalized,
 }
 
