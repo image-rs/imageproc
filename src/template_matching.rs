@@ -10,9 +10,17 @@ use image::{GrayImage, Luma};
 pub enum MatchTemplateMethod {
     /// Sum of the squares of the difference between image and template pixel
     /// intensities.
+    ///
+    /// Smaller values are better.
     SumOfSquaredErrors,
     /// Divides the sum computed using `SumOfSquaredErrors` by a normalization term.
     SumOfSquaredErrorsNormalized,
+    /// Cross Correlation
+    ///
+    /// Higher values are better.
+    CrossCorrelation,
+    /// Divides the sum computed using `CrossCorrelation` by a normalization term.
+    CrossCorrelationNormalized,
 }
 
 /// Slides a `template` over an `image` and scores the match at each point using
@@ -34,7 +42,7 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
     assert!(image_width >= template_width, "image width must be greater than or equal to template width");
     assert!(image_height >= template_height, "image height must be greater than or equal to template height");
 
-    let should_normalize = method == MatchTemplateMethod::SumOfSquaredErrorsNormalized;
+    let should_normalize = match method { MatchTemplateMethod::SumOfSquaredErrorsNormalized | MatchTemplateMethod::CrossCorrelationNormalized => true, _ => false };
     let image_squared_integral = if should_normalize { Some(integral_squared_image(&image)) } else { None };
     let template_squared_sum = if should_normalize { Some(sum_squares(&template)) } else { None };
 
@@ -48,7 +56,13 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
                 for dx in 0..template_width {
                     let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
                     let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-                    score += (image_value - template_value).powf(2.0);
+
+                    use MatchTemplateMethod::*;
+
+                    score += match method {
+                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => (image_value - template_value).powf(2.0),
+                        CrossCorrelation | CrossCorrelationNormalized => (image_value * template_value),
+                    };
                 }
             }
 
@@ -216,6 +230,53 @@ mod tests {
         let expected = gray_image!(type: f32,
             14.0 / (22.0 * tss).sqrt(), 14.0 / (30.0 * tss).sqrt();
             3.0 / (23.0 * tss).sqrt(), 1.0 / (35.0 * tss).sqrt()
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_cross_correlation() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelation);
+        let expected = gray_image!(type: f32,
+            19.0, 23.0;
+            25.0, 32.0
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_cross_correlation_normalized() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+        );
+        let tss = 30f32;
+        let expected = gray_image!(type: f32,
+            19.0 / (22.0 * tss).sqrt(), 23.0 / (30.0 * tss).sqrt();
+            25.0 / (23.0 * tss).sqrt(), 32.0 / (35.0 * tss).sqrt()
         );
 
         assert_pixels_eq!(actual, expected);
