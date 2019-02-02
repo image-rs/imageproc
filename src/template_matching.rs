@@ -10,12 +10,16 @@ use image::{GrayImage, Luma};
 pub enum MatchTemplateMethod {
     /// Sum of the squares of the difference between image and template pixel
     /// intensities.
+    ///
+    /// Smaller values are better.
     SumOfSquaredErrors,
     /// Divides the sum computed using `SumOfSquaredErrors` by a normalization term.
     SumOfSquaredErrorsNormalized,
     /// Cross Correlation
     CrossCorrelation,
     /// Divides the sum computed using `CrossCorrelation` by a normalization term.
+    ///
+    /// Higher values are better.
     CrossCorrelationNormalized,
 }
 
