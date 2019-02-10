@@ -5,7 +5,8 @@
 
 use std::fmt;
 use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
-use rand::Rand;
+use rand::prelude::*;
+use rand::distributions::{Distribution, Standard};
 use quickcheck::{Arbitrary, Gen};
 use crate::definitions::Image;
 
@@ -105,7 +106,10 @@ fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
     ((dims.0 % 10) as u32, (dims.1 % 10) as u32)
 }
 
-impl<T: Rand + Send + Primitive> ArbitraryPixel for Rgb<T> {
+impl<T: Send + Primitive> ArbitraryPixel for Rgb<T>
+where
+    Standard: Distribution<T>
+{
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let red: T = g.gen();
         let green: T = g.gen();
@@ -114,7 +118,10 @@ impl<T: Rand + Send + Primitive> ArbitraryPixel for Rgb<T> {
     }
 }
 
-impl<T: Rand + Send + Primitive> ArbitraryPixel for Luma<T> {
+impl<T: Send + Primitive> ArbitraryPixel for Luma<T>
+where
+    Standard: Distribution<T>
+{
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let val: T = g.gen();
         Luma([val])

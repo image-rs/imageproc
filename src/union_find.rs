@@ -104,8 +104,8 @@ impl DisjointSetForest {
 mod tests {
     use super::DisjointSetForest;
     use ::test;
-    use rand::{SeedableRng, StdRng};
-    use rand::distributions::{IndependentSample, Range};
+    use rand::prelude::*;
+    use rand::distributions::Uniform;
 
     #[test]
     fn test_trees() {
@@ -178,16 +178,15 @@ mod tests {
         let num_nodes = 500;
         let num_edges = 20 * num_nodes;
 
-        let seed_array: &[_] = &[1usize];
-        let mut rng: StdRng = SeedableRng::from_seed(seed_array);
-        let uniform = Range::new(0, num_nodes);
+        let mut rng: StdRng = SeedableRng::seed_from_u64(1);
+        let uniform = Uniform::new(0, num_nodes);
 
         let mut forest = DisjointSetForest::new(num_nodes);
         b.iter(|| {
             let mut count = 0;
             while count < num_edges {
-                let u = uniform.ind_sample(&mut rng);
-                let v = uniform.ind_sample(&mut rng);
+                let u = uniform.sample(&mut rng);
+                let v = uniform.sample(&mut rng);
                 forest.union(u, v);
                 count += 1;
             }
