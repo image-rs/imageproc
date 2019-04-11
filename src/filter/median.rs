@@ -75,7 +75,7 @@ use std::cmp::{min, max};
 /// assert_pixels_eq!(median_filter(&image, 1), filtered);
 /// # }
 /// ```
-pub fn median_filter<P>(image: &Image<P>, radius: u32) -> Image<P>
+pub fn median_filter<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> Image<P>
 where
     P: Pixel<Subpixel=u8> + 'static
 {
@@ -86,40 +86,41 @@ where
     }
 
     let mut out = Image::<P>::new(width, height);
-    let r = radius as i32;
+    let rx = x_radius as i32;
+    let ry = y_radius as i32;
 
-    let mut hist = initialise_histogram_for_top_left_pixel(&image, radius);
-    slide_down_column(&mut hist, &image, &mut out, 0, r);
+    let mut hist = initialise_histogram_for_top_left_pixel(&image, x_radius, y_radius);
+    slide_down_column(&mut hist, &image, &mut out, 0, rx, ry);
 
     for x in 1..width {
         if x % 2 == 0 {
-            slide_right(&mut hist, &image, x, 0, r);
-            slide_down_column(&mut hist, &image, &mut out, x, r);
+            slide_right(&mut hist, &image, x, 0, rx, ry);
+            slide_down_column(&mut hist, &image, &mut out, x, rx, ry);
         }
         else {
-            slide_right(&mut hist, &image, x, height - 1, r);
-            slide_up_column(&mut hist, &image, &mut out, x, r);
+            slide_right(&mut hist, &image, x, height - 1, rx, ry);
+            slide_up_column(&mut hist, &image, &mut out, x, rx, ry);
         }
     }
-
     out
 }
 
-fn initialise_histogram_for_top_left_pixel<P>(image: &Image<P>, radius: u32) -> HistSet
+fn initialise_histogram_for_top_left_pixel<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> HistSet
 where
     P: Pixel<Subpixel=u8> + 'static
 {
     let (width, height) = image.dimensions();
-    let kernel_size = (2 * radius + 1) * (2 * radius + 1);
+    let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1); 
     let num_channels = P::channel_count();
 
     let mut hist = HistSet::new(num_channels, kernel_size);
-    let r = radius as i32;
+    let rx = x_radius as i32;
+    let ry = y_radius as i32;
 
-    for dy in -r..(r + 1) {
+    for dy in -ry..(ry + 1) {
         let py = min(max(0, dy), height as i32 - 1) as u32;
 
-        for dx in -r..(r + 1) {
+        for dx in -rx..(rx + 1) {
             let px = min(max(0, dx), width as i32 - 1) as u32;
 
             hist.incr(image, px, py);
@@ -129,16 +130,17 @@ where
     hist
 }
 
-fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, r: i32)
+
+fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, rx: i32, ry: i32)
 where
     P: Pixel<Subpixel=u8> + 'static
 {
     let (width, height) = image.dimensions();
 
-    let prev_x = max(0, x as i32 - r - 1) as u32;
-    let next_x = min(x as i32 + r, width as i32 - 1) as u32;
+    let prev_x = max(0, x as i32 - rx - 1) as u32;
+    let next_x = min(x as i32 + rx, width as i32 - 1) as u32;
 
-    for dy in -r..(r + 1) {
+    for dy in -ry..(ry + 1) {
         let py = min(max(0, y as i32 + dy), (height - 1) as i32) as u32;
 
         hist.decr(image, prev_x, py);
@@ -146,7 +148,7 @@ where
     }
 }
 
-fn slide_down_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, r: i32)
+fn slide_down_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, rx: i32, ry: i32)
 where
     P: Pixel<Subpixel=u8> + 'static
 {
@@ -154,10 +156,10 @@ where
     hist.set_to_median(out, x, 0);
 
     for y in 1..height {
-        let prev_y = max(0, y as i32 - r - 1) as u32;
-        let next_y = min(y as i32 + r, height as i32 - 1) as u32;
+        let prev_y = max(0, y as i32 - ry - 1) as u32;
+        let next_y = min(y as i32 + ry, height as i32 - 1) as u32;
 
-        for dx in -r..(r + 1) {
+        for dx in -rx..(rx + 1) {
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
             hist.decr(image, px, prev_y);
@@ -168,7 +170,7 @@ where
     }
 }
 
-fn slide_up_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, r: i32)
+fn slide_up_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, rx: i32, ry: i32)
 where
     P: Pixel<Subpixel=u8> + 'static
 {
@@ -176,10 +178,10 @@ where
     hist.set_to_median(out, x, height - 1);
 
     for y in (0..(height-1)).rev() {
-        let prev_y = min(y as i32 + r + 1, height as i32 - 1) as u32;
-        let next_y = max(0, y as i32 - r) as u32;
+        let prev_y = min(y as i32 + ry + 1, height as i32 - 1) as u32;
+        let next_y = max(0, y as i32 - ry) as u32;
 
-        for dx in -r..(r + 1) {
+        for dx in -rx..(rx + 1) {
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
             hist.decr(image, px, prev_y);
@@ -289,25 +291,30 @@ mod tests {
     use std::cmp::{min, max};
 
     macro_rules! bench_median_filter {
-        ($name:ident, side: $s:expr, radius: $r:expr) => {
+        ($name:ident, side: $s:expr, x_radius: $rx:expr, y_radius: $ry:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
                 b.iter(|| {
-                    let filtered = median_filter(&image, $r);
+                    let filtered = median_filter(&image, $rx, $ry);
                     black_box(filtered);
                 })
             }
         }
     }
 
-    bench_median_filter!(bench_median_filter_s100_r1, side: 100, radius: 1);
-    bench_median_filter!(bench_median_filter_s100_r4, side: 100, radius: 4);
-    bench_median_filter!(bench_median_filter_s100_r8, side: 100, radius: 8);
+    bench_median_filter!(bench_median_filter_s100_r1, side: 100, x_radius: 1,y_radius: 1);
+    bench_median_filter!(bench_median_filter_s100_r4, side: 100, x_radius: 4,y_radius: 4);
+    bench_median_filter!(bench_median_filter_s100_r8, side: 100, x_radius: 8,y_radius: 8);
+    
+    // benchmark on non-square kernels
+    bench_median_filter!(bench_median_filter_s100_rx1_ry4, side: 100, x_radius: 1,y_radius: 4);
+    bench_median_filter!(bench_median_filter_s100_rx1_ry8, side: 100, x_radius: 1,y_radius: 8);
+    bench_median_filter!(bench_median_filter_s100_rx4_ry8, side: 100, x_radius: 4,y_radius: 1);
+    bench_median_filter!(bench_median_filter_s100_rx8_ry1, side: 100, x_radius: 8,y_radius: 1);
 
-    // Reference implementation of median filter - written to be as simple as possible,
-    // to validate faster versions against.
-    fn reference_median_filter(image: &GrayImage, radius: u32) -> GrayImage {
+
+    fn reference_median_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> GrayImage {
         let (width, height) = image.dimensions();
 
         if width == 0 || height == 0 {
@@ -315,17 +322,19 @@ mod tests {
         }
 
         let mut out = GrayImage::new(width, height);
-        let filter_side = (2 * radius + 1) as usize;
-        let mut neighbors = vec![0u8; filter_side * filter_side];
+        let x_filter_side = (2 * x_radius + 1) as usize;
+        let y_filter_side = (2 * y_radius + 1) as usize;
+        let mut neighbors = vec![0u8; x_filter_side * y_filter_side];
 
-        let r = radius as i32;
+        let rx = x_radius as i32;
+        let ry = y_radius as i32;
 
         for y in 0..height {
             for x in 0..width {
                 let mut idx = 0;
 
-                for dy in -r..(r + 1) {
-                    for dx in -r..(r + 1) {
+                for dy in -ry..(ry + 1) {
+                    for dx in -rx..(rx + 1) {
                         let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
                         let py = min(max(0, y as i32 + dy), (height - 1) as i32) as u32;
 
@@ -348,20 +357,21 @@ mod tests {
     fn median(sorted: &[u8]) -> u8 {
         let mid = sorted.len() / 2;
         sorted[mid]
-    }
+    } 
 
-    #[test]
+        #[test]
     fn test_median_filter_matches_reference_implementation() {
-        fn prop(image: GrayTestImage, radius: u32) -> TestResult {
-            let radius = radius % 5;
-            let expected = reference_median_filter(&image.0, radius);
-            let actual = median_filter(&image.0, radius);
+        fn prop(image: GrayTestImage, x_radius: u32, y_radius: u32) -> TestResult {
+            let x_radius = x_radius % 5;
+            let y_radius = y_radius % 5;
+            let expected = reference_median_filter(&image.0, x_radius, y_radius);
+            let actual = median_filter(&image.0, x_radius, y_radius);
 
             match pixel_diff_summary(&actual, &expected) {
                 None => TestResult::passed(),
                 Some(err) => TestResult::error(err),
             }
         }
-        quickcheck(prop as fn(GrayTestImage, u32) -> TestResult);
+        quickcheck(prop as fn(GrayTestImage, u32, u32) -> TestResult);
     }
 }
