@@ -2,10 +2,10 @@ use image::{GenericImageView, Pixel};
 use crate::definitions::Image;
 use std::cmp::{min, max};
 
-/// Applies a median filter of given `radius` to an image. Each output pixel is the median
-/// of the pixels in a `2 * radius + 1` square of pixels in the input image.
+/// Applies a median filter of given kernel to an image. Each output pixel is the median
+/// of the pixels in a `(2 * x_radius + 1) * (2 * y_radius + 1)` kernel of pixels in the input image.
 ///
-/// Pads by continuity. Performs O(radius) operations per pixel.
+/// Pads by continuity. Performs O(max(x_radius, y_radius)) operations per pixel.
 ///
 /// # Examples
 /// ```
@@ -40,7 +40,7 @@ use std::cmp::{min, max};
 ///     9, 11, 11
 /// );
 ///
-/// assert_pixels_eq!(median_filter(&image, 1), filtered);
+/// assert_pixels_eq!(median_filter(&image, 1, 1), filtered);
 /// # }
 /// ```
 ///
@@ -72,7 +72,38 @@ use std::cmp::{min, max};
 ///     [ 9,  2, 10], [11,  3, 10], [11,  3, 10]
 /// );
 ///
-/// assert_pixels_eq!(median_filter(&image, 1), filtered);
+/// assert_pixels_eq!(median_filter(&image, 1, 1), filtered);
+/// # }
+/// ```
+/// 
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::filter::median_filter;
+///
+/// // The kernel can be non-square shape.
+/// // This example uses a kernel with x_radius sets to 2
+/// // and y_radius sets to 1, which leads to 5 * 3 kernel size.
+///
+/// let image = gray_image!(
+///     1, 2, 3, 4, 5;
+///     255, 200, 4, 11, 7;
+///     42, 17, 3, 2, 1;
+///     9, 100, 11, 13, 14;
+///     15, 87, 99, 21, 45
+/// );
+///    
+/// let filtered = gray_image!(
+///     2, 3, 4, 5, 5;
+///     17, 4, 4, 4, 4;
+///     42, 13, 11, 11, 7;
+///     15, 15, 15, 14, 14;
+///     15, 15, 21, 45, 45
+/// );
+///
+/// assert_pixels_eq!(median_filter(&image, 2, 1), filtered);
 /// # }
 /// ```
 pub fn median_filter<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> Image<P>
@@ -359,7 +390,7 @@ mod tests {
         sorted[mid]
     } 
 
-        #[test]
+    #[test]
     fn test_median_filter_matches_reference_implementation() {
         fn prop(image: GrayTestImage, x_radius: u32, y_radius: u32) -> TestResult {
             let x_radius = x_radius % 5;
