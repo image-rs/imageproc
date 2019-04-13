@@ -2,7 +2,7 @@ use image::{GenericImageView, Pixel};
 use crate::definitions::Image;
 use std::cmp::{min, max};
 
-/// Applies a median filter of given kernel to an image. Each output pixel is the median
+/// Applies a median filter of given dimensions to an image. Each output pixel is the median
 /// of the pixels in a `(2 * x_radius + 1) * (2 * y_radius + 1)` kernel of pixels in the input image.
 ///
 /// Pads by continuity. Performs O(max(x_radius, y_radius)) operations per pixel.
@@ -83,7 +83,6 @@ use std::cmp::{min, max};
 /// # fn main() {
 /// use imageproc::filter::median_filter;
 ///
-/// // The kernel can be non-square shape.
 /// // This example uses a kernel with x_radius sets to 2
 /// // and y_radius sets to 1, which leads to 5 * 3 kernel size.
 ///
@@ -344,7 +343,8 @@ mod tests {
     bench_median_filter!(bench_median_filter_s100_rx4_ry8, side: 100, x_radius: 4,y_radius: 1);
     bench_median_filter!(bench_median_filter_s100_rx8_ry1, side: 100, x_radius: 8,y_radius: 1);
 
-
+    // Reference implementation of median filter - written to be as simple as possible,
+    // to validate faster versions against.
     fn reference_median_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> GrayImage {
         let (width, height) = image.dimensions();
 
@@ -388,7 +388,7 @@ mod tests {
     fn median(sorted: &[u8]) -> u8 {
         let mid = sorted.len() / 2;
         sorted[mid]
-    } 
+    }
 
     #[test]
     fn test_median_filter_matches_reference_implementation() {
