@@ -2,16 +2,15 @@ imageproc
 ====
 
 ![crates.io](https://img.shields.io/crates/v/imageproc.svg)
-[![Join the chat at https://gitter.im/PistonDevelopers/imageproc](https://badges.gitter.im/PistonDevelopers/imageproc.svg)](https://gitter.im/PistonDevelopers/imageproc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/PistonDevelopers/imageproc.svg?branch=master)](https://travis-ci.org/PistonDevelopers/imageproc)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/PistonDevelopers/imageproc/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/image-rs/imageproc.svg?branch=master)](https://travis-ci.org/image-rs/imageproc)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/image-rs/imageproc/blob/master/LICENSE)
 
-An image processing library, based on the [image](https://github.com/PistonDevelopers/image) library. There may initially
+An image processing library, based on the [image](https://github.com/image-rs/image) library. There may initially
 be overlap between the functions in this library and those in image::imageops.
 
 This is very much a work in progress. If you have ideas for things that could be done better, or new features you'd like to see, then please create issues for them. Nothing's set in stone.
 
-[API documentation](http://docs.piston.rs/imageproc/imageproc/)
+[API documentation](http://docs.rs/imageproc)
 
 # Goals
 
