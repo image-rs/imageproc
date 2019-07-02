@@ -4,7 +4,7 @@ use image::{
     Pixel
 };
 
-/// A surface for drawing on - the drawing functions in this
+/// A surface for drawing on - many drawing functions in this
 /// library are generic over a `Canvas` to allow the user to
 /// configure e.g. whether to use blending.
 ///
