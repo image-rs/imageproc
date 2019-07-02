@@ -216,6 +216,108 @@ macro_rules! rgb_image {
     }
 }
 
+
+/// Helper for defining RGBA images.
+///
+/// Pixels are delineated by square brackets, columns are
+/// separated by commas and rows are separated by semi-colons.
+/// By default a subpixel type of `u8` is used but this can be
+/// overridden, as shown in the examples.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::{ImageBuffer, Rgba, RgbaImage};
+///
+/// // An empty image with pixel type Rgba<u8>
+/// let empty = rgba_image!();
+///
+/// assert_pixels_eq!(
+///     empty,
+///     RgbaImage::from_raw(0, 0, vec![]).unwrap()
+/// );
+///
+/// // A single pixel image with pixel type Rgba<u8>
+/// let single_pixel = rgba_image!([1, 2, 3, 4]);
+///
+/// assert_pixels_eq!(
+///     single_pixel,
+///     RgbaImage::from_raw(1, 1, vec![1, 2, 3, 4]).unwrap()
+/// );
+///
+/// // A single row image with pixel type Rgba<u8>
+/// let single_row = rgba_image!([1, 2, 3, 10], [4, 5, 6, 20]);
+///
+/// assert_pixels_eq!(
+///     single_row,
+///     RgbaImage::from_raw(2, 1, vec![1, 2, 3, 10, 4, 5, 6, 20]).unwrap()
+/// );
+///
+/// // An image with 2 rows and 2 columns
+/// let image = rgba_image!(
+///     [1,  2,  3, 10], [ 4,  5,  6, 20];
+///     [7,  8,  9, 30], [10, 11, 12, 40]);
+///
+/// let equivalent = RgbaImage::from_raw(2, 2, vec![
+///     1,  2,  3, 10,  4,  5,  6, 20,
+///     7,  8,  9, 30, 10, 11, 12, 40
+/// ]).unwrap();
+///
+/// assert_pixels_eq!(image, equivalent);
+///
+/// // An empty image with pixel type Rgba<i16>.
+/// let empty_i16 = rgba_image!(type: i16);
+///
+/// // An image with 2 rows, 3 columns and pixel type Rgba<i16>
+/// let image_i16 = rgba_image!(type: i16,
+///     [1, 2, 3, 10], [ 4,  5,  6, 20];
+///     [7, 8, 9, 30], [10, 11, 12, 40]);
+///
+/// let expected_i16 = ImageBuffer::<Rgba<i16>, Vec<i16>>::from_raw(2, 2, vec![
+///     1, 2, 3, 10,  4,  5,  6, 20,
+///     7, 8, 9, 30, 10, 11, 12, 40],
+///     ).unwrap();
+/// # }
+/// ```
+#[macro_export]
+macro_rules! rgba_image {
+    // Empty image with default channel type u8
+    () => {
+        rgba_image!(type: u8)
+    };
+    // Empty image with the given channel type
+    (type: $channel_type:ty) => {
+        {
+            use image::{ImageBuffer, Rgba};
+            ImageBuffer::<Rgba<$channel_type>, Vec<$channel_type>>::new(0, 0)
+        }
+    };
+    // Non-empty image of default channel type u8
+    ($( $( [$r: expr, $g: expr, $b: expr, $a:expr]),*);*) => {
+        rgba_image!(type: u8, $( $( [$r, $g, $b, $a]),*);*)
+    };
+    // Non-empty image of given channel type
+    (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr, $a: expr]),*);*) => {
+        {
+            use image::{ImageBuffer, Rgba};
+            let nested_array = [$( [ $([$r, $g, $b, $a]),*]),*];
+            let height = nested_array.len() as u32;
+            let width = nested_array[0].len() as u32;
+
+            let flat_array: Vec<_> = nested_array.into_iter()
+                .flat_map(|row| row.into_iter().flat_map(|p| p.into_iter()))
+                .cloned()
+                .collect();
+
+            ImageBuffer::<Rgba<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+                .unwrap()
+        }
+    }
+}
+
 /// Human readable description of some of the pixels that differ
 /// between left and right, or None if all pixels match.
 pub fn pixel_diff_summary<I, J, P>(actual: &I, expected: &J) -> Option<String>
