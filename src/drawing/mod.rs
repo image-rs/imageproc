@@ -6,6 +6,12 @@ pub use self::bezier::{
     draw_cubic_bezier_curve_mut
 };
 
+mod canvas;
+pub use self::canvas::{
+    Blend,
+    Canvas
+};
+
 mod conics;
 pub use self::conics::{
     draw_hollow_ellipse,
