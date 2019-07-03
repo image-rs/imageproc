@@ -1,7 +1,7 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive};
+use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive, Rgb, Rgba};
 use crate::definitions::Image;
 use crate::map::{ChannelMap, WithChannel};
 use std::ops::AddAssign;
@@ -139,18 +139,7 @@ where
     out
 }
 
-// pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
-// where
-//     P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-//     T: From<u8> + Primitive + AddAssign + 'static
-
-// have a new slice type trait? but then the returned type is going to be opaque, so how
-// are we going to handle it? Just need it to implement add...
-
-use image::{Rgb, Rgba};
-use std::ops::{Add, Sub};
-
-/// Hack to get around lack of const generics
+/// Hack to get around lack of const generics. See comment on `sum_image_pixels`.
 pub trait ArrayData {
     /// The type of the data for this array.
     /// e.g. `[T; 1]` for `Luma`, `[T; 3]` for `Rgb`.
@@ -158,79 +147,69 @@ pub trait ArrayData {
 
     /// Get the data from this pixel as a constant length array.
     fn data(&self) -> Self::DataType;
-}
 
-/// Hack to get around lack of const generics.
-pub trait ElementwiseAdd {
-    /// fff
-    fn add(&self, other: &Self) -> Self;
-}
+    /// Add the elements of two data arrays elementwise.
+    fn add(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
 
-/// Hack to get around lack of const generics.
-pub trait ElementwiseSub {
-    /// fff
-    fn sub(&self, other: &Self) -> Self;
+    /// Subtract the elements of two data arrays elementwise.
+    fn sub(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
 }
 
 impl<T: Primitive + 'static> ArrayData for Luma<T> {
     type DataType = [T; 1];
+
     fn data(&self) -> Self::DataType {
         [self.channels()[0]]
+    }
+
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0]]
+    }
+
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0]]
     }
 }
 
 impl<T: Primitive + 'static> ArrayData for Rgb<T> {
     type DataType = [T; 3];
+
     fn data(&self) -> Self::DataType {
         [self.channels()[0], self.channels()[1], self.channels()[2]]
+    }
+
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]]
+    }
+
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
     }
 }
 
 impl<T: Primitive + 'static> ArrayData for Rgba<T> {
     type DataType = [T; 4];
+
     fn data(&self) -> Self::DataType {
         [self.channels()[0], self.channels()[1], self.channels()[2], self.channels()[3]]
     }
-}
 
-impl<T: Add<Output=T> + Copy> ElementwiseAdd for [T; 1] {
-    fn add(&self, other: &Self) -> Self {
-        [self[0] + other[0]]
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2], lhs[3] + rhs[3]]
     }
-}
 
-impl<T: Add<Output=T> + Copy> ElementwiseAdd for [T; 3] {
-    fn add(&self, other: &Self) -> Self {
-        [self[0] + other[0], self[1] + other[1], self[2] + other[2]]
-    }
-}
-
-impl<T: Add<Output=T> + Copy> ElementwiseAdd for [T; 4] {
-    fn add(&self, other: &Self) -> Self {
-        [self[0] + other[0], self[1] + other[1], self[2] + other[2], self[3] + other[3]]
-    }
-}
-
-impl<T: Sub<Output=T> + Copy> ElementwiseSub for [T; 1] {
-    fn sub(&self, other: &Self) -> Self {
-        [self[0] - other[0]]
-    }
-}
-
-impl<T: Sub<Output=T> + Copy> ElementwiseSub for [T; 3] {
-    fn sub(&self, other: &Self) -> Self {
-        [self[0] - other[0], self[1] - other[1], self[2] - other[2]]
-    }
-}
-
-impl<T: Sub<Output=T> + Copy> ElementwiseSub for [T; 4] {
-    fn sub(&self, other: &Self) -> Self {
-        [self[0] - other[0], self[1] - other[1], self[2] - other[2], self[3] - other[3]]
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2], lhs[3] - rhs[3]]
     }
 }
 
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
 /// integral image of F.
+///
+/// The of `ArrayData` here is due to lack of const generics. This library contains
+/// implementations of `ArrayData` for `Luma`, `Rgb` and `Rgba` for any element type `T` that
+/// implements `Primitive`. In that case, this function returns `[T; 1]` for an image
+/// whose pixels are of type `Luma`, `[T; 3]` for `Rgb` pixels and `[T; 4]` for `Rgba` pixels.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
 pub fn sum_image_pixels<P>(
@@ -241,9 +220,7 @@ pub fn sum_image_pixels<P>(
     bottom: u32,
 ) -> P::DataType
 where
-    P: Pixel + ArrayData + Copy + 'static,
-    P::DataType: ElementwiseAdd + ElementwiseSub,
-    P::Subpixel: Primitive
+    P: Pixel + ArrayData + Copy + 'static
 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
@@ -258,7 +235,7 @@ where
         integral_image.get_pixel(right + 1, top).data(),
         integral_image.get_pixel(left, bottom + 1).data()
     );
-    a.add(&b).sub(&c).sub(&d)
+    P::sub(P::sub(P::add(a, b), c), d)
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
