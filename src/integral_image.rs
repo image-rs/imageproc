@@ -224,10 +224,6 @@ where
 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    // integral_image.get_pixel(right + 1, bottom + 1)[0]
-    // + integral_image.get_pixel(left, top)[0]
-    // - integral_image.get_pixel(right + 1, top)[0]
-    // - integral_image.get_pixel(left, bottom + 1)[0]
     let (a, b, c, d) =
     (
         integral_image.get_pixel(right + 1, bottom + 1).data(),
