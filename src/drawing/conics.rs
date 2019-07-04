@@ -44,12 +44,6 @@ pub fn draw_hollow_ellipse_mut<I>(
     I: GenericImage,
     I::Pixel: 'static,
 {
-    // Circle drawing algorithm is faster, so use it if the given ellipse is actually a circle.
-    if width_radius == height_radius {
-        draw_hollow_circle_mut(image, center, width_radius, color);
-        return;
-    }
-
     let draw_quad_pixels = |x0: i32, y0: i32, x: i32, y: i32| {
         draw_if_in_bounds(image, x0 + x, y0 + y, color);
         draw_if_in_bounds(image, x0 - x, y0 + y, color);
@@ -99,12 +93,6 @@ pub fn draw_filled_ellipse_mut<I>(
     I: GenericImage,
     I::Pixel: 'static,
 {
-    // Circle drawing algorithm is faster, so use it if the given ellipse is actually a circle.
-    if width_radius == height_radius {
-        draw_filled_circle_mut(image, center, width_radius, color);
-        return;
-    }
-
     let draw_line_pairs = |x0: i32, y0: i32, x: i32, y: i32| {
         draw_line_segment_mut(
             image,
@@ -195,29 +183,7 @@ where
     I: GenericImage,
     I::Pixel: 'static,
 {
-    let mut x = radius;
-    let mut y = 0i32;
-    let mut err = 0i32;
-    let x0 = center.0;
-    let y0 = center.1;
-
-    while x >= y {
-        draw_if_in_bounds(image, x0 + x, y0 + y, color);
-        draw_if_in_bounds(image, x0 + y, y0 + x, color);
-        draw_if_in_bounds(image, x0 - y, y0 + x, color);
-        draw_if_in_bounds(image, x0 - x, y0 + y, color);
-        draw_if_in_bounds(image, x0 - x, y0 - y, color);
-        draw_if_in_bounds(image, x0 - y, y0 - x, color);
-        draw_if_in_bounds(image, x0 + y, y0 - x, color);
-        draw_if_in_bounds(image, x0 + x, y0 - y, color);
-
-        y += 1;
-        err += 1 + 2 * y;
-        if 2 * (err - x) + 1 > 0 {
-            x -= 1;
-            err += 1 - 2 * x;
-        }
-    }
+    draw_hollow_ellipse_mut(image, center, radius, radius, color);
 }
 
 /// Draw as much of a circle, including its contents, as lies inside the image bounds.
@@ -226,45 +192,7 @@ where
     I: GenericImage,
     I::Pixel: 'static,
 {
-    let mut x = radius;
-    let mut y = 0i32;
-    let mut err = 0i32;
-    let x0 = center.0;
-    let y0 = center.1;
-
-    while x >= y {
-        draw_line_segment_mut(
-            image,
-            ((x0 - x) as f32, (y0 + y) as f32),
-            ((x0 + x) as f32, (y0 + y) as f32),
-            color,
-        );
-        draw_line_segment_mut(
-            image,
-            ((x0 - y) as f32, (y0 + x) as f32),
-            ((x0 + y) as f32, (y0 + x) as f32),
-            color,
-        );
-        draw_line_segment_mut(
-            image,
-            ((x0 - x) as f32, (y0 - y) as f32),
-            ((x0 + x) as f32, (y0 - y) as f32),
-            color,
-        );
-        draw_line_segment_mut(
-            image,
-            ((x0 - y) as f32, (y0 - x) as f32),
-            ((x0 + y) as f32, (y0 - x) as f32),
-            color,
-        );
-
-        y += 1;
-        err += 1 + 2 * y;
-        if 2 * (err - x) + 1 > 0 {
-            x -= 1;
-            err += 1 - 2 * x;
-        }
-    }
+    draw_filled_ellipse_mut(image, center, radius, radius, color);
 }
 
 /// Draw as much of a circle and its contents as lies inside the image bounds.
