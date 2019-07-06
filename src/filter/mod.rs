@@ -166,12 +166,17 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 /// Blurs an image using a Gaussian of standard deviation sigma.
 /// The kernel used has type f32 and all intermediate calculations are performed
 /// at this type.
+///
+/// # Panics
+///
+/// Panics if `sigma <= 0.0`.
 // TODO: Integer type kernel, approximations via repeated box filter.
 pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
 where
     P: Pixel + 'static,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
+    assert!(sigma > 0.0, "sigma must be > 0.0");
     let kernel = gaussian_kernel_f32(sigma);
     separable_filter_equal(image, &kernel)
 }
@@ -792,5 +797,27 @@ mod tests {
             let blurred = gaussian_blur_f32(&image, 10f32);
             black_box(blurred);
         });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_zero_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, 0.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_negative_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, -0.5);
     }
 }
