@@ -1,13 +1,15 @@
 use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
+use crate::drawing::Canvas;
 use std::i32;
 
 /// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
 #[rustfmt::skip]
-pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
-    where I: GenericImage
+pub fn draw_cross_mut<C>(canvas: &mut C, color: C::Pixel, x: i32, y: i32)
+where
+    C: Canvas
 {
-    let (width, height) = image.dimensions();
+    let (width, height) = canvas.dimensions();
     let idx = |x, y| (3 * (y + 1) + x + 1) as usize;
     let stencil = [0u8, 1u8, 0u8,
                    1u8, 1u8, 1u8,
@@ -26,8 +28,7 @@ pub fn draw_cross_mut<I>(image: &mut I, color: I::Pixel, x: i32, y: i32)
             }
 
             if stencil[idx(sx, sy)] == 1u8 {
-                // bound checks already done
-                unsafe { image.unsafe_put_pixel(ix as u32, iy as u32, color); }
+                canvas.draw_pixel(ix as u32, iy as u32, color);
             }
         }
     }

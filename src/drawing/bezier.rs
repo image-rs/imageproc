@@ -1,5 +1,6 @@
 use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
+use crate::drawing::Canvas;
 use std::f32;
 use std::i32;
 use crate::drawing::line::draw_line_segment_mut;
@@ -24,16 +25,16 @@ where
 }
 
 /// Draws as much of a cubic bezier curve as lies within image bounds.
-pub fn draw_cubic_bezier_curve_mut<I>(
-    image: &mut I,
+pub fn draw_cubic_bezier_curve_mut<C>(
+    canvas: &mut C,
     start: (f32, f32),
     end: (f32, f32),
     control_a: (f32, f32),
     control_b: (f32, f32),
-    color: I::Pixel,
+    color: C::Pixel,
 ) where
-    I: GenericImage,
-    I::Pixel: 'static,
+    C: Canvas,
+    C::Pixel: 'static,
 {
     // Bezier Curve function from: https://pomax.github.io/bezierinfo/#control
     let cubic_bezier_curve = |t: f32| {
@@ -65,7 +66,7 @@ pub fn draw_cubic_bezier_curve_mut<I>(
     let mut t1 = 0f32;
     for i in 0..num_segments {
         let t2 = (i as f32 + 1.0) * t_interval;
-        draw_line_segment_mut(image, cubic_bezier_curve(t1), cubic_bezier_curve(t2), color);
+        draw_line_segment_mut(canvas, cubic_bezier_curve(t1), cubic_bezier_curve(t2), color);
         t1 = t2;
     }
 }

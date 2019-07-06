@@ -1,5 +1,6 @@
 use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
+use crate::drawing::Canvas;
 use crate::rect::Rect;
 use std::f32;
 use crate::drawing::line::draw_line_segment_mut;
@@ -17,20 +18,20 @@ where
 }
 
 /// Draws as much of the boundary of a rectangle as lies inside the image bounds.
-pub fn draw_hollow_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
+pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
-    I: GenericImage,
-    I::Pixel: 'static,
+    C: Canvas,
+    C::Pixel: 'static,
 {
     let left = rect.left() as f32;
     let right = rect.right() as f32;
     let top = rect.top() as f32;
     let bottom = rect.bottom() as f32;
 
-    draw_line_segment_mut(image, (left, top), (right, top), color);
-    draw_line_segment_mut(image, (left, bottom), (right, bottom), color);
-    draw_line_segment_mut(image, (left, top), (left, bottom), color);
-    draw_line_segment_mut(image, (right, top), (right, bottom), color);
+    draw_line_segment_mut(canvas, (left, top), (right, top), color);
+    draw_line_segment_mut(canvas, (left, bottom), (right, bottom), color);
+    draw_line_segment_mut(canvas, (left, top), (left, bottom), color);
+    draw_line_segment_mut(canvas, (right, top), (right, bottom), color);
 }
 
 /// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
@@ -46,20 +47,18 @@ where
 }
 
 /// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
-pub fn draw_filled_rect_mut<I>(image: &mut I, rect: Rect, color: I::Pixel)
+pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
-    I: GenericImage,
-    I::Pixel: 'static,
+    C: Canvas,
+    C::Pixel: 'static,
 {
-    let image_bounds = Rect::at(0, 0).of_size(image.width(), image.height());
-    if let Some(intersection) = image_bounds.intersect(rect) {
+    let canvas_bounds = Rect::at(0, 0).of_size(canvas.width(), canvas.height());
+    if let Some(intersection) = canvas_bounds.intersect(rect) {
         for dy in 0..intersection.height() {
             for dx in 0..intersection.width() {
                 let x = intersection.left() as u32 + dx;
                 let y = intersection.top() as u32 + dy;
-                unsafe {
-                    image.unsafe_put_pixel(x, y, color);
-                }
+                canvas.draw_pixel(x, y, color);
             }
         }
     }
@@ -69,7 +68,8 @@ where
 mod tests {
     use super::*;
     use crate::rect::Rect;
-    use image::{GrayImage, Luma, RgbImage, Rgb};
+    use crate::drawing::Blend;
+    use image::{GrayImage, Luma, Pixel, RgbImage, Rgb, RgbaImage, Rgba};
     use test::{Bencher, black_box};
 
     #[bench]
@@ -111,5 +111,39 @@ mod tests {
 
         let actual = draw_filled_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
         assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_draw_blended_filled_rect() {
+        // https://github.com/image-rs/imageproc/issues/261
+
+        let white = Rgba([255u8, 255u8, 255u8, 255u8]);
+        let blue = Rgba([0u8, 0u8, 255u8, 255u8]);
+        let semi_transparent_red = Rgba([255u8, 0u8, 0u8, 127u8]);
+
+        let mut image = Blend(RgbaImage::from_pixel(5, 5, white));
+
+        draw_filled_rect_mut(&mut image, Rect::at(1, 1).of_size(3, 3), blue);
+        draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), semi_transparent_red);
+
+        // The central pixel should be blended
+        let mut blended = blue;
+        blended.blend(&semi_transparent_red);
+
+        let expected = vec![
+            white, white,  white,  white, white,
+            white,  blue,   blue,   blue, white,
+            white,  blue, blended,  blue, white,
+            white,  blue,   blue,   blue, white,
+            white, white,  white,  white, white
+        ];
+        let expected = RgbaImage::from_fn(5, 5, |x, y| { expected[(y * 5 + x) as usize] });
+
+        assert_pixels_eq!(image.0, expected);
+
+        // Draw an opaque rectangle over the central pixel as a sanity check that
+        // we're blending in the correct direction only.
+        draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), blue);
+        assert_eq!(*image.0.get_pixel(2, 2), blue);
     }
 }

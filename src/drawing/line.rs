@@ -1,5 +1,6 @@
 use image::{GenericImage, ImageBuffer, Pixel};
 use crate::definitions::Image;
+use crate::drawing::Canvas;
 use std::mem::{swap, transmute};
 use std::f32;
 use std::i32;
@@ -176,12 +177,12 @@ where
 
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
 /// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
-pub fn draw_line_segment_mut<I>(image: &mut I, start: (f32, f32), end: (f32, f32), color: I::Pixel)
+pub fn draw_line_segment_mut<C>(canvas: &mut C, start: (f32, f32), end: (f32, f32), color: C::Pixel)
 where
-    I: GenericImage,
-    I::Pixel: 'static,
+    C: Canvas,
+    C::Pixel: 'static,
 {
-    let (width, height) = image.dimensions();
+    let (width, height) = canvas.dimensions();
     let in_bounds = |x, y| x >= 0 && x < width as i32 && y >= 0 && y < height as i32;
 
     let line_iterator = BresenhamLineIter::new(start, end);
@@ -191,9 +192,7 @@ where
         let y = point.1;
 
         if in_bounds(x, y) {
-            unsafe {
-                image.unsafe_put_pixel(x as u32, y as u32, color);
-            }
+            canvas.draw_pixel(x as u32, y as u32, color);
         }
     }
 }

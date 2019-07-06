@@ -1,5 +1,6 @@
 use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
+use crate::drawing::Canvas;
 use std::cmp::{min, max};
 use std::f32;
 use std::i32;
@@ -41,10 +42,10 @@ where
 /// An implicit edge is added from the last to the first point in the slice.
 ///
 /// Does not validate that input is convex.
-pub fn draw_convex_polygon_mut<I>(image: &mut I, poly: &[Point<i32>], color: I::Pixel)
+pub fn draw_convex_polygon_mut<C>(canvas: &mut C, poly: &[Point<i32>], color: C::Pixel)
 where
-    I: GenericImage,
-    I::Pixel: 'static,
+    C: Canvas,
+    C::Pixel: 'static,
 {
     if poly.is_empty() {
         return;
@@ -64,7 +65,7 @@ where
         y_max = max(y_max, p.y);
     }
 
-    let (width, height) = image.dimensions();
+    let (width, height) = canvas.dimensions();
 
     // Intersect polygon vertical range with image bounds
     y_min = max(0, min(y_min, height as i32 - 1));
@@ -108,13 +109,13 @@ where
                 break;
             }
             if i + 1 == intersections.len() {
-                draw_if_in_bounds(image, intersections[i], y, color);
+                draw_if_in_bounds(canvas, intersections[i], y, color);
                 break;
             }
             let from = max(0, min(intersections[i], width as i32 - 1));
             let to = max(0, min(intersections[i + 1], width as i32 - 1));
             for x in from..to + 1 {
-                image.put_pixel(x as u32, y as u32, color);
+                canvas.draw_pixel(x as u32, y as u32, color);
             }
             i += 2;
         }
@@ -125,6 +126,6 @@ where
     for edge in &edges {
         let start = (edge[0].x as f32, edge[0].y as f32);
         let end = (edge[1].x as f32, edge[1].y as f32);
-        draw_line_segment_mut(image, start, end, color);
+        draw_line_segment_mut(canvas, start, end, color);
     }
 }
