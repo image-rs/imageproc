@@ -140,5 +140,10 @@ mod tests {
         let expected = RgbaImage::from_fn(5, 5, |x, y| { expected[(y * 5 + x) as usize] });
 
         assert_pixels_eq!(image.0, expected);
+
+        // Draw an opaque rectangle over the central pixel as a sanity check that
+        // we're blending in the correct direction only.
+        draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), blue);
+        assert_eq!(*image.0.get_pixel(2, 2), blue);
     }
 }
