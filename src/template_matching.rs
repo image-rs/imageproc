@@ -97,7 +97,7 @@ fn normalization_term(
         region.top() as u32,
         region.right() as u32,
         region.bottom() as u32
-    ) as f32;
+    )[0] as f32;
     (image_sum * template_squared_sum).sqrt()
 }
 
@@ -165,7 +165,7 @@ mod tests {
     fn match_template_panics_if_image_height_is_less_than_template_height() {
         let _ = match_template(
             &GrayImage::new(5, 5),
-            &GrayImage::new(5, 6), 
+            &GrayImage::new(5, 6),
             MatchTemplateMethod::SumOfSquaredErrors
         );
     }

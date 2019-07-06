@@ -1,7 +1,7 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive};
+use image::{Luma, GrayImage, GenericImageView, Pixel, Primitive, Rgb, Rgba};
 use crate::definitions::Image;
 use crate::map::{ChannelMap, WithChannel};
 use std::ops::AddAssign;
@@ -41,10 +41,10 @@ use std::ops::AddAssign;
 /// assert_pixels_eq!(integral_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of all pixels in the right two columns
-/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 2 + 3 + 5 + 6);
+/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1)[0], 2 + 3 + 5 + 6);
 ///
 /// // Compute the sum of all pixels in the top row
-/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 2 + 3);
+/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 2 + 3);
 /// # }
 /// ```
 pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
@@ -80,10 +80,10 @@ where
 /// assert_pixels_eq!(integral_squared_image::<_, u32>(&image), integral);
 ///
 /// // Compute the sum of the squares of all pixels in the right two columns
-/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1), 4 + 9 + 25 + 36);
+/// assert_eq!(sum_image_pixels(&integral, 1, 0, 2, 1)[0], 4 + 9 + 25 + 36);
 ///
 /// // Compute the sum of the squares of all pixels in the top row
-/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0), 1 + 4 + 9);
+/// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 4 + 9);
 /// # }
 /// ```
 pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
@@ -139,25 +139,99 @@ where
     out
 }
 
+/// Hack to get around lack of const generics. See comment on `sum_image_pixels`.
+pub trait ArrayData {
+    /// The type of the data for this array.
+    /// e.g. `[T; 1]` for `Luma`, `[T; 3]` for `Rgb`.
+    type DataType;
+
+    /// Get the data from this pixel as a constant length array.
+    fn data(&self) -> Self::DataType;
+
+    /// Add the elements of two data arrays elementwise.
+    fn add(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
+
+    /// Subtract the elements of two data arrays elementwise.
+    fn sub(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
+}
+
+impl<T: Primitive + 'static> ArrayData for Luma<T> {
+    type DataType = [T; 1];
+
+    fn data(&self) -> Self::DataType {
+        [self.channels()[0]]
+    }
+
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0]]
+    }
+
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0]]
+    }
+}
+
+impl<T: Primitive + 'static> ArrayData for Rgb<T> {
+    type DataType = [T; 3];
+
+    fn data(&self) -> Self::DataType {
+        [self.channels()[0], self.channels()[1], self.channels()[2]]
+    }
+
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]]
+    }
+
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
+    }
+}
+
+impl<T: Primitive + 'static> ArrayData for Rgba<T> {
+    type DataType = [T; 4];
+
+    fn data(&self) -> Self::DataType {
+        [self.channels()[0], self.channels()[1], self.channels()[2], self.channels()[3]]
+    }
+
+    fn add(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2], lhs[3] + rhs[3]]
+    }
+
+    fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
+        [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2], lhs[3] - rhs[3]]
+    }
+}
+
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
 /// integral image of F.
 ///
+/// The of `ArrayData` here is due to lack of const generics. This library contains
+/// implementations of `ArrayData` for `Luma`, `Rgb` and `Rgba` for any element type `T` that
+/// implements `Primitive`. In that case, this function returns `[T; 1]` for an image
+/// whose pixels are of type `Luma`, `[T; 3]` for `Rgb` pixels and `[T; 4]` for `Rgba` pixels.
+///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
-pub fn sum_image_pixels<T>(
-    integral_image: &Image<Luma<T>>,
+pub fn sum_image_pixels<P>(
+    integral_image: &Image<P>,
     left: u32,
     top: u32,
     right: u32,
     bottom: u32,
-) -> T
-where T: Primitive + 'static
+) -> P::DataType
+where
+    P: Pixel + ArrayData + Copy + 'static
 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
-    integral_image.get_pixel(right + 1, bottom + 1)[0]
-    + integral_image.get_pixel(left, top)[0]
-    - integral_image.get_pixel(right + 1, top)[0]
-    - integral_image.get_pixel(left, bottom + 1)[0]
+    let (a, b, c, d) =
+    (
+        integral_image.get_pixel(right + 1, bottom + 1).data(),
+        integral_image.get_pixel(left, top).data(),
+        integral_image.get_pixel(right + 1, top).data(),
+        integral_image.get_pixel(left, bottom + 1).data()
+    );
+    P::sub(P::sub(P::add(a, b), c), d)
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -202,8 +276,8 @@ pub fn variance(
 ) -> f64 {
     // TODO: same improvements as for sum_image_pixels, plus check that the given rect is valid.
     let n = (right - left + 1) as f64 * (bottom - top + 1) as f64;
-    let sum_sq = sum_image_pixels(integral_squared_image, left, top, right, bottom);
-    let sum = sum_image_pixels(integral_image, left, top, right, bottom);
+    let sum_sq = sum_image_pixels(integral_squared_image, left, top, right, bottom)[0];
+    let sum = sum_image_pixels(integral_image, left, top, right, bottom)[0];
     (sum_sq as f64 - (sum as f64).powi(2) / n) / n
 }
 
@@ -341,25 +415,6 @@ mod tests {
     use ::test;
 
     #[test]
-    fn test_sum_image_pixels() {
-        let image = gray_image!(
-            1, 2;
-            3, 4);
-
-        let integral = integral_image::<_, u32>(&image);
-
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), 1);
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), 3);
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 1), 4);
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 1), 10);
-        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 0), 2);
-        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 1), 6);
-        assert_eq!(sum_image_pixels(&integral, 0, 1, 0, 1), 3);
-        assert_eq!(sum_image_pixels(&integral, 0, 1, 1, 1), 7);
-        assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), 4);
-    }
-
-    #[test]
     fn test_integral_image_gray() {
         let image = gray_image!(
             1, 2, 3;
@@ -385,6 +440,80 @@ mod tests {
             [0, 0, 0],  [5, 25, 45], [12, 52, 92], [21, 81, 141]);
 
         assert_pixels_eq!(integral_image::<_, u32>(&image), expected);
+    }
+
+    #[test]
+    fn test_sum_image_pixels() {
+        let image = gray_image!(
+            1, 2;
+            3, 4);
+
+        let integral = integral_image::<_, u32>(&image);
+
+        // Top left
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0)[0], 1);
+        // Top row
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0)[0], 3);
+        // Left column
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 1)[0], 4);
+        // Whole image
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 1)[0], 10);
+        // Top right
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 0)[0], 2);
+        // Right column
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 1)[0], 6);
+        // Bottom left
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 0, 1)[0], 3);
+        // Bottom row
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 1, 1)[0], 7);
+        // Bottom right
+        assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1)[0], 4);
+    }
+
+    #[test]
+    fn test_sum_image_pixels_rgb() {
+        let image = rgb_image!(
+            [1,  2,  3], [ 4,  5,  6];
+            [7,  8,  9], [10, 11, 12]);
+
+        let integral = integral_image::<_, u32>(&image);
+
+        // Top left
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 0, 0, 0),
+            [1, 2, 3]);
+        // Top row
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 0, 1, 0),
+            [5, 7, 9]);
+        // Left column
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 0, 0, 1),
+            [8, 10, 12]);
+        // Whole image
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 0, 1, 1),
+            [22, 26, 30]);
+        // Top right
+        assert_eq!(
+            sum_image_pixels(&integral, 1, 0, 1, 0),
+            [4, 5, 6]);
+        // Right column
+        assert_eq!(
+            sum_image_pixels(&integral, 1, 0, 1, 1),
+            [14, 16, 18]);
+        // Bottom left
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 1, 0, 1),
+            [7, 8, 9]);
+        // Bottom row
+        assert_eq!(
+            sum_image_pixels(&integral, 0, 1, 1, 1),
+            [17, 19, 21]);
+        // Bottom right
+        assert_eq!(
+            sum_image_pixels(&integral, 1, 1, 1, 1),
+            [10, 11, 12]);
     }
 
     #[bench]

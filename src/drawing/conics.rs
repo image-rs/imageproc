@@ -196,13 +196,13 @@ where
     C: Canvas,
     C::Pixel: Pixel + 'static,
 {
-    let mut x = radius;
-    let mut y = 0i32;
-    let mut err = 0i32;
+    let mut x = 0i32;
+    let mut y = radius;
+    let mut p = 1 - radius;
     let x0 = center.0;
     let y0 = center.1;
 
-    while x >= y {
+    while x <= y {
         draw_if_in_bounds(canvas, x0 + x, y0 + y, color);
         draw_if_in_bounds(canvas, x0 + y, y0 + x, color);
         draw_if_in_bounds(canvas, x0 - y, y0 + x, color);
@@ -212,11 +212,12 @@ where
         draw_if_in_bounds(canvas, x0 + y, y0 - x, color);
         draw_if_in_bounds(canvas, x0 + x, y0 - y, color);
 
-        y += 1;
-        err += 1 + 2 * y;
-        if 2 * (err - x) + 1 > 0 {
-            x -= 1;
-            err += 1 - 2 * x;
+        x += 1;
+        if p < 0 {
+            p += 2 * x + 1;
+        } else {
+            y -= 1;
+            p += 2 * (x - y) + 1;
         }
     }
 }
@@ -227,13 +228,13 @@ where
     C: Canvas,
     C::Pixel: Pixel + 'static,
 {
-    let mut x = radius;
-    let mut y = 0i32;
-    let mut err = 0i32;
+    let mut x = 0i32;
+    let mut y = radius;
+    let mut p = 1 - radius;
     let x0 = center.0;
     let y0 = center.1;
 
-    while x >= y {
+    while x <= y {
         draw_line_segment_mut(
             canvas,
             ((x0 - x) as f32, (y0 + y) as f32),
@@ -259,11 +260,12 @@ where
             color,
         );
 
-        y += 1;
-        err += 1 + 2 * y;
-        if 2 * (err - x) + 1 > 0 {
-            x -= 1;
-            err += 1 - 2 * x;
+        x += 1;
+        if p < 0 {
+            p += 2 * x + 1;
+        } else {
+            y -= 1;
+            p += 2 * (x - y) + 1;
         }
     }
 }

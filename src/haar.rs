@@ -73,7 +73,7 @@ pub enum HaarFeatureType {
     /// have equal width and the two rows have equal height.
     /// <pre>
     ///      -----------
-    ///     |  *  |  &  | 
+    ///     |  *  |  &  |
     ///      -----------
     ///     |  &  |  *  |
     ///      -----------
@@ -268,7 +268,7 @@ pub fn enumerate_haar_features(frame_width: u8, frame_height: u8) -> Vec<HaarFea
 fn haar_features_of_type(feature_type: HaarFeatureType, frame_size: Size<Pixels>) -> Vec<HaarFeature> {
     let mut features = Vec::new();
 
-    for block_size in block_sizes(feature_type.shape(), frame_size) {       
+    for block_size in block_sizes(feature_type.shape(), frame_size) {
         for (left, top) in feature_positions(feature_size(feature_type, block_size), frame_size) {
             for &sign in [Sign::Positive, Sign::Negative].iter() {
                 features.push(HaarFeature { sign, feature_type, block_size, left, top });
@@ -297,7 +297,7 @@ struct Size<T> {
 
 impl<T> Size<T> {
     fn new(width: u8, height: u8) -> Size<T> {
-        Size { 
+        Size {
             width,
             height,
             units: PhantomData
@@ -328,7 +328,7 @@ fn feature_positions(feature_size: Size<Pixels>, frame_size: Size<Pixels>) -> Ve
 }
 
 /// Returns the number of distinct Haar-like features for an image of the given dimensions.
-/// 
+///
 /// Includes positive and negative, two and three region, vertical and horizontal features,
 /// as well as positive and negative four region features.
 ///
@@ -336,10 +336,10 @@ fn feature_positions(feature_size: Size<Pixels>, frame_size: Size<Pixels>) -> Ve
 /// for such a feature is `M = floor(w / k)`, and for a block size `s` there are `(w + 1) - 2 * s`
 /// valid locations for the leftmost column of this feature.
 /// Summing over `s` gives `M * (w + 1) - k * [(M * (M + 1)) / 2]`.
-/// 
+///
 /// An equivalent argument applies vertically.
 pub fn number_of_haar_features(width: u32, height: u32) -> u32 {
-    let num_positive_features = 
+    let num_positive_features =
         // Two-region horizontal
         num_features(width, 2) * num_features(height, 1)
         // Three-region horizontal
@@ -404,11 +404,11 @@ mod tests {
     #[test]
     fn test_block_sizes() {
         assert_eq!(
-            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(1, 1)), 
+            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(1, 1)),
             vec![]);
 
         assert_eq!(
-            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(2, 1)), 
+            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(2, 1)),
             vec![Size::new(1, 1)]);
 
         assert_eq!(
@@ -422,16 +422,16 @@ mod tests {
 
     #[test]
     fn test_feature_positions() {
-        assert_eq!(feature_positions(Size::new(2, 3), Size::new(2, 2)), 
+        assert_eq!(feature_positions(Size::new(2, 3), Size::new(2, 2)),
             vec![]);
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(2, 2)), 
+        assert_eq!(feature_positions(Size::new(2, 2), Size::new(2, 2)),
             vec![(0, 0)]);
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 2)), 
+        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 2)),
             vec![(0, 0), (1, 0)]);
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 3)), 
+        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 3)),
             vec![(0, 0), (0, 1), (1, 0), (1, 1)]);
     }
 
@@ -519,7 +519,7 @@ mod tests {
             6u8,     5u8, 4u8,     2u8, 1u8     );
 
         let integral = integral_image(&image);
-        let feature = HaarFeature { 
+        let feature = HaarFeature {
             sign: Sign::Positive,
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(2, 3),
@@ -543,7 +543,7 @@ mod tests {
              6u8, 5u8,      4u8, 2u8, 1u8);
 
         let integral = integral_image(&image);
-        let feature = HaarFeature { 
+        let feature = HaarFeature {
             sign: Sign::Negative,
             feature_type: HaarFeatureType::ThreeRegionVertical,
             block_size: Size::new(2, 1),
@@ -558,7 +558,7 @@ mod tests {
         let image = gray_image!(
             /*****************************/
         1u8,/**/2u8, 3u8,/**/ 4u8, 5u8;/**/
-        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/ 
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/
             /*****************************/
         9u8,/**/8u8, 7u8,/**/ 6u8, 5u8;/**/
         4u8,/**/3u8, 2u8,/**/ 1u8, 0u8;/**/
@@ -566,7 +566,7 @@ mod tests {
         6u8,    5u8, 4u8,     2u8, 1u8);
 
         let integral = integral_image(&image);
-        let feature = HaarFeature { 
+        let feature = HaarFeature {
             sign: Sign::Positive,
             feature_type: HaarFeatureType::FourRegion,
             block_size: Size::new(2, 2),
@@ -593,7 +593,7 @@ mod tests {
                 let parity = (w + h + parity_shift) & 1;
                 let multiplier = 1 - 2 * (parity as i32);
 
-                let block_sum = sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32) as i32;
+                let block_sum = sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32)[0] as i32;
                 sum += multiplier * block_sum;
             }
         }
@@ -629,7 +629,7 @@ mod tests {
                  /***+++++++++*****---------***/
             6u8,     5u8, 4u8,     2u8, 1u8);
 
-        let feature = HaarFeature { 
+        let feature = HaarFeature {
             sign: Sign::Positive,
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(2, 3),
@@ -655,14 +655,14 @@ mod tests {
         let image = gray_image!(
             /*****************************/
         1u8,/**/2u8, 3u8,/**/ 4u8, 5u8;/**/
-        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/ 
+        6u8,/**/7u8, 8u8,/**/ 9u8, 0u8;/**/
             /*****************************/
         9u8,/**/8u8, 7u8,/**/ 6u8, 5u8;/**/
         4u8,/**/3u8, 2u8,/**/ 1u8, 0u8;/**/
             /*****************************/
         6u8,    5u8, 4u8,     2u8, 1u8);
 
-        let feature = HaarFeature { 
+        let feature = HaarFeature {
             sign: Sign::Positive,
             feature_type: HaarFeatureType::FourRegion,
             block_size: Size::new(2, 2),
