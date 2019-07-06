@@ -32,7 +32,7 @@ pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
 
             // Number of pixels in the block, adjusted for edge cases.
             let w = (y_high - y_low + 1) * (x_high - x_low + 1);
-            let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high) / w;
+            let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high)[0] / w;
 
             if current_pixel[0] as u32 >= mean as u32 {
                 out.put_pixel(x, y, Luma::white());
