@@ -1,4 +1,4 @@
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use std::f32;
@@ -34,7 +34,7 @@ pub fn draw_cubic_bezier_curve_mut<C>(
     color: C::Pixel,
 ) where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     // Bezier Curve function from: https://pomax.github.io/bezierinfo/#control
     let cubic_bezier_curve = |t: f32| {

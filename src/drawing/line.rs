@@ -180,7 +180,7 @@ where
 pub fn draw_line_segment_mut<C>(canvas: &mut C, start: (f32, f32), end: (f32, f32), color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     let (width, height) = canvas.dimensions();
     let in_bounds = |x, y| x >= 0 && x < width as i32 && y >= 0 && y < height as i32;

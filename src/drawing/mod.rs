@@ -67,7 +67,7 @@ pub use self::text::{
 fn draw_if_in_bounds<C>(canvas: &mut C, x: i32, y: i32, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: image::Pixel + 'static,
+    C::Pixel: 'static,
 {
     if x >= 0 && x < canvas.width() as i32 && y >= 0 && y < canvas.height() as i32 {
         canvas.draw_pixel(x as u32, y as u32, color);

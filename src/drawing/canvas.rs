@@ -13,7 +13,7 @@ use image::{
 /// `set_pixel` with the same arguments.
 pub trait Canvas {
     /// The type of `Pixel` that can be drawn on this canvas.
-    type Pixel;
+    type Pixel: Pixel;
 
     /// The width and height of this canvas.
     fn dimensions(&self) -> (u32, u32);

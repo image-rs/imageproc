@@ -1,4 +1,4 @@
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use std::cmp::{min, max};
@@ -45,7 +45,7 @@ where
 pub fn draw_convex_polygon_mut<C>(canvas: &mut C, poly: &[Point<i32>], color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     if poly.is_empty() {
         return;

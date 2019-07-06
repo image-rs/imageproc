@@ -1,4 +1,4 @@
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use crate::rect::Rect;
@@ -21,7 +21,7 @@ where
 pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     let left = rect.left() as f32;
     let right = rect.right() as f32;
@@ -50,7 +50,7 @@ where
 pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     let canvas_bounds = Rect::at(0, 0).of_size(canvas.width(), canvas.height());
     if let Some(intersection) = canvas_bounds.intersect(rect) {
@@ -69,7 +69,7 @@ mod tests {
     use super::*;
     use crate::rect::Rect;
     use crate::drawing::Blend;
-    use image::{GrayImage, Luma, RgbImage, Rgb, RgbaImage, Rgba};
+    use image::{GrayImage, Luma, Pixel, RgbImage, Rgb, RgbaImage, Rgba};
     use test::{Bencher, black_box};
 
     #[bench]

@@ -1,4 +1,4 @@
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use std::f32;
@@ -43,7 +43,7 @@ pub fn draw_hollow_ellipse_mut<C>(
     color: C::Pixel,
 ) where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     // Circle drawing algorithm is faster, so use it if the given ellipse is actually a circle.
     if width_radius == height_radius {
@@ -98,7 +98,7 @@ pub fn draw_filled_ellipse_mut<C>(
     color: C::Pixel,
 ) where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     // Circle drawing algorithm is faster, so use it if the given ellipse is actually a circle.
     if width_radius == height_radius {
@@ -194,7 +194,7 @@ where
 pub fn draw_hollow_circle_mut<C>(canvas: &mut C, center: (i32, i32), radius: i32, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     let mut x = 0i32;
     let mut y = radius;
@@ -226,7 +226,7 @@ where
 pub fn draw_filled_circle_mut<C>(canvas: &mut C, center: (i32, i32), radius: i32, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: Pixel + 'static,
+    C::Pixel: 'static,
 {
     let mut x = 0i32;
     let mut y = radius;
