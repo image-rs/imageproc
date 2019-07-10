@@ -43,6 +43,10 @@ impl<I: GenericImageView> GenericImageView for PartialImage<I> {
         self.image.get_pixel(x, y)
     }
 
+    unsafe fn unsafe_get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        self.image.unsafe_get_pixel(x, y)
+    }
+
     fn inner(&self) -> &Self::InnerImageView {
         &self.image
     }
