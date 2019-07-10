@@ -21,7 +21,7 @@ pub struct PartialImage<I> {
 
 impl<I> PartialImage<I> {
     fn reduce_width(&mut self, by: u32) {
-        assert!(by >= self.partial_width);
+        assert!(by < self.partial_width);
         self.partial_width -= by;
     }
 }
@@ -87,19 +87,21 @@ where
     assert!(target_width <= image.width(), "target_width must be <= input image width");
 
     let iterations = image.width() - target_width;
-    let mut result = ImageBuffer::new(image.width(), image.height());
-    result.copy_from(image, 0, 0);
-    let mut result = PartialImage {
-        image: result,
+    let mut temp = ImageBuffer::new(image.width(), image.height());
+    temp.copy_from(image, 0, 0);
+    let mut temp = PartialImage {
+        image: temp,
         partial_width: image.width()
     };
 
     for _ in 0..iterations {
-        let seam = find_vertical_seam(&result);
-        remove_vertical_seam(&mut result, &seam);
+        let seam = find_vertical_seam(&temp);
+        remove_vertical_seam(&mut temp, &seam);
     }
 
-    result.image
+    let mut result = ImageBuffer::new(temp.width(), temp.height());
+    result.copy_from(&temp, 0, 0);
+    result
 }
 
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
