@@ -98,16 +98,17 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
-    pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
+    pub fn filter<I, F, Q>(&self, image: &I, mut f: F) -> Image<Q>
     where
-        P: Pixel + 'static,
-        <P as Pixel>::Subpixel: ValueInto<K>,
+        I: GenericImageView,
+        I::Pixel: Pixel + 'static,
+        <I::Pixel as Pixel>::Subpixel: ValueInto<K>,
         Q: Pixel + 'static,
         F: FnMut(&mut Q::Subpixel, K) -> (),
     {
         let (width, height) = image.dimensions();
         let mut out = Image::<Q>::new(width, height);
-        let num_channels = P::channel_count() as usize;
+        let num_channels = I::Pixel::channel_count() as usize;
         let zero = K::zero();
         let mut acc = vec![zero; num_channels];
         let (k_width, k_height) = (self.width, self.height);
@@ -206,11 +207,12 @@ where
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
-pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+pub fn filter3x3<I, K, S>(image: &I, kernel: &[K]) -> Image<ChannelMap<I::Pixel, S>>
 where
-    P::Subpixel: ValueInto<K>,
+    I: GenericImageView,
+    <I::Pixel as Pixel>::Subpixel: ValueInto<K>,
     S: Clamp<K> + Primitive + 'static,
-    P: WithChannel<S> + 'static,
+    I::Pixel: WithChannel<S> + 'static,
     K: Num + Copy,
 {
     let kernel = Kernel::new(kernel, 3, 3);

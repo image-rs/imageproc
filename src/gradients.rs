@@ -152,20 +152,21 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients<P, F, Q>(
-    image: &Image<P>,
+fn gradients<I, F, Q>(
+    image: &I,
     horizontal_kernel: &[i32; 9],
     vertical_kernel: &[i32; 9],
     f: F,
 ) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    I: GenericImageView,
+    I::Pixel: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
-    ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    ChannelMap<I::Pixel, u16>: HasBlack,
+    F: Fn(ChannelMap<I::Pixel, u16>) -> Q
 {
-    let horizontal: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
-    let vertical: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
+    let horizontal: Image<ChannelMap<I::Pixel, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
+    let vertical: Image<ChannelMap<I::Pixel, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
@@ -176,7 +177,7 @@ where
             unsafe {
                 let h = horizontal.unsafe_get_pixel(x, y);
                 let v = vertical.unsafe_get_pixel(x, y);
-                let mut p = ChannelMap::<P, u16>::black();
+                let mut p = ChannelMap::<I::Pixel, u16>::black();
 
                 for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
                     *p = gradient_magnitude(*h as f32, *v as f32);
