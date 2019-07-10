@@ -19,6 +19,13 @@ pub struct PartialImage<I> {
     partial_width: u32
 }
 
+impl<I> PartialImage<I> {
+    fn reduce_width(&mut self, by: u32) {
+        assert!(by >= self.partial_width);
+        self.partial_width -= by;
+    }
+}
+
 impl<I: GenericImageView> GenericImageView for PartialImage<I> {
     type Pixel = I::Pixel;
     type InnerImageView = I;
@@ -82,13 +89,17 @@ where
     let iterations = image.width() - target_width;
     let mut result = ImageBuffer::new(image.width(), image.height());
     result.copy_from(image, 0, 0);
+    let mut result = PartialImage {
+        image: result,
+        partial_width: image.width()
+    };
 
     for _ in 0..iterations {
         let seam = find_vertical_seam(&result);
-        result = remove_vertical_seam(&result, &seam);
+        remove_vertical_seam(&mut result, &seam);
     }
 
-    result
+    result.image
 }
 
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
@@ -183,27 +194,23 @@ where
 // way of talking about views of ImageBuffer without devolving into supporting
 // arbitrary GenericImages. And a lot of other functions don't support those because
 // it would make them a lot slower.
-pub fn remove_vertical_seam<I>(image: &I, seam: &VerticalSeam) -> Image<I::Pixel>
+pub fn remove_vertical_seam<I>(image: &mut PartialImage<I>, seam: &VerticalSeam)
 where
     I: GenericImage,
     I::Pixel: Pixel + 'static
 {
     assert!(seam.0.len() as u32 == image.height(), "seam length does not match image height");
-
     let (width, height) = image.dimensions();
-    let mut out = Image::new(width - 1, height);
 
     for y in 0..height {
         let x_seam = seam.0[(height - y - 1) as usize];
-        for x in 0..x_seam {
-            out.put_pixel(x, y, image.get_pixel(x, y));
-        }
+        // Should memcpy here, but pixelwise will do for now
         for x in (x_seam + 1)..width {
-            out.put_pixel(x - 1, y, image.get_pixel(x, y));
+            image.put_pixel(x - 1, y, image.get_pixel(x, y));
         }
     }
 
-    out
+    image.reduce_width(1);
 }
 
 /// Draws a series of `seams` on `image` in red. Assumes that the provided seams were
