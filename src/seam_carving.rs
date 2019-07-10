@@ -12,6 +12,57 @@ use std::cmp::min;
 /// An image seam connecting the bottom of an image to its top (in that order).
 pub struct VerticalSeam(Vec<u32>);
 
+/// Workaround for lack of custom stride support in ImageBuffer.
+/// Store an original image and shrink the perceived width.
+pub struct PartialImage<I> {
+    image: I,
+    partial_width: u32
+}
+
+impl<I: GenericImageView> GenericImageView for PartialImage<I> {
+    type Pixel = I::Pixel;
+    type InnerImageView = I;
+
+    fn dimensions(&self) -> (u32, u32) {
+        (self.partial_width, self.image.height())
+    }
+
+    fn bounds(&self) -> (u32, u32, u32, u32) {
+        (0, 0, 0, 0) // TODO (check other impls - docs unhelpfully just say 'the bounding box')
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        // TODO: assert x < partial_width?
+        self.image.get_pixel(x, y)
+    }
+
+    fn inner(&self) -> &Self::InnerImageView {
+        &self.image
+    }
+}
+
+impl<I: GenericImage> GenericImage for PartialImage<I> {
+    type InnerImage = I;
+
+    fn get_pixel_mut(&mut self, x: u32, y: u32) -> &mut Self::Pixel {
+        self.image.get_pixel_mut(x, y)
+    }
+
+    fn put_pixel(&mut self, x: u32, y: u32, p: Self::Pixel) {
+        // TODO: assert x < partial_width?
+        self.image.put_pixel(x, y, p);
+    }
+
+    fn blend_pixel(&mut self, x: u32, y: u32, p: Self::Pixel) {
+        // TODO: assert x < partial_width?
+        self.image.blend_pixel(x, y, p);
+    }
+
+    fn inner_mut(&mut self) -> &mut Self::InnerImage {
+        &mut self.image
+    }
+}
+
 /// Reduces the width of an image using seam carving.
 ///
 /// Warning: this is very slow! It implements the algorithm from
