@@ -4,7 +4,7 @@
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
 use crate::gradients::sobel_gradient_map;
-use image::{GrayImage, Luma, Pixel, Rgb};
+use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Rgb};
 use crate::definitions::{HasBlack, Image};
 use crate::map::{map_colors, WithChannel};
 use std::cmp::min;
@@ -13,22 +13,24 @@ use std::cmp::min;
 pub struct VerticalSeam(Vec<u32>);
 
 /// Reduces the width of an image using seam carving.
-/// 
+///
 /// Warning: this is very slow! It implements the algorithm from
 /// https://inst.eecs.berkeley.edu/~cs194-26/fa16/hw/proj4-seamcarving/imret.pdf, with some
 /// extra unnecessary allocations thrown in. Rather than attempting to optimise the implementation
 /// of this inherently slow algorithm, the planned next step is to switch to the algorithm from
 /// https://users.cs.cf.ac.uk/Paul.Rosin/resources/papers/seam-carving-ChinaF.pdf.
-pub fn shrink_width<P>(image: &Image<P>, target_width: u32) -> Image<P>
+pub fn shrink_width<I>(image: &I, target_width: u32) -> Image<I::Pixel>
 // TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    <P as WithChannel<u16>>::Pixel: HasBlack
+    I: GenericImageView,
+    I::Pixel: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <I::Pixel as WithChannel<u16>>::Pixel: HasBlack
 {
     assert!(target_width <= image.width(), "target_width must be <= input image width");
 
     let iterations = image.width() - target_width;
-    let mut result = image.clone();
+    let mut result = ImageBuffer::new(image.width(), image.height());
+    result.copy_from(image, 0, 0);
 
     for _ in 0..iterations {
         let seam = find_vertical_seam(&result);
@@ -40,17 +42,18 @@ where
 
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
 /// gradient magnitudes is minimal.
-pub fn find_vertical_seam<P>(image: &Image<P>) -> VerticalSeam
+pub fn find_vertical_seam<I>(image: &I) -> VerticalSeam
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    <P as WithChannel<u16>>::Pixel: HasBlack
+    I: GenericImageView,
+    I::Pixel: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <I::Pixel as WithChannel<u16>>::Pixel: HasBlack
 {
     let (width, height) = image.dimensions();
     assert!(image.width() >= 2, "Cannot find seams if image width is < 2");
 
-    let mut gradients = sobel_gradient_map(&image, |p| {
+    let mut gradients = sobel_gradient_map(image, |p| {
         let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::channel_count() as u16;
+        let gradient_mean: u16 = gradient_sum / I::Pixel::channel_count() as u16;
         Luma([gradient_mean as u32])
     });
 
@@ -104,7 +107,10 @@ where
 }
 
 /// Assumes that the previous rows have all been processed.
-fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
+fn set_path_energy<I>(path_energies: &mut I, x: u32, y: u32)
+where
+    I: GenericImage<Pixel = Luma<u32>>
+{
     let above = path_energies.get_pixel(x, y - 1)[0];
     let mut min_energy = above;
 
@@ -126,9 +132,10 @@ fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
 // way of talking about views of ImageBuffer without devolving into supporting
 // arbitrary GenericImages. And a lot of other functions don't support those because
 // it would make them a lot slower.
-pub fn remove_vertical_seam<P>(image: &Image<P>, seam: &VerticalSeam) -> Image<P>
+pub fn remove_vertical_seam<I>(image: &I, seam: &VerticalSeam) -> Image<I::Pixel>
 where
-    P: Pixel + 'static
+    I: GenericImage,
+    I::Pixel: Pixel + 'static
 {
     assert!(seam.0.len() as u32 == image.height(), "seam length does not match image height");
 
@@ -138,10 +145,10 @@ where
     for y in 0..height {
         let x_seam = seam.0[(height - y - 1) as usize];
         for x in 0..x_seam {
-            out.put_pixel(x, y, *image.get_pixel(x, y));
+            out.put_pixel(x, y, image.get_pixel(x, y));
         }
         for x in (x_seam + 1)..width {
-            out.put_pixel(x - 1, y, *image.get_pixel(x, y));
+            out.put_pixel(x - 1, y, image.get_pixel(x, y));
         }
     }
 
@@ -168,7 +175,7 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
             offsets[y as usize].push(x_original);
         }
     }
-    
+
     out
 }
 

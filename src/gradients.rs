@@ -133,12 +133,13 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 ///     max_gradient
 /// );
 /// # }
-pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
+pub fn sobel_gradient_map<I, F, Q>(image: &I, f: F) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    I: GenericImageView,
+    I::Pixel: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
-    ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    ChannelMap<I::Pixel, u16>: HasBlack,
+    F: Fn(ChannelMap<I::Pixel, u16>) -> Q
 {
     gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, f)
 }
