@@ -111,20 +111,21 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         let num_channels = I::Pixel::channel_count() as usize;
         let zero = K::zero();
         let mut acc = vec![zero; num_channels];
-        let (k_width, k_height) = (self.width, self.height);
+        let (k_width, k_height) = (self.width as i64, self.height as i64);
+        let (width, height) = (width as i64, height as i64);
 
         for y in 0..height {
             for x in 0..width {
                 for k_y in 0..k_height {
                     let y_p = min(
-                        height + height - 1,
-                        max(height, height + y + k_y - k_height / 2),
-                    ) - height;
+                        height - 1,
+                        max(0, y + k_y - k_height / 2),
+                    ) as u32;
                     for k_x in 0..k_width {
                         let x_p = min(
-                            width + width - 1,
-                            max(width, width + x + k_x - k_width / 2),
-                        ) - width;
+                            width - 1,
+                            max(0, x + k_x - k_width / 2),
+                        ) as u32;
                         let (p, k) = unsafe {
                             (
                                 image.unsafe_get_pixel(x_p, y_p),
@@ -134,7 +135,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                         accumulate(&mut acc, &p, k);
                     }
                 }
-                let out_channels = out.get_pixel_mut(x, y).channels_mut();
+                let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
                 for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
                     f(c, *a);
                     *a = zero;
