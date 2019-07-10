@@ -181,7 +181,7 @@ fn test_affine_bilinear_rgb() {
 #[test]
 fn test_sobel_gradients() {
     fn sobel_gradients(image: &GrayImage) -> GrayImage {
-        imageproc::map::map_subpixels(&gradients::sobel_gradients(image), u8::clamp)
+        imageproc::map::map_subpixels(&gradients::sobel_gradients(image), <u8 as Clamp<u16>>::clamp)
     }
     compare_to_truth_grayscale("elephant.png", "elephant_gradients.png", sobel_gradients);
 }

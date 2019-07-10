@@ -437,11 +437,11 @@ where
     for bucket in 0..hist.len() {
         if signed {
             let dir = (2f32 * f32::consts::PI * bucket as f32) / orientations;
-            let intensity = u8::clamp(hist[bucket]);
+            let intensity = Clamp::clamp(hist[bucket]);
             draw_ray_mut(image, dir, Luma([intensity]));
         } else {
             let dir = (f32::consts::PI * bucket as f32) / orientations;
-            let intensity = u8::clamp(hist[bucket]);
+            let intensity = Clamp::clamp(hist[bucket]);
             draw_ray_mut(image, dir, Luma([intensity]));
             draw_ray_mut(image, dir + f32::consts::PI, Luma([intensity]));
         }

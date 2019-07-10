@@ -540,7 +540,7 @@ mod tests {
                     acc += color as f32 * weight;
                 }
 
-                let clamped = u8::clamp(acc);
+                let clamped = <u8 as Clamp<f32>>::clamp(acc);
                 out.put_pixel(x, y, Luma([clamped]));
             }
         }
@@ -572,7 +572,7 @@ mod tests {
                     acc += color as f32 * weight;
                 }
 
-                let clamped = u8::clamp(acc);
+                let clamped = <u8 as Clamp<f32>>::clamp(acc);
                 out.put_pixel(x, y, Luma([clamped]));
             }
         }
