@@ -117,22 +117,14 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         for y in 0..height {
             for x in 0..width {
                 for k_y in 0..k_height {
-                    let y_p = min(
-                        height - 1,
-                        max(0, y + k_y - k_height / 2),
-                    ) as u32;
+                    let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
                     for k_x in 0..k_width {
-                        let x_p = min(
-                            width - 1,
-                            max(0, x + k_x - k_width / 2),
-                        ) as u32;
-                        let (p, k) = unsafe {
-                            (
-                                image.unsafe_get_pixel(x_p, y_p),
-                                *self.data.get_unchecked((k_y * k_width + k_x) as usize),
-                            )
-                        };
-                        accumulate(&mut acc, &p, k);
+                        let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
+                        accumulate(
+                            &mut acc,
+                            unsafe { &image.unsafe_get_pixel(x_p, y_p) },
+                            unsafe { *self.data.get_unchecked((k_y * k_width + k_x) as usize) }
+                        );
                     }
                 }
                 let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
@@ -770,7 +762,7 @@ mod tests {
         let kernel = Kernel::new(&k, 3, 3);
         let filtered: Image<Luma<u8>> = kernel.filter(
             &image,
-            |c, a| *c = u8::clamp(a)
+            |c, a| *c = <u8 as Clamp<f32>>::clamp(a)
         );
 
         let expected = gray_image!(
