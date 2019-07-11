@@ -85,6 +85,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major form.
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
+        assert!(width > 0 && height > 0, "width and height must be non-zero");
         assert!(
             width * height == data.len() as u32,
             format!(
@@ -715,6 +716,66 @@ mod tests {
         );
 
         let filtered = filter3x3(&image, &kernel);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_kernel_must_be_nonempty() {
+        let k: Vec<u8> = Vec::new();
+        let _ = Kernel::new(&k, 0, 0);
+    }
+
+    #[test]
+    fn test_kernel_filter_with_even_kernel_side() {
+        let image = gray_image!(
+            3, 2;
+            4, 1);
+
+        let k = vec![1u8, 2u8];
+        let kernel = Kernel::new(&k, 2, 1);
+        let filtered = kernel.filter(&image, |c, a| *c = a);
+
+        let expected = gray_image!(
+             9,  7;
+            12,  6);
+
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_kernel_filter_with_empty_image() {
+        let image = gray_image!();
+
+        let k = vec![2u8];
+        let kernel = Kernel::new(&k, 1, 1);
+        let filtered = kernel.filter(&image, |c, a| *c = a);
+
+        let expected = gray_image!();
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_kernel_filter_with_kernel_dimensions_larger_than_image() {
+        let image = gray_image!(
+            9, 4;
+            8, 1);
+
+        let k: Vec<f32> = vec![
+            0.1, 0.2, 0.1,
+            0.2, 0.4, 0.2,
+            0.1, 0.2, 0.1
+        ];
+        let kernel = Kernel::new(&k, 3, 3);
+        let filtered: Image<Luma<u8>> = kernel.filter(
+            &image,
+            |c, a| *c = u8::clamp(a)
+        );
+
+        let expected = gray_image!(
+            11,  7;
+            10,  5);
+
         assert_pixels_eq!(filtered, expected);
     }
 

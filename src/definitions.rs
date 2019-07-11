@@ -87,15 +87,19 @@ macro_rules! implement_clamp {
     )
 }
 
-implement_clamp!(f32, u8, u8::MIN, u8::MAX, u8::MIN as f32, u8::MAX as f32);
-implement_clamp!(f32, u16, u16::MIN, u16::MAX, u16::MIN as f32, u16::MAX as f32);
-implement_clamp!(f64, u8, u8::MIN, u8::MAX, u8::MIN as f64, u8::MAX as f64);
-implement_clamp!(f64, u16, u16::MIN, u16::MAX, u16::MIN as f64, u16::MAX as f64);
+implement_clamp!(i16, u8, u8::MIN, u8::MAX, u8::MIN as i16, u8::MAX as i16);
+implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 implement_clamp!(i32, u8, u8::MIN, u8::MAX, u8::MIN as i32, u8::MAX as i32);
 implement_clamp!(u32, u8, u8::MIN, u8::MAX, u8::MIN as u32, u8::MAX as u32);
+implement_clamp!(f32, u8, u8::MIN, u8::MAX, u8::MIN as f32, u8::MAX as f32);
+implement_clamp!(f64, u8, u8::MIN, u8::MAX, u8::MIN as f64, u8::MAX as f64);
+
 implement_clamp!(i32, u16, u16::MIN, u16::MAX, u16::MIN as i32, u16::MAX as i32);
+implement_clamp!(f32, u16, u16::MIN, u16::MAX, u16::MIN as f32, u16::MAX as f32);
+implement_clamp!(f64, u16, u16::MIN, u16::MAX, u16::MIN as f64, u16::MAX as f64);
+
 implement_clamp!(i32, i16, i16::MIN, i16::MAX, i16::MIN as i32, i16::MAX as i32);
-implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
+
 
 #[cfg(test)]
 mod tests {
