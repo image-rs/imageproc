@@ -6,7 +6,7 @@
 use crate::gradients::sobel_gradient_map;
 use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Rgb};
 use crate::definitions::{HasBlack, Image};
-use crate::map::{map_colors, WithChannel};
+use crate::map::{ChannelMap, map_colors, WithChannel};
 use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
@@ -108,6 +108,16 @@ where
     result
 }
 
+// #[inline(always)]
+// fn gradient_mean<P>(p: P) -> Luma<u32>
+// where
+//     P: Pixel<Subpixel = u16>
+// {
+//     let gradient_sum: u16 = p.channels().iter().sum();
+//     let gradient_mean: u16 = gradient_sum / P::channel_count() as u16;
+//     Luma([gradient_mean as u32])
+// }
+
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
 /// gradient magnitudes is minimal.
 pub fn find_vertical_seam<I>(image: &I) -> VerticalSeam
@@ -119,7 +129,10 @@ where
     let (width, height) = image.dimensions();
     assert!(image.width() >= 2, "Cannot find seams if image width is < 2");
 
-    let mut gradients = sobel_gradient_map(image, |p| {
+    //let mut gradients = sobel_gradient_map(image, gradient_mean);
+    let mut gradients = sobel_gradient_map(
+        image,
+        |p| {
         let gradient_sum: u16 = p.channels().iter().sum();
         let gradient_mean: u16 = gradient_sum / I::Pixel::channel_count() as u16;
         Luma([gradient_mean as u32])
