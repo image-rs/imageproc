@@ -50,6 +50,34 @@ pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_SOBEL)
 }
 
+/// Scharr filter for detecting horizontal gradients.
+///
+/// Used by the [`horizontal_scharr`](fn.horizontal_scharr.html) function.
+pub static HORIZONTAL_SCHARR: [i32; 9] = [
+    3,  0,  -3,
+    10, 0, -10,
+    3,  0,  -3];
+
+/// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
+/// kernel to detect horizontal gradients.
+pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &HORIZONTAL_SCHARR)
+}
+
+/// Scharr filter for detecting vertical gradients.
+///
+/// Used by the [`vertical_scharr`](fn.vertical_scharr.html) function.
+pub static VERTICAL_SCHARR: [i32; 9] = [
+     3,  10,  3,
+     0,   0,  0,
+    -3, -10, -3];
+
+/// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
+/// kernel to detect vertical gradients.
+pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &VERTICAL_SCHARR)
+}
+
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
 /// kernel to detect horizontal gradients.
 pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
@@ -208,6 +236,8 @@ mod tests {
         let expected = ImageBuffer::from_pixel(5, 5, Luma([0i16]));
         assert_pixels_eq!(horizontal_sobel(&image), expected);
         assert_pixels_eq!(vertical_sobel(&image), expected);
+        assert_pixels_eq!(horizontal_scharr(&image), expected);
+        assert_pixels_eq!(vertical_scharr(&image), expected);
         assert_pixels_eq!(horizontal_prewitt(&image), expected);
         assert_pixels_eq!(vertical_prewitt(&image), expected);
     }
@@ -241,6 +271,38 @@ mod tests {
             -4, -4, -4);
 
         let filtered = vertical_sobel(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_horizontal_scharr_gradient_image() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            16, 32, 16;
+            16, 32, 16;
+            16, 32, 16);
+
+        let filtered = horizontal_scharr(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_vertical_scharr_gradient_image() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            16, 16, 16;
+            32, 32, 32;
+            16, 16, 16);
+
+        let filtered = vertical_scharr(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
