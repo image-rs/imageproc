@@ -16,7 +16,7 @@ display-window = ["sdl2"]
 
 [dependencies]
 conv = "0.3.1"
-image = "0.21.0"
+image = "0.22.1"
 itertools = "0.7.0"
 num = "0.2.0"
 rand = "0.6.5"
