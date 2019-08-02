@@ -64,7 +64,7 @@ pub trait Canvas {
         self.dimensions().1
     }
 
-    /// Returns the pixel located at (x, y)
+    /// Returns the pixel located at (x, y).
     fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel;
 
     /// Draw a pixel at the given coordinates. `x` and `y`
