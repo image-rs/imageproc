@@ -25,13 +25,15 @@ pub struct Proj {
 
 impl Proj {
     /// Create a 2d projective transform from a row-major 3x3 matrix in homogeneous coordinates.
-    /// If matrix is not invertible by def. is not a Projection
+    /// Matrix must be invertible, otherwise it does not define a Projection (by. definition).
     pub fn from_matrix(transform: [f32; 9]) -> Option<Proj> {
         let transform = normalize(transform);
+        let c = class_from_matrix(transform);
         try_inverse(&transform)
             .map(|inverse| 
-                 Proj { transform: transform, inverse: inverse,
-                        class: TransformationClass::Projection })
+                 Proj { transform: transform, 
+                        inverse: inverse,
+                        class: c })
     }
 
     /// Defines a translation by (tx, ty)
@@ -87,7 +89,61 @@ impl Proj {
         Proj { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
-    #[inline]
+    /// Performs projective transformation tform to an image.
+    /// Allocates an output image with same dimensions as the input image.
+    /// Output pixels outside the input image are set to `default`.
+    pub fn warp_new<P>(&self,
+        image: &Image<P>,
+        interpolation: Interpolation,
+        default: P
+        ) -> Image<P> 
+        where
+        P: Pixel + HasBlack + 'static,
+        <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+        {
+            let (width, height) = image.dimensions();
+            let mut out = ImageBuffer::new(width, height);
+            self.warp(image, interpolation, default, &mut out);
+
+            out
+        }
+
+
+    /// Performs projective transformation `tfrom` mapping pixels from
+    /// `image` into `&mut output`
+    pub fn warp<P>(&self,
+        image: &Image<P>,
+        interpolation: Interpolation,
+        default: P,
+        out: &mut Image<P>
+        )
+        where
+        P: Pixel + HasBlack + 'static,
+        <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+        {
+            let tform = self.inv();
+
+            let nn = |x,y| nearest(image, x, y, default);
+            let bl = |x,y| interpolate(image, x, y, default);
+            let w_t = |x,y| tform.warp_t(x,y);
+            let w_a = |x,y| tform.warp_a(x,y);
+            let w_p = |x,y| tform.warp_p(x,y);
+            use TransformationClass as TC;
+            use Interpolation as I;
+
+            match (interpolation, tform.class) {
+                (I::Nearest,  TC::Translation) => warp_inner(out, w_t, nn),
+                (I::Nearest,  TC::Affine)      => warp_inner(out, w_a, nn),
+                (I::Nearest,  TC::Projection)  => warp_inner(out, w_p, nn),
+                (I::Bilinear, TC::Translation) => warp_inner(out, w_t, bl),
+                (I::Bilinear, TC::Affine)      => warp_inner(out, w_a, bl),
+                (I::Bilinear, TC::Projection)  => warp_inner(out, w_p, bl),
+            }
+        }
+
+    // Helper functions used as optiomization in warp
+
+    #[inline(always)]
     fn warp_p(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
         let d = t[6]*x + t[7]*y + t[8];
@@ -96,7 +152,7 @@ impl Proj {
          (t[3]*x + t[4]*y + t[5])/d)
     }
 
-    #[inline]
+    #[inline(always)]
     fn warp_a(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
 
@@ -104,12 +160,32 @@ impl Proj {
          (t[3]*x + t[4]*y + t[5]))
     }
 
-    #[inline]
+    #[inline(always)]
     fn warp_t(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
 
         ((x + t[2]),
          (y + t[5]))
+    }
+}
+
+fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
+
+    if (mx[6]-0.0).abs() < 1e-10 &&
+       (mx[7]-0.0).abs() < 1e-10 &&
+       (mx[8]-1.0).abs() < 1e-10
+    {  
+        if (mx[0]-1.0).abs() < 1e-10 &&
+           (mx[1]-0.0).abs() < 1e-10 &&
+           (mx[3]-0.0).abs() < 1e-10 &&
+           (mx[4]-1.0).abs() < 1e-10 
+        {
+            TransformationClass::Translation 
+        } else { 
+            TransformationClass::Affine
+        }
+    } else {
+        TransformationClass::Projection
     }
 }
 
@@ -136,7 +212,7 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
 
     let det = t00 * m00 - t01 * m01 + t02 * m02;
 
-    if det == 0.0 {
+    if (det).abs() < 1e-10 {
         return None;
     }
 
@@ -177,8 +253,8 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
         );
 
     [a11*b11 + a12*b21 + a13*b31, a11*b12 + a12*b22 + a13*b32, a11*b13 + a12*b23 +a13*b33,
-    a21*b11 + a22*b21 + a23*b31, a21*b12 + a22*b22 + a23*b32, a21*b13 + a22*b23 + a23*b33,
-    a31*b11 + a32*b21 + a33*b31, a31*b12 + a32*b22 + a33*b32, a31*b13 + a32*b23 + a33*b33]
+     a21*b11 + a22*b21 + a23*b31, a21*b12 + a22*b22 + a23*b32, a21*b13 + a22*b23 + a23*b33,
+     a31*b11 + a32*b21 + a33*b31, a31*b12 + a32*b22 + a33*b32, a31*b13 + a32*b23 + a33*b33]
 }
 
 /// Basically matrix multiplication
@@ -189,10 +265,12 @@ impl Mul<Proj> for Proj {
         use TransformationClass as TC;
         let t = mul3x3(self.transform, rhs.transform);
         let i = mul3x3(rhs.inverse, self.inverse);
+
         let class = match (self.class, rhs.class) {
             (TC::Translation, TC::Translation) => TC::Translation,
             (TC::Translation, TC::Affine) => TC::Affine,
             (TC::Affine, TC::Translation) => TC::Affine,
+            (TC::Affine, TC::Affine)      => TC::Affine,
             (_, _) => TC::Projection
         };
 
@@ -216,20 +294,6 @@ impl<'a, 'b> Mul<&Proj> for &'a Proj {
         };
 
         Proj { transform: t, inverse: i, class: class }
-    }
-}
-
-impl Mul<Point2> for Proj {
-    type Output = Point2;
-
-    fn mul(self, rhs: Point2) -> Point2 {
-        let t = &self.transform;
-        let d = t[6]*rhs.x + t[7]*rhs.y + t[8];
-
-        Point2 {
-            x: (t[0]*rhs.x + t[1]*rhs.y + t[2])/d,
-            y: (t[3]*rhs.x + t[4]*rhs.y + t[5])/d
-        }
     }
 }
 
@@ -289,29 +353,17 @@ where
     }
 }
 
+#[inline(always)]
 fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
-    let rx = x.round();
-    let ry = y.round();
-
-    // default if out of bound
+    let rx = x.round() as u32;
+    let ry = y.round() as u32;
     let (width, height) = image.dimensions();
-    if rx < 0f32 || rx >= width as f32 || ry < 0f32 || ry >= height as f32 {
+    if x.round() < 0f32 ||  y.round() < 0f32 {
+        default
+    } else if rx >= width || ry >= height {
         default
     } else {
-        unsafe { image.unsafe_get_pixel(rx as u32, ry as u32) }
-    }
-}
-
-/// A 2d point in Euclidian space R^2
-#[derive(Copy, Clone, Debug, PartialEq)]
-struct Point2 {
-    x: f32,
-    y: f32
-}
-
-impl Point2 {
-    fn new(x: f32, y: f32) -> Point2 {
-        Point2 { x, y }
+        unsafe { image.unsafe_get_pixel(rx, ry) }
     }
 }
 
@@ -326,63 +378,11 @@ pub enum Interpolation {
     Bilinear,
 }
 
-/// Performs projective transformation tform to an image.
-/// Allocates an output image with same dimensions as the input image.
-/// Output pixels outside the input image are set to black.
-pub fn warp_new<P>(
-    image: &Image<P>,
-    tform: &Proj,
-    interpolation: Interpolation,
-    default: P
-    ) -> Image<P> 
-where
-    P: Pixel + HasBlack + 'static,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
-{
-    let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
-    warp(image, &tform, interpolation, default, &mut out);
-
-    out
-}
-
-
-/// warp
-pub fn warp<P>(
-    image: &Image<P>,
-    tform: &Proj,
-    interpolation: Interpolation,
-    default: P,
-    out: &mut Image<P>
-    )
-where
-    P: Pixel + HasBlack + 'static,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
-{
-    let tform = tform.inv();
-
-    let nn = |x,y| nearest(image, x, y, default);
-    let bl = |x,y| interpolate(image, x, y, default);
-    let w_t = |x,y| tform.warp_t(x,y);
-    let w_a = |x,y| tform.warp_a(x,y);
-    let w_p = |x,y| tform.warp_p(x,y);
-    use TransformationClass as TC;
-    use Interpolation as I;
-
-    match (interpolation, tform.class) {
-        (I::Nearest,  TC::Translation) => warp_inner(out, nn, w_t),
-        (I::Nearest,  TC::Affine)      => warp_inner(out, nn, w_a),
-        (I::Nearest,  TC::Projection)  => warp_inner(out, nn, w_p),
-        (I::Bilinear, TC::Translation) => warp_inner(out, bl, w_t),
-        (I::Bilinear, TC::Affine)      => warp_inner(out, bl, w_a),
-        (I::Bilinear, TC::Projection)  => warp_inner(out, bl, w_p),
-    }
-}
 
 fn warp_inner<P,Fc,Fi>(
     out: &mut Image<P>,
+    coord_tf: Fc,
     get_pixel: Fi,
-    coord_tf: Fc
     )
 where
     P: Pixel + HasBlack + 'static,
@@ -391,6 +391,8 @@ where
     Fi: Fn(f32, f32) -> P,
 {
     let (width, height) = out.dimensions();
+
+    //for (r, y) = out.rows_mut().enumerate() {
 
     for y in 0..height {
         for x in 0..width {
@@ -418,7 +420,7 @@ mod tests {
             10, 11, 12);
         let rot = Proj::trans(1.0, 0.0)*Proj::rot(0.0)*Proj::trans(-1.0, 0.0);
 
-        let rotated = warp_new(&image, &rot, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rot.warp_new(&image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, image);
     }
 
@@ -434,7 +436,7 @@ mod tests {
         let c = Proj::trans(1.0, 0.0);
         let rot = c*Proj::rot(90.0)*c.inv();
 
-        let rotated = warp_new(&image, &rot, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rot.warp_new(&image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -451,7 +453,7 @@ mod tests {
 
         let rot = c*Proj::rot(-180.0)*c.inv();
 
-        let rotated = warp_new(&image, &rot, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rot.warp_new(&image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -461,7 +463,7 @@ mod tests {
         let c = Proj::trans(3.0, 3.0);
         let rot = c*Proj::rot(1f32.to_degrees())*c.inv();
         b.iter(|| {
-            let rotated = warp_new(&image, &rot, Interpolation::Nearest, Luma([98u8]));
+            let rotated = rot.warp_new(&image, Interpolation::Nearest, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -472,7 +474,7 @@ mod tests {
         let c = Proj::trans(3.0, 3.0);
         let rot = c*Proj::rot(1f32.to_degrees())*c.inv();
         b.iter(|| {
-            let rotated = warp_new(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
+            let rotated = rot.warp_new(&image, Interpolation::Bilinear, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -489,7 +491,7 @@ mod tests {
             00, 00, 01;
             00, 10, 11);
 
-        let translated = warp_new(&image, &Proj::trans(1.0, 1.0), Interpolation::Nearest, Luma([0u8]));
+        let translated = Proj::trans(1.0,1.0).warp_new(&image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -505,7 +507,7 @@ mod tests {
             00, 20, 21;
             00, 00, 00);
 
-        let translated = warp_new(&image, &Proj::trans(1.0, -1.0), Interpolation::Nearest, Luma([0u8]));
+        let translated = Proj::trans(1.0,-1.0).warp_new(&image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -522,7 +524,7 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = warp_new(&image, &Proj::trans(5.0, 5.0), Interpolation::Nearest, Luma([0u8]));
+        let translated = Proj::trans(5.0, 5.0).warp_new(&image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -530,8 +532,9 @@ mod tests {
     fn bench_translate(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
         let t = Proj::trans(30.0, 30.0);
+
         b.iter(|| {
-            let translated = warp_new(&image, &t, Interpolation::Nearest, Luma([0u8]));
+            let translated = t.warp_new(&image, Interpolation::Nearest, Luma([0u8]));
             test::black_box(translated);
         });
     }
@@ -554,7 +557,7 @@ mod tests {
             0.0, 0.0, 1.0,
         ]).unwrap();
 
-        let translated = warp_new(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+        let translated = aff.warp_new(&image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -569,7 +572,7 @@ mod tests {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp_new(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+            let transformed = aff.warp_new(&image, Interpolation::Nearest, Luma([0u8]));
             test::black_box(transformed);
         });
     }
@@ -585,10 +588,11 @@ mod tests {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp_new(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+            let transformed = aff.warp_new(&image, Interpolation::Bilinear, Luma([0u8]));
             test::black_box(transformed);
         });
     }
+
 
     #[bench]
     fn bench_affine_bilinear_fhd(b: &mut test::Bencher) {
@@ -601,8 +605,36 @@ mod tests {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp_new(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+            let transformed = aff.warp_new(&image, Interpolation::Nearest, Luma([0u8]));
             test::black_box(transformed);
         });
     }
+
+    /*
+    #[bench]
+    fn bench_nearest_plain(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(1920, 1080, Luma([13u8]));
+
+        b.iter(|| {
+            for y in 0..1079 {
+                for x in 0..1919 {
+                    test::black_box(nearest(&image, x as f32, y as f32, Luma([99u8])));
+                }
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_nearest_fast(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(1920, 1080, Luma([13u8]));
+
+        b.iter(|| {
+            for y in 0..1079 {
+                for x in 0..1919 {
+                    test::black_box(nearest_nocheck(&image, x as f32, y as f32, Luma([99u8])));
+                }
+            }
+        });
+    }
+    */
 }
