@@ -52,6 +52,7 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
 }
 
 /// Finds local maxima to make the edges thinner.
+#[allow(deprecated)]
 fn non_maximum_suppression(
     g: &ImageBuffer<Luma<f32>, Vec<f32>>,
     gx: &ImageBuffer<Luma<i16>, Vec<i16>>,

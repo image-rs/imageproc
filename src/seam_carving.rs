@@ -50,7 +50,7 @@ where
 
     let mut gradients = sobel_gradient_map(&image, |p| {
         let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::channel_count() as u16;
+        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
         Luma([gradient_mean as u32])
     });
 

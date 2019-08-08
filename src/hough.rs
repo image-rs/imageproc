@@ -36,6 +36,7 @@ pub struct LineDetectionOptions {
 /// if their intensity is non-zero.
 ///
 /// See ./examples/hough.rs for example usage.
+#[allow(deprecated)]
 pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<PolarLine> {
     let (width, height) = image.dimensions();
 

@@ -135,7 +135,7 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
             "BresenhamLinePixelIterMut does not support empty images"
         );
         // The next two assertions are for https://github.com/PistonDevelopers/imageproc/issues/281
-        assert!(P::channel_count() > 0);
+        assert!(P::CHANNEL_COUNT > 0);
         assert!(
             image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
             "Image dimensions are too large"

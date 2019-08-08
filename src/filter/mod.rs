@@ -25,6 +25,7 @@ use std::f32;
 // TODO: for small kernels we probably want to do the convolution
 // TODO: directly instead of using an integral image.
 // TODO: more formats!
+#[allow(deprecated)]
 pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -99,6 +100,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+    #[allow(deprecated)]
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
         P: Pixel + 'static,
@@ -108,7 +110,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     {
         let (width, height) = image.dimensions();
         let mut out = Image::<Q>::new(width, height);
-        let num_channels = P::channel_count() as usize;
+        let num_channels = P::CHANNEL_COUNT as usize;
         let zero = K::zero();
         let mut acc = vec![zero; num_channels];
         let (k_width, k_height) = (self.width as i64, self.height as i64);
@@ -214,6 +216,7 @@ where
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
+#[allow(deprecated)]
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel + 'static,
@@ -226,7 +229,7 @@ where
     let (width, height) = image.dimensions();
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
-    let mut acc = vec![zero; P::channel_count() as usize];
+    let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
     let k_width = kernel.len() as i32;
 
     // Typically the image side will be much larger than the kernel length.
@@ -309,6 +312,7 @@ where
 
 ///	Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
+#[allow(deprecated)]
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel + 'static,
@@ -321,7 +325,7 @@ where
     let (width, height) = image.dimensions();
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
-    let mut acc = vec![zero; P::channel_count() as usize];
+    let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
     let k_height = kernel.len() as i32;
 
     // Typically the image side will be much larger than the kernel length.
@@ -412,7 +416,7 @@ where
     <P as Pixel>::Subpixel: ValueInto<K>,
     K: Num + Copy,
 {
-    for i in 0..(P::channel_count() as usize) {
+    for i in 0..(P::CHANNEL_COUNT as usize) {
         acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
     }
 }

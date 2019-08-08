@@ -33,6 +33,7 @@ pub enum MatchTemplateMethod {
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
+#[allow(deprecated)]
 pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemplateMethod) -> Image<Luma<f32>> {
     use image::GenericImageView;
 

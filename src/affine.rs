@@ -6,6 +6,7 @@ use crate::math::cast;
 use conv::ValueInto;
 use std::ops::Mul;
 
+
 /// A 2d affine transform, stored as a row major 3x3 matrix.
 #[derive(Copy, Clone, Debug)]
 pub struct Affine2 {
@@ -116,6 +117,7 @@ where
 /// transformation is not invertible.
 /// The output image has the same dimensions as the input. Output pixels
 /// whose pre-image lies outside the input image are set to default.
+#[allow(deprecated)]
 pub fn affine_with_default<P>(
     image: &Image<P>,
     affine: Affine2,
@@ -212,6 +214,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 fn rotate_nearest<P>(image: &Image<P>, center: (f32, f32), theta: f32, default: P) -> Image<P>
 where
     P: Pixel + 'static,
@@ -244,6 +247,7 @@ where
     out
 }
 
+#[allow(deprecated)]
 fn rotate_bilinear<P>(image: &Image<P>, center: (f32, f32), theta: f32, default: P) -> Image<P>
 where
     P: Pixel + 'static,
@@ -282,6 +286,7 @@ where
 /// image are set to the boundary pixel in the input image nearest to their pre-image.
 // TODO: it's possibly confusing that this has different behaviour to
 // TODO: attempting the equivalent transformation via the affine function
+#[allow(deprecated)]
 pub fn translate<P>(image: &Image<P>, t: (i32, i32)) -> Image<P>
 where
     P: Pixel + 'static,
@@ -334,6 +339,7 @@ where
     })
 }
 
+#[allow(deprecated)]
 fn interpolate<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel + 'static,
@@ -364,6 +370,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
     let rx = x.round();
     let ry = y.round();

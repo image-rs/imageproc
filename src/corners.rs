@@ -135,6 +135,7 @@ pub fn fast_corner_score(image: &GrayImage, threshold: u8, x: u32, y: u32, varia
 /// Checks if the given pixel is a corner according to the FAST9 detector.
 /// The current implementation is extremely inefficient.
 // TODO: Make this much faster!
+#[allow(deprecated)]
 fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (width, height) = image.dimensions();
     if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
@@ -175,6 +176,7 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
 }
 
 /// Checks if the given pixel is a corner according to the FAST12 detector.
+#[allow(deprecated)]
 fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (width, height) = image.dimensions();
 
@@ -224,6 +226,7 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
 }
 
 #[inline]
+#[allow(deprecated)]
 unsafe fn get_circle(
     image: &GrayImage,
     x: u32,

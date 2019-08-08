@@ -95,6 +95,7 @@ pub(crate) enum DistanceFrom {
     Background,
 }
 
+#[allow(deprecated)]
 pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom) {
     let max_distance = Luma([min(image.width() + image.height(), 255u32) as u8]);
 
@@ -160,6 +161,7 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
 // Sets image[current_x, current_y] to min(image[current_x, current_y], image[candidate_x, candidate_y] + 1).
 // We avoid overflow by performing the arithmetic at type u16. We could use u8::saturating_add instead, but
 // (based on the benchmarks tests) this appears to be considerably slower.
+#[allow(deprecated)]
 unsafe fn check(
     image: &mut GrayImage,
     current_x: u32,
@@ -243,6 +245,7 @@ struct Row<'a> {
 }
 
 impl<'a> Sink for Row<'a> {
+    #[allow(deprecated)]
     fn put(&mut self, idx: usize, value: f64) {
         unsafe { self.image.unsafe_put_pixel(idx as u32, self.row, Luma([value])); }
     }
@@ -257,6 +260,7 @@ struct ColumnMut<'a> {
 }
 
 impl<'a> Sink for ColumnMut<'a> {
+    #[allow(deprecated)]
     fn put(&mut self, idx: usize, value: f64) {
         unsafe { self.image.unsafe_put_pixel(self.column, idx as u32, Luma([value])); }
     }
@@ -289,6 +293,7 @@ struct Column<'a> {
 }
 
 impl<'a> Source for Column<'a> {
+    #[allow(deprecated)]
     fn get(&self, idx: usize) -> f64 {
         let pixel = unsafe { self.image.unsafe_get_pixel(self.column, idx as u32)[0] as f64 };
         if pixel > 0f64 { 0f64 } else { f64::INFINITY }

@@ -8,6 +8,7 @@ use itertools::Itertools;
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
 /// Ties are resolved lexicographically.
+#[allow(deprecated)]
 pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
@@ -78,6 +79,7 @@ where
 /// Returns true if the given block contains a larger value than
 /// the input, or contains an equal value with lexicographically
 /// lesser coordinates.
+#[allow(deprecated)]
 fn contains_greater_value<I, C>(
     image: &I,
     x: u32,

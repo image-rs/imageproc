@@ -62,6 +62,7 @@ where
 ///     scaled);
 /// # }
 /// ```
+#[allow(deprecated)]
 pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
 where
     I: GenericImage<Pixel = P>,
@@ -75,7 +76,7 @@ where
     for y in 0..height {
         for x in 0..width {
             let out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for c in 0..P::channel_count() {
+            for c in 0..P::CHANNEL_COUNT {
                 out_channels[c as usize] = f(unsafe {
                     *image.unsafe_get_pixel(x, y).channels().get_unchecked(
                         c as usize,
@@ -112,6 +113,7 @@ where
 ///     rgb);
 /// # }
 /// ```
+#[allow(deprecated)]
 pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
@@ -167,6 +169,7 @@ where
 /// );
 /// # }
 /// ```
+#[allow(deprecated)]
 pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
 where
     I: GenericImage<Pixel = P>,
@@ -220,6 +223,7 @@ where
 ///     rgb);
 /// # }
 /// ```
+#[allow(deprecated)]
 pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
