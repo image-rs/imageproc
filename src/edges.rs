@@ -58,7 +58,7 @@ fn non_maximum_suppression(
     gy: &ImageBuffer<Luma<i16>, Vec<i16>>,
 ) -> ImageBuffer<Luma<f32>, Vec<f32>> {
     const RADIANS_TO_DEGREES: f32 = 180f32 / f32::consts::PI;
-    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma { data: [0.0] });
+    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma ([0.0]));
     for y in 1..g.height() - 1 {
         for x in 1..g.width() - 1 {
             let x_gradient = gx[(x, y)][0] as f32;
@@ -103,7 +103,7 @@ fn non_maximum_suppression(
             let pixel = *g.get_pixel(x, y);
             // If the pixel is not a local maximum, suppress it.
             if pixel[0] < cmp1[0] || pixel[0] < cmp2[0] {
-                out.put_pixel(x, y, Luma { data: [0.0] });
+                out.put_pixel(x, y, Luma ([0.0]));
             } else {
                 out.put_pixel(x, y, pixel);
             }
