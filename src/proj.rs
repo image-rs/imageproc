@@ -1,12 +1,12 @@
 //! Functions for affine transformations of images.
 
-use image::{Pixel, GenericImage, GenericImageView, ImageBuffer};
-use crate::definitions::{Clamp, HasBlack, Image};
+use image::{Pixel, /*GenericImage, */GenericImageView, ImageBuffer};
+use crate::definitions::{Clamp, Image};
 
 use crate::math::cast;
 use conv::ValueInto;
 use std::ops::Mul;
-//use rayon::prelude::*;
+use rayon::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
 enum TransformationClass {
@@ -18,22 +18,22 @@ enum TransformationClass {
 /// A 2d Projective transformation, stored as a row major 3x3 matrix.
 #[derive(Copy, Clone, Debug)]
 pub struct Proj {
-    transform: [f32; 9],
-    inverse: [f32; 9],
-    class: TransformationClass
+    transform: [f32; 10], // 3x3 matrix + 1 for SIMD alignment
+    inverse: [f32; 10],
+    class: TransformationClass,
 }
 
 impl Proj {
     /// Create a 2d projective transform from a row-major 3x3 matrix in homogeneous coordinates.
     /// Matrix must be invertible, otherwise it does not define a Projection (by. definition).
-    pub fn from_matrix(transform: [f32; 9]) -> Option<Proj> {
+    pub fn from_matrix(tform: [f32; 9]) -> Option<Proj> {
+        let t = &tform;
+        let transform: [f32; 10] = [t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8], 0.0];
         let transform = normalize(transform);
-        let c = class_from_matrix(transform);
+        let class = class_from_matrix(transform);
         try_inverse(&transform)
             .map(|inverse| 
-                 Proj { transform: transform, 
-                        inverse: inverse,
-                        class: c })
+                 Proj { transform, inverse, class })
     }
 
     /// Defines a translation by (tx, ty)
@@ -42,16 +42,19 @@ impl Proj {
             transform: [
                 1.0, 0.0, tx,
                 0.0, 1.0, ty,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             inverse: [
                 1.0, 0.0, -tx,
                 0.0, 1.0, -ty,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             class: TransformationClass::Translation,
         }
     }
 
-    /// Defines a rotation around the origin by angle theta degrees
+    /// Defines a rotation around the origin by angle theta degrees.
+    /// Origin is (0,0) pixel coordinate, usually top left corner.
+    /// To rotate around center combine move origin to frame center by 
+    /// combining T*Rotation*T^-1.
     pub fn rot(theta: f32) -> Proj {
         let theta = theta.to_radians();
         let s = theta.sin();
@@ -60,11 +63,11 @@ impl Proj {
             transform: [
                 c,  -s,   0.0,
                 s,   c,   0.0,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             inverse: [
                 c,   s,   0.0,
                 -s,  c,   0.0,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             class: TransformationClass::Affine,
         }
     }
@@ -75,11 +78,11 @@ impl Proj {
             transform: [
                 sx,  0.0, 0.0,
                 0.0, sy,  0.0,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             inverse: [
                 1.0/sx, 0.0, 0.0,
                 0.0, 1.0/sy, 0.0,
-                0.0, 0.0, 1.0],
+                0.0, 0.0, 1.0, 0.0],
             class: TransformationClass::Affine,
         }
     }
@@ -98,7 +101,8 @@ impl Proj {
         default: P
         ) -> Image<P> 
         where
-        P: Pixel + HasBlack + 'static,
+        P: Pixel + Send + Sync + 'static,
+        <P as Pixel>::Subpixel: Send + Sync,
         <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
         {
             let (width, height) = image.dimensions();
@@ -107,7 +111,6 @@ impl Proj {
 
             out
         }
-
 
     /// Performs projective transformation `tfrom` mapping pixels from
     /// `image` into `&mut output`
@@ -118,8 +121,9 @@ impl Proj {
         out: &mut Image<P>
         )
         where
-        P: Pixel + HasBlack + 'static,
-        <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+        P: Pixel + Send + Sync + 'static,
+        <P as Pixel>::Subpixel: Send + Sync,
+        <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
         {
             let tform = self.inv();
 
@@ -142,10 +146,10 @@ impl Proj {
         }
 
     // Helper functions used as optiomization in warp
-
     #[inline(always)]
     fn warp_p(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
+
         let d = t[6]*x + t[7]*y + t[8];
 
         ((t[0]*x + t[1]*y + t[2])/d,
@@ -169,7 +173,34 @@ impl Proj {
     }
 }
 
-fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
+fn warp_inner<P,Fc,Fi>(
+    out: &mut Image<P>,
+    coord_tf: Fc,
+    get_pixel: Fi,
+    )
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    Fc: Fn(f32, f32) -> (f32, f32),
+    Fc: Send + Sync,
+    Fi: Fn(f32, f32) -> P,
+    Fi: Send + Sync,
+{
+    let width = out.width();
+    let raw_out = out.as_mut();
+    let pitch = P::CHANNEL_COUNT as usize * width as usize;
+
+    raw_out.par_chunks_mut(pitch).enumerate().for_each(|(y, row)| { 
+        for (x, slice) in row.chunks_mut(P::CHANNEL_COUNT as usize).enumerate() {
+            let (px, py) = coord_tf(x as f32, y as f32);
+            *P::from_slice_mut(slice) = get_pixel(px, py);
+        }
+    });
+        
+}
+
+fn class_from_matrix(mx: [f32; 10]) -> TransformationClass {
 
     if (mx[6]-0.0).abs() < 1e-10 &&
        (mx[7]-0.0).abs() < 1e-10 &&
@@ -189,13 +220,13 @@ fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
     }
 }
 
-fn normalize(mx: [f32; 9]) -> [f32; 9] {
+fn normalize(mx: [f32; 10]) -> [f32; 10] {
     [mx[0]/mx[8], mx[1]/mx[8], mx[2]/mx[8],
      mx[3]/mx[8], mx[4]/mx[8], mx[5]/mx[8],
-     mx[6]/mx[8], mx[7]/mx[8], mx[8]/mx[8]]
+     mx[6]/mx[8], mx[7]/mx[8], mx[8]/mx[8], 0.0]
 }
 
-fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
+fn try_inverse(t: &[f32; 10]) -> Option<[f32; 10]> {
     let (
         t00, t01, t02,
         t10, t11, t12,
@@ -226,13 +257,13 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
     let inv = [
         m00 / det, -m10 / det,  m20 / det,
        -m01 / det,  m11 / det, -m21 / det,
-        m02 / det, -m12 / det,  m22 / det
+        m02 / det, -m12 / det,  m22 / det, 0.0
     ];
 
     Some(normalize(inv))
 }
 
-fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+fn mul3x3(a: [f32; 10], b: [f32; 10]) -> [f32; 10] {
     let (
         a11, a12, a13,
         a21, a22, a23,
@@ -254,7 +285,7 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
 
     [a11*b11 + a12*b21 + a13*b31, a11*b12 + a12*b22 + a13*b32, a11*b13 + a12*b23 +a13*b33,
      a21*b11 + a22*b21 + a23*b31, a21*b12 + a22*b22 + a23*b32, a21*b13 + a22*b23 + a23*b33,
-     a31*b11 + a32*b21 + a33*b31, a31*b12 + a32*b22 + a33*b32, a31*b13 + a32*b23 + a33*b33]
+     a31*b11 + a32*b21 + a33*b31, a31*b12 + a32*b22 + a33*b32, a31*b13 + a32*b23 + a33*b33, 0.0]
 }
 
 /// Basically matrix multiplication
@@ -323,6 +354,7 @@ where
 }
 
 
+#[allow(deprecated)]
 fn interpolate<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel + 'static,
@@ -354,6 +386,7 @@ where
 }
 
 #[inline(always)]
+#[allow(deprecated)]
 fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
     let rx = x.round() as u32;
     let ry = y.round() as u32;
@@ -378,33 +411,6 @@ pub enum Interpolation {
     Bilinear,
 }
 
-
-fn warp_inner<P,Fc,Fi>(
-    out: &mut Image<P>,
-    coord_tf: Fc,
-    get_pixel: Fi,
-    )
-where
-    P: Pixel + HasBlack + 'static,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
-    Fc: Fn(f32, f32) -> (f32, f32),
-    Fi: Fn(f32, f32) -> P,
-{
-    let (width, height) = out.dimensions();
-
-    //for (r, y) = out.rows_mut().enumerate() {
-
-    for y in 0..height {
-        for x in 0..width {
-            let (px,py) = coord_tf(x as f32, y as f32);
-            let pix = get_pixel(px, py);
-
-            unsafe {
-                out.unsafe_put_pixel(x, y, pix);
-            }
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
