@@ -1,4 +1,4 @@
-//! Functions for affine transformations of images.
+//! Defines projections on images
 
 use image::{Pixel, /*GenericImage, */GenericImageView, ImageBuffer};
 use crate::definitions::{Clamp, Image};
@@ -25,7 +25,7 @@ pub struct Proj {
 
 impl Proj {
     /// Create a 2d projective transform from a row-major 3x3 matrix in homogeneous coordinates.
-    /// Matrix must be invertible, otherwise it does not define a Projection (by. definition).
+    /// Matrix must be invertible, otherwise it does not define a Projection (by definition).
     pub fn from_matrix(tform: [f32; 9]) -> Option<Proj> {
         let t = &tform;
         let transform: [f32; 10] = [t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8], 0.0];
@@ -51,10 +51,9 @@ impl Proj {
         }
     }
 
-    /// Defines a rotation around the origin by angle theta degrees.
-    /// Origin is (0,0) pixel coordinate, usually top left corner.
-    /// To rotate around center combine move origin to frame center by 
-    /// combining T*Rotation*T^-1.
+    /// Defines a rotation around the origin by angle theta degrees. Origin is (0,0) pixel
+    /// coordinate, usually top left corner. To rotate around image center combine rotation with 
+    /// two translations: T*Rotation*T^-1.
     pub fn rot(theta: f32) -> Proj {
         let theta = theta.to_radians();
         let s = theta.sin();
@@ -72,7 +71,7 @@ impl Proj {
         }
     }
 
-    /// Creates an anisotropic scaling (sx,sy)
+    /// Creates an anisotropic scaling (sx,sy).
     pub fn scale(sx: f32, sy: f32) -> Proj {
         Proj { 
             transform: [
@@ -87,14 +86,13 @@ impl Proj {
         }
     }
 
-    /// Invert the transformation
+    /// Inverts the transformation.
     pub fn inv(self) -> Proj {
         Proj { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
-    /// Performs projective transformation tform to an image.
-    /// Allocates an output image with same dimensions as the input image.
-    /// Output pixels outside the input image are set to `default`.
+    /// Performs projective transformation tform to an image. Allocates an output image with same
+    /// dimensions as the input image. Output pixels outside the input image are set to `default`.
     pub fn warp_new<P>(&self,
         image: &Image<P>,
         interpolation: Interpolation,
@@ -416,7 +414,7 @@ pub enum Interpolation {
 mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
-    use image::{GrayImage, Luma};
+    use image::{GrayImage, Luma, RgbImage, Rgb, Rgba};
     use ::test;
 
     #[test]
@@ -599,19 +597,20 @@ mod tests {
         });
     }
 
-
     #[bench]
-    fn bench_affine_bilinear_fhd(b: &mut test::Bencher) {
-        let image = GrayImage::from_pixel(1920, 1080, Luma([15u8]));
+    fn bench_affine_nearest_fhd(b: &mut test::Bencher) {
+        let image = RgbImage::from_pixel(1920, 1080, Rgb([15u8, 16, 17]));
 
         let aff = Proj::from_matrix([
-            0.8, 0.0, 3.0,
-            0.0, 0.9, 4.0,
-            0.0, 0.0, 1.0,
+            1.8, -0.2, 5.0,
+            0.2, 1.9, 6.0,
+            0.0002, 0.0003, 1.0,
         ]).unwrap();
 
+        let t = Proj::trans(3.0, 3.0);
+
         b.iter(|| {
-            let transformed = aff.warp_new(&image, Interpolation::Nearest, Luma([0u8]));
+            let transformed = aff.warp_new(&image, Interpolation::Nearest, Rgb([0u8, 0, 0]));
             test::black_box(transformed);
         });
     }
@@ -622,8 +621,8 @@ mod tests {
         let image = GrayImage::from_pixel(1920, 1080, Luma([13u8]));
 
         b.iter(|| {
-            for y in 0..1079 {
-                for x in 0..1919 {
+            for y in 0..1080 {
+                for x in 0..1920 {
                     test::black_box(nearest(&image, x as f32, y as f32, Luma([99u8])));
                 }
             }
@@ -635,12 +634,13 @@ mod tests {
         let image = GrayImage::from_pixel(1920, 1080, Luma([13u8]));
 
         b.iter(|| {
-            for y in 0..1079 {
-                for x in 0..1919 {
+            for y in 0..1080 {
+                for x in 0..1920 {
                     test::black_box(nearest_nocheck(&image, x as f32, y as f32, Luma([99u8])));
                 }
             }
         });
     }
     */
+
 }
