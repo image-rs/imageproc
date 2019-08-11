@@ -25,7 +25,6 @@ extern crate assert_approx_eq;
 #[macro_use]
 pub mod utils;
 pub mod affine;
-pub mod proj;
 pub mod contrast;
 pub mod corners;
 pub mod definitions;
@@ -44,6 +43,7 @@ pub mod math;
 pub mod morphology;
 pub mod noise;
 pub mod pixelops;
+pub mod proj;
 #[cfg(any(feature = "property-testing", test))]
 pub mod property_testing;
 pub mod rect;
