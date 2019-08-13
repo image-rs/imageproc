@@ -1,25 +1,25 @@
-
-use image::{GenericImage, ImageBuffer, Pixel};
 use crate::definitions::{Clamp, Image};
+use crate::drawing::Canvas;
 use conv::ValueInto;
+use image::{GenericImage, ImageBuffer, Pixel};
 use std::f32;
 use std::i32;
 
 use crate::pixelops::weighted_sum;
-use rusttype::{Font, Scale, point, PositionedGlyph};
+use rusttype::{point, Font, PositionedGlyph, Scale};
 
 /// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually
-pub fn draw_text_mut<'a, I>(
-    image: &'a mut I,
-    color: I::Pixel,
+pub fn draw_text_mut<'a, C>(
+    canvas: &'a mut C,
+    color: C::Pixel,
     x: u32,
     y: u32,
     scale: Scale,
     font: &'a Font<'a>,
     text: &'a str,
 ) where
-    I: GenericImage,
-    <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    C: Canvas,
+    <C::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let v_metrics = font.v_metrics(scale);
     let offset = point(0.0, v_metrics.ascent);
@@ -35,13 +35,13 @@ pub fn draw_text_mut<'a, I>(
                 let image_x = gx + x as i32;
                 let image_y = gy + y as i32;
 
-                let image_width = image.width() as i32;
-                let image_height = image.height() as i32;
+                let image_width = canvas.width() as i32;
+                let image_height = canvas.height() as i32;
 
                 if image_x >= 0 && image_x < image_width && image_y >= 0 && image_y < image_height {
-                    let pixel = image.get_pixel(image_x as u32, image_y as u32);
+                    let pixel = canvas.get_pixel(image_x as u32, image_y as u32);
                     let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
-                    image.put_pixel(image_x as u32, image_y as u32, weighted_color);
+                    canvas.draw_pixel(image_x as u32, image_y as u32, weighted_color);
                 }
             })
         }

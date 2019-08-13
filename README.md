@@ -1,7 +1,7 @@
 imageproc
 ====
 
-![crates.io](https://img.shields.io/crates/v/imageproc.svg)
+[![crates.io](https://img.shields.io/crates/v/imageproc.svg)](https://crates.io/crates/imageproc)
 [![Build Status](https://travis-ci.org/image-rs/imageproc.svg?branch=master)](https://travis-ci.org/image-rs/imageproc)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/image-rs/imageproc/blob/master/LICENSE)
 

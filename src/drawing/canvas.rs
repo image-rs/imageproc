@@ -1,8 +1,4 @@
-use image::{
-    GenericImage,
-    GenericImageView,
-    Pixel
-};
+use image::{GenericImage, GenericImageView, Pixel};
 
 /// A surface for drawing on - many drawing functions in this
 /// library are generic over a `Canvas` to allow the user to
@@ -68,20 +64,27 @@ pub trait Canvas {
         self.dimensions().1
     }
 
+    /// Returns the pixel located at (x, y).
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel;
+
     /// Draw a pixel at the given coordinates. `x` and `y`
     /// should be within `dimensions` - if not then panicking
     /// is a valid implementation behaviour.
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel);
 }
 
-impl <I> Canvas for I
+impl<I> Canvas for I
 where
-    I: GenericImage
+    I: GenericImage,
 {
     type Pixel = I::Pixel;
 
     fn dimensions(&self) -> (u32, u32) {
         <I as GenericImageView>::dimensions(self)
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        self.get_pixel(x, y)
     }
 
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
@@ -100,6 +103,10 @@ impl<I: GenericImage> Canvas for Blend<I> {
 
     fn dimensions(&self) -> (u32, u32) {
         self.0.dimensions()
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        self.0.get_pixel(x, y)
     }
 
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
