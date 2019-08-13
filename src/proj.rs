@@ -97,6 +97,55 @@ impl Proj {
         Proj { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
+    /// Calculates a homography from a set of four control point pairs
+    pub fn from_cp(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Proj> {
+        use rulinalg::matrix::*;
+
+        let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = 
+            (from[0].0 as f64, from[0].1 as f64,
+             from[1].0 as f64, from[1].1 as f64,
+             from[2].0 as f64, from[2].1 as f64,
+             from[3].0 as f64, from[3].1 as f64);
+
+        let (x1, y1, x2, y2, x3, y3, x4, y4) =
+            (to[0].0 as f64, to[0].1 as f64,
+             to[1].0 as f64, to[1].1 as f64,
+             to[2].0 as f64, to[2].1 as f64,
+             to[3].0 as f64, to[3].1 as f64);
+
+        let a = Matrix::new(9, 9, vec![
+            0f64,0.0, 0.0,-xf1,-yf1,-1.0, y1*xf1, y1*yf1, y1,
+            xf1, yf1, 1.0, 0.0, 0.0, 0.0,-x1*xf1,-x1*yf1,-x1,
+            0.0, 0.0, 0.0,-xf2,-yf2,-1.0, y2*xf2, y2*yf2, y2,
+            xf2, yf2, 1.0, 0.0, 0.0, 0.0,-x2*xf2,-x2*yf2,-x2,
+            0.0, 0.0, 0.0,-xf3,-yf3,-1.0, y3*xf3, y3*yf3, y3,
+            xf3, yf3, 1.0, 0.0, 0.0, 0.0,-x3*xf3,-x3*yf3,-x3,
+            0.0, 0.0, 0.0,-xf4,-yf4,-1.0, y4*xf4, y4*yf4, y4,
+            xf4, yf4, 1.0, 0.0, 0.0, 0.0,-x4*xf4,-x4*yf4,-x4,
+            xf4, yf4, 1.0, 0.0, 0.0, 0.0,-x4*xf4,-x4*yf4,-x4]);
+                
+        match a.svd() {
+            Err(_) => None,
+            Ok((s, _, v)) => {
+                if s[[8,8]].abs() > 0.0001 || // rank(a) must be 8
+                   s[[7,7]].abs() < 0.0001 {  // but not 7
+                    None
+                } else {
+                    let h = v.col(8).into_matrix().into_vec();
+                    let mut transform = 
+                        [h[0] as f32, h[1] as f32, h[2] as f32,
+                         h[3] as f32, h[4] as f32, h[5] as f32,
+                         h[6] as f32, h[7] as f32, h[8] as f32];
+                    transform = normalize(transform);
+                    let class = TransformationClass::Projection;
+
+                    try_inverse(&transform)
+                        .map(|inverse| { Proj { transform, inverse, class }})
+                }
+            }
+        }
+    }
+
     // Helper functions used as optiomization in warp
 
     #[inline(always)]
@@ -124,6 +173,66 @@ impl Proj {
 
         (x + tx,
          y + ty)
+    }
+}
+
+/// Combines two projective transformations
+/// (matrix multiplication)
+impl Mul<Proj> for Proj {
+    type Output = Proj;
+
+    fn mul(self, rhs: Proj) -> Proj {
+        use TransformationClass as TC;
+        let t = mul3x3(self.transform, rhs.transform);
+        let i = mul3x3(rhs.inverse, self.inverse);
+
+        let class = match (self.class, rhs.class) {
+            (TC::Translation, TC::Translation) => TC::Translation,
+            (TC::Translation, TC::Affine) => TC::Affine,
+            (TC::Affine, TC::Translation) => TC::Affine,
+            (TC::Affine, TC::Affine)      => TC::Affine,
+            (_, _) => TC::Projection
+        };
+
+        Proj { transform: t, inverse: i, class: class }
+    }
+}
+
+/// Combines two projective transformations
+/// (matrix multiplication)
+impl<'a, 'b> Mul<&'b Proj> for &'a Proj {
+    type Output = Proj;
+
+    fn mul(self, rhs: &Proj) -> Proj {
+        use TransformationClass as TC;
+        let t = mul3x3(self.transform, rhs.transform);
+        let i = mul3x3(rhs.inverse, self.inverse);
+        let class = match (self.class, rhs.class) {
+            (TC::Translation, TC::Translation) => TC::Translation,
+            (TC::Translation, TC::Affine) => TC::Affine,
+            (TC::Affine, TC::Translation) => TC::Affine,
+            (_, _) => TC::Projection
+        };
+
+        Proj { transform: t, inverse: i, class: class }
+    }
+}
+
+impl Mul<(f32, f32)> for Proj {
+    type Output = (f32, f32);
+
+    fn mul(self, rhs: (f32, f32)) -> (f32, f32) {
+        let (x,y) = rhs;
+        self.warp_p(x, y)
+    }
+}
+
+impl<'a, 'b> Mul<&'b (f32, f32)> for &'a Proj {
+    type Output = (f32, f32);
+
+    fn mul(self, rhs: &(f32, f32)) -> (f32, f32) {
+        let (x,y) = *rhs;
+        self.warp_p(x, y)
     }
 }
 
@@ -346,48 +455,6 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
     [a11*b11 + a12*b21 + a13*b31, a11*b12 + a12*b22 + a13*b32, a11*b13 + a12*b23 +a13*b33,
      a21*b11 + a22*b21 + a23*b31, a21*b12 + a22*b22 + a23*b32, a21*b13 + a22*b23 + a23*b33,
      a31*b11 + a32*b21 + a33*b31, a31*b12 + a32*b22 + a33*b32, a31*b13 + a32*b23 + a33*b33]
-}
-
-/// Combines two projective transformations
-/// (matrix multiplication)
-impl Mul<Proj> for Proj {
-    type Output = Proj;
-
-    fn mul(self, rhs: Proj) -> Proj {
-        use TransformationClass as TC;
-        let t = mul3x3(self.transform, rhs.transform);
-        let i = mul3x3(rhs.inverse, self.inverse);
-
-        let class = match (self.class, rhs.class) {
-            (TC::Translation, TC::Translation) => TC::Translation,
-            (TC::Translation, TC::Affine) => TC::Affine,
-            (TC::Affine, TC::Translation) => TC::Affine,
-            (TC::Affine, TC::Affine)      => TC::Affine,
-            (_, _) => TC::Projection
-        };
-
-        Proj { transform: t, inverse: i, class: class }
-    }
-}
-
-/// Combines two projective transformations
-/// (matrix multiplication)
-impl<'a, 'b> Mul<&Proj> for &'a Proj {
-    type Output = Proj;
-
-    fn mul(self, rhs: &Proj) -> Proj {
-        use TransformationClass as TC;
-        let t = mul3x3(self.transform, rhs.transform);
-        let i = mul3x3(rhs.inverse, self.inverse);
-        let class = match (self.class, rhs.class) {
-            (TC::Translation, TC::Translation) => TC::Translation,
-            (TC::Translation, TC::Affine) => TC::Affine,
-            (TC::Affine, TC::Translation) => TC::Affine,
-            (_, _) => TC::Projection
-        };
-
-        Proj { transform: t, inverse: i, class: class }
-    }
 }
 
 fn blend<P>(
@@ -670,6 +737,55 @@ mod tests {
         b.iter(|| {
             let transformed = warp_new(&aff, &image, Interpolation::Bilinear, Luma([0u8]));
             test::black_box(transformed);
+        });
+    }
+
+    #[test]
+    fn test_from_cp_trans() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
+
+        let p = Proj::from_cp(from, to);
+        assert!(p.is_some());
+
+        let out = p.unwrap()*(0f32, 0f32);
+
+        assert_approx_eq!(out.0, 10.0, 1e-10);
+        assert_approx_eq!(out.1, 5.0, 1e-10);
+    }
+
+    #[test]
+    fn test_from_cp() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(16f32, 20.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+
+        let p = Proj::from_cp(from, to);
+        assert!(p.is_some());
+
+        let out = p.unwrap()*(0f32, 0f32);
+
+        assert_approx_eq!(out.0, 16.0, 1e-10);
+        assert_approx_eq!(out.1, 20.0, 1e-10);
+    }
+
+    #[test]
+    fn test_from_cp_trans_colinear() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(0f32, 5.0), (0.0, 55.0), (0.0, 5.0), (10.0, 55.0)];
+
+        let p = Proj::from_cp(from, to);
+        // Should fail if 3 points are colinear
+        assert!(p.is_none());
+    }
+
+    #[bench]
+    fn bench_from_cp(b: &mut test::Bencher) {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
+
+        b.iter(|| {
+            let proj = Proj::from_cp(from, to);
+            test::black_box(proj);
         });
     }
 }
