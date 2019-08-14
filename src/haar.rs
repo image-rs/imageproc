@@ -237,7 +237,6 @@ impl HaarFeature {
     }
 }
 
-#[allow(deprecated)]
 unsafe fn read(integral: &Image<Luma<u32>>, location: (u8, u8)) -> i32 {
     integral.unsafe_get_pixel(location.0 as u32, location.1 as u32)[0] as i32
 }

@@ -35,7 +35,6 @@ use std::cmp;
 /// assert_eq!(pattern, expected);
 /// # }
 /// ```
-#[allow(deprecated)]
 pub fn local_binary_pattern<I>(image: &I, x: u32, y: u32) -> Option<u8>
 where
     I: GenericImage<Pixel = Luma<u8>>,

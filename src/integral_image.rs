@@ -95,7 +95,6 @@ where
 }
 
 /// Implementation of `integral_image` and `integral_squared_image`.
-#[allow(deprecated)]
 fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
 where
     P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
@@ -114,10 +113,10 @@ where
     }
 
     for y in 1..out_height {
-        let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
+        let mut sum = vec![T::zero(); P::channel_count() as usize];
         for x in 1..out_width {
             unsafe {
-                for c in 0..P::CHANNEL_COUNT {
+                for c in 0..P::channel_count() {
                     let pix: T = (image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize]).into();
                     if square {
                         sum[c as usize] += pix * pix;
@@ -307,7 +306,6 @@ pub fn variance(
 /// assert_eq!(buffer, [1, 2, 4, 7, 10]);
 /// # }
 /// ```
-#[allow(deprecated)]
 pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
@@ -370,7 +368,6 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// assert_eq!(buffer, [1, 2, 4, 7, 10]);
 /// # }
 /// ```
-#[allow(deprecated)]
 pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();

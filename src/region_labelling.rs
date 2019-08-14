@@ -118,7 +118,6 @@ pub enum Connectivity {
 ///     thresholded_components_four);
 /// # }
 /// ```
-#[allow(deprecated)]
 pub fn connected_components<I>(
     image: &I,
     conn: Connectivity,

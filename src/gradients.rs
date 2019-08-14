@@ -152,7 +152,6 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-#[allow(deprecated)]
 fn gradients<P, F, Q>(
     image: &Image<P>,
     horizontal_kernel: &[i32; 9],

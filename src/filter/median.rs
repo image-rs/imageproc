@@ -141,7 +141,7 @@ where
 {
     let (width, height) = image.dimensions();
     let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1); 
-    let num_channels = P::CHANNEL_COUNT;
+    let num_channels = P::channel_count();
 
     let mut hist = HistSet::new(num_channels, kernel_size);
     let rx = x_radius as i32;
@@ -245,7 +245,6 @@ impl HistSet {
         HistSet { data, expected_count }
     }
 
-    #[allow(deprecated)]
     fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
     where
         P: Pixel<Subpixel=u8> + 'static
@@ -261,7 +260,6 @@ impl HistSet {
         }
     }
 
-    #[allow(deprecated)]
     fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
     where
         P: Pixel<Subpixel=u8> + 'static
