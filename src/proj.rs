@@ -146,7 +146,7 @@ impl Proj {
         }
     }
 
-    // Helper functions used as optiomization in warp
+    // Helper functions used as optimization in warp
 
     #[inline(always)]
     fn warp_p(&self, x: f32, y: f32) -> (f32, f32) {
