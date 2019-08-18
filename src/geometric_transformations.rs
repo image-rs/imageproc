@@ -1,8 +1,9 @@
 //! Geometric transformations of images.
+//!
 //! Functions defined in this module do not change the pixel content, but deform the pixel grid and
 //! copy corresponding pixels from the source image to their new destination.
 
-use image::{Pixel, GenericImageView, ImageBuffer};
+use image::{Pixel, GenericImage, GenericImageView, ImageBuffer};
 use crate::definitions::{Clamp, Image};
 
 use crate::math::cast;
@@ -222,6 +223,61 @@ impl Mul<(f32, f32)> for Projection {
     fn mul(self, rhs: (f32, f32)) -> (f32, f32) {
         &self * &rhs
     }
+}
+
+/// Rotate an image clockwise about provided center by theta radians.
+/// The output image has the same dimensions as the input. Output pixels
+/// whose pre-image lies outside the input image are set to `default`.
+pub fn rotate<P>(
+    image: &Image<P>,
+    center: (f32, f32),
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+) -> Image<P>
+where
+    P: Pixel + Send + Sync + 'static,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+{
+    let (cx, cy) = center;
+    let homography = Projection::translate(cx, cy)
+        * Projection::rotate(theta)
+        * Projection::translate(-cx, -cy);
+
+    warp(&homography.invert(), image, interpolation, default)
+}
+
+/// Translates the input image by t. Note that image coordinates increase from
+/// top left to bottom right. Output pixels whose pre-image are not in the input
+/// image are set to the boundary pixel in the input image nearest to their pre-image.
+// TODO: it's possibly confusing that this has different behaviour to
+// TODO: attempting the equivalent transformation via the affine function
+pub fn translate<P>(image: &Image<P>, t: (i32, i32)) -> Image<P>
+where
+    P: Pixel + 'static,
+{
+    use std::cmp;
+
+    let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::new(width, height);
+
+    let w = width as i32;
+    let h = height as i32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let x_in = cmp::max(0, cmp::min(x as i32 - t.0, w - 1));
+            let y_in = cmp::max(0, cmp::min(y as i32 - t.1, h - 1));
+            // (x_in, y_in) and (x, y) are guaranteed to be in bounds
+            unsafe {
+                let p = image.unsafe_get_pixel(x_in as u32, y_in as u32);
+                out.unsafe_put_pixel(x, y, p);
+            }
+        }
+    }
+
+    out
 }
 
 /// Performs projective transformation to an image. Allocates an output image with same
@@ -548,9 +604,8 @@ mod tests {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
-        let rot = Projection::translate(1.0, 0.0)*Projection::rotate(0.0)*Projection::translate(-1.0, 0.0);
 
-        let rotated = warp(&rot.invert(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rotate(&image, (0f32, 0f32), 0f32, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, image);
     }
 
@@ -617,11 +672,11 @@ mod tests {
             20, 21, 22);
 
         let expected = gray_image!(
-            00, 00, 00;
             00, 00, 01;
-            00, 10, 11);
+            00, 00, 01;
+            10, 10, 11);
 
-        let translated = warp(&Projection::translate(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = translate(&image, (1, 1));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -633,11 +688,11 @@ mod tests {
             20, 21, 22);
 
         let expected = gray_image!(
-            00, 10, 11;
-            00, 20, 21;
-            00, 00, 00);
+            10, 10, 11;
+            20, 20, 21;
+            20, 20, 21);
 
-        let translated = warp(&Projection::translate(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = translate(&image, (1, -1));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -654,12 +709,70 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = warp(&Projection::translate(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = translate(&image, (5, 5));
         assert_pixels_eq!(translated, expected);
     }
 
     #[bench]
     fn bench_translate(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let translated = translate(&image, (30, 30));
+            test::black_box(translated);
+        });
+    }
+
+    #[test]
+    fn test_translate_positive_x_positive_y_projection() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        let expected = gray_image!(
+            00, 00, 00;
+            00, 00, 01;
+            00, 10, 11);
+
+        let translated = warp(&Projection::translate(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        assert_pixels_eq!(translated, expected);
+    }
+
+    #[test]
+    fn test_translate_positive_x_negative_y_projection() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        let expected = gray_image!(
+            00, 10, 11;
+            00, 20, 21;
+            00, 00, 00);
+
+        let translated = warp(&Projection::translate(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        assert_pixels_eq!(translated, expected);
+    }
+
+    #[test]
+    fn test_translate_large_x_large_y_projection() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        let expected = gray_image!(
+            00, 00, 00;
+            00, 00, 00;
+            00, 00, 00);
+
+        // Translating by more than the image width and height
+        let translated = warp(&Projection::translate(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
+        assert_pixels_eq!(translated, expected);
+    }
+
+    #[bench]
+    fn bench_translate_projection(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
         let t = Projection::translate(-30.0, -30.0);
 
