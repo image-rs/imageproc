@@ -97,7 +97,7 @@ impl Proj {
         Proj { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
-    /// Calculates a homography from a set of four control point pairs
+    /// Calculates a homography from a set of four control point pairs.
     pub fn from_cp(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Proj> {
         use rulinalg::matrix::*;
 
