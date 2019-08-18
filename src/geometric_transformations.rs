@@ -128,8 +128,8 @@ impl Projection {
         match a.svd() {
             Err(_) => None,
             Ok((s, _, v)) => {
-                if s[[8,8]].abs() > 0.0001 || // rank(a) must be 8
-                   s[[7,7]].abs() < 0.0001 {  // but not 7
+                if s[[8,8]].abs() > 0.01 || // rank(a) must be 8
+                   s[[7,7]].abs() < 0.01 {  // but not 7
                     None
                 } else {
                     let h = v.col(8).into_matrix().into_vec();
@@ -140,8 +140,10 @@ impl Projection {
                     transform = normalize(transform);
                     let class = class_from_matrix(transform);
 
+                    println!("almost inverse");
+
                     try_inverse(&transform)
-                        .map(|inverse| { Projection { transform, inverse, class }})
+                        .map(|inverse| { println!("got inverse"); Projection { transform, inverse, class }})
                 }
             }
         }
@@ -459,27 +461,27 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
         t[6], t[7], t[8]
     );
 
-    let m00 = t11  * t22  - t12  * t21 ;
-    let m01 = t10  * t22  - t12  * t20 ;
-    let m02 = t10  * t21  - t11  * t20 ;
+    let m00 = t11 as f64  * t22  as f64 - t12 as f64  * t21  as f64;
+    let m01 = t10 as f64  * t22  as f64 - t12 as f64  * t20  as f64;
+    let m02 = t10 as f64  * t21  as f64 - t11 as f64  * t20  as f64;
 
-    let det = t00  * m00 - t01  * m01 + t02  * m02;
+    let det = t00 as f64  * m00 - t01 as f64  * m01 + t02 as f64 * m02;
 
     if (det).abs() < 1e-10 {
         return None;
     }
 
-    let m10 = t01  * t22  - t02  * t21 ;
-    let m11 = t00  * t22  - t02  * t20 ;
-    let m12 = t00  * t21  - t01  * t20 ;
-    let m20 = t01  * t12  - t02  * t11 ;
-    let m21 = t00  * t12  - t02  * t10 ;
-    let m22 = t00  * t11  - t01  * t10 ;
+    let m10 = t01 as f64  * t22 as f64  - t02 as f64  * t21 as f64 ;
+    let m11 = t00 as f64  * t22 as f64  - t02 as f64  * t20 as f64 ;
+    let m12 = t00 as f64  * t21 as f64  - t01 as f64  * t20 as f64 ;
+    let m20 = t01 as f64  * t12 as f64  - t02 as f64  * t11 as f64 ;
+    let m21 = t00 as f64  * t12 as f64  - t02 as f64  * t10 as f64 ;
+    let m22 = t00 as f64  * t11 as f64  - t01 as f64  * t10 as f64 ;
 
     let inv = [
-         m00 / det, -m10 / det,  m20 / det,
-        -m01 / det,  m11 / det, -m21 / det,
-         m02 / det, -m12 / det,  m22 / det 
+       (  m00 / det) as f32,( -m10 / det) as f32,(  m20 / det) as f32,
+       ( -m01 / det) as f32,(  m11 / det) as f32,( -m21 / det) as f32,
+       (  m02 / det) as f32,( -m12 / det) as f32,(  m22 / det) as f32 
     ];
 
     Some(normalize(inv))
@@ -876,6 +878,28 @@ mod tests {
 
         assert_approx_eq!(out.0, 16.0, 1e-10);
         assert_approx_eq!(out.1, 20.0, 1e-10);
+    }
+
+    #[test]
+    fn test_from_cp_known_transform() {
+        let t = Projection::translate(10f32, 10f32);
+        let p = t*Projection::rotate(90f32.to_radians())*t.invert();
+
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [p*from[0], p*from[1], p*from[2], p*from[3]];
+
+        let p_est = Projection::from_control_points(from, to);
+        assert!(p_est.is_some());
+        let p_est = p_est.unwrap();
+
+
+        for i in 0..50 {
+            for j in 0..50 {
+                let pt = (i as f32, j as f32);
+                assert_approx_eq!((p*pt).0, (p_est*pt).0, 1e-3);;
+                assert_approx_eq!((p*pt).1, (p_est*pt).1, 1e-3);;
+            }
+        }
     }
 
     #[test]
