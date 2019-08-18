@@ -141,16 +141,16 @@ fn test_rotate_bilinear_rgb() {
         let (w, h) = image.dimensions();
         rotate(image, (w as f32/2f32, h as f32/2f32), std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgb::black())
     }
-    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 2);
 }
 
 #[test]
 fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
         let (w, h) = image.dimensions();
-        rotate(image, (w as f32/2.0, h as f32/2.0), std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgba::black())
+        rotate(image, (w as f32/2f32, h as f32/2f32), std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgba::black())
     }
-    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 2);
 }
 
 #[test]
@@ -162,7 +162,7 @@ fn test_affine_nearest_rgb() {
             root_two_inv,  root_two_inv, -70.0,
             0.0         , 0.0          , 1.0,
         ]).unwrap();
-        warp(&hom.invert(), image, Interpolation::Nearest, Rgb::black())
+        warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth_rgb("elephant.png", "elephant_affine_nearest.png", affine_nearest);
 }
@@ -177,7 +177,7 @@ fn test_affine_bilinear_rgb() {
             0.0         , 0.0          , 1.0,
         ]).unwrap();
 
-        warp(&hom.invert(), image, Interpolation::Bilinear, Rgb::black())
+        warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
     compare_to_truth_rgb("elephant.png", "elephant_affine_bilinear.png", affine_bilinear);
 }
