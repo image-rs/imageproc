@@ -331,6 +331,8 @@ pub fn warp_into_with<P, Fm>(mapping: Fm,
     }
 }
 
+// Work horse of all warp functions
+// TODO: make faster by avoiding boundary checks in inner section of src image
 fn warp_inner<P,Fc,Fi>(
     out: &mut Image<P>,
     mapping: Fc,
@@ -356,6 +358,7 @@ where
         
 }
 
+// Classifies transformation by looking up transformation matrix coefficients
 fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
 
     if (mx[6]-0.0).abs() < 1e-10 &&
