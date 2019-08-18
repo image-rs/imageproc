@@ -114,7 +114,7 @@ impl Proj {
              to[3].0 as f64, to[3].1 as f64);
 
         let a = Matrix::new(9, 9, vec![
-            0f64,0.0, 0.0,-xf1,-yf1,-1.0, y1*xf1, y1*yf1, y1,
+            0f64, 0.0, 0.0, -xf1, -yf1, -1.0, y1 * xf1, y1 * yf1, y1,
             xf1, yf1, 1.0, 0.0, 0.0, 0.0,-x1*xf1,-x1*yf1,-x1,
             0.0, 0.0, 0.0,-xf2,-yf2,-1.0, y2*xf2, y2*yf2, y2,
             xf2, yf2, 1.0, 0.0, 0.0, 0.0,-x2*xf2,-x2*yf2,-x2,
