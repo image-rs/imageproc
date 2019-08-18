@@ -21,30 +21,30 @@ enum TransformationClass {
 /// I.e. to define rotation around image center
 /// ```
 /// use imageproc::proj::*;
-/// let (cx,cy) = (320.0,240.0);
-/// let c_rotation = Proj::trans(cx,cy)*Proj::rot(30.0)*Proj::trans(-cx, -cy);
+/// let (cx, cy) = (320.0, 240.0);
+/// let c_rotation = Projection::trans(cx, cy)*Projection::rot(30.0)*Projection::trans(-cx, -cy);
 /// ```
 #[derive(Copy, Clone, Debug)]
-pub struct Proj {
+pub struct Projection {
     transform: [f32; 9],
     inverse:   [f32; 9],
     class: TransformationClass,
 }
 
-impl Proj {
+impl Projection {
     /// Create a 2d projective transform from a row-major 3x3 matrix in homogeneous coordinates.
     /// Matrix must be invertible, otherwise it does not define a Projection (by definition).
-    pub fn from_matrix(transform: [f32; 9]) -> Option<Proj> {
+    pub fn from_matrix(transform: [f32; 9]) -> Option<Projection> {
         let transform = normalize(transform);
         let class = class_from_matrix(transform);
         try_inverse(&transform)
             .map(|inverse| 
-                 Proj { transform, inverse, class })
+                 Projection { transform, inverse, class })
     }
 
     /// Defines a translation by (tx, ty).
-    pub fn trans(tx: f32, ty: f32) -> Proj {
-        Proj { 
+    pub fn trans(tx: f32, ty: f32) -> Projection {
+        Projection { 
             transform: [
                 1.0, 0.0, tx,
                 0.0, 1.0, ty,
@@ -57,14 +57,13 @@ impl Proj {
         }
     }
 
-    /// Defines a rotation around the origin by angle theta degrees. Origin is (0,0) pixel
+    /// Defines a rotation around the origin by angle theta radians. Origin is (0,0) pixel
     /// coordinate, usually top left corner. To rotate around image center combine rotation with 
     /// two translations: T*Rotation*T^-1.
-    pub fn rot(theta: f32) -> Proj {
-        let theta = theta.to_radians();
+    pub fn rot(theta: f32) -> Projection {
         let s = theta.sin();
         let c = theta.cos();
-        Proj { 
+        Projection { 
             transform: [
                 c,  -s,   0.0,
                 s,   c,   0.0,
@@ -77,9 +76,9 @@ impl Proj {
         }
     }
 
-    /// Creates an anisotropic scaling (sx,sy).
-    pub fn scale(sx: f32, sy: f32) -> Proj {
-        Proj { 
+    /// Creates an anisotropic scaling (sx, sy).
+    pub fn scale(sx: f32, sy: f32) -> Projection {
+        Projection { 
             transform: [
                 sx,  0.0, 0.0,
                 0.0, sy,  0.0,
@@ -93,12 +92,12 @@ impl Proj {
     }
 
     /// Inverts the transformation.
-    pub fn inv(self) -> Proj {
-        Proj { transform: self.inverse, inverse: self.transform, class: self.class }
+    pub fn inv(self) -> Projection {
+        Projection { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
     /// Calculates a homography from a set of four control point pairs.
-    pub fn from_cp(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Proj> {
+    pub fn from_control_points(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Projection> {
         use rulinalg::matrix::*;
 
         let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = 
@@ -137,19 +136,18 @@ impl Proj {
                          h[3] as f32, h[4] as f32, h[5] as f32,
                          h[6] as f32, h[7] as f32, h[8] as f32];
                     transform = normalize(transform);
-                    let class = TransformationClass::Projection;
+                    let class = class_from_matrix(transform);
 
                     try_inverse(&transform)
-                        .map(|inverse| { Proj { transform, inverse, class }})
+                        .map(|inverse| { Projection { transform, inverse, class }})
                 }
             }
         }
     }
 
     // Helper functions used as optimization in warp
-
     #[inline(always)]
-    fn warp_p(&self, x: f32, y: f32) -> (f32, f32) {
+    fn map_projective(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
         let d = t[6]*x + t[7]*y + t[8];
 
@@ -158,7 +156,7 @@ impl Proj {
     }
 
     #[inline(always)]
-    fn warp_a(&self, x: f32, y: f32) -> (f32, f32) {
+    fn map_affine(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
 
         ((t[0]*x + t[1]*y + t[2]),
@@ -166,7 +164,7 @@ impl Proj {
     }
 
     #[inline(always)]
-    fn warp_t(&self, x: f32, y: f32) -> (f32, f32) {
+    fn map_translation(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
         let tx = t[2];
         let ty = t[5];
@@ -178,10 +176,10 @@ impl Proj {
 
 /// Combines two projective transformations
 /// (matrix multiplication)
-impl Mul<Proj> for Proj {
-    type Output = Proj;
+impl<'a, 'b> Mul<&'b Projection> for &'a Projection {
+    type Output = Projection;
 
-    fn mul(self, rhs: Proj) -> Proj {
+    fn mul(self, rhs: &Projection) -> Projection {
         use TransformationClass as TC;
         let t = mul3x3(self.transform, rhs.transform);
         let i = mul3x3(rhs.inverse, self.inverse);
@@ -194,53 +192,42 @@ impl Mul<Proj> for Proj {
             (_, _) => TC::Projection
         };
 
-        Proj { transform: t, inverse: i, class: class }
+        Projection { transform: t, inverse: i, class: class }
     }
 }
 
 /// Combines two projective transformations
 /// (matrix multiplication)
-impl<'a, 'b> Mul<&'b Proj> for &'a Proj {
-    type Output = Proj;
+impl Mul<Projection> for Projection {
+    type Output = Projection;
 
-    fn mul(self, rhs: &Proj) -> Proj {
-        use TransformationClass as TC;
-        let t = mul3x3(self.transform, rhs.transform);
-        let i = mul3x3(rhs.inverse, self.inverse);
-        let class = match (self.class, rhs.class) {
-            (TC::Translation, TC::Translation) => TC::Translation,
-            (TC::Translation, TC::Affine) => TC::Affine,
-            (TC::Affine, TC::Translation) => TC::Affine,
-            (_, _) => TC::Projection
-        };
-
-        Proj { transform: t, inverse: i, class: class }
+    fn mul(self, rhs: Projection) -> Projection {
+        &self * &rhs
     }
 }
 
-impl Mul<(f32, f32)> for Proj {
-    type Output = (f32, f32);
-
-    fn mul(self, rhs: (f32, f32)) -> (f32, f32) {
-        let (x,y) = rhs;
-        self.warp_p(x, y)
-    }
-}
-
-impl<'a, 'b> Mul<&'b (f32, f32)> for &'a Proj {
+impl<'a, 'b> Mul<&'b (f32, f32)> for &'a Projection {
     type Output = (f32, f32);
 
     fn mul(self, rhs: &(f32, f32)) -> (f32, f32) {
-        let (x,y) = *rhs;
-        self.warp_p(x, y)
+        let (x, y) = *rhs;
+        self.map_projective(x, y)
+    }
+}
+
+impl Mul<(f32, f32)> for Projection {
+    type Output = (f32, f32);
+
+    fn mul(self, rhs: (f32, f32)) -> (f32, f32) {
+        &self * &rhs
     }
 }
 
 /// Performs projective transformation to an image. Allocates an output image with same
 /// dimensions as the input image. Output pixels outside the input image are set to `default`.
-/// Proj `homography` defines a mapping from coordinates in the `output` image to coordinates of
+/// Projection `homography` defines a mapping from coordinates in the `output` image to coordinates of
 /// the `image`.
-pub fn warp_new<P>(homography: &Proj,
+pub fn warp<P>(homography: &Projection,
                    image: &Image<P>,
                    interpolation: Interpolation,
                    default: P
@@ -252,15 +239,15 @@ P: Pixel + Send + Sync + 'static,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
-    warp(homography, image, interpolation, default, &mut out);
+    warp_into(homography, image, interpolation, default, &mut out);
 
     out
 }
 
 /// Performs projective transformation `homography` mapping pixels from
 /// `image` into `&mut output`.
-/// Proj `homograpy` defines coordinate mapping from `out` to `image`.
-pub fn warp<P>(homography: &Proj,
+/// Projection `homograpy` defines coordinate mapping from `out` to `image`.
+pub fn warp_into<P>(homography: &Projection,
                image: &Image<P>,
                interpolation: Interpolation,
                default: P,
@@ -271,11 +258,11 @@ pub fn warp<P>(homography: &Proj,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
 {
-    let nn = |x,y| nearest(image, x, y, default);
-    let bl = |x,y| interpolate(image, x, y, default);
-    let wt = |x,y| homography.warp_t(x,y);
-    let wa = |x,y| homography.warp_a(x,y);
-    let wp = |x,y| homography.warp_p(x,y);
+    let nn = |x, y| nearest(image, x, y, default);
+    let bl = |x, y| interpolate(image, x, y, default);
+    let wt = |x, y| homography.map_projective(x, y);
+    let wa = |x, y| homography.map_affine(x, y);
+    let wp = |x, y| homography.map_translation(x, y);
     use TransformationClass as TC;
     use Interpolation as I;
 
@@ -291,7 +278,7 @@ pub fn warp<P>(homography: &Proj,
 
 /// Transforms input `image` into output image of the same size.
 /// Fm `mapping` is the coordinate mapping function, mapping from out to in.
-pub fn warp_new_with<P, Fm>(mapping: Fm,
+pub fn warp_with<P, Fm>(mapping: Fm,
                    image: &Image<P>,
                    interpolation: Interpolation,
                    default: P
@@ -304,7 +291,7 @@ pub fn warp_new_with<P, Fm>(mapping: Fm,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
-    warp_with(mapping, image, interpolation, default, &mut out);
+    warp_into_with(mapping, image, interpolation, default, &mut out);
 
     out
 }
@@ -318,10 +305,10 @@ pub fn warp_new_with<P, Fm>(mapping: Fm,
 ///
 /// let img = gray_bench_image(300, 300);
 /// let mut out = ImageBuffer::new(300, 300);
-/// warp_with(|x,y| (x, y+(x/30.0).sin()), &img, Interpolation::Nearest, Luma([0u8]), &mut
+/// warp_into_with(|x, y| (x, y+(x/30.0).sin()), &img, Interpolation::Nearest, Luma([0u8]), &mut
 /// out);
 /// ```
-pub fn warp_with<P, Fm>(mapping: Fm,
+pub fn warp_into_with<P, Fm>(mapping: Fm,
                    image: &Image<P>,
                    interpolation: Interpolation,
                    default: P,
@@ -334,8 +321,8 @@ pub fn warp_with<P, Fm>(mapping: Fm,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 
 {
-    let nn = |x,y| nearest(image, x, y, default);
-    let bl = |x,y| interpolate(image, x, y, default);
+    let nn = |x, y| nearest(image, x, y, default);
+    let bl = |x, y| interpolate(image, x, y, default);
     use Interpolation as I;
 
     match interpolation {
@@ -346,7 +333,7 @@ pub fn warp_with<P, Fm>(mapping: Fm,
 
 fn warp_inner<P,Fc,Fi>(
     out: &mut Image<P>,
-    coord_tf: Fc,
+    mapping: Fc,
     get_pixel: Fi,
     )
 where
@@ -362,7 +349,7 @@ where
 
     raw_out.par_chunks_mut(pitch).enumerate().for_each(|(y, row)| { 
         for (x, slice) in row.chunks_mut(P::CHANNEL_COUNT as usize).enumerate() {
-            let (px, py) = coord_tf(x as f32, y as f32);
+            let (px, py) = mapping(x as f32, y as f32);
             *P::from_slice_mut(slice) = get_pixel(px, py);
         }
     });
@@ -406,27 +393,27 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
         t[6], t[7], t[8]
     );
 
-    let m00 = t11 * t22 - t12 * t21;
-    let m01 = t10 * t22 - t12 * t20;
-    let m02 = t10 * t21 - t11 * t20;
+    let m00 = t11 as f64 * t22 as f64 - t12 as f64 * t21 as f64;
+    let m01 = t10 as f64 * t22 as f64 - t12 as f64 * t20 as f64;
+    let m02 = t10 as f64 * t21 as f64 - t11 as f64 * t20 as f64;
 
-    let det = t00 * m00 - t01 * m01 + t02 * m02;
+    let det = t00 as f64 * m00 - t01 as f64 * m01 + t02 as f64 * m02;
 
     if (det).abs() < 1e-10 {
         return None;
     }
 
-    let m10 = t01 * t22 - t02 * t21;
-    let m11 = t00 * t22 - t02 * t20;
-    let m12 = t00 * t21 - t01 * t20;
-    let m20 = t01 * t12 - t02 * t11;
-    let m21 = t00 * t12 - t02 * t10;
-    let m22 = t00 * t11 - t01 * t10;
+    let m10 = t01 as f64 * t22 as f64 - t02 as f64 * t21 as f64;
+    let m11 = t00 as f64 * t22 as f64 - t02 as f64 * t20 as f64;
+    let m12 = t00 as f64 * t21 as f64 - t01 as f64 * t20 as f64;
+    let m20 = t01 as f64 * t12 as f64 - t02 as f64 * t11 as f64;
+    let m21 = t00 as f64 * t12 as f64 - t02 as f64 * t10 as f64;
+    let m22 = t00 as f64 * t11 as f64 - t01 as f64 * t10 as f64;
 
     let inv = [
-        m00 / det, -m10 / det,  m20 / det,
-       -m01 / det,  m11 / det, -m21 / det,
-        m02 / det, -m12 / det,  m22 / det
+        (m00 / det) as f32,  (-m10 / det) as f32, (m20 / det) as f32,
+        (-m01 / det) as f32, (m11 / det) as f32,  (-m21 / det) as f32,
+        (m02 / det) as f32,  (-m12 / det) as f32, (m22 / det) as f32
     ];
 
     Some(normalize(inv))
@@ -553,9 +540,9 @@ mod tests {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
-        let rot = Proj::trans(1.0, 0.0)*Proj::rot(0.0)*Proj::trans(-1.0, 0.0);
+        let rot = Projection::trans(1.0, 0.0)*Projection::rot(0.0)*Projection::trans(-1.0, 0.0);
 
-        let rotated = warp_new(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, image);
     }
 
@@ -568,10 +555,10 @@ mod tests {
         let expected = gray_image!(
             11, 01, 99;
             12, 02, 99);
-        let c = Proj::trans(1.0, 0.0);
-        let rot = c*Proj::rot(90.0)*c.inv();
+        let c = Projection::trans(1.0, 0.0);
+        let rot = c*Projection::rot(90f32.to_radians())*c.inv();
 
-        let rotated = warp_new(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -584,21 +571,21 @@ mod tests {
         let expected = gray_image!(
             12, 11, 10;
             02, 01, 00);
-        let c = Proj::trans(1.0, 0.5);
+        let c = Projection::trans(1.0, 0.5);
 
-        let rot = c*Proj::rot(-180.0)*c.inv();
+        let rot = c*Projection::rot((-180f32).to_radians())*c.inv();
 
-        let rotated = warp_new(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
     #[bench]
     fn bench_rotate_nearest(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Proj::trans(3.0, 3.0);
-        let rot = c*Proj::rot(1f32.to_degrees())*c.inv();
+        let c = Projection::trans(3.0, 3.0);
+        let rot = c*Projection::rot(1f32.to_degrees())*c.inv();
         b.iter(|| {
-            let rotated = warp_new(&rot.inv(), &image, Interpolation::Nearest, Luma([98u8]));
+            let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -606,10 +593,10 @@ mod tests {
     #[bench]
     fn bench_rotate_bilinear(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Proj::trans(3.0, 3.0);
-        let rot = c*Proj::rot(1f32.to_degrees())*c.inv();
+        let c = Projection::trans(3.0, 3.0);
+        let rot = c*Projection::rot(1f32.to_degrees())*c.inv();
         b.iter(|| {
-            let rotated = warp_new(&rot.inv(), &image, Interpolation::Bilinear, Luma([98u8]));
+            let rotated = warp(&rot.inv(), &image, Interpolation::Bilinear, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -626,7 +613,7 @@ mod tests {
             00, 00, 01;
             00, 10, 11);
 
-        let translated = warp_new(&Proj::trans(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::trans(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -642,7 +629,7 @@ mod tests {
             00, 20, 21;
             00, 00, 00);
 
-        let translated = warp_new(&Proj::trans(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::trans(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -659,17 +646,17 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = warp_new(&Proj::trans(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::trans(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
     #[bench]
     fn bench_translate(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
-        let t = Proj::trans(-30.0, -30.0);
+        let t = Projection::trans(-30.0, -30.0);
 
         b.iter(|| {
-            let translated = warp_new(&t, &image, Interpolation::Nearest, Luma([0u8]));
+            let translated = warp(&t, &image, Interpolation::Nearest, Luma([0u8]));
             test::black_box(translated);
         });
     }
@@ -681,7 +668,7 @@ mod tests {
         b.iter(|| {
             let (width, height) = image.dimensions();
             let mut out = ImageBuffer::new(width, height);
-            warp_with(|x,y| (x-30.0,y-30.0), &image, Interpolation::Nearest, Luma([0u8]), &mut out);
+            warp_into_with(|x, y| (x-30.0, y-30.0), &image, Interpolation::Nearest, Luma([0u8]), &mut out);
             test::black_box(out);
         });
     }
@@ -698,13 +685,13 @@ mod tests {
             00, 00, 01;
             00, 10, 11);
 
-        let aff = Proj::from_matrix([
+        let aff = Projection::from_matrix([
             1.0, 0.0, -1.0,
             0.0, 1.0, -1.0,
             0.0, 0.0, 1.0,
         ]).unwrap();
 
-        let translated = warp_new(&aff, &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&aff, &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -712,14 +699,14 @@ mod tests {
     fn bench_affine_nearest(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
-        let aff = Proj::from_matrix([
+        let aff = Projection::from_matrix([
             1.0, 0.0, -1.0,
             0.0, 1.0, -1.0,
             0.0, 0.0, 1.0,
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp_new(&aff, &image, Interpolation::Nearest, Luma([0u8]));
+            let transformed = warp(&aff, &image, Interpolation::Nearest, Luma([0u8]));
             test::black_box(transformed);
         });
     }
@@ -728,14 +715,14 @@ mod tests {
     fn bench_affine_bilinear(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
-        let aff = Proj::from_matrix([
+        let aff = Projection::from_matrix([
             1.8, -0.2, 5.0,
             0.2, 1.9, 6.0,
             0.0002, 0.0003, 1.0,
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp_new(&aff, &image, Interpolation::Bilinear, Luma([0u8]));
+            let transformed = warp(&aff, &image, Interpolation::Bilinear, Luma([0u8]));
             test::black_box(transformed);
         });
     }
@@ -745,7 +732,7 @@ mod tests {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
 
-        let p = Proj::from_cp(from, to);
+        let p = Projection::from_control_points(from, to);
         assert!(p.is_some());
 
         let out = p.unwrap()*(0f32, 0f32);
@@ -759,7 +746,7 @@ mod tests {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(16f32, 20.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
 
-        let p = Proj::from_cp(from, to);
+        let p = Projection::from_control_points(from, to);
         assert!(p.is_some());
 
         let out = p.unwrap()*(0f32, 0f32);
@@ -773,7 +760,7 @@ mod tests {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(0f32, 5.0), (0.0, 55.0), (0.0, 5.0), (10.0, 55.0)];
 
-        let p = Proj::from_cp(from, to);
+        let p = Projection::from_control_points(from, to);
         // Should fail if 3 points are colinear
         assert!(p.is_none());
     }
@@ -784,7 +771,7 @@ mod tests {
         let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
 
         b.iter(|| {
-            let proj = Proj::from_cp(from, to);
+            let proj = Projection::from_control_points(from, to);
             test::black_box(proj);
         });
     }
