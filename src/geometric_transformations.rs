@@ -1,4 +1,6 @@
-//! Projective transformations of images.
+//! Geometric transformations of images.
+//! Functions defined in this module do not change the pixel content, but deform the pixel grid and
+//! copy corresponding pixels from the source image to their new destination.
 
 use image::{Pixel, GenericImageView, ImageBuffer};
 use crate::definitions::{Clamp, Image};
@@ -20,9 +22,9 @@ enum TransformationClass {
 ///
 /// I.e. to define rotation around image center
 /// ```
-/// use imageproc::proj::*;
+/// use imageproc::geometric_transformations::*;
 /// let (cx, cy) = (320.0, 240.0);
-/// let c_rotation = Projection::trans(cx, cy)*Projection::rot(30.0)*Projection::trans(-cx, -cy);
+/// let c_rotation = Projection::translate(cx, cy)*Projection::rotate(30f32.to_radians())*Projection::translate(-cx, -cy);
 /// ```
 #[derive(Copy, Clone, Debug)]
 pub struct Projection {
@@ -43,7 +45,7 @@ impl Projection {
     }
 
     /// Defines a translation by (tx, ty).
-    pub fn trans(tx: f32, ty: f32) -> Projection {
+    pub fn translate(tx: f32, ty: f32) -> Projection {
         Projection { 
             transform: [
                 1.0, 0.0, tx,
@@ -57,10 +59,9 @@ impl Projection {
         }
     }
 
-    /// Defines a rotation around the origin by angle theta radians. Origin is (0,0) pixel
-    /// coordinate, usually top left corner. To rotate around image center combine rotation with 
-    /// two translations: T*Rotation*T^-1.
-    pub fn rot(theta: f32) -> Projection {
+    /// Defines a rotation around the origin by angle theta radians. Origin is top left corner and
+    /// positive direction is clockwise (because y grows downwards).
+    pub fn rotate(theta: f32) -> Projection {
         let s = theta.sin();
         let c = theta.cos();
         Projection { 
@@ -92,7 +93,7 @@ impl Projection {
     }
 
     /// Inverts the transformation.
-    pub fn inv(self) -> Projection {
+    pub fn invert(self) -> Projection {
         Projection { transform: self.inverse, inverse: self.transform, class: self.class }
     }
 
@@ -301,7 +302,7 @@ pub fn warp_with<P, Fm>(mapping: Fm,
 /// ```
 /// use image::{ImageBuffer, Luma};
 /// use imageproc::utils::gray_bench_image;
-/// use imageproc::proj::*;
+/// use imageproc::geometric_transformations::*;
 ///
 /// let img = gray_bench_image(300, 300);
 /// let mut out = ImageBuffer::new(300, 300);
@@ -543,9 +544,9 @@ mod tests {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
-        let rot = Projection::trans(1.0, 0.0)*Projection::rot(0.0)*Projection::trans(-1.0, 0.0);
+        let rot = Projection::translate(1.0, 0.0)*Projection::rotate(0.0)*Projection::translate(-1.0, 0.0);
 
-        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.invert(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, image);
     }
 
@@ -558,10 +559,10 @@ mod tests {
         let expected = gray_image!(
             11, 01, 99;
             12, 02, 99);
-        let c = Projection::trans(1.0, 0.0);
-        let rot = c*Projection::rot(90f32.to_radians())*c.inv();
+        let c = Projection::translate(1.0, 0.0);
+        let rot = c*Projection::rotate(90f32.to_radians())*c.invert();
 
-        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.invert(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -574,21 +575,21 @@ mod tests {
         let expected = gray_image!(
             12, 11, 10;
             02, 01, 00);
-        let c = Projection::trans(1.0, 0.5);
+        let c = Projection::translate(1.0, 0.5);
 
-        let rot = c*Projection::rot((-180f32).to_radians())*c.inv();
+        let rot = c*Projection::rotate((-180f32).to_radians())*c.invert();
 
-        let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&rot.invert(), &image, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
     }
 
     #[bench]
     fn bench_rotate_nearest(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::trans(3.0, 3.0);
-        let rot = c*Projection::rot(1f32.to_degrees())*c.inv();
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c*Projection::rotate(1f32.to_degrees())*c.invert();
         b.iter(|| {
-            let rotated = warp(&rot.inv(), &image, Interpolation::Nearest, Luma([98u8]));
+            let rotated = warp(&rot.invert(), &image, Interpolation::Nearest, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -596,10 +597,10 @@ mod tests {
     #[bench]
     fn bench_rotate_bilinear(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::trans(3.0, 3.0);
-        let rot = c*Projection::rot(1f32.to_degrees())*c.inv();
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c*Projection::rotate(1f32.to_degrees())*c.invert();
         b.iter(|| {
-            let rotated = warp(&rot.inv(), &image, Interpolation::Bilinear, Luma([98u8]));
+            let rotated = warp(&rot.invert(), &image, Interpolation::Bilinear, Luma([98u8]));
             test::black_box(rotated);
         });
     }
@@ -616,7 +617,7 @@ mod tests {
             00, 00, 01;
             00, 10, 11);
 
-        let translated = warp(&Projection::trans(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::translate(-1.0,-1.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -632,7 +633,7 @@ mod tests {
             00, 20, 21;
             00, 00, 00);
 
-        let translated = warp(&Projection::trans(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::translate(-1.0,1.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
@@ -649,14 +650,14 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = warp(&Projection::trans(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
+        let translated = warp(&Projection::translate(-5.0, -5.0), &image, Interpolation::Nearest, Luma([0u8]));
         assert_pixels_eq!(translated, expected);
     }
 
     #[bench]
     fn bench_translate(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
-        let t = Projection::trans(-30.0, -30.0);
+        let t = Projection::translate(-30.0, -30.0);
 
         b.iter(|| {
             let translated = warp(&t, &image, Interpolation::Nearest, Luma([0u8]));
@@ -731,7 +732,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cp_trans() {
+    fn test_from_cp_translate() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
 
