@@ -20,7 +20,7 @@ enum TransformationClass {
 /// A 2d Projective transformation, stored as a row major 3x3 matrix.
 /// Transformations combine by multiplication.
 ///
-/// I.e. to define rotation around image center
+/// I.e. to define rotation around image center for a VGA image.
 /// ```
 /// use imageproc::geometric_transformations::*;
 /// let (cx, cy) = (320.0, 240.0);
@@ -146,7 +146,7 @@ impl Projection {
         }
     }
 
-    // Helper functions used as optimization in warp
+    // Helper functions used as optimization in warp.
     #[inline(always)]
     fn map_projective(&self, x: f32, y: f32) -> (f32, f32) {
         let t = &self.transform;
@@ -175,7 +175,7 @@ impl Projection {
     }
 }
 
-/// Combines two projective transformations
+/// Combines two projective transformations.
 /// (matrix multiplication)
 impl<'a, 'b> Mul<&'b Projection> for &'a Projection {
     type Output = Projection;
@@ -197,7 +197,7 @@ impl<'a, 'b> Mul<&'b Projection> for &'a Projection {
     }
 }
 
-/// Combines two projective transformations
+/// Combines two projective transformations.
 /// (matrix multiplication)
 impl Mul<Projection> for Projection {
     type Output = Projection;
@@ -228,15 +228,16 @@ impl Mul<(f32, f32)> for Projection {
 /// dimensions as the input image. Output pixels outside the input image are set to `default`.
 /// Projection `homography` defines a mapping from coordinates in the `output` image to coordinates of
 /// the `image`.
-pub fn warp<P>(homography: &Projection,
-                   image: &Image<P>,
-                   interpolation: Interpolation,
-                   default: P
-                  ) -> Image<P> 
+pub fn warp<P>(
+    homography: &Projection,
+    image: &Image<P>,
+    interpolation: Interpolation,
+    default: P
+) -> Image<P> 
 where
-P: Pixel + Send + Sync + 'static,
-<P as Pixel>::Subpixel: Send + Sync,
-<P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    P: Pixel + Send + Sync + 'static,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -248,13 +249,14 @@ P: Pixel + Send + Sync + 'static,
 /// Performs projective transformation `homography` mapping pixels from
 /// `image` into `&mut output`.
 /// Projection `homograpy` defines coordinate mapping from `out` to `image`.
-pub fn warp_into<P>(homography: &Projection,
-               image: &Image<P>,
-               interpolation: Interpolation,
-               default: P,
-               out: &mut Image<P>
-              )
-    where
+pub fn warp_into<P>(
+    homography: &Projection,
+    image: &Image<P>,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>
+)
+where
     P: Pixel + Send + Sync + 'static,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
@@ -279,12 +281,13 @@ pub fn warp_into<P>(homography: &Projection,
 
 /// Transforms input `image` into output image of the same size.
 /// Fm `mapping` is the coordinate mapping function, mapping from out to in.
-pub fn warp_with<P, Fm>(mapping: Fm,
-                   image: &Image<P>,
-                   interpolation: Interpolation,
-                   default: P
-                  ) -> Image<P> 
-    where
+pub fn warp_with<P, Fm>(
+    mapping: Fm,
+    image: &Image<P>,
+    interpolation: Interpolation,
+    default: P
+) -> Image<P> 
+where
     Fm: Fn(f32, f32) -> (f32, f32) + Sync + Send,
     P: Pixel + Send + Sync + 'static,
     <P as Pixel>::Subpixel: Send + Sync,
@@ -309,13 +312,14 @@ pub fn warp_with<P, Fm>(mapping: Fm,
 /// warp_into_with(|x, y| (x, y+(x/30.0).sin()), &img, Interpolation::Nearest, Luma([0u8]), &mut
 /// out);
 /// ```
-pub fn warp_into_with<P, Fm>(mapping: Fm,
-                   image: &Image<P>,
-                   interpolation: Interpolation,
-                   default: P,
-                   out: &mut Image<P>
-                  )
-    where
+pub fn warp_into_with<P, Fm>(
+    mapping: Fm,
+    image: &Image<P>,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>
+)
+where
     Fm: Fn(f32, f32) -> (f32, f32) + Send + Sync,
     P: Pixel + Send + Sync + 'static,
     <P as Pixel>::Subpixel: Send + Sync,
