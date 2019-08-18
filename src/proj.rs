@@ -42,7 +42,7 @@ impl Proj {
                  Proj { transform, inverse, class })
     }
 
-    /// Defines a translation by (tx, ty)
+    /// Defines a translation by (tx, ty).
     pub fn trans(tx: f32, ty: f32) -> Proj {
         Proj { 
             transform: [
