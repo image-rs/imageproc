@@ -917,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cp_translate() {
+    fn test_from_control_points_translate() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
 
@@ -931,7 +931,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cp() {
+    fn test_from_control_points() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(16f32, 20.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
 
@@ -945,7 +945,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cp_known_transform() {
+    fn test_from_control_points_known_transform() {
         let t = Projection::translate(10f32, 10f32);
         let p = t * Projection::rotate(90f32.to_radians()) * t.invert();
 
@@ -966,7 +966,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cp_trans_colinear() {
+    fn test_from_control_points_colinear() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(0f32, 5.0), (0.0, 55.0), (0.0, 5.0), (10.0, 55.0)];
 
@@ -976,7 +976,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_from_cp(b: &mut test::Bencher) {
+    fn bench_from_control_points(b: &mut test::Bencher) {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
         let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
 
