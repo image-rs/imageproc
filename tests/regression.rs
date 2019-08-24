@@ -16,7 +16,7 @@ use std::path::Path;
 use std::f32;
 use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, Rgb, Rgba, RgbImage, RgbaImage};
 use imageproc::utils::{load_image_or_panic};
-use imageproc::geometric_transformations::{Interpolation, rotate, Projection, warp};
+use imageproc::geometric_transformations::{Interpolation, rotate_about_center, Projection, warp};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
@@ -114,8 +114,7 @@ fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, o
 #[test]
 fn test_rotate_nearest_rgb() {
     fn rotate_nearest_about_center(image: &RgbImage) -> RgbImage {
-        let (w, h) = image.dimensions();
-        rotate(image, (w as f32/2.0, h as f32/2.0), std::f32::consts::PI/4f32, Interpolation::Nearest, Rgb::black())
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth_rgb("elephant.png", "elephant_rotate_nearest.png", rotate_nearest_about_center);
 }
@@ -123,8 +122,7 @@ fn test_rotate_nearest_rgb() {
 #[test]
 fn test_rotate_nearest_rgba() {
     fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
-        let (w, h) = image.dimensions();
-        rotate(image, (w as f32/2.0, h as f32/2.0), std::f32::consts::PI/4f32, Interpolation::Nearest, Rgba::black())
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest, Rgba::black())
     }
     compare_to_truth_rgba("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
 }
@@ -138,8 +136,7 @@ fn test_equalize_histogram_grayscale() {
 #[test]
 fn test_rotate_bilinear_rgb() {
     fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
-        let (w, h) = image.dimensions();
-        rotate(image, (w as f32/2f32, h as f32/2f32), std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgb::black())
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgb::black())
     }
     compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 2);
 }
@@ -147,8 +144,7 @@ fn test_rotate_bilinear_rgb() {
 #[test]
 fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
-        let (w, h) = image.dimensions();
-        rotate(image, (w as f32/2f32, h as f32/2f32), std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgba::black())
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgba::black())
     }
     compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 2);
 }
@@ -179,7 +175,7 @@ fn test_affine_bilinear_rgb() {
 
         warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
-    compare_to_truth_rgb("elephant.png", "elephant_affine_bilinear.png", affine_bilinear);
+    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_affine_bilinear.png", affine_bilinear, 1);
 }
 
 #[test]

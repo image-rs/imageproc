@@ -140,10 +140,8 @@ impl Projection {
                     transform = normalize(transform);
                     let class = class_from_matrix(transform);
 
-                    println!("almost inverse");
-
                     try_inverse(&transform)
-                        .map(|inverse| { println!("got inverse"); Projection { transform, inverse, class }})
+                        .map(|inverse| { Projection { transform, inverse, class }})
                 }
             }
         }
@@ -225,6 +223,24 @@ impl Mul<(f32, f32)> for Projection {
     fn mul(self, rhs: (f32, f32)) -> (f32, f32) {
         &self * &rhs
     }
+}
+
+/// Rotate an image clockwise about image center.
+/// The output image has the same dimensions as the input. Output pixels
+/// whose pre-image lies outside the input image are set to `default`.
+pub fn rotate_about_center<P>(
+    image: &Image<P>,
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+) -> Image<P>
+where
+    P: Pixel + Send + Sync + 'static,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+{
+    let (w, h) = image.dimensions();
+    rotate(image, (w as f32/2.0, h as f32/2.0), theta, interpolation, default)
 }
 
 /// Rotate an image clockwise about provided center by theta radians.
@@ -461,27 +477,27 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
         t[6], t[7], t[8]
     );
 
-    let m00 = t11 as f64  * t22  as f64 - t12 as f64  * t21  as f64;
-    let m01 = t10 as f64  * t22  as f64 - t12 as f64  * t20  as f64;
-    let m02 = t10 as f64  * t21  as f64 - t11 as f64  * t20  as f64;
+    let m00 = t11 * t22 - t12 * t21;
+    let m01 = t10 * t22 - t12 * t20;
+    let m02 = t10 * t21 - t11 * t20;
 
-    let det = t00 as f64  * m00 - t01 as f64  * m01 + t02 as f64 * m02;
+    let det = t00   * m00 - t01   * m01 + t02  * m02;
 
     if (det).abs() < 1e-10 {
         return None;
     }
 
-    let m10 = t01 as f64  * t22 as f64  - t02 as f64  * t21 as f64 ;
-    let m11 = t00 as f64  * t22 as f64  - t02 as f64  * t20 as f64 ;
-    let m12 = t00 as f64  * t21 as f64  - t01 as f64  * t20 as f64 ;
-    let m20 = t01 as f64  * t12 as f64  - t02 as f64  * t11 as f64 ;
-    let m21 = t00 as f64  * t12 as f64  - t02 as f64  * t10 as f64 ;
-    let m22 = t00 as f64  * t11 as f64  - t01 as f64  * t10 as f64 ;
+    let m10 = t01 * t22 - t02 * t21;
+    let m11 = t00 * t22 - t02 * t20;
+    let m12 = t00 * t21 - t01 * t20;
+    let m20 = t01 * t12 - t02 * t11;
+    let m21 = t00 * t12 - t02 * t10;
+    let m22 = t00 * t11 - t01 * t10;
 
     let inv = [
-       (  m00 / det) as f32,( -m10 / det) as f32,(  m20 / det) as f32,
-       ( -m01 / det) as f32,(  m11 / det) as f32,( -m21 / det) as f32,
-       (  m02 / det) as f32,( -m12 / det) as f32,(  m22 / det) as f32 
+       ( m00 / det),(-m10 / det),( m20 / det),
+       (-m01 / det),( m11 / det),(-m21 / det),
+       ( m02 / det),(-m12 / det),( m22 / det) 
     ];
 
     Some(normalize(inv))
@@ -570,17 +586,15 @@ where
 }
 
 #[inline(always)]
-#[allow(deprecated)]
 fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
-    let rx = x.round() as u32;
-    let ry = y.round() as u32;
+    let rx = x.round();
+    let ry = y.round();
+
     let (width, height) = image.dimensions();
-    if x.round() < 0f32 ||  y.round() < 0f32 {
-        default
-    } else if rx >= width || ry >= height {
+    if rx < 0f32 || rx >= width as f32 || ry < 0f32 || ry >= height as f32 {
         default
     } else {
-        unsafe { image.unsafe_get_pixel(rx, ry) }
+        unsafe { image.unsafe_get_pixel(rx as u32, ry as u32) }
     }
 }
 
@@ -896,8 +910,8 @@ mod tests {
         for i in 0..50 {
             for j in 0..50 {
                 let pt = (i as f32, j as f32);
-                assert_approx_eq!((p*pt).0, (p_est*pt).0, 1e-3);;
-                assert_approx_eq!((p*pt).1, (p_est*pt).1, 1e-3);;
+                assert_approx_eq!((p*pt).0, (p_est*pt).0, 1e-3);
+                assert_approx_eq!((p*pt).1, (p_est*pt).1, 1e-3);
             }
         }
     }
