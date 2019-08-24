@@ -14,9 +14,9 @@ extern crate imageproc;
 use std::ops::Deref;
 use std::path::Path;
 use std::f32;
-use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, Rgb, RgbImage, RgbaImage};
+use image::{DynamicImage, GrayImage, ImageBuffer, Pixel, Luma, Rgb, Rgba, RgbImage, RgbaImage};
 use imageproc::utils::{load_image_or_panic};
-use imageproc::affine::{affine, Affine2, Interpolation, rotate_about_center};
+use imageproc::geometric_transformations::{Interpolation, rotate_about_center, Projection, warp};
 use imageproc::edges::canny;
 use imageproc::filter::gaussian_blur_f32;
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
@@ -114,7 +114,7 @@ fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, o
 #[test]
 fn test_rotate_nearest_rgb() {
     fn rotate_nearest_about_center(image: &RgbImage) -> RgbImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth_rgb("elephant.png", "elephant_rotate_nearest.png", rotate_nearest_about_center);
 }
@@ -122,7 +122,7 @@ fn test_rotate_nearest_rgb() {
 #[test]
 fn test_rotate_nearest_rgba() {
     fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest)
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Nearest, Rgba::black())
     }
     compare_to_truth_rgba("elephant_rgba.png", "elephant_rotate_nearest_rgba.png", rotate_nearest_about_center);
 }
@@ -136,29 +136,29 @@ fn test_equalize_histogram_grayscale() {
 #[test]
 fn test_rotate_bilinear_rgb() {
     fn rotate_bilinear_about_center(image: &RgbImage) -> RgbImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgb::black())
     }
-    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bilinear.png", rotate_bilinear_about_center, 2);
 }
 
 #[test]
 fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear)
+        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bilinear, Rgba::black())
     }
-    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 1);
+    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bilinear_rgba.png", rotate_bilinear_about_center, 2);
 }
 
 #[test]
 fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32/2f32.sqrt()*2.0;
-        let trans = Affine2::from_matrix_unchecked([
+        let hom = Projection::from_matrix([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
             0.0         , 0.0          , 1.0,
-        ]);
-        affine(image, trans, Interpolation::Nearest).unwrap()
+        ]).unwrap();
+        warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth_rgb("elephant.png", "elephant_affine_nearest.png", affine_nearest);
 }
@@ -167,15 +167,15 @@ fn test_affine_nearest_rgb() {
 fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32/2f32.sqrt()*2.0;
-        let trans = Affine2::from_matrix_unchecked([
+        let hom = Projection::from_matrix([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
             0.0         , 0.0          , 1.0,
-        ]);
+        ]).unwrap();
 
-        affine(image, trans, Interpolation::Bilinear).unwrap()
+        warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
-    compare_to_truth_rgb("elephant.png", "elephant_affine_bilinear.png", affine_bilinear);
+    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_affine_bilinear.png", affine_bilinear, 1);
 }
 
 #[test]
