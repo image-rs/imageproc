@@ -1,14 +1,15 @@
 //! Functions for computing gradients of image intensities.
 
-use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use crate::definitions::{HasBlack, Image};
 use crate::filter::filter3x3;
+use crate::map::{ChannelMap, WithChannel};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
-use crate::map::{WithChannel, ChannelMap};
 
 /// Sobel filter for detecting vertical gradients.
 ///
 /// Used by the [`vertical_sobel`](fn.vertical_sobel.html) function.
+#[rustfmt::skip]
 pub static VERTICAL_SOBEL: [i32; 9] = [
     -1, -2, -1,
      0,  0,  0,
@@ -17,14 +18,34 @@ pub static VERTICAL_SOBEL: [i32; 9] = [
 /// Sobel filter for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_sobel`](fn.horizontal_sobel.html) function.
+#[rustfmt::skip]
 pub static HORIZONTAL_SOBEL: [i32; 9] = [
     -1, 0, 1,
     -2, 0, 2,
     -1, 0, 1];
 
+/// Scharr filter for detecting vertical gradients.
+///
+/// Used by the [`vertical_scharr`](fn.vertical_scharr.html) function.
+#[rustfmt::skip]
+pub static VERTICAL_SCHARR: [i32; 9] = [
+    -3, -10,  -3,
+     0,   0,   0,
+     3,  10,   3];
+
+/// Scharr filter for detecting horizontal gradients.
+///
+/// Used by the [`horizontal_scharr`](fn.horizontal_scharr.html) function.
+#[rustfmt::skip]
+pub static HORIZONTAL_SCHARR: [i32; 9] = [
+     -3,  0,   3,
+    -10,  0,  10,
+     -3,  0,   3];
+
 /// Prewitt filter for detecting vertical gradients.
 ///
 /// Used by the [`vertical_prewitt`](fn.vertical_prewitt.html) function.
+#[rustfmt::skip]
 pub static VERTICAL_PREWITT: [i32; 9] = [
     -1, -1, -1,
      0,  0,  0,
@@ -33,6 +54,7 @@ pub static VERTICAL_PREWITT: [i32; 9] = [
 /// Prewitt filter for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_prewitt`](fn.horizontal_prewitt.html) function.
+#[rustfmt::skip]
 pub static HORIZONTAL_PREWITT: [i32; 9] = [
     -1, 0, 1,
     -1, 0, 1,
@@ -48,6 +70,18 @@ pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
 /// kernel to detect vertical gradients.
 pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &VERTICAL_SOBEL)
+}
+
+/// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
+/// kernel to detect horizontal gradients.
+pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &HORIZONTAL_SCHARR)
+}
+
+/// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
+/// kernel to detect vertical gradients.
+pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
+    filter3x3(image, &VERTICAL_SCHARR)
 }
 
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
@@ -135,10 +169,10 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// # }
 pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
     ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    F: Fn(ChannelMap<P, u16>) -> Q,
 {
     gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, f)
 }
@@ -159,10 +193,10 @@ fn gradients<P, F, Q>(
     f: F,
 ) -> Image<Q>
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
     Q: Pixel + 'static,
     ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q
+    F: Fn(ChannelMap<P, u16>) -> Q,
 {
     let horizontal: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
     let vertical: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
@@ -198,16 +232,19 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{ImageBuffer, Luma};
-    use test::{Bencher, black_box};
     use crate::utils::gray_bench_image;
+    use image::{ImageBuffer, Luma};
+    use test::{black_box, Bencher};
 
+    #[rustfmt::skip::macros(gray_image)]
     #[test]
     fn test_gradients_constant_image() {
         let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
         let expected = ImageBuffer::from_pixel(5, 5, Luma([0i16]));
         assert_pixels_eq!(horizontal_sobel(&image), expected);
         assert_pixels_eq!(vertical_sobel(&image), expected);
+        assert_pixels_eq!(horizontal_scharr(&image), expected);
+        assert_pixels_eq!(vertical_scharr(&image), expected);
         assert_pixels_eq!(horizontal_prewitt(&image), expected);
         assert_pixels_eq!(vertical_prewitt(&image), expected);
     }
@@ -241,6 +278,38 @@ mod tests {
             -4, -4, -4);
 
         let filtered = vertical_sobel(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_horizontal_scharr_gradient_image() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -16, -32, -16;
+            -16, -32, -16;
+            -16, -32, -16);
+
+        let filtered = horizontal_scharr(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_vertical_scharr_gradient_image() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            -16, -16, -16;
+            -32, -32, -32;
+            -16, -16, -16);
+
+        let filtered = vertical_scharr(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
