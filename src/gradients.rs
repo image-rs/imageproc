@@ -29,18 +29,18 @@ pub static HORIZONTAL_SOBEL: [i32; 9] = [
 /// Used by the [`vertical_scharr`](fn.vertical_scharr.html) function.
 #[rustfmt::skip]
 pub static VERTICAL_SCHARR: [i32; 9] = [
-    3,  0,  -3,
-    10, 0, -10,
-    3,  0,  -3];
+    -3, -10,  -3,
+     0,   0,   0,
+     3,  10,   3];
 
 /// Scharr filter for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_scharr`](fn.horizontal_scharr.html) function.
 #[rustfmt::skip]
 pub static HORIZONTAL_SCHARR: [i32; 9] = [
-     3,  10,  3,
-     0,   0,  0,
-    -3, -10, -3];
+     -3,  0,   3,
+    -10,  0,  10,
+     -3,  0,   3];
 
 /// Prewitt filter for detecting vertical gradients.
 ///
@@ -289,9 +289,9 @@ mod tests {
             9, 8, 7);
 
         let expected = gray_image!(type: i16,
-            16, 32, 16;
-            16, 32, 16;
-            16, 32, 16);
+            -16, -32, -16;
+            -16, -32, -16;
+            -16, -32, -16);
 
         let filtered = horizontal_scharr(&image);
         assert_pixels_eq!(filtered, expected);
@@ -305,9 +305,9 @@ mod tests {
             1, 4, 7);
 
         let expected = gray_image!(type: i16,
-            16, 16, 16;
-            32, 32, 32;
-            16, 16, 16);
+            -16, -16, -16;
+            -32, -32, -32;
+            -16, -16, -16);
 
         let filtered = vertical_scharr(&image);
         assert_pixels_eq!(filtered, expected);
