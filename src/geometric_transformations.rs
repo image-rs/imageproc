@@ -553,8 +553,6 @@ where
     })
 }
 
-
-#[allow(deprecated)]
 fn interpolate<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel + 'static,
