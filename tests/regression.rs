@@ -203,16 +203,11 @@ fn test_rotate_bilinear_rgba() {
 fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
+        #[rustfmt::skip]
         let hom = Projection::from_matrix([
-            root_two_inv,
-            -root_two_inv,
-            50.0,
-            root_two_inv,
-            root_two_inv,
-            -70.0,
-            0.0,
-            0.0,
-            1.0,
+            root_two_inv, -root_two_inv,  50.0,
+            root_two_inv,  root_two_inv, -70.0,
+                     0.0,           0.0,   1.0,
         ])
         .unwrap();
         warp(image, &hom, Interpolation::Nearest, Rgb::black())
@@ -228,16 +223,11 @@ fn test_affine_nearest_rgb() {
 fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
+        #[rustfmt::skip]
         let hom = Projection::from_matrix([
-            root_two_inv,
-            -root_two_inv,
-            50.0,
-            root_two_inv,
-            root_two_inv,
-            -70.0,
-            0.0,
-            0.0,
-            1.0,
+            root_two_inv, -root_two_inv,  50.0,
+            root_two_inv,  root_two_inv, -70.0,
+                     0.0,           0.0,   1.0,
         ])
         .unwrap();
 

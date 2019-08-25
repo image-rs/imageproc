@@ -692,7 +692,12 @@ mod tests {
 
     #[test]
     fn test_filter3x3_with_results_outside_input_channel_range() {
-        let kernel: Vec<i32> = vec![-1, 0, 1, -2, 0, 2, -1, 0, 1];
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1
+        ];
 
         let image = gray_image!(
             3, 2, 1;
@@ -751,7 +756,12 @@ mod tests {
             9, 4;
             8, 1);
 
-        let k: Vec<f32> = vec![0.1, 0.2, 0.1, 0.2, 0.4, 0.2, 0.1, 0.2, 0.1];
+        #[rustfmt::skip]
+        let k: Vec<f32> = vec![
+            0.1, 0.2, 0.1,
+            0.2, 0.4, 0.2,
+            0.1, 0.2, 0.1
+        ];
         let kernel = Kernel::new(&k, 3, 3);
         let filtered: Image<Luma<u8>> =
             kernel.filter(&image, |c, a| *c = <u8 as Clamp<f32>>::clamp(a));
@@ -766,7 +776,12 @@ mod tests {
     #[bench]
     fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel: Vec<i32> = vec![-1, 0, 1, -2, 0, 2, -1, 0, 1];
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1
+        ];
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =

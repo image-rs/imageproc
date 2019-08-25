@@ -256,10 +256,8 @@ impl HistSet {
             data.push([0u32; 256]);
         }
 
-        HistSet {
-            data,
-            expected_count,
-        }
+        #[rustfmt::skip]
+        HistSet { data, expected_count }
     }
 
     fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
