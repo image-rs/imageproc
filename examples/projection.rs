@@ -89,7 +89,5 @@ fn main() -> Result<()> {
         Rgb([255, 0, 0])
     ).save(output_dir.join("scaled.png"))?;
 
-    // need to demo from_control_points
-
     Ok(())
 }
