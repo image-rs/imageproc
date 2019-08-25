@@ -592,7 +592,7 @@ where
         let p1 = cast(px1.channels()[i]);
         let p2 = cast(px2.channels()[i]);
         let p3 = cast(px3.channels()[i]);
-        let pval = p1 + 0.5 * x * (p2 - p0 + x * (2.0*p0 - 5.0*p1 + 4.0*p2 - p3 + x*(3.0*(p1 - p2) + p3 - p0)));
+        let pval = p1 + 0.5 * x * (p2 - p0 + x * (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3 + x * (3.0 * (p1 - p2) + p3 - p0)));
         outp.channels_mut()[i] = <P as Pixel>::Subpixel::clamp(pval);
     }
 
@@ -605,15 +605,15 @@ where
     P: Pixel + 'static,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let left = x.floor()-1f32;
+    let left = x.floor() - 1f32;
     let right = left + 4f32;
-    let top = y.floor()-1f32;
+    let top = y.floor() - 1f32;
     let bottom = top + 4f32;
 
-    let x_weight = x - (left+1f32);
-    let y_weight = y - (top+1f32);
+    let x_weight = x - (left + 1f32);
+    let y_weight = y - (top + 1f32);
 
-    let mut col: [P;4] = [default, default, default, default];
+    let mut col: [P; 4] = [default, default, default, default];
 
     let (width, height) = image.dimensions();
     if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
