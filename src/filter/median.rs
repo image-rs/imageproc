@@ -1,6 +1,6 @@
-use image::{GenericImageView, Pixel};
 use crate::definitions::Image;
-use std::cmp::{min, max};
+use image::{GenericImageView, Pixel};
+use std::cmp::{max, min};
 
 /// Applies a median filter of given dimensions to an image. Each output pixel is the median
 /// of the pixels in a `(2 * x_radius + 1) * (2 * y_radius + 1)` kernel of pixels in the input image.
@@ -75,7 +75,7 @@ use std::cmp::{min, max};
 /// assert_pixels_eq!(median_filter(&image, 1, 1), filtered);
 /// # }
 /// ```
-/// 
+///
 /// ```
 /// # extern crate image;
 /// # #[macro_use]
@@ -107,7 +107,7 @@ use std::cmp::{min, max};
 /// ```
 pub fn median_filter<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> Image<P>
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
 
@@ -126,8 +126,7 @@ where
         if x % 2 == 0 {
             slide_right(&mut hist, &image, x, 0, rx, ry);
             slide_down_column(&mut hist, &image, &mut out, x, rx, ry);
-        }
-        else {
+        } else {
             slide_right(&mut hist, &image, x, height - 1, rx, ry);
             slide_up_column(&mut hist, &image, &mut out, x, rx, ry);
         }
@@ -135,12 +134,16 @@ where
     out
 }
 
-fn initialise_histogram_for_top_left_pixel<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> HistSet
+fn initialise_histogram_for_top_left_pixel<P>(
+    image: &Image<P>,
+    x_radius: u32,
+    y_radius: u32,
+) -> HistSet
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
-    let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1); 
+    let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1);
     let num_channels = P::channel_count();
 
     let mut hist = HistSet::new(num_channels, kernel_size);
@@ -160,10 +163,9 @@ where
     hist
 }
 
-
 fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, rx: i32, ry: i32)
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
 
@@ -178,9 +180,15 @@ where
     }
 }
 
-fn slide_down_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, rx: i32, ry: i32)
-where
-    P: Pixel<Subpixel=u8> + 'static
+fn slide_down_column<P>(
+    hist: &mut HistSet,
+    image: &Image<P>,
+    out: &mut Image<P>,
+    x: u32,
+    rx: i32,
+    ry: i32,
+) where
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
     hist.set_to_median(out, x, 0);
@@ -200,14 +208,20 @@ where
     }
 }
 
-fn slide_up_column<P>(hist: &mut HistSet, image: &Image<P>, out: &mut Image<P>, x: u32, rx: i32, ry: i32)
-where
-    P: Pixel<Subpixel=u8> + 'static
+fn slide_up_column<P>(
+    hist: &mut HistSet,
+    image: &Image<P>,
+    out: &mut Image<P>,
+    x: u32,
+    rx: i32,
+    ry: i32,
+) where
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = image.dimensions();
     hist.set_to_median(out, x, height - 1);
 
-    for y in (0..(height-1)).rev() {
+    for y in (0..(height - 1)).rev() {
         let prev_y = min(y as i32 + ry + 1, height as i32 - 1) as u32;
         let next_y = max(0, y as i32 - ry) as u32;
 
@@ -242,12 +256,15 @@ impl HistSet {
             data.push([0u32; 256]);
         }
 
-        HistSet { data, expected_count }
+        HistSet {
+            data,
+            expected_count,
+        }
     }
 
-    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let pixel = image.unsafe_get_pixel(x, y);
@@ -260,9 +277,9 @@ impl HistSet {
         }
     }
 
-    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32) 
+    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let pixel = image.unsafe_get_pixel(x, y);
@@ -277,7 +294,7 @@ impl HistSet {
 
     fn set_to_median<P>(&self, image: &mut Image<P>, x: u32, y: u32)
     where
-        P: Pixel<Subpixel=u8> + 'static
+        P: Pixel<Subpixel = u8> + 'static,
     {
         unsafe {
             let target = image.get_pixel_mut(x, y);
@@ -289,9 +306,7 @@ impl HistSet {
     }
 
     fn channel_median(&self, c: u8) -> u8 {
-        let hist = unsafe {
-            self.data.get_unchecked(c as usize)
-        };
+        let hist = unsafe { self.data.get_unchecked(c as usize) };
 
         let mut count = 0;
 
@@ -312,13 +327,13 @@ impl HistSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::property_testing::GrayTestImage;
     use crate::utils::gray_bench_image;
+    use crate::utils::pixel_diff_summary;
     use image::{GrayImage, Luma};
     use quickcheck::{quickcheck, TestResult};
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
-    use test::{Bencher, black_box};
-    use std::cmp::{min, max};
+    use std::cmp::{max, min};
+    use test::{black_box, Bencher};
 
     macro_rules! bench_median_filter {
         ($name:ident, side: $s:expr, x_radius: $rx:expr, y_radius: $ry:expr) => {
@@ -330,13 +345,13 @@ mod tests {
                     black_box(filtered);
                 })
             }
-        }
+        };
     }
 
     bench_median_filter!(bench_median_filter_s100_r1, side: 100, x_radius: 1,y_radius: 1);
     bench_median_filter!(bench_median_filter_s100_r4, side: 100, x_radius: 4,y_radius: 4);
     bench_median_filter!(bench_median_filter_s100_r8, side: 100, x_radius: 8,y_radius: 8);
-    
+
     // benchmark on non-square kernels
     bench_median_filter!(bench_median_filter_s100_rx1_ry4, side: 100, x_radius: 1,y_radius: 4);
     bench_median_filter!(bench_median_filter_s100_rx1_ry8, side: 100, x_radius: 1,y_radius: 8);
