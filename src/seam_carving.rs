@@ -3,17 +3,17 @@
 //!
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
-use crate::gradients::sobel_gradient_map;
-use image::{GrayImage, Luma, Pixel, Rgb};
 use crate::definitions::{HasBlack, Image};
+use crate::gradients::sobel_gradient_map;
 use crate::map::{map_colors, WithChannel};
+use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
 pub struct VerticalSeam(Vec<u32>);
 
 /// Reduces the width of an image using seam carving.
-/// 
+///
 /// Warning: this is very slow! It implements the algorithm from
 /// https://inst.eecs.berkeley.edu/~cs194-26/fa16/hw/proj4-seamcarving/imret.pdf, with some
 /// extra unnecessary allocations thrown in. Rather than attempting to optimise the implementation
@@ -22,10 +22,13 @@ pub struct VerticalSeam(Vec<u32>);
 pub fn shrink_width<P>(image: &Image<P>, target_width: u32) -> Image<P>
 // TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    <P as WithChannel<u16>>::Pixel: HasBlack
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <P as WithChannel<u16>>::Pixel: HasBlack,
 {
-    assert!(target_width <= image.width(), "target_width must be <= input image width");
+    assert!(
+        target_width <= image.width(),
+        "target_width must be <= input image width"
+    );
 
     let iterations = image.width() - target_width;
     let mut result = image.clone();
@@ -42,11 +45,14 @@ where
 /// gradient magnitudes is minimal.
 pub fn find_vertical_seam<P>(image: &Image<P>) -> VerticalSeam
 where
-    P: Pixel<Subpixel=u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    <P as WithChannel<u16>>::Pixel: HasBlack
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    <P as WithChannel<u16>>::Pixel: HasBlack,
 {
     let (width, height) = image.dimensions();
-    assert!(image.width() >= 2, "Cannot find seams if image width is < 2");
+    assert!(
+        image.width() >= 2,
+        "Cannot find seams if image width is < 2"
+    );
 
     let mut gradients = sobel_gradient_map(&image, |p| {
         let gradient_sum: u16 = p.channels().iter().sum();
@@ -128,9 +134,12 @@ fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
 // it would make them a lot slower.
 pub fn remove_vertical_seam<P>(image: &Image<P>, seam: &VerticalSeam) -> Image<P>
 where
-    P: Pixel + 'static
+    P: Pixel + 'static,
 {
-    assert!(seam.0.len() as u32 == image.height(), "seam length does not match image height");
+    assert!(
+        seam.0.len() as u32 == image.height(),
+        "seam length does not match image height"
+    );
 
     let (width, height) = image.dimensions();
     let mut out = Image::new(width - 1, height);
@@ -157,7 +166,7 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
     let mut out = map_colors(image, |p| p.to_rgb());
 
     for seam in seams {
-        for (y, x) in(0..height).rev().zip(&seam.0) {
+        for (y, x) in (0..height).rev().zip(&seam.0) {
             let mut x_original = *x;
             for o in &offsets[y as usize] {
                 if *o < *x {
@@ -168,15 +177,15 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
             offsets[y as usize].push(x_original);
         }
     }
-    
+
     out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{Bencher, black_box};
     use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
 
     macro_rules! bench_shrink_width {
         ($name:ident, side: $s:expr, shrink_by: $m:expr) => {
@@ -188,7 +197,7 @@ mod tests {
                     black_box(filtered);
                 })
             }
-        }
+        };
     }
 
     bench_shrink_width!(bench_shrink_width_s100_r1, side: 100, shrink_by: 1);

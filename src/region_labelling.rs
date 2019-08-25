@@ -140,7 +140,6 @@ where
         return out;
     }
 
-    
     let mut forest = DisjointSetForest::new(image_size);
     let mut adj_labels = [0u32; 4];
     let mut next_label = 1;
@@ -246,10 +245,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::connected_components;
-    use super::Connectivity::{Four, Eight};
+    use super::Connectivity::{Eight, Four};
     use crate::definitions::{HasBlack, HasWhite};
-    use image::{GrayImage, ImageBuffer, Luma};
     use ::test;
+    use image::{GrayImage, ImageBuffer, Luma};
 
     #[test]
     fn test_connected_components_eight_white_background() {
@@ -272,10 +271,12 @@ mod tests {
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way conectivity.
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| if (x + y) % 2 == 0 {
-            return Luma([255u8]);
-        } else {
-            return Luma([0u8]);
+        ImageBuffer::from_fn(width, height, |x, y| {
+            if (x + y) % 2 == 0 {
+                return Luma([255u8]);
+            } else {
+                return Luma([0u8]);
+            }
         })
     }
 

@@ -2,9 +2,11 @@
 //!
 //! [morphological operators]: http://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
-use std::u8;
+use crate::distance_transform::{
+    distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
+};
 use image::GrayImage;
-use crate::distance_transform::{DistanceFrom, distance_transform_impl, distance_transform_mut, Norm};
+use std::u8;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -322,8 +324,8 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, Luma};
     use ::test::*;
+    use image::{GrayImage, Luma};
     use std::cmp::{max, min};
 
     #[test]
@@ -459,10 +461,12 @@ mod tests {
     }
 
     fn square() -> GrayImage {
-        GrayImage::from_fn(500, 500, |x, y| if min(x, y) > 100 && max(x, y) < 300 {
-            Luma([255u8])
-        } else {
-            Luma([0u8])
+        GrayImage::from_fn(500, 500, |x, y| {
+            if min(x, y) > 100 && max(x, y) < 300 {
+                Luma([255u8])
+            } else {
+                Luma([0u8])
+            }
         })
     }
 

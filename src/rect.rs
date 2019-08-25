@@ -125,15 +125,16 @@ impl Rect {
 
 impl Region<i32> for Rect {
     fn contains(&self, x: i32, y: i32) -> bool {
-        self.left <= x && x <= self.right() &&
-        self.top <= y && y <= self.bottom()
+        self.left <= x && x <= self.right() && self.top <= y && y <= self.bottom()
     }
 }
 
 impl Region<f32> for Rect {
     fn contains(&self, x: f32, y: f32) -> bool {
-        self.left as f32 <= x && x <= self.right() as f32 &&
-        self.top as f32 <= y && y <= self.bottom() as f32
+        self.left as f32 <= x
+            && x <= self.right() as f32
+            && self.top as f32 <= y
+            && y <= self.bottom() as f32
     }
 }
 
@@ -157,7 +158,7 @@ impl RectPosition {
             left: self.left,
             top: self.top,
             width,
-            height
+            height,
         }
     }
 }

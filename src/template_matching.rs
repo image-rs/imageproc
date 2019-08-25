@@ -1,8 +1,8 @@
 //! Functions for performing template matching.
-use image::Primitive;
 use crate::definitions::Image;
-use crate::rect::Rect;
 use crate::integral_image::{integral_squared_image, sum_image_pixels};
+use crate::rect::Rect;
+use image::Primitive;
 use image::{GrayImage, Luma};
 
 /// Method used to compute the matching score between a template and an image region.
@@ -33,20 +33,45 @@ pub enum MatchTemplateMethod {
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
-pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemplateMethod) -> Image<Luma<f32>> {
+pub fn match_template(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>> {
     use image::GenericImageView;
 
     let (image_width, image_height) = image.dimensions();
     let (template_width, template_height) = template.dimensions();
 
-    assert!(image_width >= template_width, "image width must be greater than or equal to template width");
-    assert!(image_height >= template_height, "image height must be greater than or equal to template height");
+    assert!(
+        image_width >= template_width,
+        "image width must be greater than or equal to template width"
+    );
+    assert!(
+        image_height >= template_height,
+        "image height must be greater than or equal to template height"
+    );
 
-    let should_normalize = match method { MatchTemplateMethod::SumOfSquaredErrorsNormalized | MatchTemplateMethod::CrossCorrelationNormalized => true, _ => false };
-    let image_squared_integral = if should_normalize { Some(integral_squared_image(&image)) } else { None };
-    let template_squared_sum = if should_normalize { Some(sum_squares(&template)) } else { None };
+    let should_normalize = match method {
+        MatchTemplateMethod::SumOfSquaredErrorsNormalized
+        | MatchTemplateMethod::CrossCorrelationNormalized => true,
+        _ => false,
+    };
+    let image_squared_integral = if should_normalize {
+        Some(integral_squared_image(&image))
+    } else {
+        None
+    };
+    let template_squared_sum = if should_normalize {
+        Some(sum_squares(&template))
+    } else {
+        None
+    };
 
-    let mut result = Image::new(image_width - template_width + 1, image_height - template_height + 1);
+    let mut result = Image::new(
+        image_width - template_width + 1,
+        image_height - template_height + 1,
+    );
 
     for y in 0..result.height() {
         for x in 0..result.width() {
@@ -60,8 +85,12 @@ pub fn match_template(image: &GrayImage, template: &GrayImage, method: MatchTemp
                     use MatchTemplateMethod::*;
 
                     score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => (image_value - template_value).powf(2.0),
-                        CrossCorrelation | CrossCorrelationNormalized => (image_value * template_value),
+                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                            (image_value - template_value).powf(2.0)
+                        }
+                        CrossCorrelation | CrossCorrelationNormalized => {
+                            (image_value * template_value)
+                        }
                     };
                 }
             }
@@ -90,13 +119,14 @@ fn sum_squares(template: &GrayImage) -> f32 {
 fn normalization_term(
     image_squared_integral: &Image<Luma<u64>>,
     template_squared_sum: f32,
-    region: Rect) -> f32 {
+    region: Rect,
+) -> f32 {
     let image_sum = sum_image_pixels(
         image_squared_integral,
         region.left() as u32,
         region.top() as u32,
         region.right() as u32,
-        region.bottom() as u32
+        region.bottom() as u32,
     )[0] as f32;
     (image_sum * template_squared_sum).sqrt()
 }
@@ -112,16 +142,19 @@ pub struct Extremes<T> {
     /// The coordinates of the largest value in an image.
     pub max_value_location: (u32, u32),
     /// The coordinates of the smallest value in an image.
-    pub min_value_location: (u32, u32)
+    pub min_value_location: (u32, u32),
 }
 
 /// Finds the largest and smallest values in an image and their locations.
 /// If there are multiple such values then the lexicographically smallest is returned.
 pub fn find_extremes<T>(image: &Image<Luma<T>>) -> Extremes<T>
 where
-    T : Primitive + 'static
+    T: Primitive + 'static,
 {
-    assert!(image.width() > 0 && image.height() > 0, "image must be non-empty");
+    assert!(
+        image.width() > 0 && image.height() > 0,
+        "image must be non-empty"
+    );
 
     let mut min_value = image.get_pixel(0, 0)[0];
     let mut max_value = image.get_pixel(0, 0)[0];
@@ -140,7 +173,12 @@ where
         }
     }
 
-    Extremes { max_value, min_value, max_value_location, min_value_location }
+    Extremes {
+        max_value,
+        min_value,
+        max_value_location,
+        min_value_location,
+    }
 }
 
 #[cfg(test)]
@@ -148,7 +186,7 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::GrayImage;
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     #[test]
     #[should_panic]
@@ -156,7 +194,7 @@ mod tests {
         let _ = match_template(
             &GrayImage::new(5, 5),
             &GrayImage::new(6, 5),
-            MatchTemplateMethod::SumOfSquaredErrors
+            MatchTemplateMethod::SumOfSquaredErrors,
         );
     }
 
@@ -166,7 +204,7 @@ mod tests {
         let _ = match_template(
             &GrayImage::new(5, 5),
             &GrayImage::new(5, 6),
-            MatchTemplateMethod::SumOfSquaredErrors
+            MatchTemplateMethod::SumOfSquaredErrors,
         );
     }
 
@@ -176,7 +214,8 @@ mod tests {
             match_template(
                 &GrayImage::new(5, 5),
                 &GrayImage::new(5, 5),
-                MatchTemplateMethod::SumOfSquaredErrors),
+                MatchTemplateMethod::SumOfSquaredErrors
+            ),
             gray_image!(type: f32, 0.0)
         );
     }
@@ -187,7 +226,8 @@ mod tests {
             match_template(
                 &GrayImage::new(1, 1),
                 &GrayImage::new(1, 1),
-                MatchTemplateMethod::SumOfSquaredErrorsNormalized),
+                MatchTemplateMethod::SumOfSquaredErrorsNormalized
+            ),
             gray_image!(type: f32, 0.0)
         );
     }
@@ -225,7 +265,11 @@ mod tests {
             3, 4
         );
 
-        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+        );
         let tss = 30f32;
         let expected = gray_image!(type: f32,
             14.0 / (22.0 * tss).sqrt(), 14.0 / (30.0 * tss).sqrt();
@@ -289,11 +333,12 @@ mod tests {
                 let image = gray_bench_image($s, $s);
                 let template = gray_bench_image($t, $t);
                 b.iter(|| {
-                    let result = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
+                    let result =
+                        match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
                     black_box(result);
                 })
             }
-        }
+        };
     }
 
     bench_match_template!(
@@ -343,7 +388,7 @@ mod tests {
             max_value: 15,
             min_value: 1,
             max_value_location: (1, 1),
-            min_value_location: (3, 0)
+            min_value_location: (3, 0),
         };
 
         assert_eq!(find_extremes(&image), expected);

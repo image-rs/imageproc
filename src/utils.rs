@@ -1,14 +1,16 @@
 //! Utils for testing and debugging.
 
-use image::{DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, open, Pixel, Rgb, RgbImage};
+use image::{
+    open, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Pixel, Rgb, RgbImage,
+};
 
-use std::u32;
+use itertools::Itertools;
+use std::cmp::{max, min};
+use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Write;
 use std::path::Path;
-use itertools::Itertools;
-use std::collections::HashSet;
-use std::cmp::{max, min};
+use std::u32;
 
 /// Helper for defining greyscale images.
 ///
@@ -216,7 +218,6 @@ macro_rules! rgb_image {
     }
 }
 
-
 /// Helper for defining RGBA images.
 ///
 /// Pixels are delineated by square brackets, columns are
@@ -348,7 +349,7 @@ where
     if actual.dimensions() != expected.dimensions() {
         return Some(format!(
             "dimensions do not match. \
-            actual: {:?}, expected: {:?}",
+             actual: {:?}, expected: {:?}",
             actual.dimensions(),
             expected.dimensions()
         ));
@@ -363,30 +364,32 @@ where
 /// Panics if any pixels differ between the two input images.
 #[macro_export]
 macro_rules! assert_pixels_eq {
-    ($actual:expr, $expected:expr) => ({
+    ($actual:expr, $expected:expr) => {{
         assert_dimensions_match!($actual, $expected);
         match $crate::utils::pixel_diff_summary(&$actual, &$expected) {
-            None => {},
-            Some(err) => panic!(err)
+            None => {}
+            Some(err) => panic!(err),
         };
-     })
+    }};
 }
 
 /// Panics if any pixels differ between the two images by more than the
 /// given tolerance in a single channel.
 #[macro_export]
 macro_rules! assert_pixels_eq_within {
-    ($actual:expr, $expected:expr, $channel_tolerance:expr) => ({
-
+    ($actual:expr, $expected:expr, $channel_tolerance:expr) => {{
         assert_dimensions_match!($actual, $expected);
         let diffs = $crate::utils::pixel_diffs(&$actual, &$expected, |p, q| {
-
             use image::Pixel;
             let cp = p.2.channels();
             let cq = q.2.channels();
             if cp.len() != cq.len() {
-                panic!("pixels have different channel counts. \
-                    actual: {:?}, expected: {:?}", cp.len(), cq.len())
+                panic!(
+                    "pixels have different channel counts. \
+                     actual: {:?}, expected: {:?}",
+                    cp.len(),
+                    cq.len()
+                )
             }
 
             let mut large_diff = false;
@@ -394,7 +397,7 @@ macro_rules! assert_pixels_eq_within {
                 let sp = cp[i];
                 let sq = cq[i];
                 // Handle unsigned subpixels
-                let diff = if sp > sq {sp - sq} else {sq - sp};
+                let diff = if sp > sq { sp - sq } else { sq - sp };
                 if diff > $channel_tolerance {
                     large_diff = true;
                     break;
@@ -404,32 +407,32 @@ macro_rules! assert_pixels_eq_within {
             large_diff
         });
         if !diffs.is_empty() {
-            panic!($crate::utils::describe_pixel_diffs(&$actual, &$expected, &diffs))
+            panic!($crate::utils::describe_pixel_diffs(
+                &$actual, &$expected, &diffs
+            ))
         }
-    })
+    }};
 }
 
 /// Panics if image dimensions do not match.
 #[macro_export]
 macro_rules! assert_dimensions_match {
-    ($actual:expr, $expected:expr) => ({
-
+    ($actual:expr, $expected:expr) => {{
         let actual_dim = $actual.dimensions();
         let expected_dim = $expected.dimensions();
 
         if actual_dim != expected_dim {
-            panic!("dimensions do not match. \
-                actual: {:?}, expected: {:?}", actual_dim, expected_dim)
+            panic!(
+                "dimensions do not match. \
+                 actual: {:?}, expected: {:?}",
+                actual_dim, expected_dim
+            )
         }
-     })
+    }};
 }
 
 /// Lists pixels that differ between left and right images.
-pub fn pixel_diffs<I, J, F, P>(
-    actual: &I,
-    expected: &J,
-    is_diff: F,
-) -> Vec<(Diff<I::Pixel>)>
+pub fn pixel_diffs<I, J, F, P>(actual: &I, expected: &J, is_diff: F) -> Vec<(Diff<I::Pixel>)>
 where
     P: Pixel,
     I: GenericImage<Pixel = P>,
@@ -452,8 +455,9 @@ where
                 x: p.0,
                 y: p.1,
                 actual: p.2,
-                expected: q.2
-        }})
+                expected: q.2,
+            }
+        })
         .collect::<Vec<_>>()
 }
 
@@ -487,9 +491,9 @@ where
     let top_left = diffs.iter().fold((u32::MAX, u32::MAX), |acc, ref d| {
         (acc.0.min(d.x), acc.1.min(d.y))
     });
-    let bottom_right = diffs.iter().fold((0, 0), |acc, ref d| {
-        (acc.0.max(d.x), acc.1.max(d.y))
-    });
+    let bottom_right = diffs
+        .iter()
+        .fold((0, 0), |acc, ref d| (acc.0.max(d.x), acc.1.max(d.y)));
 
     // If all the diffs are contained in a small region of the image then render all of this
     // region, with a small margin.
@@ -502,25 +506,23 @@ where
         let diff_locations = diffs.iter().map(|d| (d.x, d.y)).collect::<HashSet<_>>();
 
         err.push_str(&colored(&"Actual:", Color::Red));
-        let actual_rendered = render_image_region(
-            actual,
-            left,
-            top,
-            right,
-            bottom,
-            |x, y| if diff_locations.contains(&(x, y)) { Color::Red } else { Color::Cyan }
-        );
+        let actual_rendered = render_image_region(actual, left, top, right, bottom, |x, y| {
+            if diff_locations.contains(&(x, y)) {
+                Color::Red
+            } else {
+                Color::Cyan
+            }
+        });
         err.push_str(&actual_rendered);
 
         err.push_str(&colored(&"Expected:", Color::Green));
-        let expected_rendered = render_image_region(
-            expected,
-            left,
-            top,
-            right,
-            bottom,
-            |x, y| if diff_locations.contains(&(x, y)) { Color::Green } else { Color::Cyan }
-        );
+        let expected_rendered = render_image_region(expected, left, top, right, bottom, |x, y| {
+            if diff_locations.contains(&(x, y)) {
+                Color::Green
+            } else {
+                Color::Cyan
+            }
+        });
         err.push_str(&expected_rendered);
 
         return err;
@@ -531,26 +533,40 @@ where
         &(diffs
             .iter()
             .take(5)
-            .map(|d| format!(
-                "\nlocation: {}, actual: {}, expected: {} ",
-                colored(&format!("{:?}", (d.x, d.y)), Color::Yellow),
-                colored(&render_pixel(d.actual), Color::Red),
-                colored(&render_pixel(d.expected), Color::Green))
-            )
+            .map(|d| {
+                format!(
+                    "\nlocation: {}, actual: {}, expected: {} ",
+                    colored(&format!("{:?}", (d.x, d.y)), Color::Yellow),
+                    colored(&render_pixel(d.actual), Color::Red),
+                    colored(&render_pixel(d.expected), Color::Green)
+                )
+            })
             .collect::<Vec<_>>()
-            .join(""))
+            .join("")),
     );
     err
 }
 
-enum Color { Red, Green, Cyan, Yellow }
+enum Color {
+    Red,
+    Green,
+    Cyan,
+    Yellow,
+}
 
-fn render_image_region<I, P, C>(image: &I, left: u32, top: u32, right: u32, bottom: u32, color: C) -> String
+fn render_image_region<I, P, C>(
+    image: &I,
+    left: u32,
+    top: u32,
+    right: u32,
+    bottom: u32,
+    color: C,
+) -> String
 where
     P: Pixel,
     P::Subpixel: fmt::Debug,
     I: GenericImage<Pixel = P>,
-    C: Fn(u32, u32) -> Color
+    C: Fn(u32, u32) -> Color,
 {
     let mut rendered = String::new();
 
@@ -578,7 +594,13 @@ where
     }
 
     // +--------------
-    write!(rendered, "\n  {}+{}", " ".repeat(max_digits), "-".repeat((pixel_column_width + 1) * num_columns + 1)).unwrap();
+    write!(
+        rendered,
+        "\n  {}+{}",
+        " ".repeat(max_digits),
+        "-".repeat((pixel_column_width + 1) * num_columns + 1)
+    )
+    .unwrap();
     // row_number |
     write!(rendered, "\n  {y:>w$}| ", y = " ", w = max_digits).unwrap();
 
@@ -589,7 +611,11 @@ where
 
         for x in left..right + 1 {
             // Pad pixel string to column width and right align
-            let padded = format!("{c:>w$}", c = rendered_pixels[count], w = pixel_column_width);
+            let padded = format!(
+                "{c:>w$}",
+                c = rendered_pixels[count],
+                w = pixel_column_width
+            );
             write!(rendered, "{} ", &colored(&padded, color(x, y))).unwrap();
             count += 1;
         }
@@ -608,7 +634,7 @@ where
     let cs = p.channels();
     match cs.len() {
         1 => format!("{:?}", cs[0]),
-        _ => format!("[{}]", cs.iter().map(|c| format!("{:?}", c)).join(", "))
+        _ => format!("[{}]", cs.iter().map(|c| format!("{:?}", c)).join(", ")),
     }
 }
 
@@ -617,7 +643,7 @@ fn colored(s: &str, c: Color) -> String {
         Color::Red => "\x1b[31m",
         Color::Green => "\x1b[32m",
         Color::Cyan => "\x1b[36m",
-        Color::Yellow => "\x1b[33m"
+        Color::Yellow => "\x1b[33m",
     };
     format!("{}{}\x1b[0m", escape_sequence, s)
 }
@@ -713,8 +739,6 @@ mod tests {
     #[test]
     fn test_pixel_diff_summary_handles_1x1_image() {
         let summary = pixel_diff_summary(&gray_image!(1), &gray_image!(0));
-        assert_eq!(
-            &summary.unwrap()[0..19],
-            "pixels do not match");
+        assert_eq!(&summary.unwrap()[0..19], "pixels do not match");
     }
 }
