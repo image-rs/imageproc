@@ -2,10 +2,10 @@
 //!
 //! [Hough transform]: https://en.wikipedia.org/wiki/Hough_transform
 
-use image::{GenericImage, GenericImageView, GrayImage, Luma, ImageBuffer, Pixel};
-use crate::drawing::draw_line_segment_mut;
 use crate::definitions::Image;
+use crate::drawing::draw_line_segment_mut;
 use crate::suppress::suppress_non_maximum;
+use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel};
 use std::f32;
 
 /// A detected line, in polar coordinates.
@@ -211,9 +211,12 @@ fn degrees_to_radians(degrees: u32) -> f32 {
 mod tests {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
-    fn assert_points_eq(actual: Option<((f32, f32), (f32, f32))>, expected: Option<((f32, f32), (f32, f32))>) {
+    fn assert_points_eq(
+        actual: Option<((f32, f32), (f32, f32))>,
+        expected: Option<((f32, f32), (f32, f32))>,
+    ) {
         match (actual, expected) {
             (None, None) => {}
             (Some(ps), Some(qs)) => {
@@ -222,15 +225,15 @@ mod tests {
                 };
 
                 match (points_eq(ps.0, qs.0), points_eq(ps.1, qs.1)) {
-                    (true, true) => {},
+                    (true, true) => {}
                     _ => {
                         panic!("Expected {:?}, got {:?}", expected, actual);
                     }
                 };
-            },
+            }
             (Some(_), None) => {
                 panic!("Expected None, got {:?}", actual);
-            },
+            }
             (None, Some(_)) => {
                 panic!("Expected {:?}, got None", expected);
             }
@@ -241,29 +244,64 @@ mod tests {
     fn intersection_points_zero_signed_distance() {
         // Vertical
         assert_points_eq(
-            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 0}, 10, 5),
-            Some(((0.0, 0.0), (0.0, 5.0)))
+            intersection_points(
+                PolarLine {
+                    r: 0.0,
+                    angle_in_degrees: 0,
+                },
+                10,
+                5,
+            ),
+            Some(((0.0, 0.0), (0.0, 5.0))),
         );
         // Horizontal
         assert_points_eq(
-            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 90}, 10, 5),
-            Some(((0.0, 0.0), (10.0, 0.0)))
+            intersection_points(
+                PolarLine {
+                    r: 0.0,
+                    angle_in_degrees: 90,
+                },
+                10,
+                5,
+            ),
+            Some(((0.0, 0.0), (10.0, 0.0))),
         );
         // Bottom left to top right
         assert_points_eq(
-            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 45}, 10, 5),
-            Some(((0.0, 0.0), (0.0, 0.0)))
+            intersection_points(
+                PolarLine {
+                    r: 0.0,
+                    angle_in_degrees: 45,
+                },
+                10,
+                5,
+            ),
+            Some(((0.0, 0.0), (0.0, 0.0))),
         );
         // Top left to bottom right
         assert_points_eq(
-            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 5),
-            Some(((0.0, 0.0), (5.0, 5.0)))
+            intersection_points(
+                PolarLine {
+                    r: 0.0,
+                    angle_in_degrees: 135,
+                },
+                10,
+                5,
+            ),
+            Some(((0.0, 0.0), (5.0, 5.0))),
         );
         // Top left to bottom right, square image (because a previous version of the code
         // got this case wrong)
         assert_points_eq(
-            intersection_points(PolarLine { r: 0.0, angle_in_degrees: 135}, 10, 10),
-            Some(((10.0, 10.0), (0.0, 0.0)))
+            intersection_points(
+                PolarLine {
+                    r: 0.0,
+                    angle_in_degrees: 135,
+                },
+                10,
+                10,
+            ),
+            Some(((10.0, 10.0), (0.0, 0.0))),
         );
     }
 
@@ -271,28 +309,63 @@ mod tests {
     fn intersection_points_positive_signed_distance() {
         // Vertical intersecting image
         assert_points_eq(
-            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 0}, 10, 5),
-            Some(((9.0, 0.0), (9.0, 5.0)))
+            intersection_points(
+                PolarLine {
+                    r: 9.0,
+                    angle_in_degrees: 0,
+                },
+                10,
+                5,
+            ),
+            Some(((9.0, 0.0), (9.0, 5.0))),
         );
         // Vertical outside image
         assert_points_eq(
-            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 0}, 5, 10),
-            None
+            intersection_points(
+                PolarLine {
+                    r: 8.0,
+                    angle_in_degrees: 0,
+                },
+                5,
+                10,
+            ),
+            None,
         );
         // Horizontal intersecting image
         assert_points_eq(
-            intersection_points(PolarLine { r: 9.0, angle_in_degrees: 90}, 5, 10),
-            Some(((0.0, 9.0), (5.0, 9.0)))
+            intersection_points(
+                PolarLine {
+                    r: 9.0,
+                    angle_in_degrees: 90,
+                },
+                5,
+                10,
+            ),
+            Some(((0.0, 9.0), (5.0, 9.0))),
         );
         // Horizontal outside image
         assert_points_eq(
-            intersection_points(PolarLine { r: 8.0, angle_in_degrees: 90}, 10, 5),
-            None
+            intersection_points(
+                PolarLine {
+                    r: 8.0,
+                    angle_in_degrees: 90,
+                },
+                10,
+                5,
+            ),
+            None,
         );
         // Positive gradient
         assert_points_eq(
-            intersection_points(PolarLine { r: 5.0, angle_in_degrees: 45}, 10, 5),
-            Some(((50f32.sqrt() - 5.0, 5.0), (50f32.sqrt(), 0.0)))
+            intersection_points(
+                PolarLine {
+                    r: 5.0,
+                    angle_in_degrees: 45,
+                },
+                10,
+                5,
+            ),
+            Some(((50f32.sqrt() - 5.0, 5.0), (50f32.sqrt(), 0.0))),
         );
     }
 
@@ -300,18 +373,39 @@ mod tests {
     fn intersection_points_negative_signed_distance() {
         // Vertical
         assert_points_eq(
-            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 0}, 10, 5),
-            None
+            intersection_points(
+                PolarLine {
+                    r: -1.0,
+                    angle_in_degrees: 0,
+                },
+                10,
+                5,
+            ),
+            None,
         );
         // Horizontal
         assert_points_eq(
-            intersection_points(PolarLine { r: -1.0, angle_in_degrees: 90}, 5, 10),
-            None
+            intersection_points(
+                PolarLine {
+                    r: -1.0,
+                    angle_in_degrees: 90,
+                },
+                5,
+                10,
+            ),
+            None,
         );
         // Negative gradient
         assert_points_eq(
-            intersection_points(PolarLine { r: -5.0, angle_in_degrees: 135}, 10, 5),
-            Some(((10.0, 10.0 - 50f32.sqrt()), (50f32.sqrt(), 0.0)))
+            intersection_points(
+                PolarLine {
+                    r: -5.0,
+                    angle_in_degrees: 135,
+                },
+                10,
+                5,
+            ),
+            Some(((10.0, 10.0 - 50f32.sqrt()), (50f32.sqrt(), 0.0))),
         );
     }
 
@@ -359,9 +453,22 @@ mod tests {
         assert_eq!(line.angle_in_degrees, 90);
     }
 
-    fn image_with_polar_line(width: u32, height: u32, r: f32, angle_in_degrees: u32, color: Luma<u8>) -> GrayImage {
+    fn image_with_polar_line(
+        width: u32,
+        height: u32,
+        r: f32,
+        angle_in_degrees: u32,
+        color: Luma<u8>,
+    ) -> GrayImage {
         let mut image = GrayImage::new(width, height);
-        draw_polar_line(&mut image, PolarLine { r, angle_in_degrees }, color);
+        draw_polar_line(
+            &mut image,
+            PolarLine {
+                r,
+                angle_in_degrees,
+            },
+            color,
+        );
         image
     }
 
@@ -446,7 +553,14 @@ mod tests {
                     suppression_radius: 8,
                 };
                 let mut image = GrayImage::new(100, 100);
-                draw_polar_line(&mut image, PolarLine { r: $r, angle_in_degrees: $angle}, Luma([255u8]));
+                draw_polar_line(
+                    &mut image,
+                    PolarLine {
+                        r: $r,
+                        angle_in_degrees: $angle,
+                    },
+                    Luma([255u8]),
+                );
 
                 b.iter(|| {
                     let lines = detect_lines(&image, options);
@@ -461,11 +575,13 @@ mod tests {
     bench_detect_lines!(bench_detect_line_neg10_120, -10.0, 120);
 
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(
-            width,
-            height,
-            |x, y| if (x + y) % 2 == 0 { Luma([255u8]) } else { Luma([0u8]) }
-        )
+        ImageBuffer::from_fn(width, height, |x, y| {
+            if (x + y) % 2 == 0 {
+                Luma([255u8])
+            } else {
+                Luma([0u8])
+            }
+        })
     }
 
     #[bench]

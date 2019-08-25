@@ -10,9 +10,15 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 #![allow(
-    clippy::cast_lossless, clippy::too_many_arguments, clippy::needless_range_loop,
-    clippy::useless_let_if_seq, clippy::match_wild_err_arm, clippy::range_plus_one,
-    clippy::trivially_copy_pass_by_ref, clippy::nonminimal_bool, clippy::expect_fun_call,
+    clippy::cast_lossless,
+    clippy::too_many_arguments,
+    clippy::needless_range_loop,
+    clippy::useless_let_if_seq,
+    clippy::match_wild_err_arm,
+    clippy::range_plus_one,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::nonminimal_bool,
+    clippy::expect_fun_call,
     clippy::many_single_char_names
 )]
 // This was added when bumping image from 0.21 to 0.22.1, as the new version
@@ -35,6 +41,7 @@ pub mod distance_transform;
 pub mod drawing;
 pub mod edges;
 pub mod filter;
+pub mod geometric_transformations;
 pub mod gradients;
 pub mod haar;
 pub mod hog;
@@ -46,7 +53,6 @@ pub mod math;
 pub mod morphology;
 pub mod noise;
 pub mod pixelops;
-pub mod geometric_transformations;
 #[cfg(any(feature = "property-testing", test))]
 pub mod property_testing;
 pub mod rect;

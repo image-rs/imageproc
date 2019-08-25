@@ -27,7 +27,7 @@ enum Sign {
     /// Top left region is counted with a positive sign.
     Positive,
     /// Top left region is counted with a negative sign.
-    Negative
+    Negative,
 }
 
 /// The type of a Haar-like feature determines the number of regions it contains and their orientation.
@@ -78,7 +78,7 @@ pub enum HaarFeatureType {
     ///     |  &  |  *  |
     ///      -----------
     /// </pre>
-    FourRegion
+    FourRegion,
 }
 
 impl HaarFeatureType {
@@ -89,7 +89,7 @@ impl HaarFeatureType {
             HaarFeatureType::ThreeRegionHorizontal => Size::new(3, 1),
             HaarFeatureType::TwoRegionVertical => Size::new(1, 2),
             HaarFeatureType::ThreeRegionVertical => Size::new(1, 3),
-            HaarFeatureType::FourRegion => Size::new(2, 2)
+            HaarFeatureType::FourRegion => Size::new(2, 2),
         }
     }
 }
@@ -122,6 +122,7 @@ impl HaarFeature {
         let e = self.block_boundary(0, 1);
         let f = self.block_boundary(1, 1);
 
+        #[rustfmt::skip]
         let sum = match self.feature_type {
             HaarFeatureType::TwoRegionHorizontal => {
                 let c = self.block_boundary(2, 0);
@@ -135,7 +136,7 @@ impl HaarFeature {
                         + 2 * read(integral, f)
                         - read(integral, g)
                 }
-            },
+            }
 
             HaarFeatureType::ThreeRegionHorizontal => {
                 let c = self.block_boundary(2, 0);
@@ -153,7 +154,7 @@ impl HaarFeature {
                         - 2 * read(integral, g)
                         + read(integral, h)
                 }
-            },
+            }
 
             HaarFeatureType::TwoRegionVertical => {
                 let i = self.block_boundary(0, 2);
@@ -167,7 +168,7 @@ impl HaarFeature {
                         + read(integral, i)
                         - read(integral, j)
                 }
-            },
+            }
 
             HaarFeatureType::ThreeRegionVertical => {
                 let i = self.block_boundary(0, 2);
@@ -185,7 +186,7 @@ impl HaarFeature {
                         - read(integral, m)
                         + read(integral, n)
                 }
-            },
+            }
 
             HaarFeatureType::FourRegion => {
                 let c = self.block_boundary(2, 0);
@@ -208,12 +209,19 @@ impl HaarFeature {
             }
         };
 
-        let mul = if self.sign == Sign::Positive { 1i32 } else { -1i32 };
+        let mul = if self.sign == Sign::Positive {
+            1i32
+        } else {
+            -1i32
+        };
         sum * mul
     }
 
     fn block_boundary(&self, x: u8, y: u8) -> (u8, u8) {
-        (self.left + x * self.block_width(), self.top + y * self.block_height())
+        (
+            self.left + x * self.block_width(),
+            self.top + y * self.block_height(),
+        )
     }
 
     /// Width of this feature in blocks.
@@ -244,7 +252,10 @@ unsafe fn read(integral: &Image<Luma<u32>>, location: (u8, u8)) -> i32 {
 // The total width and height of a feature with the given type and block size.
 fn feature_size(feature_type: HaarFeatureType, block_size: Size<Pixels>) -> Size<Pixels> {
     let shape = feature_type.shape();
-    Size::new(shape.width * block_size.width, shape.height * block_size.height)
+    Size::new(
+        shape.width * block_size.width,
+        shape.height * block_size.height,
+    )
 }
 
 /// Returns a vector of all valid Haar-like features for an image with given width and height.
@@ -256,7 +267,7 @@ pub fn enumerate_haar_features(frame_width: u8, frame_height: u8) -> Vec<HaarFea
         HaarFeatureType::ThreeRegionHorizontal,
         HaarFeatureType::TwoRegionVertical,
         HaarFeatureType::ThreeRegionVertical,
-        HaarFeatureType::FourRegion
+        HaarFeatureType::FourRegion,
     ];
 
     feature_types
@@ -265,13 +276,22 @@ pub fn enumerate_haar_features(frame_width: u8, frame_height: u8) -> Vec<HaarFea
         .collect()
 }
 
-fn haar_features_of_type(feature_type: HaarFeatureType, frame_size: Size<Pixels>) -> Vec<HaarFeature> {
+fn haar_features_of_type(
+    feature_type: HaarFeatureType,
+    frame_size: Size<Pixels>,
+) -> Vec<HaarFeature> {
     let mut features = Vec::new();
 
     for block_size in block_sizes(feature_type.shape(), frame_size) {
         for (left, top) in feature_positions(feature_size(feature_type, block_size), frame_size) {
             for &sign in [Sign::Positive, Sign::Negative].iter() {
-                features.push(HaarFeature { sign, feature_type, block_size, left, top });
+                features.push(HaarFeature {
+                    sign,
+                    feature_type,
+                    block_size,
+                    left,
+                    top,
+                });
             }
         }
     }
@@ -292,7 +312,7 @@ struct Blocks(u8);
 struct Size<T> {
     width: u8,
     height: u8,
-    units: PhantomData<T>
+    units: PhantomData<T>,
 }
 
 impl<T> Size<T> {
@@ -300,7 +320,7 @@ impl<T> Size<T> {
         Size {
             width,
             height,
-            units: PhantomData
+            units: PhantomData,
         }
     }
 }
@@ -316,7 +336,7 @@ fn block_sizes(feature_shape: Size<Blocks>, frame_size: Size<Pixels>) -> Vec<Siz
 // Returns the start positions for an interval of length `inner` for which the
 // interval is wholly contained within an interval of length `outer`.
 fn start_positions(inner: u8, outer: u8) -> Range<u8> {
-    let upper = if inner > outer { 0 } else { outer - inner + 1};
+    let upper = if inner > outer { 0 } else { outer - inner + 1 };
     0..upper
 }
 
@@ -362,8 +382,9 @@ fn num_features(image_side: u32, num_blocks: u32) -> u32 {
 /// Draws the given Haar-like feature on an image, drawing pixels
 /// with a positive sign white and those with a negative sign black.
 pub fn draw_haar_feature<I>(image: &I, feature: HaarFeature) -> Image<I::Pixel>
-    where I: GenericImage,
-          I::Pixel: HasBlack + HasWhite + 'static
+where
+    I: GenericImage,
+    I::Pixel: HasBlack + HasWhite + 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0);
@@ -374,15 +395,20 @@ pub fn draw_haar_feature<I>(image: &I, feature: HaarFeature) -> Image<I::Pixel>
 /// Draws the given Haar-like feature on an image in place, drawing pixels
 /// with a positive sign white and those with a negative sign black.
 pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
-    where I: GenericImage,
-          I::Pixel: HasBlack + HasWhite
+where
+    I: GenericImage,
+    I::Pixel: HasBlack + HasWhite,
 {
     let parity_shift = if feature.sign == Sign::Positive { 0 } else { 1 };
 
     for w in 0..feature.blocks_wide() {
         for h in 0..feature.blocks_high() {
             let parity = (w + h + parity_shift) % 2;
-            let color = if parity == 0 { I::Pixel::white() } else { I::Pixel::black() };
+            let color = if parity == 0 {
+                I::Pixel::white()
+            } else {
+                I::Pixel::black()
+            };
             for x in 0..feature.block_width() {
                 for y in 0..feature.block_height() {
                     let px = feature.left + w * feature.block_width() + x;
@@ -404,35 +430,53 @@ mod tests {
     #[test]
     fn test_block_sizes() {
         assert_eq!(
-            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(1, 1)),
-            vec![]);
+            block_sizes(
+                HaarFeatureType::TwoRegionHorizontal.shape(),
+                Size::new(1, 1)
+            ),
+            vec![]
+        );
 
         assert_eq!(
-            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(2, 1)),
-            vec![Size::new(1, 1)]);
+            block_sizes(
+                HaarFeatureType::TwoRegionHorizontal.shape(),
+                Size::new(2, 1)
+            ),
+            vec![Size::new(1, 1)]
+        );
 
         assert_eq!(
-            block_sizes(HaarFeatureType::TwoRegionHorizontal.shape(), Size::new(5, 1)),
-            vec![Size::new(1, 1), Size::new(2, 1)]);
+            block_sizes(
+                HaarFeatureType::TwoRegionHorizontal.shape(),
+                Size::new(5, 1)
+            ),
+            vec![Size::new(1, 1), Size::new(2, 1)]
+        );
 
         assert_eq!(
             block_sizes(HaarFeatureType::TwoRegionVertical.shape(), Size::new(1, 2)),
-            vec![Size::new(1, 1)]);
+            vec![Size::new(1, 1)]
+        );
     }
 
     #[test]
     fn test_feature_positions() {
-        assert_eq!(feature_positions(Size::new(2, 3), Size::new(2, 2)),
-            vec![]);
+        assert_eq!(feature_positions(Size::new(2, 3), Size::new(2, 2)), vec![]);
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(2, 2)),
-            vec![(0, 0)]);
+        assert_eq!(
+            feature_positions(Size::new(2, 2), Size::new(2, 2)),
+            vec![(0, 0)]
+        );
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 2)),
-            vec![(0, 0), (1, 0)]);
+        assert_eq!(
+            feature_positions(Size::new(2, 2), Size::new(3, 2)),
+            vec![(0, 0), (1, 0)]
+        );
 
-        assert_eq!(feature_positions(Size::new(2, 2), Size::new(3, 3)),
-            vec![(0, 0), (0, 1), (1, 0), (1, 1)]);
+        assert_eq!(
+            feature_positions(Size::new(2, 2), Size::new(3, 3)),
+            vec![(0, 0), (0, 1), (1, 0), (1, 1)]
+        );
     }
 
     #[test]
@@ -456,7 +500,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(1, 1),
             left: 0,
-            top: 0
+            top: 0,
         };
         // For a haar feature of width 2 the input image needs to have width
         // at least 2, and so its integral image needs to have width at least 3.
@@ -471,7 +515,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(1, 1),
             left: 0,
-            top: 0
+            top: 0,
         };
         let x = feature.evaluate(&image);
         assert_eq!(x, 1);
@@ -486,7 +530,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(1, 1),
             left: 1,
-            top: 0
+            top: 0,
         };
         // The feature's left offset would result in attempting to
         // read outside the image boundaries
@@ -501,7 +545,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(1, 1),
             left: 1,
-            top: 0
+            top: 0,
         };
         let x = feature.evaluate(&image);
         assert_eq!(x, 0);
@@ -524,7 +568,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(2, 3),
             left: 1,
-            top: 1
+            top: 1,
         };
         assert_eq!(feature.evaluate(&integral), 14i32);
     }
@@ -548,7 +592,7 @@ mod tests {
             feature_type: HaarFeatureType::ThreeRegionVertical,
             block_size: Size::new(2, 1),
             left: 0,
-            top: 0
+            top: 0,
         };
         assert_eq!(feature.evaluate(&integral), -7i32);
     }
@@ -571,7 +615,7 @@ mod tests {
             feature_type: HaarFeatureType::FourRegion,
             block_size: Size::new(2, 2),
             left: 1,
-            top: 0
+            top: 0,
         };
 
         assert_eq!(feature.evaluate(&integral), -6i32);
@@ -593,7 +637,13 @@ mod tests {
                 let parity = (w + h + parity_shift) & 1;
                 let multiplier = 1 - 2 * (parity as i32);
 
-                let block_sum = sum_image_pixels(integral, left as u32, top as u32, right as u32, bottom as u32)[0] as i32;
+                let block_sum = sum_image_pixels(
+                    integral,
+                    left as u32,
+                    top as u32,
+                    right as u32,
+                    bottom as u32,
+                )[0] as i32;
                 sum += multiplier * block_sum;
             }
         }
@@ -634,7 +684,7 @@ mod tests {
             feature_type: HaarFeatureType::TwoRegionHorizontal,
             block_size: Size::new(2, 3),
             left: 1,
-            top: 1
+            top: 1,
         };
         let actual = draw_haar_feature(&image, feature);
 
@@ -667,7 +717,7 @@ mod tests {
             feature_type: HaarFeatureType::FourRegion,
             block_size: Size::new(2, 2),
             left: 1,
-            top: 0
+            top: 0,
         };
 
         let actual = draw_haar_feature(&image, feature);

@@ -1,10 +1,10 @@
 //! Functions for detecting edges in images.
 
-use std::f32;
-use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
-use crate::gradients::{vertical_sobel, horizontal_sobel};
-use crate::definitions::{HasWhite, HasBlack};
+use crate::definitions::{HasBlack, HasWhite};
 use crate::filter::gaussian_blur_f32;
+use crate::gradients::{horizontal_sobel, vertical_sobel};
+use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+use std::f32;
 
 /// Runs the canny edge detection algorithm.
 ///
@@ -37,7 +37,8 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
     // 2. Intensity of gradients.
     let gx = horizontal_sobel(&blurred);
     let gy = vertical_sobel(&blurred);
-    let g: Vec<f32> = gx.iter()
+    let g: Vec<f32> = gx
+        .iter()
         .zip(gy.iter())
         .map(|(h, v)| (*h as f32).hypot(*v as f32))
         .collect::<Vec<f32>>();
@@ -84,19 +85,15 @@ fn non_maximum_suppression(
             let (cmp1, cmp2) = unsafe {
                 match clamped_angle {
                     0 => (g.unsafe_get_pixel(x - 1, y), g.unsafe_get_pixel(x + 1, y)),
-                    45 => {
-                        (
-                            g.unsafe_get_pixel(x + 1, y + 1),
-                            g.unsafe_get_pixel(x - 1, y - 1),
-                        )
-                    }
+                    45 => (
+                        g.unsafe_get_pixel(x + 1, y + 1),
+                        g.unsafe_get_pixel(x - 1, y - 1),
+                    ),
                     90 => (g.unsafe_get_pixel(x, y - 1), g.unsafe_get_pixel(x, y + 1)),
-                    135 => {
-                        (
-                            g.unsafe_get_pixel(x - 1, y + 1),
-                            g.unsafe_get_pixel(x + 1, y - 1),
-                        )
-                    }
+                    135 => (
+                        g.unsafe_get_pixel(x - 1, y + 1),
+                        g.unsafe_get_pixel(x + 1, y - 1),
+                    ),
                     _ => unreachable!(),
                 }
             };
@@ -119,7 +116,6 @@ fn hysteresis(
     low_thresh: f32,
     high_thresh: f32,
 ) -> ImageBuffer<Luma<u8>, Vec<u8>> {
-
     let max_brightness = Luma::white();
     let min_brightness = Luma::black();
     // Init output image as all black.
@@ -166,8 +162,8 @@ mod tests {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;
-    use image::{GrayImage, Luma};
     use ::test;
+    use image::{GrayImage, Luma};
 
     fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
         let mut image = GrayImage::new(width, height);
