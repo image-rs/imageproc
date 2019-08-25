@@ -1,9 +1,9 @@
-use image::{GenericImage, ImageBuffer};
 use crate::definitions::Image;
+use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use crate::rect::Rect;
+use image::{GenericImage, ImageBuffer};
 use std::f32;
-use crate::drawing::line::draw_line_segment_mut;
 
 /// Draws as much of the boundary of a rectangle as lies inside the image bounds.
 pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
@@ -67,10 +67,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rect::Rect;
     use crate::drawing::Blend;
-    use image::{GrayImage, Luma, Pixel, RgbImage, Rgb, RgbaImage, Rgba};
-    use test::{Bencher, black_box};
+    use crate::rect::Rect;
+    use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
@@ -124,20 +124,22 @@ mod tests {
         let mut image = Blend(RgbaImage::from_pixel(5, 5, white));
 
         draw_filled_rect_mut(&mut image, Rect::at(1, 1).of_size(3, 3), blue);
-        draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), semi_transparent_red);
+        draw_filled_rect_mut(
+            &mut image,
+            Rect::at(2, 2).of_size(1, 1),
+            semi_transparent_red,
+        );
 
         // The central pixel should be blended
         let mut blended = blue;
         blended.blend(&semi_transparent_red);
 
         let expected = vec![
-            white, white,  white,  white, white,
-            white,  blue,   blue,   blue, white,
-            white,  blue, blended,  blue, white,
-            white,  blue,   blue,   blue, white,
-            white, white,  white,  white, white
+            white, white, white, white, white, white, blue, blue, blue, white, white, blue,
+            blended, blue, white, white, blue, blue, blue, white, white, white, white, white,
+            white,
         ];
-        let expected = RgbaImage::from_fn(5, 5, |x, y| { expected[(y * 5 + x) as usize] });
+        let expected = RgbaImage::from_fn(5, 5, |x, y| expected[(y * 5 + x) as usize]);
 
         assert_pixels_eq!(image.0, expected);
 
