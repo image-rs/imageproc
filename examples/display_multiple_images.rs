@@ -1,4 +1,4 @@
-//! Run this example from your root directory, enabled the display_image feature and
+//! Run this example from your root directory, enable the display_image feature and
 //! provide a path to an image file as an argument.
 //!
 //! `cargo run --release --features display-window --example display_multiple_images examples/wrench.jpg examples/empire-state-building.jpg`
