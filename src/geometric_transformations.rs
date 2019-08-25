@@ -1,4 +1,4 @@
-//! Geometric transformations of images. This includes rotations, translation, scaling and general
+//! Geometric transformations of images. This includes rotations, translation, and general
 //! projective transformations.
 
 use std::ops::Mul;
@@ -23,9 +23,13 @@ enum TransformationClass {
 ///
 /// ```
 /// use imageproc::geometric_transformations::*;
+/// use std::f32::consts::PI;
+///
 /// let (cx, cy) = (320.0, 240.0);
-/// let theta = 30f32.to_radians();
-/// let c_rotation = Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
+///
+/// let c_rotation = Projection::translate(cx, cy)
+///     * Projection::rotate(PI / 6.0)
+///     * Projection::translate(-cx, -cy);
 /// ```
 /// 
 /// See ./examples/projection.rs for more examples.
@@ -87,6 +91,9 @@ impl Projection {
     }
 
     /// An anisotropic scaling (sx, sy).
+    /// 
+    /// Note that the `warp` function does not change the size of the input image.
+    /// If you want to resize an image then use the `imageops` module in the `image` crate.
     pub fn scale(sx: f32, sy: f32) -> Projection {
         Projection {
             transform: [
@@ -342,8 +349,8 @@ where
 /// The returned image has the same dimensions as `image`. Output pixels
 /// whose pre-image lies outside the input image are set to `default`.
 /// 
-/// The provided projection defines a mapping from coordinates in the input image to coordinates in
-/// the output image.
+/// The provided projection defines a mapping from locations in the input image to their
+/// corresponding location in the output image.
 pub fn warp<P>(
     image: &Image<P>,
     projection: &Projection,
@@ -394,8 +401,23 @@ pub fn warp_into<P>(
     }
 }
 
-/// Transforms input `image` into output image of the same size.
-/// F `mapping` is the coordinate mapping function, mapping coordinates from out to in.
+/// Warps an image using the provided function to define the pre-image of each output pixel.
+/// 
+/// # Examples
+/// Applying a wave pattern.
+/// ```
+/// use image::{ImageBuffer, Luma};
+/// use imageproc::utils::gray_bench_image;
+/// use imageproc::geometric_transformations::*;
+///
+/// let image = gray_bench_image(300, 300);
+/// let warped = warp_with(
+///     &image,
+///     |x, y| (x, y + (x / 30.0).sin()),
+///     Interpolation::Nearest,
+///     Luma([0u8])
+/// );
+/// ```
 pub fn warp_with<P, F>(
     image: &Image<P>,
     mapping: F,
@@ -414,18 +436,10 @@ where
     out
 }
 
-/// Warp image with custom function.
-/// This enables the user to define a custom mapping such as a wave pattern:
-/// ```
-/// use image::{ImageBuffer, Luma};
-/// use imageproc::utils::gray_bench_image;
-/// use imageproc::geometric_transformations::*;
-///
-/// let img = gray_bench_image(300, 300);
-/// let mut out = ImageBuffer::new(300, 300);
-/// warp_into_with(&img, |x, y| (x, y+(x/30.0).sin()), Interpolation::Nearest, Luma([0u8]), &mut
-/// out);
-/// ```
+/// Warps an image using the provided function to define the pre-image of each output pixel,
+/// writing into a preallocated output.
+/// 
+/// See the [`warp_with`](fn.warp_with.html) documentation for more information.
 pub fn warp_into_with<P, F>(
     image: &Image<P>,
     mapping: F,

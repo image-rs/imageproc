@@ -40,6 +40,14 @@ fn main() -> Result<()> {
         Rgb([255, 0, 0])
     ).save(output_dir.join("translated.png"))?;
 
+    let inverse_translation = translate.invert();
+    warp(
+        &image,
+        &inverse_translation,
+        Interpolation::Bilinear,
+        Rgb([255, 0, 0])
+    ).save(output_dir.join("translated_inverse.png"))?;
+
     let rotate = Projection::rotate(45f32.to_radians());
     warp(
         &image,
@@ -73,7 +81,15 @@ fn main() -> Result<()> {
         Rgb([255, 0, 0])
     ).save(output_dir.join("rotated_about_center.png"))?;
 
-    // need to demo scale, invert, from_control_points
+    let scale = Projection::scale(2.0, 3.0);
+    warp(
+        &image,
+        &scale,
+        Interpolation::Bilinear,
+        Rgb([255, 0, 0])
+    ).save(output_dir.join("scaled.png"))?;
+
+    // need to demo from_control_points
 
     Ok(())
 }
