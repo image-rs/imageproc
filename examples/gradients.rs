@@ -1,6 +1,7 @@
 //! An example of finding gradients in a greyscale image.
 //! If running from the root directory of this crate you can test on the
-//! wrench image in /examples by running
+//! building image in /examples by running the following command line.
+//! 
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{GrayImage, Luma, open};
