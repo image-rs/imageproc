@@ -1,21 +1,21 @@
 //! Statistical properties of images.
 
-use image::{GenericImage, GrayImage, Pixel, Primitive};
 use crate::definitions::Image;
-use num::Bounded;
 use crate::math::cast;
 use conv::ValueInto;
+use image::{GenericImage, GrayImage, Pixel, Primitive};
+use num::Bounded;
 
 /// A set of per-channel histograms from an image with 8 bits per channel.
 pub struct ChannelHistogram {
     /// Per-channel histograms.
-    pub channels: Vec<[u32; 256]>
+    pub channels: Vec<[u32; 256]>,
 }
 
 /// Returns a vector of per-channel histograms.
 pub fn histogram<P>(image: &Image<P>) -> ChannelHistogram
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let mut hist = vec![[0u32; 256]; P::channel_count() as usize];
 
@@ -31,13 +31,13 @@ where
 /// A set of per-channel cumulative histograms from an image with 8 bits per channel.
 pub struct CumulativeChannelHistogram {
     /// Per-channel cumulative histograms.
-    pub channels: Vec<[u32; 256]>
+    pub channels: Vec<[u32; 256]>,
 }
 
 /// Returns per-channel cumulative histograms.
 pub fn cumulative_histogram<P>(image: &Image<P>) -> CumulativeChannelHistogram
 where
-    P: Pixel<Subpixel=u8> + 'static
+    P: Pixel<Subpixel = u8> + 'static,
 {
     let mut hist = histogram(image);
 
@@ -47,7 +47,9 @@ where
         }
     }
 
-    CumulativeChannelHistogram { channels: hist.channels }
+    CumulativeChannelHistogram {
+        channels: hist.channels,
+    }
 }
 
 /// Returns the `p`th percentile of the pixel intensities in an image.
@@ -153,7 +155,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, RgbImage, Luma, Rgb};
+    use image::{GrayImage, Luma, Rgb, RgbImage};
     use test::Bencher;
 
     #[test]
@@ -168,7 +170,11 @@ mod tests {
     #[test]
     fn test_cumulative_histogram_rgb() {
         let image = rgb_image!(
-            [1u8, 10u8, 1u8], [2u8, 20u8, 2u8], [3u8, 30u8, 3u8], [2u8, 20u8, 2u8], [1u8, 10u8, 1u8]
+            [1u8, 10u8, 1u8],
+            [2u8, 20u8, 2u8],
+            [3u8, 30u8, 3u8],
+            [2u8, 20u8, 2u8],
+            [1u8, 10u8, 1u8]
         );
 
         let hist = cumulative_histogram(&image);
@@ -200,7 +206,11 @@ mod tests {
     #[test]
     fn test_histogram_rgb() {
         let image = rgb_image!(
-            [1u8, 10u8, 1u8], [2u8, 20u8, 2u8], [3u8, 30u8, 3u8], [2u8, 20u8, 2u8], [1u8, 10u8, 1u8]
+            [1u8, 10u8, 1u8],
+            [2u8, 20u8, 2u8],
+            [3u8, 30u8, 3u8],
+            [2u8, 20u8, 2u8],
+            [1u8, 10u8, 1u8]
         );
 
         let hist = histogram(&image);
