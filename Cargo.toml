@@ -6,7 +6,8 @@ edition = "2018"
 license = "MIT"
 description = "Image processing operations"
 readme = "README.md"
-homepage = "https://github.com/PistonDevelopers/imageproc"
+repository = "https://github.com/image-rs/imageproc.git"
+homepage = "https://github.com/image-rs/imageproc"
 exclude = ["examples/*.ttf"]
 
 [features]
