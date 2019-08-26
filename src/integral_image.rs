@@ -302,6 +302,11 @@ pub fn variance(
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
 ///
+/// # Panics
+/// - If `buffer.len() < 2 * padding + image.width()`.
+/// - If `row >= image.height()`.
+/// - If `image.width() == 0`.
+///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -325,36 +330,34 @@ pub fn variance(
 pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
+    let (width, padding) = (width as usize, padding as usize);
     assert!(
-        buffer.len() >= (width + 2 * padding) as usize,
-        format!(
-            "Buffer length {} is less than {} + 2 * {}",
-            buffer.len(),
-            width,
-            padding
-        )
+        buffer.len() >= width + 2 * padding,
+        "Buffer length {} is less than {} + 2 * {}",
+        buffer.len(),
+        width,
+        padding
     );
-    assert!(
-        row < height,
-        format!("row out of bounds: {} >= {}", row, height)
-    );
+    assert!(row < height, "row out of bounds: {} >= {}", row, height);
+    assert!(width > 0, "image is empty");
 
-    unsafe {
-        let mut sum = 0;
-        for x in 0..padding {
-            sum += image.unsafe_get_pixel(0, row)[0] as u32;
-            *buffer.get_unchecked_mut(x as usize) = sum;
-        }
+    let row_data = &(**image)[width * row as usize..][..width];
+    let first = row_data[0] as u32;
+    let last = row_data[width - 1] as u32;
 
-        for x in 0..width {
-            sum += image.unsafe_get_pixel(x, row)[0] as u32;
-            *buffer.get_unchecked_mut((x + padding) as usize) = sum;
-        }
+    let mut sum = 0;
 
-        for x in 0..padding {
-            sum += image.unsafe_get_pixel(width - 1, row)[0] as u32;
-            *buffer.get_unchecked_mut((x + width + padding) as usize) = sum;
-        }
+    for b in &mut buffer[..padding] {
+        sum += first;
+        *b = sum;
+    }
+    for (b, p) in buffer[padding..].iter_mut().zip(row_data) {
+        sum += *p as u32;
+        *b = sum;
+    }
+    for b in &mut buffer[padding + width..] {
+        sum += last;
+        *b = sum;
     }
 }
 
