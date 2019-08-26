@@ -139,8 +139,7 @@ where
             let current = out.get_pixel_mut(x + 1, y + 1);
             // Using zip here makes this slower.
             for c in 0..P::channel_count() {
-                current.channels_mut()[c as usize] =
-                    above.channels()[c as usize] + sum[c as usize];
+                current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
             }
         }
     }
