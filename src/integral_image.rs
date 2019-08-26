@@ -117,7 +117,7 @@ where
         for x in 0..in_width {
             // JUSTIFICATION
             //  Benefit
-            //      Using checked accessing here makes bench_integral_image_rgb take 1.05x as long
+            //      Using checked indexing here makes bench_integral_image_rgb take 1.05x as long
             //      (The results are noisy, but this seems to be reproducible. I've not checked the generated assembly.)
             //  Correctness
             //      x and y are within bounds by definition of in_width and in_height
@@ -129,7 +129,7 @@ where
 
             // JUSTIFICATION
             //  Benefit
-            //      Using checked accessing here makes bench_integral_image_rgb take 1.05x as long
+            //      Using checked indexing here makes bench_integral_image_rgb take 1.05x as long
             //      (The results are noisy, but this seems to be reproducible. I've not checked the generated assembly.)
             //  Correctness
             //      0 <= x < in_width, 0 <= y < in_height and out has width in_width + 1 and height in_height + 1
