@@ -165,6 +165,12 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let total = hist[255] as f32;
 
     image.par_iter_mut().for_each(|p| {
+        // JUSTIFICATION
+        //  Benefit
+        //      Using checked indexing here makes this function take 1.1x longer, as measured
+        //      by bench_equalize_histogram_mut
+        //  Correctness
+        //      Each channel of CumulativeChannelHistogram has length 256, and a GrayImage has 8 bits per pixel
         let fraction = unsafe { *hist.get_unchecked(*p as usize) as f32 / total };
         *p = (f32::min(255f32, 255f32 * fraction)) as u8;
     });
