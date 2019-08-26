@@ -1,17 +1,18 @@
-
-use image::{GrayImage, open, Luma, Pixel};
-use imageproc::seam_carving::*;
-use imageproc::map::map_colors;
+use image::{open, GrayImage, Luma, Pixel};
 use imageproc::definitions::Clamp;
 use imageproc::gradients::sobel_gradient_map;
+use imageproc::map::map_colors;
+use imageproc::seam_carving::*;
 use std::env;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 fn main() {
     if env::args().len() != 3 {
-        panic!("Please enter an input file and a target directory. For example:
-    cargo run --release --example seam_carving PATH_TO_IMAGE temp");
+        panic!(
+            "Please enter an input file and a target directory. For example:
+    cargo run --release --example seam_carving PATH_TO_IMAGE temp"
+        );
     }
 
     let input_path = env::args().nth(1).unwrap();
@@ -36,7 +37,7 @@ fn main() {
     // Save original image in output directory
     let original_path = output_dir.join("original.png");
     input_image.save(&original_path).unwrap();
-    
+
     // We will reduce the image width by this amount, removing one seam at a time.
     let seams_to_remove = 300;
 

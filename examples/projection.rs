@@ -6,7 +6,7 @@
 //! `cargo run --release --example projection ./examples/empire-state-building.jpg ./tmp
 
 use image::{open, Rgb};
-use imageproc::geometric_transformations::{Interpolation, Projection, warp};
+use imageproc::geometric_transformations::{warp, Interpolation, Projection};
 use std::{env, fs, io::Result, path::Path};
 
 fn main() -> Result<()> {
@@ -37,57 +37,55 @@ fn main() -> Result<()> {
         &image,
         &translate,
         Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("translated.png"))?;
+        Rgb([255, 0, 0]),
+    )
+    .save(output_dir.join("translated.png"))?;
 
     let inverse_translation = translate.invert();
     warp(
         &image,
         &inverse_translation,
         Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("translated_inverse.png"))?;
+        Rgb([255, 0, 0]),
+    )
+    .save(output_dir.join("translated_inverse.png"))?;
 
     let rotate = Projection::rotate(45f32.to_radians());
-    warp(
-        &image,
-        &rotate,
-        Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("rotated.png"))?;
+    warp(&image, &rotate, Interpolation::Bilinear, Rgb([255, 0, 0]))
+        .save(output_dir.join("rotated.png"))?;
 
     let rotate_then_translate = translate * rotate;
     warp(
         &image,
         &rotate_then_translate,
         Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("rotated_then_translated.png"))?;
+        Rgb([255, 0, 0]),
+    )
+    .save(output_dir.join("rotated_then_translated.png"))?;
 
     let translate_then_rotate = rotate * translate;
     warp(
         &image,
         &translate_then_rotate,
         Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("translated_then_rotated.png"))?;
+        Rgb([255, 0, 0]),
+    )
+    .save(output_dir.join("translated_then_rotated.png"))?;
 
     let (cx, cy) = (image.width() as f32 / 2.0, image.height() as f32 / 2.0);
-    let rotate_about_center = Projection::translate(cx, cy) * rotate * Projection::translate(-cx, -cy);
+    let rotate_about_center =
+        Projection::translate(cx, cy) * rotate * Projection::translate(-cx, -cy);
     warp(
         &image,
         &rotate_about_center,
         Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("rotated_about_center.png"))?;
+        Rgb([255, 0, 0]),
+    )
+    .save(output_dir.join("rotated_about_center.png"))?;
 
     let scale = Projection::scale(2.0, 3.0);
-    warp(
-        &image,
-        &scale,
-        Interpolation::Bilinear,
-        Rgb([255, 0, 0])
-    ).save(output_dir.join("scaled.png"))?;
+    warp(&image, &scale, Interpolation::Bilinear, Rgb([255, 0, 0]))
+        .save(output_dir.join("scaled.png"))?;
 
     Ok(())
 }

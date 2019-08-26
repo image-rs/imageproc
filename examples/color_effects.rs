@@ -1,10 +1,10 @@
 //! Demonstrates adding a color tint and applying a color gradient to a grayscale image.
 
-use std::env;
-use std::path::Path;
-use image::{Luma, open, Rgb};
+use image::{open, Luma, Rgb};
 use imageproc::map::map_colors;
 use imageproc::pixelops::weighted_sum;
+use std::env;
+use std::path::Path;
 
 /// Tint a grayscale value with the given color.
 /// Midtones are tinted most heavily.
@@ -18,19 +18,22 @@ pub fn tint(gray: Luma<u8>, color: Rgb<u8>) -> Rgb<u8> {
 /// half of maximum brightness and between mid and high for those above.
 pub fn color_gradient(gray: Luma<u8>, low: Rgb<u8>, mid: Rgb<u8>, high: Rgb<u8>) -> Rgb<u8> {
     let fraction = gray[0] as f32 / 255f32;
-    let (lower, upper, offset) = if fraction < 0.5 { (low, mid, 0.0) } else { (mid, high, 0.5) };
+    let (lower, upper, offset) = if fraction < 0.5 {
+        (low, mid, 0.0)
+    } else {
+        (mid, high, 0.5)
+    };
     let right_weight = 2.0 * (fraction - offset);
     let left_weight = 1.0 - right_weight;
     weighted_sum(lower, upper, left_weight, right_weight)
 }
 
 fn main() {
-
     let arg = if env::args().count() == 2 {
-            env::args().nth(1).unwrap()
-        } else {
-            panic!("Please enter an input file")
-        };
+        env::args().nth(1).unwrap()
+    } else {
+        panic!("Please enter an input file")
+    };
     let path = Path::new(&arg);
 
     // Load a image::DynamicImage and convert it to a image::GrayImage

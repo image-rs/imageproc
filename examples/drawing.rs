@@ -1,25 +1,21 @@
 //! An example using the drawing functions. Writes to the user-provided target file.
 
+use image::{Rgb, RgbImage};
+use imageproc::drawing::{
+    draw_cross_mut, draw_filled_circle_mut, draw_filled_rect_mut, draw_hollow_circle_mut,
+    draw_hollow_rect_mut, draw_line_segment_mut,
+};
+use imageproc::rect::Rect;
 use std::env;
 use std::path::Path;
-use image::{Rgb, RgbImage};
-use imageproc::rect::Rect;
-use imageproc::drawing::{
-    draw_cross_mut,
-    draw_line_segment_mut,
-    draw_hollow_rect_mut,
-    draw_filled_rect_mut,
-    draw_hollow_circle_mut,
-    draw_filled_circle_mut
-};
 
+#[rustfmt::skip]
 fn main() {
-
     let arg = if env::args().count() == 2 {
-            env::args().nth(1).unwrap()
-        } else {
-            panic!("Please enter a target file path")
-        };
+        env::args().nth(1).unwrap()
+    } else {
+        panic!("Please enter a target file path")
+    };
 
     let path = Path::new(&arg);
 

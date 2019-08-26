@@ -202,17 +202,37 @@ fn test_rotate_bilinear_rgba() {
 #[test]
 fn test_rotate_bicubic_rgb() {
     fn rotate_bicubic_about_center(image: &RgbImage) -> RgbImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bicubic, Rgb::black())
+        rotate_about_center(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bicubic,
+            Rgb::black(),
+        )
     }
-    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_rotate_bicubic.png", rotate_bicubic_about_center, 2);
+    compare_to_truth_rgb_with_tolerance(
+        "elephant.png",
+        "elephant_rotate_bicubic.png",
+        rotate_bicubic_about_center,
+        2,
+    );
 }
 
 #[test]
 fn test_rotate_bicubic_rgba() {
     fn rotate_bicubic_about_center(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(image, std::f32::consts::PI/4f32, Interpolation::Bicubic, Rgba::black())
+        rotate_about_center(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bicubic,
+            Rgba::black(),
+        )
     }
-    compare_to_truth_rgba_with_tolerance("elephant_rgba.png", "elephant_rotate_bicubic_rgba.png", rotate_bicubic_about_center, 2);
+    compare_to_truth_rgba_with_tolerance(
+        "elephant_rgba.png",
+        "elephant_rotate_bicubic_rgba.png",
+        rotate_bicubic_about_center,
+        2,
+    );
 }
 
 #[test]
@@ -260,7 +280,8 @@ fn test_affine_bilinear_rgb() {
 #[test]
 fn test_affine_bicubic_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
-        let root_two_inv = 1f32/2f32.sqrt()*2.0;
+        let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
+        #[rustfmt::skip]
         let hom = Projection::from_matrix([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
@@ -269,7 +290,12 @@ fn test_affine_bicubic_rgb() {
 
         warp(image, &hom, Interpolation::Bicubic, Rgb::black())
     }
-    compare_to_truth_rgb_with_tolerance("elephant.png", "elephant_affine_bicubic.png", affine_bilinear, 1);
+    compare_to_truth_rgb_with_tolerance(
+        "elephant.png",
+        "elephant_affine_bicubic.png",
+        affine_bilinear,
+        1,
+    );
 }
 
 #[test]

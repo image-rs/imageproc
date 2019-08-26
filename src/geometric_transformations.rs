@@ -1,12 +1,12 @@
 //! Geometric transformations of images. This includes rotations, translation, and general
 //! projective transformations.
 
-use std::ops::Mul;
+use crate::definitions::{Clamp, Image};
+use crate::math::cast;
 use conv::ValueInto;
 use image::{GenericImage, GenericImageView, ImageBuffer, Pixel};
 use rayon::prelude::*;
-use crate::definitions::{Clamp, Image};
-use crate::math::cast;
+use std::ops::Mul;
 
 #[derive(Copy, Clone, Debug)]
 enum TransformationClass {
@@ -31,7 +31,7 @@ enum TransformationClass {
 ///     * Projection::rotate(PI / 6.0)
 ///     * Projection::translate(-cx, -cy);
 /// ```
-/// 
+///
 /// See ./examples/projection.rs for more examples.
 #[derive(Copy, Clone, Debug)]
 pub struct Projection {
@@ -55,6 +55,7 @@ impl Projection {
     }
 
     /// A translation by (tx, ty).
+    #[rustfmt::skip]
     pub fn translate(tx: f32, ty: f32) -> Projection {
         Projection {
             transform: [
@@ -72,6 +73,7 @@ impl Projection {
     }
 
     /// A clockwise rotation around the top-left corner of the image by theta radians.
+    #[rustfmt::skip]
     pub fn rotate(theta: f32) -> Projection {
         let s = theta.sin();
         let c = theta.cos();
@@ -91,9 +93,10 @@ impl Projection {
     }
 
     /// An anisotropic scaling (sx, sy).
-    /// 
+    ///
     /// Note that the `warp` function does not change the size of the input image.
     /// If you want to resize an image then use the `imageops` module in the `image` crate.
+    #[rustfmt::skip]
     pub fn scale(sx: f32, sy: f32) -> Projection {
         Projection {
             transform: [
@@ -145,6 +148,7 @@ impl Projection {
             to[3].1 as f64,
         );
 
+        #[rustfmt::skip]
         let a = Matrix::new(
             9,
             9,
@@ -165,7 +169,7 @@ impl Projection {
             Err(_) => None,
             Ok((s, _, v)) => {
                 // rank(a) must be 8, but not 7
-                if s[[8,8]].abs() > 0.01 || s[[7,7]].abs() < 0.01 {
+                if s[[8, 8]].abs() > 0.01 || s[[7, 7]].abs() < 0.01 {
                     None
                 } else {
                     let h = v.col(8).into_matrix().into_vec();
@@ -308,7 +312,8 @@ where
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let (cx, cy) = center;
-    let projection = Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
+    let projection =
+        Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
     warp(image, &projection, interpolation, default)
 }
 
@@ -345,10 +350,10 @@ where
 }
 
 /// Applies a projective transformation to an image.
-/// 
+///
 /// The returned image has the same dimensions as `image`. Output pixels
 /// whose pre-image lies outside the input image are set to `default`.
-/// 
+///
 /// The provided projection defines a mapping from locations in the input image to their
 /// corresponding location in the output image.
 pub fn warp<P>(
@@ -406,7 +411,7 @@ pub fn warp_into<P>(
 }
 
 /// Warps an image using the provided function to define the pre-image of each output pixel.
-/// 
+///
 /// # Examples
 /// Applying a wave pattern.
 /// ```
@@ -442,7 +447,7 @@ where
 
 /// Warps an image using the provided function to define the pre-image of each output pixel,
 /// writing into a preallocated output.
-/// 
+///
 /// See the [`warp_with`](fn.warp_with.html) documentation for more information.
 pub fn warp_into_with<P, F>(
     image: &Image<P>,
@@ -546,6 +551,7 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
     let m21 = t00 * t12 - t02 * t10;
     let m22 = t00 * t11 - t01 * t10;
 
+    #[rustfmt::skip]
     let inv = [
          m00 / det, -m10 / det,  m20 / det,
         -m01 / det,  m11 / det, -m21 / det,
@@ -574,13 +580,7 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
     ]
 }
 
-fn blend_cubic<P>(
-    px0: &P,
-    px1: &P,
-    px2: &P,
-    px3: &P,
-    x: f32
-) -> P
+fn blend_cubic<P>(px0: &P, px1: &P, px2: &P, px3: &P, x: f32) -> P
 where
     P: Pixel,
     P::Subpixel: ValueInto<f32> + Clamp<f32>,
@@ -592,13 +592,13 @@ where
         let p1 = cast(px1.channels()[i]);
         let p2 = cast(px2.channels()[i]);
         let p3 = cast(px3.channels()[i]);
+        #[rustfmt::skip]
         let pval = p1 + 0.5 * x * (p2 - p0 + x * (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3 + x * (3.0 * (p1 - p2) + p3 - p0)));
         outp.channels_mut()[i] = <P as Pixel>::Subpixel::clamp(pval);
     }
 
     outp
 }
-
 
 fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
@@ -724,7 +724,7 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -971,6 +971,7 @@ mod tests {
             00, 00, 01;
             00, 10, 11);
 
+        #[rustfmt::skip]
         let aff = Projection::from_matrix([
             1.0, 0.0, 1.0,
             0.0, 1.0, 1.0,
@@ -1000,6 +1001,7 @@ mod tests {
             00, 00, 00, 00, 00;
             00, 00, 00, 00, 00);
 
+        #[rustfmt::skip]
         let aff = Projection::from_matrix([
             1.0, 0.0, 1.0,
             0.0, 1.0, 1.0,
@@ -1010,11 +1012,11 @@ mod tests {
         assert_pixels_eq!(translated_bicubic, expected);
     }
 
-
     #[bench]
     fn bench_affine_nearest(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
+        #[rustfmt::skip]
         let aff = Projection::from_matrix([
             1.0, 0.0, -1.0,
             0.0, 1.0, -1.0,
@@ -1031,6 +1033,7 @@ mod tests {
     fn bench_affine_bilinear(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
+        #[rustfmt::skip]
         let aff = Projection::from_matrix([
             1.8,      -0.2, 5.0,
             0.2,       1.9, 6.0,
@@ -1047,6 +1050,7 @@ mod tests {
     fn bench_affine_bicubic(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
+        #[rustfmt::skip]
         let aff = Projection::from_matrix([
             1.8,      -0.2, 5.0,
             0.2,       1.9, 6.0,
