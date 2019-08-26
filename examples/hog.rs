@@ -1,12 +1,11 @@
 //! Demonstrates computing and visualising HoG gradients.
 
-use std::env;
-use std::path::Path;
 use image::{open, ImageBuffer};
 use imageproc::hog::*;
+use std::env;
+use std::path::Path;
 
 fn create_hog_image(input: &Path, signed: bool) {
-
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(input)
         .expect(&format!("Could not load image at {:?}", input))
@@ -22,11 +21,14 @@ fn create_hog_image(input: &Path, signed: bool) {
         signed: signed,
         cell_side: 5,
         block_side: 2,
-        block_stride: 1
+        block_stride: 1,
     };
 
     let (width, height) = image.dimensions();
-    assert!(width >= 10 && height >= 10, "input file must have width and height both >= 10");
+    assert!(
+        width >= 10 && height >= 10,
+        "input file must have width and height both >= 10"
+    );
 
     // Crop image to a suitable size
     let (cropped_width, cropped_height) = (10 * (width / 10), 10 * (height / 10));
@@ -45,17 +47,20 @@ fn create_hog_image(input: &Path, signed: bool) {
     let star_side = 20;
     let hog = render_hist_grid(star_side, &hist.view_mut(), signed);
 
-    let output_name = if signed { "hog_signed.png" } else { "hog_unsigned.png" };
+    let output_name = if signed {
+        "hog_signed.png"
+    } else {
+        "hog_unsigned.png"
+    };
     hog.save(input.with_file_name(output_name)).unwrap();
 }
 
 fn main() {
-
     let arg = if env::args().count() == 2 {
-            env::args().nth(1).unwrap()
-        } else {
-            panic!("Please enter an input file")
-        };
+        env::args().nth(1).unwrap()
+    } else {
+        panic!("Please enter an input file")
+    };
     let path = Path::new(&arg);
 
     create_hog_image(path, true);
