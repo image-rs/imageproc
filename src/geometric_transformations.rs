@@ -383,8 +383,9 @@ pub fn warp_into<P>(
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
 {
     let projection = projection.invert();
-    let nn = |x, y| nearest(image, x, y, default);
-    let bl = |x, y| interpolate(image, x, y, default);
+    let nn = |x, y| interpolate_nearest(image, x, y, default);
+    let bl = |x, y| interpolate_bilinear(image, x, y, default);
+    let bc = |x, y| interpolate_bicubic(image, x, y, default);
     let wt = |x, y| projection.map_projective(x, y);
     let wa = |x, y| projection.map_affine(x, y);
     let wp = |x, y| projection.map_translation(x, y);
@@ -398,6 +399,9 @@ pub fn warp_into<P>(
         (I::Bilinear, TC::Translation) => warp_inner(out, wt, bl),
         (I::Bilinear, TC::Affine) => warp_inner(out, wa, bl),
         (I::Bilinear, TC::Projection) => warp_inner(out, wp, bl),
+        (I::Bicubic, TC::Translation) => warp_inner(out, wt, bc),
+        (I::Bicubic, TC::Affine) => warp_inner(out, wa, bc),
+        (I::Bicubic, TC::Projection) => warp_inner(out, wp, bc),
     }
 }
 
@@ -452,13 +456,15 @@ pub fn warp_into_with<P, F>(
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let nn = |x, y| nearest(image, x, y, default);
-    let bl = |x, y| interpolate(image, x, y, default);
+    let nn = |x, y| interpolate_nearest(image, x, y, default);
+    let bl = |x, y| interpolate_bilinear(image, x, y, default);
+    let bc = |x, y| interpolate_bicubic(image, x, y, default);
     use Interpolation as I;
 
     match interpolation {
         I::Nearest => warp_inner(out, mapping, nn),
         I::Bilinear => warp_inner(out, mapping, bl),
+        I::Bicubic => warp_inner(out, mapping, bc),
     }
 }
 
@@ -568,7 +574,70 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
     ]
 }
 
-fn blend<P>(
+fn blend_cubic<P>(
+    px0: &P,
+    px1: &P,
+    px2: &P,
+    px3: &P,
+    x: f32
+) -> P
+where
+    P: Pixel,
+    P::Subpixel: ValueInto<f32> + Clamp<f32>,
+{
+    let mut outp = px0.clone();
+
+    for i in 0..(P::channel_count() as usize) {
+        let p0 = cast(px0.channels()[i]);
+        let p1 = cast(px1.channels()[i]);
+        let p2 = cast(px2.channels()[i]);
+        let p3 = cast(px3.channels()[i]);
+        let pval = p1 + 0.5 * x * (p2 - p0 + x * (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3 + x * (3.0 * (p1 - p2) + p3 - p0)));
+        outp.channels_mut()[i] = <P as Pixel>::Subpixel::clamp(pval);
+    }
+
+    outp
+}
+
+
+fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
+where
+    P: Pixel + 'static,
+    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+{
+    let left = x.floor() - 1f32;
+    let right = left + 4f32;
+    let top = y.floor() - 1f32;
+    let bottom = top + 4f32;
+
+    let x_weight = x - (left + 1f32);
+    let y_weight = y - (top + 1f32);
+
+    let mut col: [P; 4] = [default, default, default, default];
+
+    let (width, height) = image.dimensions();
+    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
+        default
+    } else {
+        for row in top as u32..bottom as u32 {
+            let (p0, p1, p2, p3): (P, P, P, P) = unsafe {
+                (
+                    image.unsafe_get_pixel(left as u32, row),
+                    image.unsafe_get_pixel(left as u32 + 1, row),
+                    image.unsafe_get_pixel(left as u32 + 2, row),
+                    image.unsafe_get_pixel(left as u32 + 3, row),
+                )
+            };
+
+            let c = blend_cubic(&p0, &p1, &p2, &p3, x_weight);
+            col[row as usize - top as usize] = c;
+        }
+
+        blend_cubic(&col[0], &col[1], &col[2], &col[3], y_weight)
+    }
+}
+
+fn blend_bilinear<P>(
     top_left: P,
     top_right: P,
     bottom_left: P,
@@ -593,7 +662,7 @@ where
     })
 }
 
-fn interpolate<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
+fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel + 'static,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
@@ -619,12 +688,12 @@ where
                 image.unsafe_get_pixel(right as u32, bottom as u32),
             )
         };
-        blend(tl, tr, bl, br, right_weight, bottom_weight)
+        blend_bilinear(tl, tr, bl, br, right_weight, bottom_weight)
     }
 }
 
 #[inline(always)]
-fn nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
+fn interpolate_nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
     let rx = x.round();
     let ry = y.round();
 
@@ -645,6 +714,9 @@ pub enum Interpolation {
     /// Bilinearly interpolate between the four pixels
     /// closest to the pre-image of the output pixel.
     Bilinear,
+    /// Bicubicly interpolate between the four pixels
+    /// closest to the pre-image of the output pixel.
+    Bicubic,
 }
 
 #[cfg(test)]
@@ -721,6 +793,17 @@ mod tests {
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
             let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_rotate_bicubic(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
             black_box(rotated);
         });
     }
@@ -894,9 +977,39 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
-        assert_pixels_eq!(translated, expected);
+        let translated_nearest = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+        assert_pixels_eq!(translated_nearest, expected);
+        let translated_bilinear = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+        assert_pixels_eq!(translated_bilinear, expected);
     }
+
+    #[test]
+    fn test_affine_bicubic() {
+        let image = gray_image!(
+            99, 01, 02, 03, 04;
+            10, 11, 12, 13, 14;
+            20, 21, 22, 23, 24;
+            30, 31, 32, 33, 34;
+            40, 41, 42, 43, 44);
+
+        // Expect 2 pixels each side lost due to kernel size
+        let expected = gray_image!(
+            00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00;
+            00, 00, 11, 00, 00;
+            00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00);
+
+        let aff = Projection::from_matrix([
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0
+        ]).unwrap();
+
+        let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
+        assert_pixels_eq!(translated_bicubic, expected);
+    }
+
 
     #[bench]
     fn bench_affine_nearest(b: &mut Bencher) {
@@ -926,6 +1039,22 @@ mod tests {
 
         b.iter(|| {
             let transformed = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+            black_box(transformed);
+        });
+    }
+
+    #[bench]
+    fn bench_affine_bicubic(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+
+        let aff = Projection::from_matrix([
+            1.8,      -0.2, 5.0,
+            0.2,       1.9, 6.0,
+            0.0002, 0.0003, 1.0
+        ]).unwrap();
+
+        b.iter(|| {
+            let transformed = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
             black_box(transformed);
         });
     }
