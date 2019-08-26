@@ -396,6 +396,7 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
     assert!(
+        // assertion 1
         buffer.len() >= height as usize + 2 * padding as usize,
         "Buffer length {} is less than {} + 2 * {}",
         buffer.len(),
@@ -403,29 +404,42 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
         padding
     );
     assert!(
+        // assertion 2
         column < width,
         "column out of bounds: {} >= {}",
         column,
         width
     );
-    assert!(height > 0, "image is empty");
+    assert!(
+        // assertion 3
+        height > 0,
+        "image is empty"
+    );
 
+    let first = image.get_pixel(column, 0)[0] as u32;
+    let last = image.get_pixel(column, height - 1)[0] as u32;
+
+    let mut sum = 0;
+
+    for b in &mut buffer[..padding as usize] {
+        sum += first;
+        *b = sum;
+    }
+    // JUSTIFICATION:
+    //  Benefit
+    //      Using checked indexing here makes this function take 1.8x longer, as measured by bench_column_running_sum
+    //  Correctness
+    //      column is in bounds due to assertion 2.
+    //      height + padding - 1 < buffer.len() due to assertions 1 and 3.
     unsafe {
-        let mut sum = 0;
-        for y in 0..padding {
-            sum += image.unsafe_get_pixel(column, 0)[0] as u32;
-            *buffer.get_unchecked_mut(y as usize) = sum;
-        }
-
         for y in 0..height {
             sum += image.unsafe_get_pixel(column, y)[0] as u32;
-            *buffer.get_unchecked_mut((y + padding) as usize) = sum;
+            *buffer.get_unchecked_mut(y as usize + padding as usize) = sum;
         }
-
-        for y in 0..padding {
-            sum += image.unsafe_get_pixel(column, height - 1)[0] as u32;
-            *buffer.get_unchecked_mut((y + height + padding) as usize) = sum;
-        }
+    }
+    for b in &mut buffer[padding as usize + height as usize..] {
+        sum += last;
+        *b = sum;
     }
 }
 
