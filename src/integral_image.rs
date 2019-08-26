@@ -112,28 +112,35 @@ where
         return out;
     }
 
-    for y in 1..out_height {
+    for y in 0..in_height {
         let mut sum = vec![T::zero(); P::channel_count() as usize];
-        for x in 1..out_width {
-            unsafe {
-                for c in 0..P::channel_count() {
-                    let pix: T =
-                        (image.unsafe_get_pixel(x - 1, y - 1).channels()[c as usize]).into();
-                    if square {
-                        sum[c as usize] += pix * pix;
-                    } else {
-                        sum[c as usize] += pix;
-                    }
-                }
+        for x in 0..in_width {
+            // JUSTIFICATION
+            //  Benefit
+            //      Using checked accessing here makes bench_integral_image_rgb take 1.05x as long
+            //      (The results are noisy, but this seems to be reproducible. I've not checked the generated assembly.)
+            //  Correctness
+            //      x and y are within bounds by definition of in_width and in_height
+            let input = unsafe { image.unsafe_get_pixel(x, y) };
+            for (s, c) in sum.iter_mut().zip(input.channels()) {
+                let pix: T = (*c).into();
+                *s += if square { pix * pix } else { pix };
+            }
 
-                let above = out.unsafe_get_pixel(x, y - 1);
-                // For some reason there's no unsafe_get_pixel_mut, so to update the existing
-                // pixel here we need to use the method with bounds checking
-                let current = out.get_pixel_mut(x, y);
-                for c in 0..P::channel_count() {
-                    current.channels_mut()[c as usize] =
-                        above.channels()[c as usize] + sum[c as usize];
-                }
+            // JUSTIFICATION
+            //  Benefit
+            //      Using checked accessing here makes bench_integral_image_rgb take 1.05x as long
+            //      (The results are noisy, but this seems to be reproducible. I've not checked the generated assembly.)
+            //  Correctness
+            //      0 <= x < in_width, 0 <= y < in_height and out has width in_width + 1 and height in_height + 1
+            let above = unsafe { out.unsafe_get_pixel(x + 1, y) };
+            // For some reason there's no unsafe_get_pixel_mut, so to update the existing
+            // pixel here we need to use the method with bounds checking
+            let current = out.get_pixel_mut(x + 1, y + 1);
+            // Using zip here makes this slower.
+            for c in 0..P::channel_count() {
+                current.channels_mut()[c as usize] =
+                    above.channels()[c as usize] + sum[c as usize];
             }
         }
     }
