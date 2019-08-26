@@ -977,9 +977,39 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
-        assert_pixels_eq!(translated, expected);
+        let translated_nearest = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+        assert_pixels_eq!(translated_nearest, expected);
+        let translated_bilinear = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+        assert_pixels_eq!(translated_bilinear, expected);
     }
+
+    #[test]
+    fn test_affine_bicubic() {
+        let image = gray_image!(
+            99, 01, 02, 03, 04;
+            10, 11, 12, 13, 14;
+            20, 21, 22, 23, 24;
+            30, 31, 32, 33, 34;
+            40, 41, 42, 43, 44);
+
+        // Expect 2 pixels each side lost due to kernel size
+        let expected = gray_image!(
+            00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00;
+            00, 00, 11, 00, 00;
+            00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00);
+
+        let aff = Projection::from_matrix([
+            1.0, 0.0, 1.0,
+            0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0
+        ]).unwrap();
+
+        let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
+        assert_pixels_eq!(translated_bicubic, expected);
+    }
+
 
     #[bench]
     fn bench_affine_nearest(b: &mut Bencher) {
