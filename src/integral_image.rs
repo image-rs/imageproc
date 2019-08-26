@@ -366,6 +366,11 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// Takes a reference to buffer so that this can be reused
 /// for all columns in an image.
 ///
+/// # Panics
+/// - If `buffer.len() < 2 * padding + image.height()`.
+/// - If `column >= image.width()`.
+/// - If `image.height() == 0`.
+///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -391,18 +396,19 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
     assert!(
-        buffer.len() >= (height + 2 * padding) as usize,
-        format!(
-            "Buffer length {} is less than {} + 2 * {}",
-            buffer.len(),
-            height,
-            padding
-        )
+        buffer.len() >= height as usize + 2 * padding as usize,
+        "Buffer length {} is less than {} + 2 * {}",
+        buffer.len(),
+        height,
+        padding
     );
     assert!(
         column < width,
-        format!("column out of bounds: {} >= {}", column, width)
+        "column out of bounds: {} >= {}",
+        column,
+        width
     );
+    assert!(height > 0, "image is empty");
 
     unsafe {
         let mut sum = 0;
