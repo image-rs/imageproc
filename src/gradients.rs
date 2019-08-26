@@ -207,15 +207,34 @@ where
     // This would be more concise using itertools::multizip over image pixels, but that increased runtime by around 20%
     for y in 0..height {
         for x in 0..width {
+            // JUSTIFICATION
+            //  Benefit
+            //      Using checked indexing here makes this sobel_gradients 1.1x slower,
+            //      as measured by bench_sobel_gradients
+            //  Correctness
+            //      x and y are in bounds for image by construction,
+            //      vertical and horizontal are the result of calling filter3x3 on image,
+            //      and filter3x3 returns an image of the same size as its input
+            let (h, v) = unsafe {
+                (
+                    horizontal.unsafe_get_pixel(x, y),
+                    vertical.unsafe_get_pixel(x, y),
+                )
+            };
+            let mut p = ChannelMap::<P, u16>::black();
+
+            for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
+                *p = gradient_magnitude(*h as f32, *v as f32);
+            }
+
+            // JUSTIFICATION
+            //  Benefit
+            //      Using checked indexing here makes this sobel_gradients 1.1x slower,
+            //      as measured by bench_sobel_gradients
+            //  Correctness
+            //      x and y are in bounds for image by construction,
+            //      and out has the same dimensions
             unsafe {
-                let h = horizontal.unsafe_get_pixel(x, y);
-                let v = vertical.unsafe_get_pixel(x, y);
-                let mut p = ChannelMap::<P, u16>::black();
-
-                for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
-                    *p = gradient_magnitude(*h as f32, *v as f32);
-                }
-
                 out.unsafe_put_pixel(x, y, f(p));
             }
         }
