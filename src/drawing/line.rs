@@ -67,7 +67,7 @@ impl Iterator for BresenhamLineIter {
             self.x += 1;
             self.error -= self.dy;
             if self.error < 0f32 {
-                self.y = self.y + self.y_step;
+                self.y += self.y_step;
                 self.error += self.dx;
             }
 

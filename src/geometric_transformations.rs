@@ -242,7 +242,7 @@ impl<'a, 'b> Mul<&'b Projection> for &'a Projection {
         Projection {
             transform: t,
             inverse: i,
-            class: class,
+            class,
         }
     }
 }
@@ -601,7 +601,7 @@ where
     P: Pixel,
     P::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let mut outp = px0.clone();
+    let mut outp = *px0;
 
     for i in 0..(P::channel_count() as usize) {
         let p0 = cast(px0.channels()[i]);
