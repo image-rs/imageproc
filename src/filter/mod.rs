@@ -3,6 +3,9 @@
 mod median;
 pub use self::median::median_filter;
 
+mod sharpen;
+pub use self::sharpen::*;
+
 use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
 
 use crate::definitions::{Clamp, Image};

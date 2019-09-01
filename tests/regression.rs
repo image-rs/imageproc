@@ -12,7 +12,7 @@ extern crate imageproc;
 use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::edges::canny;
-use imageproc::filter::gaussian_blur_f32;
+use imageproc::filter::{gaussian_blur_f32, sharpen3x3};
 use imageproc::geometric_transformations::{rotate_about_center, warp, Interpolation, Projection};
 use imageproc::gradients;
 use imageproc::utils::load_image_or_panic;
@@ -307,6 +307,19 @@ fn test_sobel_gradients() {
         )
     }
     compare_to_truth_grayscale("elephant.png", "elephant_gradients.png", sobel_gradients);
+}
+
+#[test]
+fn test_sharpen3x3() {
+    compare_to_truth_grayscale("robin.png", "robin_sharpen3x3.png", sharpen3x3);
+}
+
+#[test]
+fn test_sharpen_gaussian() {
+    fn sharpen(image: &GrayImage) -> GrayImage {
+        imageproc::filter::sharpen_gaussian(image, 0.7, 7.0)
+    }
+    compare_to_truth_grayscale("robin.png", "robin_sharpen_gaussian.png", sharpen);
 }
 
 #[test]
