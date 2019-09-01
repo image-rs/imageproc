@@ -56,7 +56,7 @@ pub enum Fast {
     Twelve,
 }
 
-/// Finds corners using FAST-12 features. See comment on Fast enum.
+/// Finds corners using FAST-12 features. See comment on `Fast`.
 pub fn corners_fast12(image: &GrayImage, threshold: u8) -> Vec<Corner> {
     let (width, height) = image.dimensions();
     let mut corners = vec![];
@@ -136,20 +136,36 @@ pub fn fast_corner_score(image: &GrayImage, threshold: u8, x: u32, y: u32, varia
 /// The current implementation is extremely inefficient.
 // TODO: Make this much faster!
 fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
+    // UNSAFETY JUSTIFICATION
+    //  Benefit
+    //      Removing all unsafe pixel accesses in this file makes 
+    //      bench_is_corner_fast9_9_contiguous_lighter_pixels 60% slower, and
+    //      bench_is_corner_fast12_12_noncontiguous 40% slower
+    //  Correctness
+    //      All pixel accesses in this function, and in the called get_circle,
+    //      access pixels with x-coordinate in the range [x - 3, x + 3] and 
+    //      y-coordinate in the range [y - 3, y + 3]. The precondition below
+    //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-    if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
+    if x >= u32::max_value() - 3 || y >= u32::max_value() - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3 {
         return false;
     }
 
+    // JUSTIFICATION - see comment at the start of this function
     let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
     let low_thresh: i16 = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
-    let p0 = unsafe { image.unsafe_get_pixel(x, y - 3)[0] as i16 };
-    let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
-    let p4 = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
-    let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
+    // JUSTIFICATION - see comment at the start of this function
+    let (p0, p4, p8, p12) = unsafe {
+        (
+            image.unsafe_get_pixel(x, y - 3)[0] as i16,
+            image.unsafe_get_pixel(x, y + 3)[0] as i16,
+            image.unsafe_get_pixel(x + 3, y)[0] as i16,
+            image.unsafe_get_pixel(x - 3, y)[0] as i16
+        )
+    };
 
     let above = (p0 > high_thresh && p4 > high_thresh)
         || (p4 > high_thresh && p8 > high_thresh)
@@ -165,6 +181,7 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
         return false;
     }
 
+    // JUSTIFICATION - see comment at the start of this function
     let pixels = unsafe { get_circle(image, x, y, p0, p4, p8, p12) };
 
     // above and below could both be true
@@ -174,19 +191,34 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
 
 /// Checks if the given pixel is a corner according to the FAST12 detector.
 fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
+    // UNSAFETY JUSTIFICATION
+    //  Benefit
+    //      Removing all unsafe pixel accesses in this file makes 
+    //      bench_is_corner_fast9_9_contiguous_lighter_pixels 60% slower, and
+    //      bench_is_corner_fast12_12_noncontiguous 40% slower
+    //  Correctness
+    //      All pixel accesses in this function, and in the called get_circle,
+    //      access pixels with x-coordinate in the range [x - 3, x + 3] and 
+    //      y-coordinate in the range [y - 3, y + 3]. The precondition below
+    //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-
-    if x < 3 || y < 3 || x >= width - 3 || y >= height - 3 {
+    if x >= u32::max_value() - 3 || y >= u32::max_value() - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3 {
         return false;
     }
 
+    // JUSTIFICATION - see comment at the start of this function
     let c = unsafe { image.unsafe_get_pixel(x, y)[0] };
     let low_thresh: i16 = c as i16 - threshold as i16;
     let high_thresh: i16 = c as i16 + threshold as i16;
 
     // See Note [FAST circle labels]
-    let p0 = unsafe { image.unsafe_get_pixel(x, y - 3)[0] as i16 };
-    let p8 = unsafe { image.unsafe_get_pixel(x, y + 3)[0] as i16 };
+    // JUSTIFICATION - see comment at the start of this function
+    let (p0, p8) = unsafe {
+        (
+            image.unsafe_get_pixel(x, y - 3)[0] as i16,
+            image.unsafe_get_pixel(x, y + 3)[0] as i16
+        )
+    };
 
     let mut above = p0 > high_thresh && p8 > high_thresh;
     let mut below = p0 < low_thresh && p8 < low_thresh;
@@ -195,8 +227,13 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
         return false;
     }
 
-    let p4 = unsafe { image.unsafe_get_pixel(x + 3, y)[0] as i16 };
-    let p12 = unsafe { image.unsafe_get_pixel(x - 3, y)[0] as i16 };
+    // JUSTIFICATION - see comment at the start of this function
+    let (p4, p12) = unsafe {
+        (
+            image.unsafe_get_pixel(x + 3, y)[0] as i16,
+            image.unsafe_get_pixel(x - 3, y)[0] as i16
+        )
+    };
 
     above = above && ((p4 > high_thresh) || (p12 > high_thresh));
     below = below && ((p4 < low_thresh) || (p12 < low_thresh));
@@ -211,6 +248,7 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     // TODO: need to distinguish between GenericImages and ImageBuffers.
     // TODO: We can also reduce the number of checks we do below.
 
+    // JUSTIFICATION - see comment at the start of this function
     let pixels = unsafe { get_circle(image, x, y, p0, p4, p8, p12) };
 
     // Exactly one of above or below is true
@@ -221,6 +259,15 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     }
 }
 
+/// # Safety
+///
+/// The caller must ensure that:
+///
+///   x + 3 < image.width() &&
+///   x >= 3 &&
+///   y + 3 < image.height() &&
+///   y >= 3
+///
 #[inline]
 unsafe fn get_circle(
     image: &GrayImage,
@@ -296,7 +343,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::Bencher;
+    use test::{Bencher, black_box};
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
@@ -356,16 +403,16 @@ mod tests {
 
     #[bench]
     fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
-        let image = gray_image!(
+        let image = black_box(gray_image!(
             10, 10, 00, 00, 00, 10, 10;
             10, 00, 10, 10, 10, 00, 10;
             00, 10, 10, 10, 10, 10, 10;
             00, 10, 10, 10, 10, 10, 10;
             10, 10, 10, 10, 10, 10, 00;
             10, 00, 10, 10, 10, 10, 10;
-            10, 10, 00, 00, 00, 10, 10);
+            10, 10, 00, 00, 00, 10, 10));
 
-        b.iter(|| is_corner_fast12(&image, 8, 3, 3));
+        b.iter(|| black_box(is_corner_fast12(&image, 8, 3, 3)));
     }
 
     #[test]
@@ -430,16 +477,16 @@ mod tests {
 
     #[bench]
     fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
-        let image = gray_image!(
+        let image = black_box(gray_image!(
             00, 00, 10, 10, 10, 00, 00;
             00, 10, 00, 00, 00, 10, 00;
             10, 00, 00, 00, 00, 00, 00;
             10, 00, 00, 00, 00, 00, 00;
             10, 00, 00, 00, 00, 00, 00;
             00, 10, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00);
+            00, 00, 00, 00, 00, 00, 00));
 
-        b.iter(|| is_corner_fast9(&image, 8, 3, 3));
+        b.iter(|| black_box(is_corner_fast9(&image, 8, 3, 3)));
     }
 
     #[test]
