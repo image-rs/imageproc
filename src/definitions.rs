@@ -95,6 +95,17 @@ macro_rules! implement_clamp {
     };
 }
 
+/// Implements Clamp<T> for T, for all input types T.
+macro_rules! implement_identity_clamp {
+    ( $($t:ty),* ) => {
+        $(
+            impl Clamp<$t> for $t {
+                fn clamp(x: $t) -> $t { x }
+            }
+        )*
+    };
+}
+
 implement_clamp!(i16, u8, u8::MIN, u8::MAX, u8::MIN as i16, u8::MAX as i16);
 implement_clamp!(u16, u8, u8::MIN, u8::MAX, u8::MIN as u16, u8::MAX as u16);
 implement_clamp!(i32, u8, u8::MIN, u8::MAX, u8::MIN as i32, u8::MAX as i32);
@@ -135,6 +146,8 @@ implement_clamp!(
     i16::MIN as i32,
     i16::MAX as i32
 );
+
+implement_identity_clamp!(u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
 
 #[cfg(test)]
 mod tests {
