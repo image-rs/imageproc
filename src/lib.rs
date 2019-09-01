@@ -6,7 +6,7 @@
 //! `imageops` module, so check there if you cannot find
 //! a standard image processing function in this crate.
 //!
-//! [image]: https://github.com/PistonDevelopers/image
+//! [image]: https://github.com/image-rs/image
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 #![allow(

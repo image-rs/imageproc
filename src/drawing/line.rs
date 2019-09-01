@@ -143,7 +143,7 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
             image.width() >= 1 && image.height() >= 1,
             "BresenhamLinePixelIterMut does not support empty images"
         );
-        // The next two assertions are for https://github.com/PistonDevelopers/imageproc/issues/281
+        // The next two assertions are for https://github.com/image-rs/imageproc/issues/281
         assert!(P::channel_count() > 0);
         assert!(
             image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
