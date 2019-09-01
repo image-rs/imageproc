@@ -42,8 +42,16 @@ macro_rules! impl_black_white {
 
 impl_black_white!(Luma<u8>, Luma([u8::MIN]), Luma([u8::MAX]));
 impl_black_white!(Luma<u16>, Luma([u16::MIN]), Luma([u16::MAX]));
-impl_black_white!(LumaA<u8>, LumaA([u8::MIN, u8::MAX]), LumaA([u8::MAX, u8::MAX]));
-impl_black_white!(LumaA<u16>, LumaA([u16::MIN, u16::MAX]), LumaA([u16::MAX, u16::MAX]));
+impl_black_white!(
+    LumaA<u8>,
+    LumaA([u8::MIN, u8::MAX]),
+    LumaA([u8::MAX, u8::MAX])
+);
+impl_black_white!(
+    LumaA<u16>,
+    LumaA([u16::MIN, u16::MAX]),
+    LumaA([u16::MAX, u16::MAX])
+);
 impl_black_white!(Rgb<u8>, Rgb([u8::MIN; 3]), Rgb([u8::MAX; 3]));
 impl_black_white!(Rgb<u16>, Rgb([u16::MIN; 3]), Rgb([u16::MAX; 3]));
 impl_black_white!(
