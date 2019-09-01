@@ -1,6 +1,6 @@
 //! Functions for mapping over pixels, colors or subpixels of images.
 
-use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb, Rgba};
+use image::{Bgr, Bgra, GenericImage, ImageBuffer, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
 
 use crate::definitions::Image;
 
@@ -31,12 +31,36 @@ where
     type Pixel = Rgba<U>;
 }
 
+impl<T, U> WithChannel<U> for Bgr<T>
+where
+    T: Primitive + 'static,
+    U: Primitive + 'static,
+{
+    type Pixel = Bgr<U>;
+}
+
+impl<T, U> WithChannel<U> for Bgra<T>
+where
+    T: Primitive + 'static,
+    U: Primitive + 'static,
+{
+    type Pixel = Bgra<U>;
+}
+
 impl<T, U> WithChannel<U> for Luma<T>
 where
     T: Primitive + 'static,
     U: Primitive + 'static,
 {
     type Pixel = Luma<U>;
+}
+
+impl<T, U> WithChannel<U> for LumaA<T>
+where
+    T: Primitive + 'static,
+    U: Primitive + 'static,
+{
+    type Pixel = LumaA<U>;
 }
 
 /// Applies `f` to each subpixel of the input image.
