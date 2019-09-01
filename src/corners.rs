@@ -138,16 +138,22 @@ pub fn fast_corner_score(image: &GrayImage, threshold: u8, x: u32, y: u32, varia
 fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     // UNSAFETY JUSTIFICATION
     //  Benefit
-    //      Removing all unsafe pixel accesses in this file makes 
+    //      Removing all unsafe pixel accesses in this file makes
     //      bench_is_corner_fast9_9_contiguous_lighter_pixels 60% slower, and
     //      bench_is_corner_fast12_12_noncontiguous 40% slower
     //  Correctness
     //      All pixel accesses in this function, and in the called get_circle,
-    //      access pixels with x-coordinate in the range [x - 3, x + 3] and 
+    //      access pixels with x-coordinate in the range [x - 3, x + 3] and
     //      y-coordinate in the range [y - 3, y + 3]. The precondition below
     //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-    if x >= u32::max_value() - 3 || y >= u32::max_value() - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3 {
+    if x >= u32::max_value() - 3
+        || y >= u32::max_value() - 3
+        || x < 3
+        || y < 3
+        || width <= x + 3
+        || height <= y + 3
+    {
         return false;
     }
 
@@ -163,7 +169,7 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
             image.unsafe_get_pixel(x, y - 3)[0] as i16,
             image.unsafe_get_pixel(x, y + 3)[0] as i16,
             image.unsafe_get_pixel(x + 3, y)[0] as i16,
-            image.unsafe_get_pixel(x - 3, y)[0] as i16
+            image.unsafe_get_pixel(x - 3, y)[0] as i16,
         )
     };
 
@@ -193,16 +199,22 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
 fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     // UNSAFETY JUSTIFICATION
     //  Benefit
-    //      Removing all unsafe pixel accesses in this file makes 
+    //      Removing all unsafe pixel accesses in this file makes
     //      bench_is_corner_fast9_9_contiguous_lighter_pixels 60% slower, and
     //      bench_is_corner_fast12_12_noncontiguous 40% slower
     //  Correctness
     //      All pixel accesses in this function, and in the called get_circle,
-    //      access pixels with x-coordinate in the range [x - 3, x + 3] and 
+    //      access pixels with x-coordinate in the range [x - 3, x + 3] and
     //      y-coordinate in the range [y - 3, y + 3]. The precondition below
     //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-    if x >= u32::max_value() - 3 || y >= u32::max_value() - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3 {
+    if x >= u32::max_value() - 3
+        || y >= u32::max_value() - 3
+        || x < 3
+        || y < 3
+        || width <= x + 3
+        || height <= y + 3
+    {
         return false;
     }
 
@@ -216,7 +228,7 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (p0, p8) = unsafe {
         (
             image.unsafe_get_pixel(x, y - 3)[0] as i16,
-            image.unsafe_get_pixel(x, y + 3)[0] as i16
+            image.unsafe_get_pixel(x, y + 3)[0] as i16,
         )
     };
 
@@ -231,7 +243,7 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (p4, p12) = unsafe {
         (
             image.unsafe_get_pixel(x + 3, y)[0] as i16,
-            image.unsafe_get_pixel(x - 3, y)[0] as i16
+            image.unsafe_get_pixel(x - 3, y)[0] as i16,
         )
     };
 
@@ -343,7 +355,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{Bencher, black_box};
+    use test::{black_box, Bencher};
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
