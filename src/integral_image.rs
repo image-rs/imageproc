@@ -113,7 +113,7 @@ where
     }
 
     for y in 0..in_height {
-        let mut sum = vec![T::zero(); P::channel_count() as usize];
+        let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
         for x in 0..in_width {
             // JUSTIFICATION
             //  Benefit
@@ -138,7 +138,7 @@ where
             // pixel here we need to use the method with bounds checking
             let current = out.get_pixel_mut(x + 1, y + 1);
             // Using zip here makes this slower.
-            for c in 0..P::channel_count() {
+            for c in 0..P::CHANNEL_COUNT {
                 current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
             }
         }

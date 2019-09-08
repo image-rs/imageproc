@@ -21,10 +21,6 @@
     clippy::expect_fun_call,
     clippy::many_single_char_names
 )]
-// This was added when bumping image from 0.21 to 0.22.1, as the new version
-// deprecated unsafe_get_pixel on GenericImageView and we use the method
-// throughout this library.
-#![allow(deprecated)]
 
 #[cfg(test)]
 extern crate test;

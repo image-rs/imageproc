@@ -17,7 +17,7 @@ display-window = ["sdl2"]
 
 [dependencies]
 conv = "0.3.1"
-image = { version = "0.22.1", default-features = false }
+image = { version = "0.22.2", default-features = false }
 itertools = "0.7.0"
 num = "0.2.0"
 rand = "0.6.5"
@@ -29,7 +29,7 @@ rulinalg = "0.4.2"
 
 [dev-dependencies]
 assert_approx_eq = "1.0.0"
-image = "0.22.1"
+image = "0.22.2"
 quickcheck = "0.8"
 
 [package.metadata.docs.rs]
