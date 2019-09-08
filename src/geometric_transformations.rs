@@ -603,7 +603,7 @@ where
 {
     let mut outp = *px0;
 
-    for i in 0..(P::channel_count() as usize) {
+    for i in 0..(P::CHANNEL_COUNT as usize) {
         let p0 = cast(px0.channels()[i]);
         let p1 = cast(px1.channels()[i]);
         let p2 = cast(px2.channels()[i]);

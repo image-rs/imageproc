@@ -93,7 +93,7 @@ use std::cmp::{max, min};
 ///     9, 100, 11, 13, 14;
 ///     15, 87, 99, 21, 45
 /// );
-///    
+///
 /// let filtered = gray_image!(
 ///     2, 3, 4, 5, 5;
 ///     17, 4, 4, 4, 4;
@@ -144,7 +144,7 @@ where
 {
     let (width, height) = image.dimensions();
     let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1);
-    let num_channels = P::channel_count();
+    let num_channels = P::CHANNEL_COUNT;
 
     let mut hist = HistSet::new(num_channels, kernel_size);
     let rx = x_radius as i32;

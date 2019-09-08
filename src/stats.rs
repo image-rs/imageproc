@@ -17,7 +17,7 @@ pub fn histogram<P>(image: &Image<P>) -> ChannelHistogram
 where
     P: Pixel<Subpixel = u8> + 'static,
 {
-    let mut hist = vec![[0u32; 256]; P::channel_count() as usize];
+    let mut hist = vec![[0u32; 256]; P::CHANNEL_COUNT as usize];
 
     for pix in image.pixels() {
         for (i, c) in pix.channels().iter().enumerate() {
@@ -148,7 +148,7 @@ where
             sum_squared_diffs += diff * diff;
         }
     }
-    let count = (left.width() * left.height() * P::channel_count() as u32) as f64;
+    let count = (left.width() * left.height() * P::CHANNEL_COUNT as u32) as f64;
     sum_squared_diffs / count
 }
 
