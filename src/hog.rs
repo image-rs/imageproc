@@ -62,14 +62,10 @@ pub struct HogSpec {
 impl HogSpec {
     /// Returns an error message if image dimensions aren't compatible with the provided options.
     pub fn from_options(width: u32, height: u32, options: HogOptions) -> Result<HogSpec, String> {
-        let (cells_wide, cells_high) = Self::checked_cell_dimensions(
-            width as usize,
-            height as usize,
-            options,
-        )?;
-        let (blocks_wide, blocks_high) = Self::checked_block_dimensions(
-            cells_wide, cells_high, options,
-        )?;
+        let (cells_wide, cells_high) =
+            Self::checked_cell_dimensions(width as usize, height as usize, options)?;
+        let (blocks_wide, blocks_high) =
+            Self::checked_block_dimensions(cells_wide, cells_high, options)?;
         Ok(HogSpec {
             options,
             cells_wide,
