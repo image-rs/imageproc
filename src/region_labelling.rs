@@ -129,7 +129,7 @@ where
 {
     let (width, height) = image.dimensions();
     let image_size = width as usize * height as usize;
-    if image_size >= 2usize.pow(32) {
+    if image_size >= 2usize.saturating_pow(32) {
         panic!("Images with 2^32 or more pixels are not supported");
     }
 
