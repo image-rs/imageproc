@@ -365,7 +365,7 @@ where
 #[macro_export]
 macro_rules! assert_pixels_eq {
     ($actual:expr, $expected:expr) => {{
-        assert_dimensions_match!($actual, $expected);
+        $crate::assert_dimensions_match!($actual, $expected);
         match $crate::utils::pixel_diff_summary(&$actual, &$expected) {
             None => {}
             Some(err) => panic!(err),
@@ -378,7 +378,7 @@ macro_rules! assert_pixels_eq {
 #[macro_export]
 macro_rules! assert_pixels_eq_within {
     ($actual:expr, $expected:expr, $channel_tolerance:expr) => {{
-        assert_dimensions_match!($actual, $expected);
+        $crate::assert_dimensions_match!($actual, $expected);
         let diffs = $crate::utils::pixel_diffs(&$actual, &$expected, |p, q| {
             use image::Pixel;
             let cp = p.2.channels();
