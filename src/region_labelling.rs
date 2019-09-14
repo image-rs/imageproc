@@ -129,7 +129,7 @@ where
 {
     let (width, height) = image.dimensions();
     let image_size = width as usize * height as usize;
-    if image_size >= 2usize.pow(32) {
+    if image_size >= 2usize.saturating_pow(32) {
         panic!("Images with 2^32 or more pixels are not supported");
     }
 
@@ -244,13 +244,18 @@ where
 
 #[cfg(test)]
 mod tests {
+    extern crate wasm_bindgen_test;
+
     use super::connected_components;
     use super::Connectivity::{Eight, Four};
     use crate::definitions::{HasBlack, HasWhite};
     use ::test;
     use image::{GrayImage, ImageBuffer, Luma};
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::*;
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_connected_components_eight_white_background() {
         let image = gray_image!(
               1, 255,   2,   1;
@@ -280,7 +285,8 @@ mod tests {
         })
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_connected_components_eight_chessboard() {
         let image = chessboard(30, 30);
         let components = connected_components(&image, Eight, Luma::black());
@@ -288,7 +294,8 @@ mod tests {
         assert_eq!(max_component, Some(1u32));
     }
 
-    #[test]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
     fn test_connected_components_four_chessboard() {
         let image = chessboard(30, 30);
         let components = connected_components(&image, Four, Luma::black());
