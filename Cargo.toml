@@ -1,6 +1,6 @@
 [package]
 name = "imageproc"
-version = "0.19.1"
+version = "0.19.2"
 authors = ["theotherphil"]
 edition = "2018"
 license = "MIT"
@@ -34,7 +34,9 @@ quickcheck = "0.8"
 wasm-bindgen-test = "0.2"
 
 [package.metadata.docs.rs]
-all-features = true
+# See https://github.com/image-rs/imageproc/issues/358
+# all-features = true
+features = [ "property-testing" ]
 
 [profile.release]
 opt-level = 3
