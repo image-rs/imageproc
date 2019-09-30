@@ -18,10 +18,10 @@ display-window = ["sdl2"]
 [dependencies]
 conv = "0.3.1"
 image = { version = "0.22.2", default-features = false }
-itertools = "0.7.0"
+itertools = "0.8.0"
 num = "0.2.0"
 rand = "0.6.5"
-rusttype = "0.7"
+rusttype = "0.8.1"
 rayon = "1.0"
 quickcheck = { version = "0.8", optional = true }
 sdl2 = { version = "0.32", optional = true, default-features = false, features = ["bundled"] }

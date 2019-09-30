@@ -2,7 +2,6 @@
 
 use crate::definitions::{Position, Score};
 use image::{GenericImage, ImageBuffer, Luma, Primitive};
-use itertools::Itertools;
 use std::cmp;
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
@@ -26,8 +25,8 @@ where
     // the (2r + 1) * (2r + 1) search once per r * r grid cell (as opposed to once
     // per pixel in the naive implementation of this algorithm).
 
-    for y in (0..height).step(radius as usize + 1) {
-        for x in (0..width).step(radius as usize + 1) {
+    for y in (0..height).step_by(radius as usize + 1) {
+        for x in (0..width).step_by(radius as usize + 1) {
             let mut best_x = x;
             let mut best_y = y;
             let mut mi = image.get_pixel(x, y)[0];
@@ -179,7 +178,6 @@ mod tests {
     use crate::property_testing::GrayTestImage;
     use crate::utils::pixel_diff_summary;
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
-    use itertools::Itertools;
     use quickcheck::{quickcheck, TestResult};
     use std::cmp;
     use test::Bencher;
@@ -400,8 +398,8 @@ mod tests {
 
     #[test]
     fn test_step() {
-        assert_eq!((0u32..5).step(4).collect::<Vec<u32>>(), vec![0, 4]);
-        assert_eq!((0u32..4).step(4).collect::<Vec<u32>>(), vec![0]);
-        assert_eq!((4u32..4).step(4).collect::<Vec<u32>>(), vec![]);
+        assert_eq!((0u32..5).step_by(4).collect::<Vec<u32>>(), vec![0, 4]);
+        assert_eq!((0u32..4).step_by(4).collect::<Vec<u32>>(), vec![0]);
+        assert_eq!((4u32..4).step_by(4).collect::<Vec<u32>>(), vec![]);
     }
 }
