@@ -354,7 +354,7 @@ where
             }
 
             if w + tx > 0 {
-                let in_base = (y_in as usize * width as usize - (tx as usize)) * num_channels;
+                let in_base = (y_in as usize * width as usize + (tx.abs() as usize)) * num_channels;
                 let out_base = (y as usize * width as usize) * num_channels;
                 let len = (w + tx) as usize * num_channels;
                 (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);
@@ -853,6 +853,22 @@ mod tests {
             20, 20, 21);
 
         let translated = translate(&image, (1, -1));
+        assert_pixels_eq!(translated, expected);
+    }
+
+    #[test]
+    fn test_translate_negative_x() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        let expected = gray_image!(
+            01, 02, 02;
+            11, 12, 12;
+            21, 22, 22);
+
+        let translated = translate(&image, (-1, 0));
         assert_pixels_eq!(translated, expected);
     }
 
