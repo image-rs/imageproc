@@ -13,9 +13,7 @@ use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rg
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::edges::canny;
 use imageproc::filter::{gaussian_blur_f32, sharpen3x3};
-use imageproc::geometric_transformations::{
-    rotate_about_center, translate, warp, Interpolation, Projection,
-};
+use imageproc::geometric_transformations::{rotate_about_center, warp, Interpolation, Projection};
 use imageproc::gradients;
 use imageproc::utils::load_image_or_panic;
 use std::f32;
@@ -296,22 +294,6 @@ fn test_affine_bicubic_rgb() {
         "elephant.png",
         "elephant_affine_bicubic.png",
         affine_bilinear,
-        1,
-    );
-}
-
-#[test]
-fn test_translate() {
-    fn translate_negative_coordinates(image: &RgbImage) -> RgbImage {
-        let image = translate(image, (-30, -10));
-
-        image
-    }
-
-    compare_to_truth_rgb_with_tolerance(
-        "elephant.png",
-        "elephant_translated.png",
-        translate_negative_coordinates,
         1,
     );
 }
