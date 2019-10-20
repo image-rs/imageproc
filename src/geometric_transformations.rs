@@ -802,7 +802,12 @@ mod tests {
             99, 12;
             99, 99);
 
-        let rotated = rotate_uncropped(&image, std::f32::consts::PI / 2f32, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rotate_uncropped(
+            &image,
+            std::f32::consts::PI / 2f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -817,7 +822,12 @@ mod tests {
             99, 12, 02;
             99, 99, 99);
 
-        let rotated = rotate_uncropped(&image, std::f32::consts::PI / 4f32, Interpolation::Nearest, Luma([99u8]));
+        let rotated = rotate_uncropped(
+            &image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
         assert_pixels_eq!(rotated, expected);
     }
 
