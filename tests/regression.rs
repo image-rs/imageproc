@@ -13,7 +13,9 @@ use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rg
 use imageproc::definitions::{Clamp, HasBlack, HasWhite};
 use imageproc::edges::canny;
 use imageproc::filter::{gaussian_blur_f32, sharpen3x3};
-use imageproc::geometric_transformations::{rotate_about_center, warp, Interpolation, Projection};
+use imageproc::geometric_transformations::{
+    rotate_about_center, rotate_uncropped, warp, Interpolation, Projection,
+};
 use imageproc::gradients;
 use imageproc::utils::load_image_or_panic;
 use std::f32;
@@ -154,6 +156,24 @@ fn test_rotate_nearest_rgba() {
         "elephant_rgba.png",
         "elephant_rotate_nearest_rgba.png",
         rotate_nearest_about_center,
+    );
+}
+
+#[test]
+fn test_rotate_uncropped_image() {
+    fn rotate_uncropped_image(image: &RgbaImage) -> RgbaImage {
+        rotate_uncropped(
+            image,
+            std::f32::consts::PI / 2f32,
+            Interpolation::Nearest,
+            Rgba([0u8, 0u8, 0u8, 255u8]),
+        )
+    }
+
+    compare_to_truth_rgba(
+        "elephant.png",
+        "elephant_rotated_uncropped.png",
+        rotate_uncropped_image,
     );
 }
 
