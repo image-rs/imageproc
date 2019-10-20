@@ -161,7 +161,7 @@ fn test_rotate_nearest_rgba() {
 
 #[test]
 fn test_rotate_uncropped_image() {
-    fn rotate_uncropped_image(image: &RgbaImage) -> RgbaImage {
+    fn rotate_uncropped_image_half_pi(image: &RgbaImage) -> RgbaImage {
         rotate_uncropped(
             image,
             std::f32::consts::PI / 2f32,
@@ -170,10 +170,46 @@ fn test_rotate_uncropped_image() {
         )
     }
 
+    save_truth_image(&rotate_uncropped_image_half_pi(&load_input_image("elephant.png").to_rgba()), "elephant_rotated_half_pi_uncropped.png");
+
     compare_to_truth_rgba(
         "elephant.png",
-        "elephant_rotated_uncropped.png",
-        rotate_uncropped_image,
+        "elephant_rotated_half_pi_uncropped.png",
+        rotate_uncropped_image_half_pi,
+    );
+
+    fn rotate_uncropped_image_pi(image: &RgbaImage) -> RgbaImage {
+        rotate_uncropped(
+            image,
+            std::f32::consts::PI,
+            Interpolation::Nearest,
+            Rgba([0u8, 0u8, 0u8, 255u8]),
+        )
+    }
+
+    save_truth_image(&rotate_uncropped_image_pi(&load_input_image("elephant.png").to_rgba()), "elephant_rotated_pi_uncropped.png");
+
+    compare_to_truth_rgba(
+        "elephant.png",
+        "elephant_rotated_pi_uncropped.png",
+        rotate_uncropped_image_pi,
+    );
+
+    fn rotate_uncropped_image_quarter_pi(image: &RgbaImage) -> RgbaImage {
+        rotate_uncropped(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Nearest,
+            Rgba([0u8, 0u8, 0u8, 255u8]),
+        )
+    }
+
+    save_truth_image(&rotate_uncropped_image_quarter_pi(&load_input_image("elephant.png").to_rgba()), "elephant_rotated_quarter_pi_uncropped.png");
+
+    compare_to_truth_rgba(
+        "elephant.png",
+        "elephant_rotated_quarter_pi_uncropped.png",
+        rotate_uncropped_image_quarter_pi,
     );
 }
 
