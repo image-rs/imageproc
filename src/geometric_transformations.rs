@@ -170,7 +170,7 @@ impl Projection {
         match &svd {
             SVD { v_t: Some(v), .. } => {
                 // rank(a) must be 8, but not 7
-                if svd.rank(0.01) != 8 {
+                if svd.rank(0.01) == 7 {
                     None
                 } else {
                     let transform = normalize(v.row(8).map(|x| x as f32).into());
