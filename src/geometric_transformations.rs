@@ -124,7 +124,9 @@ impl Projection {
 
     /// Calculates a projection from a set of four control point pairs.
     pub fn from_control_points(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Projection> {
-        use rulinalg::matrix::*;
+        use nalgebra::dimension::*;
+        use nalgebra::MatrixMN;
+        use nalgebra::SVD;
 
         let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = (
             from[0].0 as f64,
@@ -149,10 +151,8 @@ impl Projection {
         );
 
         #[rustfmt::skip]
-        let a = Matrix::new(
-            9,
-            9,
-            vec![
+        let a = MatrixMN::<f64, U9, U9>::from_row_slice(
+            &[
                 0.0, 0.0, 0.0, -xf1, -yf1, -1.0, y1 * xf1, y1 * yf1, y1,
                 xf1, yf1, 1.0, 0.0, 0.0, 0.0, -x1 * xf1, -x1 * yf1, -x1,
                 0.0, 0.0, 0.0, -xf2, -yf2, -1.0, y2 * xf2, y2 * yf2, y2,
@@ -165,26 +165,15 @@ impl Projection {
             ],
         );
 
-        match a.svd() {
-            Err(_) => None,
-            Ok((s, _, v)) => {
+        let svd = a.svd(false, true);
+
+        match &svd {
+            SVD { v_t: Some(v), .. } => {
                 // rank(a) must be 8, but not 7
-                if s[[8, 8]].abs() > 0.01 || s[[7, 7]].abs() < 0.01 {
+                if svd.rank(0.01) != 8 {
                     None
                 } else {
-                    let h = v.col(8).into_matrix().into_vec();
-                    let mut transform = [
-                        h[0] as f32,
-                        h[1] as f32,
-                        h[2] as f32,
-                        h[3] as f32,
-                        h[4] as f32,
-                        h[5] as f32,
-                        h[6] as f32,
-                        h[7] as f32,
-                        h[8] as f32,
-                    ];
-                    transform = normalize(transform);
+                    let transform = normalize(v.row(8).map(|x| x as f32).into());
                     let class = class_from_matrix(transform);
 
                     try_inverse(&transform).map(|inverse| Projection {
@@ -194,6 +183,7 @@ impl Projection {
                     })
                 }
             }
+            _ => None,
         }
     }
 
