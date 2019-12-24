@@ -260,7 +260,11 @@ impl<'a, 'b> Mul<&'b (f32, f32)> for &'a Projection {
 
     fn mul(self, rhs: &(f32, f32)) -> (f32, f32) {
         let (x, y) = *rhs;
-        self.map_projective(x, y)
+        match self.class {
+            TransformationClass::Translation => self.map_translation(x, y),
+            TransformationClass::Affine => self.map_affine(x, y),
+            TransformationClass::Projection => self.map_projective(x, y),
+        }
     }
 }
 
@@ -407,9 +411,9 @@ pub fn warp_into<P>(
     let nn = |x, y| interpolate_nearest(image, x, y, default);
     let bl = |x, y| interpolate_bilinear(image, x, y, default);
     let bc = |x, y| interpolate_bicubic(image, x, y, default);
-    let wt = |x, y| projection.map_projective(x, y);
+    let wp = |x, y| projection.map_projective(x, y);
     let wa = |x, y| projection.map_affine(x, y);
-    let wp = |x, y| projection.map_translation(x, y);
+    let wt = |x, y| projection.map_translation(x, y);
     use Interpolation as I;
     use TransformationClass as TC;
 
