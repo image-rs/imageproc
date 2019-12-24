@@ -11,7 +11,7 @@ script:
   - |
     if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
       rustup target add wasm32-unknown-unknown --toolchain nightly
-      cargo install wasm-bindgen-cli --vers "0.2.51"
+      cargo install wasm-bindgen-cli --vers "0.2.56"
       cargo test -v --target wasm32-unknown-unknown
     fi
   - |
