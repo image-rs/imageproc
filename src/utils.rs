@@ -432,7 +432,7 @@ macro_rules! assert_dimensions_match {
 }
 
 /// Lists pixels that differ between left and right images.
-pub fn pixel_diffs<I, J, F, P>(actual: &I, expected: &J, is_diff: F) -> Vec<(Diff<I::Pixel>)>
+pub fn pixel_diffs<I, J, F, P>(actual: &I, expected: &J, is_diff: F) -> Vec<Diff<I::Pixel>>
 where
     P: Pixel,
     I: GenericImage<Pixel = P>,
