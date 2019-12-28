@@ -106,7 +106,7 @@ macro_rules! gray_image {
             let height = nested_array.len() as u32;
             let width = nested_array[0].len() as u32;
 
-            let flat_array: Vec<_> = nested_array.into_iter()
+            let flat_array: Vec<_> = nested_array.iter()
                 .flat_map(|row| row.into_iter())
                 .cloned()
                 .collect();
@@ -207,7 +207,7 @@ macro_rules! rgb_image {
             let height = nested_array.len() as u32;
             let width = nested_array[0].len() as u32;
 
-            let flat_array: Vec<_> = nested_array.into_iter()
+            let flat_array: Vec<_> = nested_array.iter()
                 .flat_map(|row| row.into_iter().flat_map(|p| p.into_iter()))
                 .cloned()
                 .collect();
@@ -308,7 +308,7 @@ macro_rules! rgba_image {
             let height = nested_array.len() as u32;
             let width = nested_array[0].len() as u32;
 
-            let flat_array: Vec<_> = nested_array.into_iter()
+            let flat_array: Vec<_> = nested_array.iter()
                 .flat_map(|row| row.into_iter().flat_map(|p| p.into_iter()))
                 .cloned()
                 .collect();
