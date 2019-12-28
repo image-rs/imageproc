@@ -23,14 +23,16 @@ struct TemplateMatchingArgs {
 impl TemplateMatchingArgs {
     fn parse(args: Vec<String>) -> TemplateMatchingArgs {
         if args.len() != 7 {
-            panic!(r#"
+            panic!(
+                r#"
 Usage:
 
      cargo run --example template_matching input_path output_dir template_x template_y template_w template_h
 
 Loads the image at input_path and extracts a region with the given location and size to use as the matching
 template. Calls match_template on the input image and this template, and saves the results to output_dir.
-"#);
+"#
+            );
         }
 
         let input_path = PathBuf::from(&args[1]);
