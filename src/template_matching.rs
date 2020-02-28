@@ -89,7 +89,7 @@ pub fn match_template(
                             (image_value - template_value).powf(2.0)
                         }
                         CrossCorrelation | CrossCorrelationNormalized => {
-                            (image_value * template_value)
+                            image_value * template_value
                         }
                     };
                 }
