@@ -178,7 +178,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_line_segment_mut(&mut out, start, end, color);
     out
 }
@@ -222,7 +222,7 @@ where
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_antialiased_line_segment_mut(&mut out, start, end, color, blend);
     out
 }

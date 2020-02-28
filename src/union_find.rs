@@ -109,8 +109,8 @@ impl DisjointSetForest {
 mod tests {
     use super::DisjointSetForest;
     use ::test;
-    use rand::distributions::Uniform;
-    use rand::prelude::*;
+    use rand::{rngs::StdRng, SeedableRng};
+    use rand_distr::{Distribution, Uniform};
 
     #[test]
     fn test_trees() {

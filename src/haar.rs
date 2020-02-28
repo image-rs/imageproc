@@ -387,7 +387,7 @@ where
     I::Pixel: HasBlack + HasWhite + 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_haar_feature_mut(&mut out, feature);
     out
 }

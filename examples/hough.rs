@@ -51,9 +51,9 @@ fn main() {
     };
     let lines: Vec<PolarLine> = detect_lines(&edges, options);
 
-    let white = Rgb([255, 255, 255]);
-    let green = Rgb([0, 255, 0]);
-    let black = Rgb([0, 0, 0]);
+    let white = Rgb::<u8>([255, 255, 255]);
+    let green = Rgb::<u8>([0, 255, 0]);
+    let black = Rgb::<u8>([0, 0, 0]);
 
     // Convert edge image to colour
     let color_edges = map_colors(&edges, |p| if p[0] > 0 { white } else { black });

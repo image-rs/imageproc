@@ -5,11 +5,11 @@
 //!
 //! `cargo run --release --example projection ./examples/empire-state-building.jpg ./tmp
 
-use image::{open, Rgb};
+use image::{error::ImageResult, open, Rgb};
 use imageproc::geometric_transformations::{warp, Interpolation, Projection};
-use std::{env, fs, io::Result, path::Path};
+use std::{env, fs, path::Path};
 
-fn main() -> Result<()> {
+fn main() -> ImageResult<()> {
     if env::args().len() != 3 {
         panic!("Please enter an input file and a target directory")
     }

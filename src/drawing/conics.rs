@@ -24,7 +24,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_hollow_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
 }
@@ -79,7 +79,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_filled_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
 }
@@ -185,7 +185,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_hollow_circle_mut(&mut out, center, radius, color);
     out
 }
@@ -282,7 +282,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_filled_circle_mut(&mut out, center, radius, color);
     out
 }

@@ -15,6 +15,7 @@
     clippy::needless_range_loop,
     clippy::useless_let_if_seq,
     clippy::match_wild_err_arm,
+    clippy::needless_doctest_main,
     clippy::range_plus_one,
     clippy::trivially_copy_pass_by_ref,
     clippy::nonminimal_bool,
