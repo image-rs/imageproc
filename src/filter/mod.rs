@@ -218,7 +218,7 @@ where
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
 
-///	Returns horizontal correlations between an image and a 1d kernel.
+/// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
@@ -314,7 +314,7 @@ where
     out
 }
 
-///	Returns horizontal correlations between an image and a 1d kernel.
+/// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where

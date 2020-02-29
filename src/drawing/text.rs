@@ -64,7 +64,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_text_mut(&mut out, color, x, y, scale, font, text);
     out
 }

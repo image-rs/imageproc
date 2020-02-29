@@ -344,7 +344,7 @@ mod tests {
     {
         let (width, height) = image.dimensions();
         let mut out = ImageBuffer::new(width, height);
-        out.copy_from(image, 0, 0);
+        out.copy_from(image, 0, 0).unwrap();
 
         let iradius = radius as i32;
         let iheight = height as i32;

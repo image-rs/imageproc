@@ -103,7 +103,9 @@ fn run_match_template(
 
     // Pad the result to the same size as the input image, to make them easier to compare
     let mut result_padded = GrayImage::new(image.width(), image.height());
-    result_padded.copy_from(&result_scaled, args.template_w / 2, args.template_h / 2);
+    result_padded
+        .copy_from(&result_scaled, args.template_w / 2, args.template_h / 2)
+        .unwrap();
 
     // Show location the template was extracted from
     let roi = Rect::at(args.template_x as i32, args.template_y as i32)

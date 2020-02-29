@@ -12,7 +12,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_hollow_rect_mut(&mut out, rect, color);
     out
 }
@@ -41,7 +41,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_filled_rect_mut(&mut out, rect, color);
     out
 }

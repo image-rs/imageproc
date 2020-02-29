@@ -19,7 +19,7 @@ where
     I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0);
+    out.copy_from(image, 0, 0).unwrap();
     draw_cubic_bezier_curve_mut(&mut out, start, end, control_a, control_b, color);
     out
 }

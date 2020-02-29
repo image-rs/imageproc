@@ -6,8 +6,8 @@
 use crate::definitions::Image;
 use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
 use quickcheck::{Arbitrary, Gen};
-use rand::distributions::{Distribution, Standard};
-use rand::prelude::*;
+use rand::Rng;
+use rand_distr::{Distribution, Standard};
 use std::fmt;
 
 /// Wrapper for image buffers to allow us to write an Arbitrary instance.
