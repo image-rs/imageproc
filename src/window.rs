@@ -1,6 +1,9 @@
 //! Displays an image in a window created by sdl2.
 
-use image::{imageops::resize, RgbaImage};
+use image::{
+    imageops::{resize, FilterType},
+    ConvertBuffer, GenericImageView, RgbaImage,
+};
 use sdl2::{
     event::{Event, WindowEvent},
     keyboard::Keycode,
@@ -15,7 +18,10 @@ use sdl2::{
 ///
 /// The minimum window width or height is 150 pixels - input values less than this
 /// will be rounded up to the minimum.
-pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_height: u32) {
+pub fn display_image<I>(title: &str, image: &I, window_width: u32, window_height: u32)
+where
+    I: GenericImageView + ConvertBuffer<RgbaImage>,
+{
     display_multiple_images(title, &vec![image], window_width, window_height);
 }
 
@@ -23,12 +29,10 @@ pub fn display_image(title: &str, image: &RgbaImage, window_width: u32, window_h
 ///
 /// The minimum window width or height is 150 pixels - input values less than this
 /// will be rounded up to the minimum.
-pub fn display_multiple_images(
-    title: &str,
-    images: &[&RgbaImage],
-    window_width: u32,
-    window_height: u32,
-) {
+pub fn display_multiple_images<I>(title: &str, images: &[&I], window_width: u32, window_height: u32)
+where
+    I: GenericImageView + ConvertBuffer<RgbaImage>,
+{
     if images.len() == 0 {
         return;
     }
@@ -102,44 +106,6 @@ pub fn display_multiple_images(
     }
 
     // Shrinks input image to fit if required and renders to the sdl canvas
-    let render_image_to_canvas =
-        |image,
-         window_width,
-         window_height,
-         canvas: &mut Canvas<Window>,
-         texture_creator: &TextureCreator<WindowContext>| {
-            let scaled_image = resize_to_fit(image, window_width, window_height);
-
-            let (image_width, image_height) = scaled_image.dimensions();
-            let mut buffer = scaled_image.into_raw();
-            const CHANNEL_COUNT: u32 = 4;
-            let surface = Surface::from_data(
-                &mut buffer,
-                image_width,
-                image_height,
-                image_width * CHANNEL_COUNT,
-                PixelFormatEnum::ABGR8888, // sdl2 expects bits from highest to lowest
-            )
-            .expect("couldn't create surface");
-
-            let texture = texture_creator
-                .create_texture_from_surface(surface)
-                .expect("couldn't create texture from surface");
-
-            canvas.set_draw_color(Color::RGB(255, 255, 255));
-            canvas.clear();
-
-            let left = ((window_width - image_width) as f32 / 2f32) as i32;
-            let top = ((window_height - image_height) as f32 / 2f32) as i32;
-            canvas
-                .copy(
-                    &texture,
-                    None,
-                    Rect::new(left, top, image_width, image_height),
-                )
-                .unwrap();
-            canvas.present();
-        };
 
     for (i, (canvas, texture_creator)) in
         canvases.iter_mut().zip(texture_creators.iter()).enumerate()
@@ -224,9 +190,13 @@ pub fn display_multiple_images(
 }
 
 // Scale input image down if required so that it fits within a window of the given dimensions
-fn resize_to_fit(image: &RgbaImage, window_width: u32, window_height: u32) -> RgbaImage {
+fn resize_to_fit<I>(image: &I, window_width: u32, window_height: u32) -> RgbaImage
+where
+    I: GenericImageView + ConvertBuffer<RgbaImage>,
+{
+    let image = image.convert();
     if image.height() < window_height && image.width() < window_width {
-        return image.clone();
+        return image;
     }
 
     let scale = {
@@ -238,5 +208,47 @@ fn resize_to_fit(image: &RgbaImage, window_width: u32, window_height: u32) -> Rg
     let height = (scale * image.height() as f32) as u32;
     let width = (scale * image.width() as f32) as u32;
 
-    resize(image, width, height, image::FilterType::Triangle)
+    resize(&image, width, height, FilterType::Triangle)
+}
+
+fn render_image_to_canvas<I>(
+    image: &I,
+    window_width: u32,
+    window_height: u32,
+    canvas: &mut Canvas<Window>,
+    texture_creator: &TextureCreator<WindowContext>,
+) where
+    I: GenericImageView + ConvertBuffer<RgbaImage>,
+{
+    let scaled_image = resize_to_fit(image, window_width, window_height);
+
+    let (image_width, image_height) = scaled_image.dimensions();
+    let mut buffer = scaled_image.into_raw();
+    const CHANNEL_COUNT: u32 = 4;
+    let surface = Surface::from_data(
+        &mut buffer,
+        image_width,
+        image_height,
+        image_width * CHANNEL_COUNT,
+        PixelFormatEnum::ABGR8888, // sdl2 expects bits from highest to lowest
+    )
+    .expect("couldn't create surface");
+
+    let texture = texture_creator
+        .create_texture_from_surface(surface)
+        .expect("couldn't create texture from surface");
+
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    canvas.clear();
+
+    let left = ((window_width - image_width) as f32 / 2f32) as i32;
+    let top = ((window_height - image_height) as f32 / 2f32) as i32;
+    canvas
+        .copy(
+            &texture,
+            None,
+            Rect::new(left, top, image_width, image_height),
+        )
+        .unwrap();
+    canvas.present();
 }
