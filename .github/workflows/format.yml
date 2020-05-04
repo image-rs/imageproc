@@ -4,6 +4,12 @@ name: Format Check
 jobs:
   format:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
     steps:
       - uses: actions-rs/toolchain@v1        
         with:
