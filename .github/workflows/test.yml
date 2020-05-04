@@ -1,0 +1,63 @@
+on: [push, pull_request]
+
+name: Continuous integration
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        features:
+          - "display-window"
+          - ""
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        name: Install Nightly Toolchain
+        if: ${{ matrix.rust == 'nightly' }}
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          target: wasm32-unknown-unknown
+
+      - uses: actions-rs/toolchain@v1
+        name: Install Non-nightly Toolchain
+        if: ${{ matrix.rust != 'nightly' }}
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true                
+
+      - uses: actions-rs/cargo@v1
+        name: Build
+        with:
+          command: build
+          args: --features=${{ matrix.features }}
+
+      # Tests only run on Nightly due to #![feature(*)] use 
+      - uses: actions-rs/cargo@v1
+
+        if: ${{ matrix.rust == 'nightly' }}
+        name: Unit Test
+        with:
+          command: test
+          args: --features=${{ matrix.features }}
+      
+      - uses: actions-rs/cargo@v1
+        if: ${{ matrix.rust == 'nightly' }}
+        name: Unit Test Web Assembly
+        with:
+          command: test
+          args: --features=${{ matrix.features }} -v --target wasm32-unknown-unknown
+          
