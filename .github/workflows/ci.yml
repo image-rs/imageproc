@@ -1,9 +1,10 @@
 on: [push, pull_request]
 
-name: Continuous integration
+name: Continuous Integration
 
 jobs:
-  ci:
+  buildtest:
+    name: Build and Test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -60,4 +61,57 @@ jobs:
         with:
           command: test
           args: --features=${{ matrix.features }} -v --target wasm32-unknown-unknown
-          
+
+  docbuild:
+    name: Doc Build Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest        
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1        
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt       
+      
+      - uses: actions-rs/cargo@v1
+        name: Doc Build Check
+        with:
+          command: doc
+          args: -v
+
+  formatcheck:
+    name: Format Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1        
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt       
+      
+      - uses: actions-rs/cargo@v1
+        name: Format Check
+        with:
+          command: fmt
+          args: --all -- --check
