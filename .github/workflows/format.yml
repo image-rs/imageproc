@@ -1,0 +1,19 @@
+on: [push, pull_request]
+
+name: Format Check
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/toolchain@v1        
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt       
+      
+      - uses: actions-rs/cargo@v1
+        name: Format Check
+        with:
+          command: fmt
+          args: --all -- --check
