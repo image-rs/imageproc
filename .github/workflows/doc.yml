@@ -26,4 +26,4 @@ jobs:
         name: Doc Build Check
         with:
           command: doc
-          args: --all -- --check
+          args: -v
