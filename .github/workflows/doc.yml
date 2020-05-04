@@ -1,0 +1,29 @@
+on: [push, pull_request]
+
+name: Doc Build Check
+jobs:
+  doc:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest        
+    steps:
+      - uses: actions-rs/toolchain@v1        
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt       
+      
+      - uses: actions-rs/cargo@v1
+        name: Doc Build Check
+        with:
+          command: doc
+          args: --all -- --check
