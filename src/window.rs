@@ -2,7 +2,8 @@
 
 use image::{
     imageops::{resize, FilterType},
-    ConvertBuffer, GenericImageView, RgbaImage,
+    buffer::ConvertBuffer,
+    GenericImageView, RgbaImage,
 };
 use sdl2::{
     event::{Event, WindowEvent},
