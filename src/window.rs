@@ -1,8 +1,9 @@
 //! Displays an image in a window created by sdl2.
 
 use image::{
+    buffer::ConvertBuffer,
     imageops::{resize, FilterType},
-    ConvertBuffer, GenericImageView, RgbaImage,
+    GenericImageView, RgbaImage,
 };
 use sdl2::{
     event::{Event, WindowEvent},
