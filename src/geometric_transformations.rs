@@ -333,14 +333,14 @@ where
 {
     let (width, height) = (image.width() as f32, image.height() as f32);
     let (new_width, new_height) = (
-        (width * theta.cos().abs() + height * theta.sin().abs()) as u32,
-        (height * theta.cos().abs() + width * theta.sin().abs()) as u32,
+        (width * theta.cos().abs() + height * theta.sin().abs()),
+        (height * theta.cos().abs() + width * theta.sin().abs()),
     );
 
     let (cx, cy) = (width / 2f32, height / 2f32);
-    let (new_cx, new_cy) = ((new_width / 2) as f32, (new_height / 2) as f32);
+    let (new_cx, new_cy) = ((new_width / 2f32), (new_height / 2f32));
 
-    let mut new_image = ImageBuffer::from_pixel(new_width, new_height, default);
+    let mut new_image = ImageBuffer::from_pixel(new_width as u32, new_height as u32, default);
     let projection = Projection::translate(new_cx, new_cy)
         * Projection::rotate(theta)
         * Projection::translate(-cx, -cy);
