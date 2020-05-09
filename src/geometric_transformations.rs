@@ -792,6 +792,22 @@ mod tests {
     }
 
     #[test]
+    fn test_rotate_nearest_zero_radians_uncropped() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
+
+        let rotated = rotate_uncropped(
+            &image,
+            0f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
+        assert_pixels_eq!(rotated, image);
+    }
+
+
+    #[test]
     fn test_rotate_half_pi_uncropped() {
         let image = gray_image!(
             00, 01, 02;
