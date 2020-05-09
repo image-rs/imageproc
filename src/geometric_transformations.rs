@@ -341,7 +341,8 @@ where
     let (new_cx, new_cy) = ((new_width / 2f32), (new_height / 2f32));
 
     let mut new_image = ImageBuffer::from_pixel(new_width as u32, new_height as u32, default);
-    let projection = Projection::translate(new_cx, new_cy)
+    let projection = 
+          Projection::translate(new_cx, new_cy)
         * Projection::rotate(theta)
         * Projection::translate(-cx, -cy);
 
@@ -847,6 +848,31 @@ mod tests {
         );
         assert_pixels_eq!(rotated, expected);
     }
+
+    #[test]
+    fn test_rotate_half_pi_uncropped_square() {
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 14;
+            21, 22, 23, 25;
+            31, 32, 33, 34);
+
+        let expected = gray_image!(
+            31, 21, 10, 00;
+            32, 22, 11, 01;
+            33, 23, 12, 02;
+            34, 25, 14, 03);
+
+        let rotated = rotate_uncropped(
+            &image,
+            std::f32::consts::PI / 2f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
+        assert_pixels_eq!(rotated, expected);
+    }
+
+    
 
     #[test]
     fn text_rotate_nearest_quarter_turn_clockwise() {
