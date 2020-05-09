@@ -798,9 +798,9 @@ mod tests {
             10, 11, 12);
 
         let expected = gray_image!(
-            99, 11;
-            99, 12;
-            99, 99);
+            10, 00;
+            11, 01;
+            12, 02);
 
         let rotated = rotate_uncropped(
             &image,
@@ -811,6 +811,7 @@ mod tests {
         assert_pixels_eq!(rotated, expected);
     }
 
+    //TODO: fix test
     #[test]
     fn test_rotate_quarter_pi_uncropped() {
         let image = gray_image!(
