@@ -2,7 +2,7 @@
 
 use image::{Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use rusttype::{FontCollection, Scale};
+use rusttype::{Font, Scale};
 use std::env;
 use std::path::Path;
 
@@ -18,10 +18,7 @@ fn main() {
     let mut image = RgbImage::new(200, 200);
 
     let font = Vec::from(include_bytes!("DejaVuSans.ttf") as &[u8]);
-    let font = FontCollection::from_bytes(font)
-        .unwrap()
-        .into_font()
-        .unwrap();
+    let font = Font::try_from_vec(font).unwrap();
 
     let height = 12.4;
     let scale = Scale {
