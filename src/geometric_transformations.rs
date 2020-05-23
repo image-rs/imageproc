@@ -333,15 +333,16 @@ where
 {
     let (width, height) = (image.width() as f32, image.height() as f32);
     let (new_width, new_height) = (
-        (width * theta.cos().abs() + height * theta.sin().abs()) as u32,
-        (height * theta.cos().abs() + width * theta.sin().abs()) as u32,
+        (width * theta.cos().abs() + height * theta.sin().abs()),
+        (height * theta.cos().abs() + width * theta.sin().abs()),
     );
 
     let (cx, cy) = (width / 2f32, height / 2f32);
-    let (new_cx, new_cy) = ((new_width / 2) as f32, (new_height / 2) as f32);
+    let (new_cx, new_cy) = ((new_width / 2f32), (new_height / 2f32));
 
-    let mut new_image = ImageBuffer::from_pixel(new_width, new_height, default);
-    let projection = Projection::translate(new_cx, new_cy)
+    let mut new_image = ImageBuffer::from_pixel(new_width as u32, new_height as u32, default);
+    let projection = 
+          Projection::translate(new_cx, new_cy)
         * Projection::rotate(theta)
         * Projection::translate(-cx, -cy);
 
@@ -792,15 +793,31 @@ mod tests {
     }
 
     #[test]
+    fn test_rotate_nearest_zero_radians_uncropped() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
+
+        let rotated = rotate_uncropped(
+            &image,
+            0f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
+        assert_pixels_eq!(rotated, image);
+    }
+
+
+    #[test]
     fn test_rotate_half_pi_uncropped() {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
 
         let expected = gray_image!(
-            99, 11;
-            99, 12;
-            99, 99);
+            10, 00;
+            11, 01;
+            12, 02);
 
         let rotated = rotate_uncropped(
             &image,
@@ -811,6 +828,7 @@ mod tests {
         assert_pixels_eq!(rotated, expected);
     }
 
+    //TODO: fix test
     #[test]
     fn test_rotate_quarter_pi_uncropped() {
         let image = gray_image!(
@@ -830,6 +848,31 @@ mod tests {
         );
         assert_pixels_eq!(rotated, expected);
     }
+
+    #[test]
+    fn test_rotate_half_pi_uncropped_square() {
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 14;
+            21, 22, 23, 25;
+            31, 32, 33, 34);
+
+        let expected = gray_image!(
+            31, 21, 10, 00;
+            32, 22, 11, 01;
+            33, 23, 12, 02;
+            34, 25, 14, 03);
+
+        let rotated = rotate_uncropped(
+            &image,
+            std::f32::consts::PI / 2f32,
+            Interpolation::Nearest,
+            Luma([99u8]),
+        );
+        assert_pixels_eq!(rotated, expected);
+    }
+
+    
 
     #[test]
     fn text_rotate_nearest_quarter_turn_clockwise() {
