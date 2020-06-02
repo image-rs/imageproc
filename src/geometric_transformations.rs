@@ -124,7 +124,8 @@ impl Projection {
 
     /// Calculates a projection from a set of four control point pairs.
     pub fn from_control_points(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Projection> {
-        use nalgebra::{Matrix, U9};
+        use approx::AbsDiffEq;
+        use nalgebra::{linalg::SVD, Matrix, U9};
 
         let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = (
             from[0].0 as f64,
@@ -161,44 +162,38 @@ impl Projection {
             xf4, yf4, 1.0, 0.0, 0.0, 0.0, -x4 * xf4, -x4 * yf4, -x4,
         ]);
 
-        nalgebra::linalg::SVD::try_new(
-            a,
-            false,
-            true,
-            <f64 as approx::AbsDiffEq>::default_epsilon(),
-            0,
-        )
-        .filter(|svd| {
-            // rank(a) must be 8, but not 7
-            svd.rank(0.01) == 8
-        })
-        .and_then(|svd| {
-            let vt = svd.v_t.unwrap();
-
-            // nalgebra doesn't sort the u and v matrices, so we locate the row with the smallest singular value
-            // See https://github.com/rustsim/nalgebra/issues/349
-            let h = vt.row(svd.singular_values.imin());
-            let mut transform = [
-                h[0] as f32,
-                h[1] as f32,
-                h[2] as f32,
-                h[3] as f32,
-                h[4] as f32,
-                h[5] as f32,
-                h[6] as f32,
-                h[7] as f32,
-                h[8] as f32,
-            ];
-
-            transform = normalize(transform);
-            let class = class_from_matrix(transform);
-
-            try_inverse(&transform).map(|inverse| Projection {
-                transform,
-                inverse,
-                class,
+        SVD::try_new(a, false, true, f64::default_epsilon(), 0)
+            .filter(|svd| {
+                // rank(a) must be 8, but not 7
+                svd.rank(0.01) == 8
             })
-        })
+            .and_then(|svd| {
+                let vt = svd.v_t.unwrap();
+
+                // nalgebra doesn't sort the u and v matrices, so we locate the row with the smallest singular value
+                // See https://github.com/rustsim/nalgebra/issues/349
+                let h = vt.row(svd.singular_values.imin());
+                let mut transform = [
+                    h[0] as f32,
+                    h[1] as f32,
+                    h[2] as f32,
+                    h[3] as f32,
+                    h[4] as f32,
+                    h[5] as f32,
+                    h[6] as f32,
+                    h[7] as f32,
+                    h[8] as f32,
+                ];
+
+                transform = normalize(transform);
+                let class = class_from_matrix(transform);
+
+                try_inverse(&transform).map(|inverse| Projection {
+                    transform,
+                    inverse,
+                    class,
+                })
+            })
     }
 
     // Helper functions used as optimization in warp.
