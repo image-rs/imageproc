@@ -165,7 +165,7 @@ impl Projection {
         SVD::try_new(a, false, true, f64::default_epsilon(), 0)
             .filter(|svd| {
                 // rank(a) must be 8, but not 7
-                svd.rank(0.01) == 8
+                svd.rank(f64::default_epsilon()) == 8
             })
             .and_then(|svd| {
                 let vt = svd.v_t.unwrap();
@@ -1124,6 +1124,20 @@ mod tests {
 
         assert_approx_eq!(out.0, 16.0, 1e-10);
         assert_approx_eq!(out.1, 20.0, 1e-10);
+    }
+
+    #[test]
+    fn test_from_control_points_2() {
+        let from = [
+            (67.24537, 427.96024),
+            (65.51512, 67.96736),
+            (569.6426, 62.33165),
+            (584.4605, 425.33667),
+        ];
+        let to = [(0.0, 0.0), (640.0, 0.0), (640.0, 480.0), (0.0, 480.0)];
+
+        let p = Projection::from_control_points(from, to);
+        assert!(p.is_some());
     }
 
     #[test]
