@@ -1151,8 +1151,7 @@ mod tests {
         ];
         let to = [(0.0, 0.0), (249.0, 0.0), (0.0, 105.0), (249.0, 105.0)];
 
-        let p = Projection::from_control_points(from, to);
-        assert!(p.is_none());
+        Projection::from_control_points(from, to);
     }
 
     #[test]
