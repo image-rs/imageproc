@@ -22,6 +22,12 @@ Maximum genericity over image storages or formats, or support for higher-dimensi
 
 Full blown computer vision applications (e.g. face recognition or image registration) probably also belong elsewhere, but the line's a bit blurred here (e.g. is image in-painting an image processing task or a computer vision task?). However, worrying about how to structure the code can probably wait until we have more code to structure...
 
+# Crate Features
+
+Imageproc is built with these features enabled by default:
+
+-   `rayon` enables multithreading image processing for certain operations (i.g., geometric transformations) via [rayon](https://github.com/rayon-rs/rayon)
+
 # How to contribute
 
 All pull requests are welcome. Some specific areas that would be great to get some help with are:
