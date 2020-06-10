@@ -28,6 +28,11 @@ Imageproc is built with these features enabled by default:
 
 -   `rayon` enables multithreading image processing for certain operations (i.g., geometric transformations) via [rayon](https://github.com/rayon-rs/rayon)
 
+Optionally, the following dependencies can be enabled:
+
+-   `property-testing` enables testing (not that it is only for internal usage for now) with [quickcheck](https://github.com/BurntSushi/quickcheck)
+-   `display-window` enables to display images (using `imageproc::window`) with [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
+
 # How to contribute
 
 All pull requests are welcome. Some specific areas that would be great to get some help with are:
