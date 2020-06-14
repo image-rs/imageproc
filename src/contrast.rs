@@ -169,7 +169,7 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let iter = image.par_iter_mut();
     #[cfg(not(feature = "rayon"))]
     let iter = image.iter_mut();
-    
+
     iter.for_each(|p| {
         // JUSTIFICATION
         //  Benefit
