@@ -4,6 +4,7 @@ use crate::definitions::{HasBlack, HasWhite};
 use crate::integral_image::{integral_image, sum_image_pixels};
 use crate::stats::{cumulative_histogram, histogram};
 use image::{GrayImage, ImageBuffer, Luma};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::cmp::{max, min};
 
@@ -164,7 +165,12 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let hist = cumulative_histogram(image).channels[0];
     let total = hist[255] as f32;
 
-    image.par_iter_mut().for_each(|p| {
+    #[cfg(feature = "rayon")]
+    let iter = image.par_iter_mut();
+    #[cfg(not(feature = "rayon"))]
+    let iter = image.iter_mut();
+
+    iter.for_each(|p| {
         // JUSTIFICATION
         //  Benefit
         //      Using checked indexing here makes this function take 1.1x longer, as measured
