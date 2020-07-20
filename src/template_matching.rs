@@ -58,7 +58,7 @@ pub fn match_template(
         _ => false,
     };
     let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(&image))
+        Some(integral_squared_image(image))
     } else {
         None
     };

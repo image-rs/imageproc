@@ -47,10 +47,11 @@ use std::ops::AddAssign;
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 2 + 3);
 /// # }
 /// ```
-pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
-where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+pub fn integral_image<I, T>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
+    where
+        I: GenericImageView,
+        I::Pixel: Pixel + WithChannel<T> + 'static,
+        T: From<<I::Pixel as Pixel>::Subpixel> + Primitive + AddAssign + 'static,
 {
     integral_image_impl(image, false)
 }
@@ -86,19 +87,21 @@ where
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 4 + 9);
 /// # }
 /// ```
-pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
+pub fn integral_squared_image<I, T>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    I: GenericImageView,
+    I::Pixel: Pixel + WithChannel<T> + 'static,
+    T: From<<I::Pixel as Pixel>::Subpixel> + Primitive + AddAssign + 'static,
 {
     integral_image_impl(image, true)
 }
 
 /// Implementation of `integral_image` and `integral_squared_image`.
-fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
+fn integral_image_impl<I, T>(image: &I, square: bool) -> Image<ChannelMap<I::Pixel, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    I: GenericImageView,
+    I::Pixel: Pixel + WithChannel<T> + 'static,
+    T: From<<I::Pixel as Pixel>::Subpixel> + Primitive + AddAssign + 'static,
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -106,14 +109,14 @@ where
     let out_width = in_width + 1;
     let out_height = in_height + 1;
 
-    let mut out = Image::<ChannelMap<P, T>>::new(out_width, out_height);
+    let mut out = Image::<ChannelMap<I::Pixel, T>>::new(out_width, out_height);
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
     for y in 0..in_height {
-        let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
+        let mut sum = vec![T::zero(); I::Pixel::CHANNEL_COUNT as usize];
         for x in 0..in_width {
             // JUSTIFICATION
             //  Benefit
@@ -138,7 +141,7 @@ where
             // pixel here we need to use the method with bounds checking
             let current = out.get_pixel_mut(x + 1, y + 1);
             // Using zip here makes this slower.
-            for c in 0..P::CHANNEL_COUNT {
+            for c in 0..I::Pixel::CHANNEL_COUNT {
                 current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
             }
         }
