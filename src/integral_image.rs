@@ -183,6 +183,9 @@ pub trait ArrayData {
 
     /// Subtract the elements of two data arrays elementwise.
     fn sub(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
+
+    /// Convert DataType back into Pixel
+    fn data_to_pixel(data: Self::DataType) -> Self;
 }
 
 impl<T: Primitive + 'static> ArrayData for Luma<T> {
@@ -199,6 +202,10 @@ impl<T: Primitive + 'static> ArrayData for Luma<T> {
     fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
         [lhs[0] - rhs[0]]
     }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
+    }
 }
 
 impl<T: Primitive + 'static> ArrayData for Rgb<T> {
@@ -214,6 +221,10 @@ impl<T: Primitive + 'static> ArrayData for Rgb<T> {
 
     fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
         [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
+    }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
     }
 }
 
@@ -246,6 +257,10 @@ impl<T: Primitive + 'static> ArrayData for Rgba<T> {
             lhs[3] - rhs[3],
         ]
     }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
+    }
 }
 
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -257,15 +272,16 @@ impl<T: Primitive + 'static> ArrayData for Rgba<T> {
 /// whose pixels are of type `Luma`, `[T; 3]` for `Rgb` pixels and `[T; 4]` for `Rgba` pixels.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
-pub fn sum_image_pixels<P>(
-    integral_image: &Image<P>,
+pub fn sum_image_pixels<I>(
+    integral_image: &I,
     left: u32,
     top: u32,
     right: u32,
     bottom: u32,
-) -> P::DataType
+) -> I::Pixel
 where
-    P: Pixel + ArrayData + Copy + 'static,
+    I: GenericImageView,
+    I::Pixel: Pixel + ArrayData + Copy + 'static,
 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.
@@ -275,7 +291,8 @@ where
         integral_image.get_pixel(right + 1, top).data(),
         integral_image.get_pixel(left, bottom + 1).data(),
     );
-    P::sub(P::sub(P::add(a, b), c), d)
+
+    ArrayData::data_to_pixel(I::Pixel::sub(I::Pixel::sub(I::Pixel::add(a, b), c), d))
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -545,24 +562,26 @@ mod tests {
 
         let integral = integral_image::<_, u32>(&image);
 
+        use image::Rgb;
+
         // Top left
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), [1, 2, 3]);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 0), Rgb {0:[1, 2, 3]});
         // Top row
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), [5, 7, 9]);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 0), Rgb {0:[5, 7, 9]});
         // Left column
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 1), [8, 10, 12]);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 0, 1), Rgb {0:[8, 10, 12]});
         // Whole image
-        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 1), [22, 26, 30]);
+        assert_eq!(sum_image_pixels(&integral, 0, 0, 1, 1), Rgb {0:[22, 26, 30]});
         // Top right
-        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 0), [4, 5, 6]);
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 0), Rgb {0:[4, 5, 6]});
         // Right column
-        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 1), [14, 16, 18]);
+        assert_eq!(sum_image_pixels(&integral, 1, 0, 1, 1), Rgb {0:[14, 16, 18]});
         // Bottom left
-        assert_eq!(sum_image_pixels(&integral, 0, 1, 0, 1), [7, 8, 9]);
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 0, 1), Rgb {0:[7, 8, 9]});
         // Bottom row
-        assert_eq!(sum_image_pixels(&integral, 0, 1, 1, 1), [17, 19, 21]);
+        assert_eq!(sum_image_pixels(&integral, 0, 1, 1, 1), Rgb {0:[17, 19, 21]});
         // Bottom right
-        assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), [10, 11, 12]);
+        assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), Rgb {0:[10, 11, 12]});
     }
 
     #[bench]

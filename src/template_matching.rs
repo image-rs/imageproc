@@ -1,9 +1,12 @@
 //! Functions for performing template matching.
 use crate::definitions::Image;
-use crate::integral_image::{integral_squared_image, sum_image_pixels};
+use crate::integral_image::{sum_image_pixels, integral_squared_image_view, ArrayData};
 use crate::rect::Rect;
-use image::Primitive;
-use image::{GrayImage, Luma};
+use image::{Primitive, GenericImageView, Pixel};
+use image::Luma;
+use std::ops::AddAssign;
+use crate::map::WithChannel;
+use num::ToPrimitive;
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -33,13 +36,17 @@ pub enum MatchTemplateMethod {
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
-pub fn match_template(
-    image: &GrayImage,
-    template: &GrayImage,
+pub fn match_template<T>(
+    image: &T,
+    template: &T,
     method: MatchTemplateMethod,
-) -> Image<Luma<f32>> {
-    use image::GenericImageView;
-
+) -> Image<Luma<f32>>
+where
+    T: image::GenericImageView,
+    T::Pixel: WithChannel<<<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel> + image::Pixel + 'static + ArrayData,
+    <<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
+    <<T as image::GenericImageView>::Pixel as WithChannel<<<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel>>::Pixel: ArrayData
+{
     let (image_width, image_height) = image.dimensions();
     let (template_width, template_height) = template.dimensions();
 
@@ -57,13 +64,15 @@ pub fn match_template(
         | MatchTemplateMethod::CrossCorrelationNormalized => true,
         _ => false,
     };
+
     let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
+        Some(integral_squared_image_view::<<<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel,T>(image))
     } else {
         None
     };
+
     let template_squared_sum = if should_normalize {
-        Some(sum_squares(&template))
+        Some(sum_squares(template))
     } else {
         None
     };
@@ -79,19 +88,24 @@ pub fn match_template(
 
             for dy in 0..template_height {
                 for dx in 0..template_width {
-                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                    let image_pixel = unsafe{image.unsafe_get_pixel(x + dx, y + dy)};
+                    let template_pixel = unsafe { template.unsafe_get_pixel(dx, dy)};
 
-                    use MatchTemplateMethod::*;
+                    for c in 0..T::Pixel::CHANNEL_COUNT {
+                        let image_value = image_pixel.channels()[c as usize].to_f32().unwrap();
+                        let template_value = template_pixel.channels()[c as usize].to_f32().unwrap();
 
-                    score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                            (image_value - template_value).powf(2.0)
-                        }
-                        CrossCorrelation | CrossCorrelationNormalized => {
-                            image_value * template_value
-                        }
-                    };
+                        use MatchTemplateMethod::*;
+
+                        score += match method {
+                            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                                (image_value - template_value).powf(2.0)
+                            }
+                            CrossCorrelation | CrossCorrelationNormalized => {
+                                image_value * template_value
+                            }
+                        };
+                    }
                 }
             }
 
@@ -110,24 +124,37 @@ pub fn match_template(
     result
 }
 
-fn sum_squares(template: &GrayImage) -> f32 {
-    template.iter().map(|p| *p as f32 * *p as f32).sum()
+fn sum_squares<T>(template: &T) -> f32
+where
+    T: GenericImageView,
+    <<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
+{
+    template.pixels().map(|p| p.2.channels().iter().map(|pv| pv.to_f32().unwrap().powf(2.0)).sum::<f32>()).sum()
 }
 
 /// Returns the square root of the product of the sum of squares of
 /// pixel intensities in template and the provided region of image.
-fn normalization_term(
-    image_squared_integral: &Image<Luma<u64>>,
+fn normalization_term<T>(
+    image_squared_integral: &T,
     template_squared_sum: f32,
     region: Rect,
-) -> f32 {
+) -> f32
+where
+    T: GenericImageView,
+    T::Pixel: ArrayData + 'static,
+    <<T as image::GenericImageView>::Pixel as image::Pixel>::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
+{
+
     let image_sum = sum_image_pixels(
         image_squared_integral,
         region.left() as u32,
         region.top() as u32,
         region.right() as u32,
         region.bottom() as u32,
-    )[0] as f32;
+    );
+
+    let image_sum = image_sum.channels().iter().map(|v| v.to_f32().unwrap()).sum::<f32>();
+
     (image_sum * template_squared_sum).sqrt()
 }
 
@@ -180,6 +207,7 @@ where
         min_value_location,
     }
 }
+
 
 #[cfg(test)]
 mod tests {
