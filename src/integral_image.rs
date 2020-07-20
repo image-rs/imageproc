@@ -47,7 +47,16 @@ use std::ops::AddAssign;
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 2 + 3);
 /// # }
 /// ```
-pub fn integral_image<I, T>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
+pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
+    where
+        P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+        T: From<u8> + Primitive + AddAssign + 'static
+{
+    integral_image_impl(image, false)
+}
+
+/// Same as integral_image but for a GenericImageView
+pub fn integral_image_view<T, I>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
     where
         I: GenericImageView,
         I::Pixel: Pixel + WithChannel<T> + 'static,
@@ -87,7 +96,17 @@ pub fn integral_image<I, T>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
 /// assert_eq!(sum_image_pixels(&integral, 0, 0, 2, 0)[0], 1 + 4 + 9);
 /// # }
 /// ```
-pub fn integral_squared_image<I, T>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
+///
+pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
+    where
+        P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+        T: From<u8> + Primitive + AddAssign + 'static
+{
+    integral_image_impl(image, true)
+}
+
+/// Same as integral_squared_image but for a GenericImageView
+pub fn integral_squared_image_view<T, I>(image: &I) -> Image<ChannelMap<I::Pixel, T>>
 where
     I: GenericImageView,
     I::Pixel: Pixel + WithChannel<T> + 'static,
