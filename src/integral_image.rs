@@ -4,7 +4,7 @@
 use crate::definitions::Image;
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImageView, GrayImage, Luma, Pixel, Primitive, Rgb, Rgba};
-use std::ops::AddAssign;
+use num::traits::*;
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
 ///
@@ -50,7 +50,8 @@ use std::ops::AddAssign;
 pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
     P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    P::Subpixel: NumCast,
+    T: Primitive + NumAssign + 'static,
 {
     integral_image_impl(image, false)
 }
@@ -89,7 +90,8 @@ where
 pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
     P: Pixel + WithChannel<T> + 'static,
-    T: From<<P as Pixel>::Subpixel> + Primitive + AddAssign + 'static,
+    P::Subpixel: NumCast,
+    T: NumAssign + 'static + Primitive,
 {
     integral_image_impl(image, true)
 }
@@ -98,7 +100,8 @@ where
 fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
 where
     P: Pixel + WithChannel<T> + 'static,
-    T: From<<P as Pixel>::Subpixel> + Primitive + AddAssign + 'static,
+    P::Subpixel: NumCast,
+    T: NumAssign + 'static + Primitive,
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -123,7 +126,7 @@ where
             //      x and y are within bounds by definition of in_width and in_height
             let input = unsafe { image.unsafe_get_pixel(x, y) };
             for (s, c) in sum.iter_mut().zip(input.channels()) {
-                let pix: T = (*c).into();
+                let pix: T = T::from(*c).unwrap();
                 *s += if square { pix * pix } else { pix };
             }
 

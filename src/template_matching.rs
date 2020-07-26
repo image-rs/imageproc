@@ -6,7 +6,9 @@ use image::{Primitive, GenericImageView, Pixel};
 use image::Luma;
 use std::ops::AddAssign;
 use crate::map::WithChannel;
-use num::ToPrimitive;
+use num::{ToPrimitive, NumCast};
+use num::traits::NumAssign;
+
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -42,9 +44,9 @@ pub fn match_template<P>(
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>>
 where
-    P: Pixel + 'static + WithChannel<< P as Pixel>::Subpixel> + ArrayData,
-    P::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
-    <P as WithChannel<<P as Pixel>::Subpixel>>::Pixel: ArrayData,
+    P: Pixel + 'static + WithChannel<f32> + ArrayData,
+    P::Subpixel: NumAssign + NumCast + 'static,
+    <P as WithChannel<f32>>::Pixel: ArrayData,
 {
     let (image_width, image_height) = image.dimensions();
     let (template_width, template_height) = template.dimensions();
@@ -65,7 +67,7 @@ where
     };
 
     let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
+        Some(integral_squared_image::<_, f32>(image))
     } else {
         None
     };
