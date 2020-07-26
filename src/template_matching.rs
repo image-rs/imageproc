@@ -128,7 +128,7 @@ where
 fn sum_squares<P>(template: &Image<P>) -> f32
 where
     P: Pixel + 'static,
-    P::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
+    P::Subpixel: NumAssign + 'static,
 {
     template.pixels().map(|p| p.channels().iter().map(|pv| pv.to_f32().unwrap().powf(2.0)).sum::<f32>()).sum()
 }
@@ -142,7 +142,7 @@ fn normalization_term<P>(
 ) -> f32
 where
     P: Pixel + 'static + ArrayData,
-    P::Subpixel: AddAssign + Primitive + ToPrimitive + 'static,
+    P::Subpixel: AddAssign + 'static,
 {
 
     let image_sum = sum_image_pixels(
@@ -342,7 +342,7 @@ mod tests {
         let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
         // Not yet correct expected
         let expected = gray_image!(type: f32,
-            3.0, 39.0, 183.0
+            0.007280524, 0.07134486, 0.26518285
         );
 
         assert_pixels_eq!(actual, expected);
