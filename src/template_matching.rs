@@ -280,6 +280,27 @@ mod tests {
     }
 
     #[test]
+    fn match_template_rgb_sum_of_squared_errors() {
+        let image = rgb_image!(
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9];
+            [10,  11,  12], [13, 14, 15], [16, 17, 18];
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9]);
+
+        let template = rgb_image!(
+            [1, 2, 3];
+            [11, 12, 13]
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
+        let expected = gray_image!(type: f32,
+            3.0, 39.0, 183.0;
+            543.0, 579.0, 723.0
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
     fn match_template_sum_of_squared_errors_normalized() {
         let image = gray_image!(
             1, 4, 2;
@@ -300,6 +321,26 @@ mod tests {
         let expected = gray_image!(type: f32,
             14.0 / (22.0 * tss).sqrt(), 14.0 / (30.0 * tss).sqrt();
             3.0 / (23.0 * tss).sqrt(), 1.0 / (35.0 * tss).sqrt()
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_rgb_sum_of_squared_errors_normalized() {
+        let image = rgb_image!(
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9];
+            [10,  11,  12], [13, 14, 15], [16, 17, 18]);
+
+        let template = rgb_image!(
+            [1, 2, 3];
+            [11, 12, 13]
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+        // Not yet correct expected
+        let expected = gray_image!(type: f32,
+            3.0, 39.0, 183.0
         );
 
         assert_pixels_eq!(actual, expected);
