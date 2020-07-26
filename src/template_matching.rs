@@ -1,14 +1,13 @@
 //! Functions for performing template matching.
 use crate::definitions::Image;
-use crate::integral_image::{sum_image_pixels, integral_squared_image, ArrayData};
-use crate::rect::Rect;
-use image::{Primitive, GenericImageView, Pixel};
-use image::Luma;
-use std::ops::AddAssign;
+use crate::integral_image::{integral_squared_image, sum_image_pixels, ArrayData};
 use crate::map::WithChannel;
-use num::{ToPrimitive, NumCast};
+use crate::rect::Rect;
+use image::Luma;
+use image::{GenericImageView, Pixel, Primitive};
 use num::traits::NumAssign;
-
+use num::{NumCast, ToPrimitive};
+use std::ops::AddAssign;
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -89,12 +88,13 @@ where
 
             for dy in 0..template_height {
                 for dx in 0..template_width {
-                    let image_pixel = unsafe{image.unsafe_get_pixel(x + dx, y + dy)};
-                    let template_pixel = unsafe { template.unsafe_get_pixel(dx, dy)};
+                    let image_pixel = unsafe { image.unsafe_get_pixel(x + dx, y + dy) };
+                    let template_pixel = unsafe { template.unsafe_get_pixel(dx, dy) };
 
                     for c in 0..P::CHANNEL_COUNT {
                         let image_value = image_pixel.channels()[c as usize].to_f32().unwrap();
-                        let template_value = template_pixel.channels()[c as usize].to_f32().unwrap();
+                        let template_value =
+                            template_pixel.channels()[c as usize].to_f32().unwrap();
 
                         use MatchTemplateMethod::*;
 
@@ -130,7 +130,15 @@ where
     P: Pixel + 'static,
     P::Subpixel: NumAssign + 'static,
 {
-    template.pixels().map(|p| p.channels().iter().map(|pv| pv.to_f32().unwrap().powf(2.0)).sum::<f32>()).sum()
+    template
+        .pixels()
+        .map(|p| {
+            p.channels()
+                .iter()
+                .map(|pv| pv.to_f32().unwrap().powf(2.0))
+                .sum::<f32>()
+        })
+        .sum()
 }
 
 /// Returns the square root of the product of the sum of squares of
@@ -144,7 +152,6 @@ where
     P: Pixel + 'static + ArrayData,
     P::Subpixel: AddAssign + 'static,
 {
-
     let image_sum = sum_image_pixels(
         image_squared_integral,
         region.left() as u32,
@@ -207,7 +214,6 @@ where
         min_value_location,
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -339,7 +345,11 @@ mod tests {
             [11, 12, 13]
         );
 
-        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+        );
         // Not yet correct expected
         let expected = gray_image!(type: f32,
             0.007280524, 0.07134486, 0.26518285
@@ -428,7 +438,11 @@ mod tests {
             [11, 12, 13]
         );
 
-        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelationNormalized);
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+        );
         let expected = gray_image!(type: f32,
             0.9998586, 0.9841932, 0.96219355;
             0.34461147, 0.49026725, 0.57094014

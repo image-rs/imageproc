@@ -185,7 +185,7 @@ impl<T: Primitive + 'static> ArrayData for Luma<T> {
     }
 
     fn data_to_pixel(data: Self::DataType) -> Self {
-        Self{ 0: data }
+        Self { 0: data }
     }
 }
 
@@ -205,7 +205,7 @@ impl<T: Primitive + 'static> ArrayData for Rgb<T> {
     }
 
     fn data_to_pixel(data: Self::DataType) -> Self {
-        Self{ 0: data }
+        Self { 0: data }
     }
 }
 
@@ -240,7 +240,7 @@ impl<T: Primitive + 'static> ArrayData for Rgba<T> {
     }
 
     fn data_to_pixel(data: Self::DataType) -> Self {
-        Self{ 0: data }
+        Self { 0: data }
     }
 }
 
@@ -272,7 +272,9 @@ where
         integral_image.get_pixel(left, bottom + 1).data(),
     );
 
-    P::data_to_pixel(P::sub(P::sub(P::add(a, b), c), d)).channels().to_vec()
+    P::data_to_pixel(P::sub(P::sub(P::add(a, b), c), d))
+        .channels()
+        .to_vec()
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
