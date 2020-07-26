@@ -370,6 +370,27 @@ mod tests {
     }
 
     #[test]
+    fn match_template_rgb_cross_correlation() {
+        let image = rgb_image!(
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9];
+            [10,  11,  12], [13, 14, 15], [16, 17, 18];
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9]);
+
+        let template = rgb_image!(
+            [1, 2, 3];
+            [11, 12, 13]
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelation);
+        let expected = gray_image!(type: f32,
+            412.0, 538.0, 664.0;
+            142.0, 268.0, 394.0
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
     fn match_template_cross_correlation_normalized() {
         let image = gray_image!(
             1, 4, 2;
@@ -390,6 +411,27 @@ mod tests {
         let expected = gray_image!(type: f32,
             19.0 / (22.0 * tss).sqrt(), 23.0 / (30.0 * tss).sqrt();
             25.0 / (23.0 * tss).sqrt(), 32.0 / (35.0 * tss).sqrt()
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_rgb_cross_correlation_normalised() {
+        let image = rgb_image!(
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9];
+            [10,  11,  12], [13, 14, 15], [16, 17, 18];
+            [1,  2,  3], [ 4,  5,  6], [7, 8, 9]);
+
+        let template = rgb_image!(
+            [1, 2, 3];
+            [11, 12, 13]
+        );
+
+        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelationNormalized);
+        let expected = gray_image!(type: f32,
+            0.9998586, 0.9841932, 0.96219355;
+            0.34461147, 0.49026725, 0.57094014
         );
 
         assert_pixels_eq!(actual, expected);
