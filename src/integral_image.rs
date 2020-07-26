@@ -49,9 +49,9 @@ use num::traits::*;
 /// ```
 pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
+    P: Pixel + WithChannel<T> + 'static,
     P::Subpixel: NumCast,
-    T: Primitive + NumAssign + 'static,
+    T: NumAssign + 'static + Primitive,
 {
     integral_image_impl(image, false)
 }
@@ -249,8 +249,8 @@ impl<T: Primitive + 'static> ArrayData for Rgba<T> {
 ///
 /// The of `ArrayData` here is due to lack of const generics. This library contains
 /// implementations of `ArrayData` for `Luma`, `Rgb` and `Rgba` for any element type `T` that
-/// implements `Primitive`. In that case, this function returns `[T; 1]` for an image
-/// whose pixels are of type `Luma`, `[T; 3]` for `Rgb` pixels and `[T; 4]` for `Rgba` pixels.
+/// implements `Primitive`. In that case, this function returns `vec![T; 1]` for an image
+/// whose pixels are of type `Luma`, `vec![T; 3]` for `Rgb` pixels and `vec![T; 4]` for `Rgba` pixels.
 ///
 /// See the [`integral_image`](fn.integral_image.html) documentation for examples.
 pub fn sum_image_pixels<P>(
