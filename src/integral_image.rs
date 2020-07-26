@@ -161,6 +161,9 @@ pub trait ArrayData {
 
     /// Subtract the elements of two data arrays elementwise.
     fn sub(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
+
+    /// Convert DataType back into Pixel
+    fn data_to_pixel(data: Self::DataType) -> Self;
 }
 
 impl<T: Primitive + 'static> ArrayData for Luma<T> {
@@ -177,6 +180,10 @@ impl<T: Primitive + 'static> ArrayData for Luma<T> {
     fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
         [lhs[0] - rhs[0]]
     }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
+    }
 }
 
 impl<T: Primitive + 'static> ArrayData for Rgb<T> {
@@ -192,6 +199,10 @@ impl<T: Primitive + 'static> ArrayData for Rgb<T> {
 
     fn sub(lhs: Self::DataType, rhs: Self::DataType) -> Self::DataType {
         [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
+    }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
     }
 }
 
@@ -224,6 +235,10 @@ impl<T: Primitive + 'static> ArrayData for Rgba<T> {
             lhs[3] - rhs[3],
         ]
     }
+
+    fn data_to_pixel(data: Self::DataType) -> Self {
+        Self{ 0: data }
+    }
 }
 
 /// Sums the pixels in positions [left, right] * [top, bottom] in F, where `integral_image` is the
@@ -241,7 +256,7 @@ pub fn sum_image_pixels<P>(
     top: u32,
     right: u32,
     bottom: u32,
-) -> P::DataType
+) -> Vec<P::Subpixel>
 where
     P: Pixel + ArrayData + Copy + 'static,
 {
@@ -253,7 +268,8 @@ where
         integral_image.get_pixel(right + 1, top).data(),
         integral_image.get_pixel(left, bottom + 1).data(),
     );
-    P::sub(P::sub(P::add(a, b), c), d)
+
+    P::data_to_pixel(P::sub(P::sub(P::add(a, b), c), d)).channels().to_vec()
 }
 
 /// Computes the variance of [left, right] * [top, bottom] in F, where `integral_image` is the
