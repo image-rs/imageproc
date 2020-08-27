@@ -22,6 +22,17 @@ Maximum genericity over image storages or formats, or support for higher-dimensi
 
 Full blown computer vision applications (e.g. face recognition or image registration) probably also belong elsewhere, but the line's a bit blurred here (e.g. is image in-painting an image processing task or a computer vision task?). However, worrying about how to structure the code can probably wait until we have more code to structure...
 
+# Crate Features
+
+Imageproc is built with these features enabled by default:
+
+-   `rayon` enables multithreading for certain operations (e.g., geometric transformations) via [rayon](https://github.com/rayon-rs/rayon)
+
+Optionally, the following dependencies can be enabled:
+
+-   `property-testing` exposes helper types and methods to enable property testing via [quickcheck](https://github.com/BurntSushi/quickcheck)
+-   `display-window` enables the displaying of images (using `imageproc::window`) with [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
+
 # How to contribute
 
 All pull requests are welcome. Some specific areas that would be great to get some help with are:

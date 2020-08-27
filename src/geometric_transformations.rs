@@ -5,6 +5,7 @@ use crate::definitions::{Clamp, Image};
 use crate::math::cast;
 use conv::ValueInto;
 use image::{GenericImageView, ImageBuffer, Pixel};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::{cmp, ops::Mul};
 
@@ -506,15 +507,17 @@ where
     let raw_out = out.as_mut();
     let pitch = P::CHANNEL_COUNT as usize * width as usize;
 
-    raw_out
-        .par_chunks_mut(pitch)
-        .enumerate()
-        .for_each(|(y, row)| {
-            for (x, slice) in row.chunks_mut(P::CHANNEL_COUNT as usize).enumerate() {
-                let (px, py) = mapping(x as f32, y as f32);
-                *P::from_slice_mut(slice) = get_pixel(px, py);
-            }
-        });
+    #[cfg(feature = "rayon")]
+    let chunks = raw_out.par_chunks_mut(pitch);
+    #[cfg(not(feature = "rayon"))]
+    let chunks = raw_out.chunks_mut(pitch);
+
+    chunks.enumerate().for_each(|(y, row)| {
+        for (x, slice) in row.chunks_mut(P::CHANNEL_COUNT as usize).enumerate() {
+            let (px, py) = mapping(x as f32, y as f32);
+            *P::from_slice_mut(slice) = get_pixel(px, py);
+        }
+    });
 }
 
 // Classifies transformation by looking up transformation matrix coefficients
