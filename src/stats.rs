@@ -3,7 +3,7 @@
 use crate::definitions::Image;
 use crate::math::cast;
 use conv::ValueInto;
-use image::{GenericImage, GrayImage, Pixel, Primitive};
+use image::{GenericImageView, GrayImage, Pixel, Primitive};
 use num::Bounded;
 
 /// A set of per-channel histograms from an image with 8 bits per channel.
@@ -107,8 +107,8 @@ pub fn percentile(image: &GrayImage, p: u8) -> u8 {
 /// image formats first.
 pub fn root_mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
 where
-    I: GenericImage<Pixel = P>,
-    J: GenericImage<Pixel = P>,
+    I: GenericImageView<Pixel = P>,
+    J: GenericImageView<Pixel = P>,
     P: Pixel,
     P::Subpixel: ValueInto<f64>,
 {
@@ -121,8 +121,8 @@ where
 /// See also [peak signal-to-noise ratio (wikipedia)](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio).
 pub fn peak_signal_to_noise_ratio<I, J, P>(original: &I, noisy: &J) -> f64
 where
-    I: GenericImage<Pixel = P>,
-    J: GenericImage<Pixel = P>,
+    I: GenericImageView<Pixel = P>,
+    J: GenericImageView<Pixel = P>,
     P: Pixel,
     P::Subpixel: ValueInto<f64> + Primitive,
 {
@@ -133,8 +133,8 @@ where
 
 fn mean_squared_error<I, J, P>(left: &I, right: &J) -> f64
 where
-    I: GenericImage<Pixel = P>,
-    J: GenericImage<Pixel = P>,
+    I: GenericImageView<Pixel = P>,
+    J: GenericImageView<Pixel = P>,
     P: Pixel,
     P::Subpixel: ValueInto<f64>,
 {
