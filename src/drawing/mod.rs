@@ -22,7 +22,9 @@ pub use self::line::{
 };
 
 mod polygon;
-pub use self::polygon::{draw_convex_polygon, draw_convex_polygon_mut, Point};
+pub use self::polygon::{
+    draw_convex_polygon, draw_convex_polygon_mut, draw_polygon, draw_polygon_mut, Point,
+};
 
 mod rect;
 pub use self::rect::{
