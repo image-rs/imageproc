@@ -61,7 +61,7 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
       }
     }
   }
-  let mut neighbour_indices_diffs = VecDeque::from(vec![
+  let mut diffs = VecDeque::from(vec![
     (-1, 0),  // w
     (-1, -1), // nw
     (0, -1),  // n
@@ -104,13 +104,11 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
           is_outer = !contours[*p_idx].is_outer;
         }
 
-        let initial_pos_diff = (pos2.x as i32 - x as i32, pos2.y as i32 - y as i32);
-        let rotate_pos = neighbour_indices_diffs
-          .iter()
-          .position(|&x| x == initial_pos_diff)
-          .unwrap();
-        neighbour_indices_diffs.rotate_left(rotate_pos);
-        if let Some(pos1) = neighbour_indices_diffs.iter().find_map(|(x_diff, y_diff)| {
+        rotate_to_value(
+          &mut diffs,
+          (pos2.x as i32 - x as i32, pos2.y as i32 - y as i32),
+        );
+        if let Some(pos1) = diffs.iter().find_map(|(x_diff, y_diff)| {
           get_position_if_non_zero_pixel(&image_values, x as i32 + *x_diff, y as i32 + *y_diff)
         }) {
           pos2 = pos1;
@@ -118,13 +116,11 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
           let mut contour_points = Vec::new();
           loop {
             contour_points.push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
-            let initial_pos_diff = (pos2.x as i32 - pos3.x as i32, pos2.y as i32 - pos3.y as i32);
-            let rotate_pos = neighbour_indices_diffs
-              .iter()
-              .position(|&x| x == initial_pos_diff)
-              .unwrap();
-            neighbour_indices_diffs.rotate_left(rotate_pos);
-            let pos4 = neighbour_indices_diffs
+            rotate_to_value(
+              &mut diffs,
+              (pos2.x as i32 - pos3.x as i32, pos2.y as i32 - pos3.y as i32),
+            );
+            let pos4 = diffs
               .iter()
               .rev() // counter-clockwise
               .find_map(|(x_diff, y_diff)| {
@@ -168,6 +164,11 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
   }
 
   contours
+}
+
+fn rotate_to_value(values: &mut VecDeque<(i32, i32)>, value: (i32, i32)) {
+  let rotate_pos = values.iter().position(|&x| x == value).unwrap();
+  values.rotate_left(rotate_pos);
 }
 
 fn get_position_if_non_zero_pixel(
