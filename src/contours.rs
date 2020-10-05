@@ -461,18 +461,19 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
         remaining_points.push(p);
     }
 
-    let mut stack = vec![Point::new(
+    let mut stack: Vec<Point<T>> = vec![Point::new(
         cast(start_point.x).unwrap(),
         cast(start_point.y).unwrap(),
     )];
 
-    for p in points_slice.iter() {
+    for p in points.iter() {
+        let point = Point::new(cast(p.x).unwrap(), cast(p.y).unwrap());
         while stack.len() > 1
-            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], p) != 2
+            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &point) != 2
         {
             stack.pop();
         }
-        stack.push(Point::new(cast(p.x).unwrap(), cast(p.y).unwrap()));
+        stack.push(point);
     }
     stack
 }
