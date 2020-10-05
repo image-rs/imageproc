@@ -10,7 +10,7 @@
 extern crate imageproc;
 
 use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
-use imageproc::definitions::{Clamp, HasBlack, HasWhite};
+use imageproc::definitions::{Clamp, HasBlack, HasWhite, Point};
 use imageproc::edges::canny;
 use imageproc::filter::{gaussian_blur_f32, sharpen3x3};
 use imageproc::geometric_transformations::{rotate_about_center, warp, Interpolation, Projection};
@@ -415,8 +415,8 @@ fn test_draw_antialiased_line_segment_rgb() {
 
 #[test]
 fn test_draw_polygon() {
+    use imageproc::definitions::Point;
     use imageproc::drawing::draw_polygon_mut;
-    use imageproc::drawing::Point;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let white = Luma::white();
@@ -484,8 +484,8 @@ fn test_draw_polygon() {
 
 #[test]
 fn test_draw_non_trivial_polygons() {
+    use imageproc::definitions::Point;
     use imageproc::drawing::draw_polygon_mut;
-    use imageproc::drawing::Point;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::white());
     let black = Luma::black();
@@ -681,4 +681,108 @@ fn test_hough_line_detection() {
         let truth = load_truth_image("hough_lines.png").to_rgb();
         assert_pixels_eq!(lines_image, truth);
     }
+}
+
+#[test]
+fn test_contours_structured() {
+    use imageproc::contours::find_contours;
+    use imageproc::drawing::draw_polygon_mut;
+
+    let white = Luma([255u8]);
+    let black = Luma([0u8]);
+
+    let mut image = GrayImage::from_pixel(300, 300, black);
+    // border 1 (outer)
+    draw_polygon_mut(
+        &mut image,
+        &[
+            Point::new(20, 20),
+            Point::new(280, 20),
+            Point::new(280, 280),
+            Point::new(20, 280),
+        ],
+        white,
+    );
+    // border 2 (hole)
+    draw_polygon_mut(
+        &mut image,
+        &[
+            Point::new(40, 40),
+            Point::new(260, 40),
+            Point::new(260, 260),
+            Point::new(40, 260),
+        ],
+        black,
+    );
+    // border 3 (outer)
+    draw_polygon_mut(
+        &mut image,
+        &[
+            Point::new(60, 60),
+            Point::new(240, 60),
+            Point::new(240, 240),
+            Point::new(60, 240),
+        ],
+        white,
+    );
+    // border 4 (hole)
+    draw_polygon_mut(
+        &mut image,
+        &[
+            Point::new(80, 80),
+            Point::new(220, 80),
+            Point::new(220, 220),
+            Point::new(80, 220),
+        ],
+        black,
+    );
+    // rectangle in the corner (outer)
+    draw_polygon_mut(
+        &mut image,
+        &[
+            Point::new(290, 290),
+            Point::new(300, 290),
+            Point::new(300, 300),
+            Point::new(290, 300),
+        ],
+        white,
+    );
+    let contours = find_contours::<i32>(&image);
+
+    assert_eq!(contours.len(), 5);
+    // border 1
+    assert!(contours[0].points.contains(&Point::new(20, 20)));
+    assert!(contours[0].points.contains(&Point::new(280, 20)));
+    assert!(contours[0].points.contains(&Point::new(280, 280)));
+    assert!(contours[0].points.contains(&Point::new(20, 280)));
+    assert!(contours[0].is_outer, true);
+    assert_eq!(contours[0].parent, None);
+    // border 2
+    assert!(contours[1].points.contains(&Point::new(39, 40)));
+    assert!(contours[1].points.contains(&Point::new(261, 40)));
+    assert!(contours[1].points.contains(&Point::new(261, 260)));
+    assert!(contours[1].points.contains(&Point::new(39, 260)));
+    assert_eq!(contours[1].is_outer, false);
+    assert_eq!(contours[1].parent, Some(0));
+    // border 3
+    assert!(contours[2].points.contains(&Point::new(60, 60)));
+    assert!(contours[2].points.contains(&Point::new(240, 60)));
+    assert!(contours[2].points.contains(&Point::new(240, 240)));
+    assert!(contours[2].points.contains(&Point::new(60, 240)));
+    assert_eq!(contours[2].is_outer, true);
+    assert_eq!(contours[2].parent, Some(1));
+    // border 4
+    assert!(contours[3].points.contains(&Point::new(79, 80)));
+    assert!(contours[3].points.contains(&Point::new(221, 80)));
+    assert!(contours[3].points.contains(&Point::new(221, 220)));
+    assert!(contours[3].points.contains(&Point::new(79, 220)));
+    assert_eq!(contours[3].is_outer, false);
+    assert_eq!(contours[3].parent, Some(2));
+    // rectangle in the corner
+    assert!(contours[4].points.contains(&Point::new(290, 290)));
+    assert!(contours[4].points.contains(&Point::new(299, 290)));
+    assert!(contours[4].points.contains(&Point::new(299, 299)));
+    assert!(contours[4].points.contains(&Point::new(290, 299)));
+    assert_eq!(contours[4].is_outer, true);
+    assert_eq!(contours[4].parent, None);
 }

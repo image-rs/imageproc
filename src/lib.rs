@@ -31,6 +31,7 @@ extern crate assert_approx_eq;
 
 #[macro_use]
 pub mod utils;
+pub mod contours;
 pub mod contrast;
 pub mod corners;
 pub mod definitions;
