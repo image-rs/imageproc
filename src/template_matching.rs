@@ -53,8 +53,8 @@ pub fn match_template(
     );
 
     let should_normalize = matches! { method,
-        MatchTemplateMethod::SumOfSquaredErrorsNormalized
-        | MatchTemplateMethod::CrossCorrelationNormalized };
+    MatchTemplateMethod::SumOfSquaredErrorsNormalized
+    | MatchTemplateMethod::CrossCorrelationNormalized };
     let image_squared_integral = if should_normalize {
         Some(integral_squared_image(&image))
     } else {
