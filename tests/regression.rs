@@ -487,22 +487,24 @@ fn test_draw_non_trivial_polygons() {
     use imageproc::drawing::draw_polygon_mut;
     use imageproc::drawing::Point;
 
-    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
-    let white = Luma::white();
+    let mut image = GrayImage::from_pixel(300, 300, Luma::white());
+    let black = Luma::black();
 
     let partially_out_of_bounds_poly = vec![
-        Point::new(-20, 20),
-        Point::new(50, 20),
-        Point::new(50, 50),
-        Point::new(20, 50),
-        Point::new(20, 40),
-        Point::new(40, 40),
+        Point::new(0, 0),
+        Point::new(300, 0),
+        Point::new(300, 300),
+        Point::new(0, 300),
+        Point::new(0, 30),
         Point::new(40, 30),
-        Point::new(-10, 30),
-        Point::new(-10, 40),
-        Point::new(-20, 40),
+        Point::new(40, 40),
+        Point::new(20, 40),
+        Point::new(20, 50),
+        Point::new(50, 50),
+        Point::new(50, 20),
+        Point::new(-20, 20),
     ];
-    draw_polygon_mut(&mut image, &partially_out_of_bounds_poly, white);
+    draw_polygon_mut(&mut image, &partially_out_of_bounds_poly, black);
 
     if REGENERATE {
         save_truth_image(&image, "polygons2.png");
