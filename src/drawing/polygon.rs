@@ -53,11 +53,12 @@ where
         );
     }
 
-    let (mut y_min, mut y_max) = poly
-        .iter()
-        .fold((i32::MAX, i32::MIN), |(curr_min, curr_max), p| {
-            (curr_min.min(p.y), curr_max.max(p.y))
-        });
+    let mut y_min = i32::MAX;
+    let mut y_max = i32::MIN;
+    for p in poly {
+        y_min = min(y_min, p.y);
+        y_max = max(y_max, p.y);
+    }
 
     let (width, height) = canvas.dimensions();
 
@@ -114,9 +115,9 @@ where
         intersections.clear();
     }
 
-    edges.iter().for_each(|edge| {
+    for edge in &edges {
         let start = (edge[0].x as f32, edge[0].y as f32);
         let end = (edge[1].x as f32, edge[1].y as f32);
         draw_line_segment_mut(canvas, start, end, color);
-    })
+    }
 }
