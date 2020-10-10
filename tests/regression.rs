@@ -483,6 +483,36 @@ fn test_draw_polygon() {
 }
 
 #[test]
+fn test_draw_non_trivial_polygons() {
+    use imageproc::drawing::draw_polygon_mut;
+    use imageproc::drawing::Point;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let partially_out_of_bounds_poly = vec![
+        Point::new(-20, 20),
+        Point::new(50, 20),
+        Point::new(50, 50),
+        Point::new(20, 50),
+        Point::new(20, 40),
+        Point::new(40, 40),
+        Point::new(40, 30),
+        Point::new(-10, 30),
+        Point::new(-10, 40),
+        Point::new(-20, 40),
+    ];
+    draw_polygon_mut(&mut image, &partially_out_of_bounds_poly, white);
+
+    if REGENERATE {
+        save_truth_image(&image, "polygons2.png");
+    } else {
+        let truth = load_truth_image("polygons2.png").to_luma();
+        assert_pixels_eq!(image, truth);
+    }
+}
+
+#[test]
 fn test_draw_cubic_bezier_curve() {
     use imageproc::drawing::draw_cubic_bezier_curve_mut;
 
