@@ -624,48 +624,48 @@ mod tests {
         assert!(perpendicular_distance(line_args, &point) - 3.9510276472 < 1e-10);
     }
 
-    // #[test]
-    // fn get_contours_approx_points() {
-    //   use crate::drawing::draw_polygon_mut;
-    //   use image::{GrayImage, Luma};
-    //   let mut image = GrayImage::from_pixel(300, 300, Luma([0]));
-    //   let white = Luma([255]);
+    #[test]
+    fn get_contours_approx_points() {
+        use crate::drawing::draw_polygon_mut;
+        use image::{GrayImage, Luma};
+        let mut image = GrayImage::from_pixel(300, 300, Luma([0]));
+        let white = Luma([255]);
 
-    //   let star = vec![
-    //     Point::new(100, 20),
-    //     Point::new(120, 35),
-    //     Point::new(140, 30),
-    //     Point::new(115, 45),
-    //     Point::new(130, 60),
-    //     Point::new(100, 50),
-    //     Point::new(80, 55),
-    //     Point::new(90, 40),
-    //     Point::new(60, 25),
-    //     Point::new(90, 35),
-    //   ];
-    //   draw_polygon_mut(&mut image, &star, white);
-    //   let contours = find_contours::<u32>(&image);
-    //   let c1_approx = approx_poly_dp(
-    //     &contours[0].points,
-    //     arc_length(&contours[0].points, true) * 0.01,
-    //     true,
-    //   );
-    //   assert_eq!(
-    //     c1_approx,
-    //     vec![
-    //       Point::new(100, 20),
-    //       Point::new(90, 35),
-    //       Point::new(60, 25),
-    //       Point::new(90, 40),
-    //       Point::new(80, 55),
-    //       Point::new(101, 50),
-    //       Point::new(130, 60),
-    //       Point::new(115, 45),
-    //       Point::new(140, 30),
-    //       Point::new(120, 35)
-    //     ]
-    //   );
-    // }
+        let star = vec![
+            Point::new(100, 20),
+            Point::new(120, 35),
+            Point::new(140, 30),
+            Point::new(115, 45),
+            Point::new(130, 60),
+            Point::new(100, 50),
+            Point::new(80, 55),
+            Point::new(90, 40),
+            Point::new(60, 25),
+            Point::new(90, 35),
+        ];
+        draw_polygon_mut(&mut image, &star, white);
+        let contours = find_contours::<u32>(&image);
+        let c1_approx = approx_poly_dp(
+            &contours[0].points,
+            arc_length(&contours[0].points, true) * 0.01,
+            true,
+        );
+        assert_eq!(
+            c1_approx,
+            vec![
+                Point::new(100, 20),
+                Point::new(90, 35),
+                Point::new(60, 25),
+                Point::new(90, 40),
+                Point::new(80, 55),
+                Point::new(101, 50),
+                Point::new(130, 60),
+                Point::new(115, 45),
+                Point::new(140, 30),
+                Point::new(120, 35)
+            ]
+        );
+    }
 
     #[test]
     fn get_convex_hull_points() {
