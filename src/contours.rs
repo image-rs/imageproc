@@ -217,9 +217,9 @@ pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], cl
 
 /// Fits the polygon curve to a similar curve with fewer points.
 /// The input parameters include an ordered array of points and an distance
-/// dimension `epsilon` > 0.
-/// [Douglas–Peucker algorithm](https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm)
+/// dimension `epsilon` > 0. Based on the [Douglas–Peucker algorithm].
 ///
+/// [Douglas–Peucker algorithm]: https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     curve: &[Point<T>],
     epsilon: f64,
@@ -265,10 +265,10 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     res
 }
 
-/// Returns the parameters of the line (Ax + By + C = 0) that passes through the
+/// Returns the parameters of the [line equation] (Ax + By + C = 0) that passes through the
 /// given points p1 and p2.
-/// [Equation of a line given 2 points](https://en.wikipedia.org/wiki/Linear_equation#Two-point_form)
 ///
+/// [line equation]: https://en.wikipedia.org/wiki/Linear_equation#Two-point_form
 fn line_params<T: Num + NumCast + Copy + PartialEq + Eq>(
     p1: &Point<T>,
     p2: &Point<T>,
@@ -306,10 +306,10 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq>(
     }
 }
 
-/// The implementation of the rotating calipers used for determining the
+/// The implementation of the [rotating calipers] used for determining the
 /// bounding rectangle with the smallest area.
-/// [Rotating calipers](https://en.wikipedia.org/wiki/Rotating_calipers)
 ///
+/// [rotating calipers]: https://en.wikipedia.org/wiki/Rotating_calipers
 fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     points: &[Point<T>],
 ) -> Vec<Point<T>> {
@@ -414,8 +414,9 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 }
 
 /// Finds points of the smallest convex polygon that contains all the contour points.
-/// [Graham scan algorithm](https://en.wikipedia.org/wiki/Graham_scan)
+/// Based on the [Graham scan algorithm].
 ///
+/// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
 fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
@@ -494,7 +495,7 @@ fn get_orientation<T: Num + NumCast + Copy + PartialEq + Eq>(
     }
 }
 
-/// Calculates the distance between 2 points
+/// Calculates the distance between 2 points.
 ///
 pub fn get_distance<T: Num + NumCast + Copy + PartialEq + Eq>(p1: &Point<T>, p2: &Point<T>) -> f64 {
     ((p1.x.to_f64().unwrap() - p2.x.to_f64().unwrap()).powf(2.)
