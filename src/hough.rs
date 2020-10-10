@@ -158,7 +158,7 @@ fn intersection_points(
         };
     }
 
-    let theta = degrees_to_radians(m);
+    let theta = (m as f32).to_radians();
     let (sin, cos) = theta.sin_cos();
 
     let right_y = cos.mul_add(-w, r) / sin;
