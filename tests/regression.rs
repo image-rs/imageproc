@@ -415,8 +415,8 @@ fn test_draw_antialiased_line_segment_rgb() {
 
 #[test]
 fn test_draw_polygon() {
+    use imageproc::definitions::Point;
     use imageproc::drawing::draw_polygon_mut;
-    use imageproc::drawing::Point;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let white = Luma::white();
@@ -484,8 +484,8 @@ fn test_draw_polygon() {
 
 #[test]
 fn test_draw_non_trivial_polygons() {
+    use imageproc::definitions::Point;
     use imageproc::drawing::draw_polygon_mut;
-    use imageproc::drawing::Point;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::white());
     let black = Luma::black();

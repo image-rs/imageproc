@@ -1,24 +1,10 @@
-use crate::definitions::Image;
+use crate::definitions::{Image, Point};
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer};
 use std::cmp::{max, min};
 use std::f32;
 use std::i32;
-
-/// A 2D point.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Point<T: Copy + PartialEq + Eq> {
-    x: T,
-    y: T,
-}
-
-impl<T: Copy + PartialEq + Eq> Point<T> {
-    /// Construct a point at (x, y).
-    pub fn new(x: T, y: T) -> Point<T> {
-        Point::<T> { x, y }
-    }
-}
 
 /// Draws as much of a filled polygon as lies within image bounds. The provided
 /// list of points should be an open path, i.e. the first and last points must not be equal.

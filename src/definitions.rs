@@ -12,6 +12,22 @@ use std::{i16, u16, u8};
 /// with contiguous storage.
 pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 
+/// A 2D point.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Point<T: Copy + PartialEq + Eq> {
+    /// x-coordinate.
+    pub x: T,
+    /// y-coordinate.
+    pub y: T,
+}
+
+impl<T: Copy + PartialEq + Eq> Point<T> {
+    /// Construct a point at (x, y).
+    pub fn new(x: T, y: T) -> Point<T> {
+        Point::<T> { x, y }
+    }
+}
+
 /// Pixels which have a named Black value.
 pub trait HasBlack {
     /// Returns a black pixel of this type.
