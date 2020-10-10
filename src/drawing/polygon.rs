@@ -98,7 +98,7 @@ where
             }
         }
 
-        intersections.sort();
+        intersections.sort_unstable();
         let mut i = 0;
         loop {
             // Handle points where multiple lines intersect
