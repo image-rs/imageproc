@@ -6,7 +6,7 @@ use std::cmp::{max, min};
 use std::f32;
 use std::i32;
 
-/// Draws as much of a filled convex polygon as lies within image bounds. The provided
+/// Draws as much of a filled polygon as lies within image bounds. The provided
 /// list of points should be an open path, i.e. the first and last points must not be equal.
 /// An implicit edge is added from the last to the first point in the slice.
 pub fn draw_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
