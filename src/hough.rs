@@ -49,7 +49,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
 
     // Precalculate values of (cos(m), sin(m))
     let lut: Vec<(f32, f32)> = (0..180u32)
-        .map(f32::to_radians)
+        .map(|deg| (deg as f32).to_radians())
         .map(f32::sin_cos)
         .collect();
 
