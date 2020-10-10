@@ -588,7 +588,7 @@ fn try_inverse(t: &AffineMatrix) -> Option<AffineMatrix> {
 fn mul3x3(a: AffineMatrix, b: AffineMatrix) -> AffineMatrix {
     let [a11, a12, a13, a21, a22, a23, a31, a32, a33] = a;
     let [b11, b12, b13, b21, b22, b23, b31, b32, b33] = b;
-  
+
     [
         a11 * b11 + a12 * b21 + a13 * b31,
         a11 * b12 + a12 * b22 + a13 * b32,
