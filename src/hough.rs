@@ -49,8 +49,8 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
 
     // Precalculate values of (cos(m), sin(m))
     let lut: Vec<(f32, f32)> = (0..180u32)
-        .map(degrees_to_radians)
-        .map(|t| (t.cos(), t.sin()))
+        .map(f32::to_radians)
+        .map(f32::sin_cos)
         .collect();
 
     for y in 0..height {
@@ -58,7 +58,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
             let p = unsafe { image.unsafe_get_pixel(x, y)[0] };
 
             if p > 0 {
-                for (m, (c, s)) in lut.iter().enumerate() {
+                for (m, (s, c)) in lut.iter().enumerate() {
                     let r = (x as f32) * c + (y as f32) * s;
                     let d = r as i32 + rmax;
 
@@ -159,8 +159,7 @@ fn intersection_points(
     }
 
     let theta = degrees_to_radians(m);
-    let sin = theta.sin();
-    let cos = theta.cos();
+    let (sin, cos) = theta.sin_cos();
 
     let right_y = cos.mul_add(-w, r) / sin;
     let left_y = r / sin;
@@ -201,10 +200,6 @@ fn intersection_points(
     }
 
     None
-}
-
-fn degrees_to_radians(degrees: u32) -> f32 {
-    degrees as f32 * f32::consts::PI / 180.0
 }
 
 #[cfg(test)]

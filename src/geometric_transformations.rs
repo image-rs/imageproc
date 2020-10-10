@@ -76,8 +76,7 @@ impl Projection {
     /// A clockwise rotation around the top-left corner of the image by theta radians.
     #[rustfmt::skip]
     pub fn rotate(theta: f32) -> Projection {
-        let s = theta.sin();
-        let c = theta.cos();
+        let (s, c) = theta.sin_cos();
         Projection {
             transform: [
                   c,  -s, 0.0,
