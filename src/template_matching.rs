@@ -52,11 +52,9 @@ pub fn match_template(
         "image height must be greater than or equal to template height"
     );
 
-    let should_normalize = match method {
+    let should_normalize = matches! { method,
         MatchTemplateMethod::SumOfSquaredErrorsNormalized
-        | MatchTemplateMethod::CrossCorrelationNormalized => true,
-        _ => false,
-    };
+        | MatchTemplateMethod::CrossCorrelationNormalized };
     let image_squared_integral = if should_normalize {
         Some(integral_squared_image(&image))
     } else {
