@@ -16,6 +16,9 @@ enum TransformationClass {
     Projection,
 }
 
+type Float = f32;
+type AffineMatrix = [Float; 9];
+
 /// A 2d projective transformation, stored as a row major 3x3 matrix.
 ///
 /// Transformations combine by pre-multiplication, i.e. applying `P * Q` is equivalent to
@@ -36,8 +39,8 @@ enum TransformationClass {
 /// See ./examples/projection.rs for more examples.
 #[derive(Copy, Clone, Debug)]
 pub struct Projection {
-    transform: [f32; 9],
-    inverse: [f32; 9],
+    transform: AffineMatrix,
+    inverse: AffineMatrix,
     class: TransformationClass,
 }
 
@@ -45,7 +48,7 @@ impl Projection {
     /// Creates a 2d projective transform from a row-major 3x3 matrix in homogeneous coordinates.
     ///
     /// Returns `None` if the matrix is not invertible.
-    pub fn from_matrix(transform: [f32; 9]) -> Option<Projection> {
+    pub fn from_matrix(transform: AffineMatrix) -> Option<Projection> {
         let transform = normalize(transform);
         let class = class_from_matrix(transform);
         try_inverse(&transform).map(|inverse| Projection {
@@ -522,7 +525,7 @@ where
 }
 
 // Classifies transformation by looking up transformation matrix coefficients
-fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
+fn class_from_matrix(mx: AffineMatrix) -> TransformationClass {
     if (mx[6] - 0.0).abs() < 1e-10 && (mx[7] - 0.0).abs() < 1e-10 && (mx[8] - 1.0).abs() < 1e-10 {
         if (mx[0] - 1.0).abs() < 1e-10
             && (mx[1] - 0.0).abs() < 1e-10
@@ -538,7 +541,7 @@ fn class_from_matrix(mx: [f32; 9]) -> TransformationClass {
     }
 }
 
-fn normalize(mx: [f32; 9]) -> [f32; 9] {
+fn normalize(mx: AffineMatrix) -> AffineMatrix {
     [
         mx[0] / mx[8],
         mx[1] / mx[8],
@@ -553,7 +556,7 @@ fn normalize(mx: [f32; 9]) -> [f32; 9] {
 }
 
 // TODO: write me in f64
-fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
+fn try_inverse(t: &AffineMatrix) -> Option<AffineMatrix> {
     let (t00, t01, t02, t10, t11, t12, t20, t21, t22) =
         (t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8]);
 
@@ -584,7 +587,7 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
     Some(normalize(inv))
 }
 
-fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+fn mul3x3(a: AffineMatrix, b: AffineMatrix) -> AffineMatrix {
     let (a11, a12, a13, a21, a22, a23, a31, a32, a33) =
         (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
     let (b11, b12, b13, b21, b22, b23, b31, b32, b33) =
