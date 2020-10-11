@@ -414,22 +414,50 @@ fn test_draw_antialiased_line_segment_rgb() {
 }
 
 #[test]
-fn test_draw_convex_polygon() {
-    use imageproc::drawing::draw_convex_polygon_mut;
-    use imageproc::drawing::Point;
+fn test_draw_polygon() {
+    use imageproc::definitions::Point;
+    use imageproc::drawing::draw_polygon_mut;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let white = Luma::white();
 
-    let triangle = vec![Point::new(35, 50), Point::new(145, 80), Point::new(5, 60)];
-    draw_convex_polygon_mut(&mut image, &triangle, white);
+    let star = vec![
+        Point::new(100, 20),
+        Point::new(120, 35),
+        Point::new(140, 30),
+        Point::new(115, 45),
+        Point::new(130, 60),
+        Point::new(100, 50),
+        Point::new(80, 55),
+        Point::new(90, 40),
+        Point::new(60, 25),
+        Point::new(90, 35),
+    ];
+    draw_polygon_mut(&mut image, &star, white);
+
+    let partially_out_of_bounds_star = vec![
+        Point::new(275, 20),
+        Point::new(295, 35),
+        Point::new(315, 30),
+        Point::new(290, 45),
+        Point::new(305, 60),
+        Point::new(275, 50),
+        Point::new(255, 55),
+        Point::new(265, 40),
+        Point::new(235, 25),
+        Point::new(265, 35),
+    ];
+    draw_polygon_mut(&mut image, &partially_out_of_bounds_star, white);
+
+    let triangle = vec![Point::new(35, 80), Point::new(145, 110), Point::new(5, 90)];
+    draw_polygon_mut(&mut image, &triangle, white);
 
     let partially_out_of_bounds_triangle = vec![
-        Point::new(250, 50),
-        Point::new(350, 100),
-        Point::new(250, 90),
+        Point::new(250, 80),
+        Point::new(350, 130),
+        Point::new(250, 120),
     ];
-    draw_convex_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
+    draw_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
 
     let quad = vec![
         Point::new(190, 250),
@@ -437,19 +465,51 @@ fn test_draw_convex_polygon() {
         Point::new(270, 200),
         Point::new(220, 280),
     ];
-    draw_convex_polygon_mut(&mut image, &quad, white);
+    draw_polygon_mut(&mut image, &quad, white);
 
     let hex: Vec<Point<i32>> = (0..6)
         .map(|i| i as f32 * f32::consts::PI / 3f32)
         .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
         .map(|(x, y)| Point::new(x as i32, y as i32))
         .collect();
-    draw_convex_polygon_mut(&mut image, &hex, white);
+    draw_polygon_mut(&mut image, &hex, white);
 
     if REGENERATE {
         save_truth_image(&image, "polygon.png");
     } else {
         let truth = load_truth_image("polygon.png").to_luma();
+        assert_pixels_eq!(image, truth);
+    }
+}
+
+#[test]
+fn test_draw_non_trivial_polygons() {
+    use imageproc::definitions::Point;
+    use imageproc::drawing::draw_polygon_mut;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::white());
+    let black = Luma::black();
+
+    let partially_out_of_bounds_poly = vec![
+        Point::new(0, 0),
+        Point::new(300, 0),
+        Point::new(300, 300),
+        Point::new(0, 300),
+        Point::new(0, 30),
+        Point::new(40, 30),
+        Point::new(40, 40),
+        Point::new(20, 40),
+        Point::new(20, 50),
+        Point::new(50, 50),
+        Point::new(50, 20),
+        Point::new(-20, 20),
+    ];
+    draw_polygon_mut(&mut image, &partially_out_of_bounds_poly, black);
+
+    if REGENERATE {
+        save_truth_image(&image, "polygons2.png");
+    } else {
+        let truth = load_truth_image("polygons2.png").to_luma();
         assert_pixels_eq!(image, truth);
     }
 }
