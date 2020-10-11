@@ -83,7 +83,7 @@ where
             }
         }
 
-        intersections.sort();
+        intersections.sort_unstable();
         intersections.chunks(2).for_each(|range| {
             let mut from = min(range[0], width as i32);
             let mut to = min(range[1], width as i32 - 1);

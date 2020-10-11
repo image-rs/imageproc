@@ -622,7 +622,7 @@ where
         // Empty row, except for leading | separating row numbers from pixels
         write!(rendered, "\n  {y:>w$}| ", y = " ", w = max_digits).unwrap();
     }
-    rendered.push_str("\n");
+    rendered.push('\n');
     rendered
 }
 
