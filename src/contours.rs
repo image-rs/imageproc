@@ -86,30 +86,35 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
     while (x, y) != last_pixel {
         if image_values[x][y] != 0 {
             skip_tracing = false;
+            let is_outer;
             if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
                 curr_border_num += 1;
                 pos2 = Point::new(x - 1, y);
+                is_outer = true;
             } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
+                is_outer = false;
                 curr_border_num += 1;
                 pos2 = Point::new(x + 1, y);
                 if image_values[x][y] > 1 {
                     parent_border_num = image_values[x][y] as usize;
                 }
             } else {
+                is_outer = false;
                 skip_tracing = true;
             }
 
             if !skip_tracing {
-                let parent = if parent_border_num < 2 {
-                    None
-                } else {
-                    Some(parent_border_num - 2)
+                let mut parent = None;
+                if parent_border_num > 1 {
+                    let p_idx = parent_border_num - 2;
+                    if is_outer ^ contours[p_idx].is_outer {
+                        parent = Some(p_idx);
+                    } else {
+                        parent = contours[p_idx].parent;
+                    }
                 };
-                let mut is_outer = true;
-                if let Some(p_idx) = &parent {
-                    is_outer = !contours[*p_idx].is_outer;
-                }
 
+                let mut contour_points = Vec::new();
                 rotate_to_value(
                     &mut diffs,
                     (pos2.x as i32 - x as i32, pos2.y as i32 - y as i32),
@@ -123,7 +128,6 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
                 }) {
                     pos2 = pos1;
                     let mut pos3 = Point::new(x, y);
-                    let mut contour_points = Vec::new();
                     loop {
                         contour_points
                             .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
@@ -143,7 +147,20 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
                             })
                             .unwrap();
 
-                        if pos3.x + 1 < width && image_values[pos3.x + 1][pos3.y] == 0 {
+                        let mut is_right_edge = false;
+                        let pos4_diff =
+                            (pos4.x as i32 - pos3.x as i32, pos4.y as i32 - pos3.y as i32);
+                        for diff in diffs.iter().rev() {
+                            if diff == &pos4_diff {
+                                break;
+                            }
+                            if diff == &(1, 0) {
+                                is_right_edge = true;
+                                break;
+                            }
+                        }
+
+                        if pos3.x + 1 == width || is_right_edge {
                             image_values[pos3.x][pos3.y] = -curr_border_num;
                         } else if image_values[pos3.x][pos3.y] == 1 {
                             image_values[pos3.x][pos3.y] = curr_border_num;
@@ -154,11 +171,11 @@ pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
                         pos2 = pos3;
                         pos3 = pos4;
                     }
-
-                    contours.push(Contour::new(contour_points, is_outer, parent));
                 } else {
+                    contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
                     image_values[x][y] = -curr_border_num;
                 }
+                contours.push(Contour::new(contour_points, is_outer, parent));
             }
 
             if image_values[x][y] != 1 {
@@ -609,6 +626,80 @@ mod tests {
         assert!(contours[4].points.contains(&Point::new(290, 299)));
         assert_eq!(contours[4].is_outer, true);
         assert_eq!(contours[4].parent, None);
+    }
+
+    #[test]
+    fn find_contours_basic_test() {
+        use crate::definitions::HasWhite;
+        use crate::drawing::draw_polygon_mut;
+        use image::Luma;
+
+        let mut image = GrayImage::new(15, 20);
+        draw_polygon_mut(
+            &mut image,
+            &[Point::new(5, 5), Point::new(11, 5)],
+            Luma::white(),
+        );
+
+        draw_polygon_mut(
+            &mut image,
+            &[Point::new(11, 5), Point::new(11, 9)],
+            Luma::white(),
+        );
+
+        draw_polygon_mut(
+            &mut image,
+            &[Point::new(11, 9), Point::new(5, 9)],
+            Luma::white(),
+        );
+
+        draw_polygon_mut(
+            &mut image,
+            &[Point::new(5, 5), Point::new(5, 9)],
+            Luma::white(),
+        );
+
+        draw_polygon_mut(
+            &mut image,
+            &[Point::new(8, 5), Point::new(8, 9)],
+            Luma::white(),
+        );
+
+        *image.get_pixel_mut(13, 6) = Luma::white();
+
+        let contours = find_contours::<u32>(&image);
+        assert_eq!(contours[0].is_outer, true);
+        assert!(contours[0].points.contains(&Point::new(5, 5)));
+        assert!(contours[0].points.contains(&Point::new(11, 5)));
+        assert!(contours[0].points.contains(&Point::new(5, 9)));
+        assert!(contours[0].points.contains(&Point::new(11, 9)));
+        assert!(!contours[0].points.contains(&Point::new(13, 6)));
+        assert_eq!(contours[0].parent, None);
+
+        assert_eq!(contours[1].is_outer, false);
+        assert!(contours[1].points.contains(&Point::new(5, 6)));
+        assert!(contours[1].points.contains(&Point::new(8, 6)));
+        assert!(!contours[1].points.contains(&Point::new(10, 5)));
+        assert!(contours[1].points.contains(&Point::new(6, 9)));
+        assert!(contours[1].points.contains(&Point::new(8, 8)));
+        assert!(!contours[1].points.contains(&Point::new(10, 9)));
+        assert!(!contours[1].points.contains(&Point::new(13, 6)));
+        assert_eq!(contours[1].parent, Some(0));
+
+        assert_eq!(contours[2].is_outer, false);
+        assert!(!contours[2].points.contains(&Point::new(5, 6)));
+        assert!(contours[2].points.contains(&Point::new(8, 6)));
+        assert!(contours[2].points.contains(&Point::new(10, 5)));
+        assert!(!contours[2].points.contains(&Point::new(6, 9)));
+        assert!(contours[2].points.contains(&Point::new(8, 8)));
+        assert!(contours[2].points.contains(&Point::new(10, 9)));
+        assert!(!contours[2].points.contains(&Point::new(13, 6)));
+        assert_eq!(contours[2].parent, Some(0));
+
+        assert_eq!(contours[3].is_outer, true);
+        assert_eq!(contours[3].points, [Point::new(13, 6)]);
+        assert_eq!(contours[3].parent, None);
+        assert_eq!(contours.len(), 4);
     }
 
     #[test]
