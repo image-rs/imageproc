@@ -484,8 +484,8 @@ fn test_draw_polygon() {
 
 #[test]
 fn test_draw_spiral_polygon() {
-    use imageproc::drawing::draw_polygon_mut;
     use imageproc::definitions::Point;
+    use imageproc::drawing::draw_polygon_mut;
 
     let mut image = GrayImage::from_pixel(100, 100, Luma::black());
 
