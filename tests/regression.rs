@@ -483,33 +483,32 @@ fn test_draw_polygon() {
 }
 
 #[test]
-fn test_draw_non_trivial_polygons() {
+fn test_draw_spiral_polygon() {
     use imageproc::definitions::Point;
     use imageproc::drawing::draw_polygon_mut;
 
-    let mut image = GrayImage::from_pixel(300, 300, Luma::white());
-    let black = Luma::black();
+    let mut image = GrayImage::from_pixel(100, 100, Luma::black());
 
-    let partially_out_of_bounds_poly = vec![
-        Point::new(0, 0),
-        Point::new(300, 0),
-        Point::new(300, 300),
-        Point::new(0, 300),
-        Point::new(0, 30),
-        Point::new(40, 30),
-        Point::new(40, 40),
+    let polygon = vec![
+        Point::new(20, 20),
+        Point::new(80, 20),
+        Point::new(80, 70),
+        Point::new(20, 70),
         Point::new(20, 40),
-        Point::new(20, 50),
-        Point::new(50, 50),
-        Point::new(50, 20),
-        Point::new(-20, 20),
+        Point::new(60, 40),
+        Point::new(60, 50),
+        Point::new(30, 50),
+        Point::new(30, 60),
+        Point::new(70, 60),
+        Point::new(70, 30),
+        Point::new(20, 30),
     ];
-    draw_polygon_mut(&mut image, &partially_out_of_bounds_poly, black);
+    draw_polygon_mut(&mut image, &polygon, Luma::white());
 
     if REGENERATE {
-        save_truth_image(&image, "polygons2.png");
+        save_truth_image(&image, "spiral_polygon.png");
     } else {
-        let truth = load_truth_image("polygons2.png").to_luma();
+        let truth = load_truth_image("spiral_polygon.png").to_luma();
         assert_pixels_eq!(image, truth);
     }
 }
