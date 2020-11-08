@@ -63,6 +63,7 @@ where
     type Pixel = LumaA<U>;
 }
 
+
 /// Applies `f` to each subpixel of the input image.
 ///
 /// # Examples
@@ -96,19 +97,15 @@ where
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<ChannelMap<P, S>, Vec<S>> = ImageBuffer::new(width, height);
 
-    for y in 0..height {
-        for x in 0..width {
-            let out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for c in 0..P::CHANNEL_COUNT {
-                out_channels[c as usize] = f(unsafe {
-                    *image
-                        .unsafe_get_pixel(x, y)
-                        .channels()
-                        .get_unchecked(c as usize)
-                });
-            }
+    // UNSAFE JUSTIFICATION:
+    // - no need to check bounds
+    // - `out` is created from the dimensions of `image`
+    image.pixels().for_each(|(x, y, pixel)| {
+        let out_channels = out.get_pixel_mut(x, y).channels_mut();
+        for c in 0..P::CHANNEL_COUNT {
+            out_channels[c as usize] = f(unsafe { *pixel.channels().get_unchecked(c as usize) });
         }
-    }
+    });
 
     out
 }
@@ -147,14 +144,11 @@ where
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
 
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(pix));
-            }
-        }
-    }
+    // UNSAFE JUSTIFICATION:
+    // - no need to check bounds
+    // - `out` is created from the dimensions of `image`
+    image.pixels()
+        .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
 
     out
 }
@@ -206,15 +200,13 @@ where
     let (width, height) = image1.dimensions();
     let mut out: ImageBuffer<R, Vec<R::Subpixel>> = ImageBuffer::new(width, height);
 
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let p = image1.unsafe_get_pixel(x, y);
-                let q = image2.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(p, q));
-            }
-        }
-    }
+    // UNSAFE JUSTIFICATION:
+    // - no need to check bounds
+    // - `out` is created from the dimensions of the images
+    // - `image1` and `image2` are guaranteed to have the same dimensions
+    image1.pixels()
+        .zip(image2.pixels())
+        .for_each(|((x, y, p), (_, _, q))| unsafe { out.unsafe_put_pixel(x, y, f(p, q)) });
 
     out
 }
@@ -255,14 +247,11 @@ where
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
 
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(x, y, pix));
-            }
-        }
-    }
+    // UNSAFE JUSTIFICATION:
+    // - no need to check bounds
+    // - `out` is created from the dimensions of `image`
+    image.pixels()
+        .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(x, y, pixel)) });
 
     out
 }
