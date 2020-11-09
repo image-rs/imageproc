@@ -1,6 +1,8 @@
 //! Functions for mapping over pixels, colors or subpixels of images.
 
 use image::{Bgr, Bgra, GenericImage, ImageBuffer, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 
 use crate::definitions::Image;
 
@@ -62,7 +64,6 @@ where
 {
     type Pixel = LumaA<U>;
 }
-
 
 /// Applies `f` to each subpixel of the input image.
 ///
@@ -134,6 +135,7 @@ where
 ///     rgb);
 /// # }
 /// ```
+#[cfg(not(feature = "rayon"))]
 pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
@@ -142,14 +144,65 @@ where
     F: Fn(P) -> Q,
 {
     let (width, height) = image.dimensions();
+
     let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
+    // UNSAFE JUSTIFICATION:
+    // - no need to check bounds
+    // - `out` is created from the dimensions of `image`
+    // iter_pixels!(image).for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
+    image
+        .pixels()
+        .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
+
+    out
+}
+/// Applies `f` to the color of each pixel in the input image (parallel).
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::map::map_colors;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let rgb = rgb_image!(
+///     [1, 2, 3], [2, 4, 6];
+///     [3, 6, 9], [4, 8, 12]);
+///
+/// assert_pixels_eq!(
+///     map_colors(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
+///     rgb);
+/// # }
+/// ```
+#[cfg(feature = "rayon")]
+pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
+where
+    I: GenericImage<Pixel = P> + Send + Sync,
+    P: Pixel + Send + Sync,
+    Q: Pixel + 'static + Send + Sync,
+    <Q as Pixel>::Subpixel: Send + Sync,
+    F: Fn(P) -> Q + Send + Sync,
+{
+    let (width, height) = image.dimensions();
 
     // UNSAFE JUSTIFICATION:
     // - no need to check bounds
     // - `out` is created from the dimensions of `image`
-    image.pixels()
-        .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
-
+    let pix_vec: Vec<_> = image
+        .pixels()
+        .par_bridge()
+        .map(|(x, y, pixel)| (x, y, f(pixel)))
+        .collect();
+    let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
+    pix_vec
+        .iter()
+        .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(*x, *y, *pixel) });
     out
 }
 
@@ -204,7 +257,8 @@ where
     // - no need to check bounds
     // - `out` is created from the dimensions of the images
     // - `image1` and `image2` are guaranteed to have the same dimensions
-    image1.pixels()
+    image1
+        .pixels()
         .zip(image2.pixels())
         .for_each(|((x, y, p), (_, _, q))| unsafe { out.unsafe_put_pixel(x, y, f(p, q)) });
 
@@ -250,7 +304,8 @@ where
     // UNSAFE JUSTIFICATION:
     // - no need to check bounds
     // - `out` is created from the dimensions of `image`
-    image.pixels()
+    image
+        .pixels()
         .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(x, y, pixel)) });
 
     out
@@ -281,8 +336,8 @@ where
 /// ```
 pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| Luma([p[0]]))
 }
@@ -312,8 +367,8 @@ where
 /// ```
 pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Luma<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -347,8 +402,8 @@ where
 /// ```
 pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| Luma([p[1]]))
 }
@@ -378,8 +433,8 @@ where
 /// ```
 pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Luma<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -413,8 +468,8 @@ where
 /// ```
 pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| Luma([p[2]]))
 }
@@ -444,8 +499,8 @@ where
 /// ```
 pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    I: GenericImage<Pixel = Luma<C>> + Send + Sync,
+    C: Primitive + 'static + Send + Sync,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
