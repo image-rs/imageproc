@@ -149,7 +149,6 @@ where
     // UNSAFE JUSTIFICATION:
     // - no need to check bounds
     // - `out` is created from the dimensions of `image`
-    // iter_pixels!(image).for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
     image
         .pixels()
         .for_each(|(x, y, pixel)| unsafe { out.unsafe_put_pixel(x, y, f(pixel)) });
@@ -184,9 +183,8 @@ where
 pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P> + Send + Sync,
-    P: Pixel + Send + Sync,
-    Q: Pixel + 'static + Send + Sync,
-    <Q as Pixel>::Subpixel: Send + Sync,
+    P: Pixel + Send,
+    Q: Pixel + 'static + Send,
     F: Fn(P) -> Q + Send + Sync,
 {
     let (width, height) = image.dimensions();
@@ -337,7 +335,7 @@ where
 pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| Luma([p[0]]))
 }
@@ -368,7 +366,7 @@ where
 pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -403,7 +401,7 @@ where
 pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| Luma([p[1]]))
 }
@@ -434,7 +432,7 @@ where
 pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -469,7 +467,7 @@ where
 pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| Luma([p[2]]))
 }
@@ -500,7 +498,7 @@ where
 pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>> + Send + Sync,
-    C: Primitive + 'static + Send + Sync,
+    C: Primitive + 'static + Send,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
