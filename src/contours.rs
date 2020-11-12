@@ -3,8 +3,8 @@
 
 use crate::definitions::Point;
 use image::GrayImage;
-use num::{cast, Num, NumCast};
-use std::cmp::Ordering;
+use num::{cast, traits::bounds::Bounded, Num, NumCast};
+use std::cmp::{Ord, Ordering};
 use std::collections::VecDeque;
 use std::f64::consts::PI;
 
@@ -311,7 +311,7 @@ fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Finds the minimal area rectangle that covers all of the points in the input
 /// contour in the following order -> (TL, TR, BR, BL).
 ///
-pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq>(
+pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord + Bounded>(
     contour: &[Point<T>],
 ) -> Vec<Point<T>> {
     let hull = convex_hull(&contour);
@@ -399,11 +399,11 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 
     res.sort_by(|a, b| {
         if a.0 < b.0 {
-            std::cmp::Ordering::Less
+            Ordering::Less
         } else if a.0 > b.0 {
-            std::cmp::Ordering::Greater
+            Ordering::Greater
         } else {
-            std::cmp::Ordering::Equal
+            Ordering::Equal
         }
     });
     let i1 = if res[1].1 > res[0].1 { 0 } else { 1 };
@@ -434,15 +434,12 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Based on the [Graham scan algorithm].
 ///
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
-fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
+fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord + Bounded>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
-    let mut points: Vec<Point<i32>> = points_slice
-        .iter()
-        .map(|p| Point::new(p.x.to_i32().unwrap(), p.y.to_i32().unwrap()))
-        .collect();
+    let mut points: Vec<Point<T>> = points_slice.to_vec();
     let (start_point_pos, start_point) = points.iter().enumerate().fold(
-        (usize::MAX, Point::new(i32::MAX, i32::MAX)),
+        (usize::MAX, Point::new(T::max_value(), T::max_value())),
         |(pos, acc_point), (i, &point)| {
             if point.y < acc_point.y || point.y == acc_point.y && point.x < acc_point.x {
                 return (i, point);
@@ -456,14 +453,14 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
         let orientation = get_orientation(&start_point, a, b);
         if orientation == 0 {
             if get_distance(&start_point, a) < get_distance(&start_point, b) {
-                return std::cmp::Ordering::Less;
+                return Ordering::Less;
             }
-            return std::cmp::Ordering::Greater;
+            return Ordering::Greater;
         }
         if orientation == 2 {
-            std::cmp::Ordering::Less
+            Ordering::Less
         } else {
-            std::cmp::Ordering::Greater
+            Ordering::Greater
         }
     });
 
@@ -481,14 +478,13 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
         cast(start_point.y).unwrap(),
     )];
 
-    for p in points.iter() {
-        let point = Point::new(cast(p.x).unwrap(), cast(p.y).unwrap());
+    for p in points {
         while stack.len() > 1
-            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &point) != 2
+            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &p) != 2
         {
             stack.pop();
         }
-        stack.push(point);
+        stack.push(p);
     }
     stack
 }
