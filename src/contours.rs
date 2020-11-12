@@ -437,6 +437,9 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord + Bounded>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
+    if points_slice.is_empty() {
+        return Vec::new();
+    }
     let mut points: Vec<Point<T>> = points_slice.to_vec();
     let (start_point_pos, start_point) = points.iter().enumerate().fold(
         (usize::MAX, Point::new(T::max_value(), T::max_value())),
@@ -777,6 +780,12 @@ mod tests {
                 Point::new(60, 25)
             ]
         );
+    }
+
+    #[test]
+    fn get_convex_hull_points_empty_vec() {
+        let points = convex_hull::<i32>(&vec![]);
+        assert_eq!(points, []);
     }
 
     #[test]
