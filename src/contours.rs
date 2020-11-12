@@ -437,15 +437,12 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
-    let mut points: Vec<Point<usize>> = points_slice
+    let mut points: Vec<Point<i32>> = points_slice
         .iter()
-        .map(|p| Point::new(p.x.to_usize().unwrap(), p.y.to_usize().unwrap()))
+        .map(|p| Point::new(p.x.to_i32().unwrap(), p.y.to_i32().unwrap()))
         .collect();
     let (start_point_pos, start_point) = points.iter().enumerate().fold(
-        (
-            std::usize::MAX,
-            Point::new(std::usize::MAX, std::usize::MAX),
-        ),
+        (usize::MAX, Point::new(i32::MAX, i32::MAX)),
         |(pos, acc_point), (i, &point)| {
             if point.y < acc_point.y || point.y == acc_point.y && point.x < acc_point.x {
                 return (i, point);
@@ -782,6 +779,33 @@ mod tests {
                 Point::new(130, 60),
                 Point::new(80, 55),
                 Point::new(60, 25)
+            ]
+        );
+    }
+
+    #[test]
+    fn get_convex_hull_points_with_negative_values() {
+        let star = vec![
+            Point::new(100, -20),
+            Point::new(90, 5),
+            Point::new(60, -15),
+            Point::new(90, 0),
+            Point::new(80, 15),
+            Point::new(101, 10),
+            Point::new(130, 20),
+            Point::new(115, 5),
+            Point::new(140, -10),
+            Point::new(120, -5),
+        ];
+        let points = convex_hull(&star);
+        assert_eq!(
+            points,
+            [
+                Point::new(100, -20),
+                Point::new(140, -10),
+                Point::new(130, 20),
+                Point::new(80, 15),
+                Point::new(60, -15)
             ]
         );
     }
