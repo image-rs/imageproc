@@ -3,7 +3,7 @@
 
 use crate::definitions::Point;
 use image::GrayImage;
-use num::{cast, traits::bounds::Bounded, Num, NumCast};
+use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
 use std::collections::VecDeque;
 use std::f64::consts::PI;
@@ -311,7 +311,7 @@ fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Finds the minimal area rectangle that covers all of the points in the input
 /// contour in the following order -> (TL, TR, BR, BL).
 ///
-pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord + Bounded>(
+pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     contour: &[Point<T>],
 ) -> Vec<Point<T>> {
     let hull = convex_hull(&contour);
@@ -434,22 +434,21 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Based on the [Graham scan algorithm].
 ///
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
-fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord + Bounded>(
+fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
     if points_slice.is_empty() {
         return Vec::new();
     }
     let mut points: Vec<Point<T>> = points_slice.to_vec();
-    let (start_point_pos, start_point) = points.iter().enumerate().fold(
-        (usize::MAX, Point::new(T::max_value(), T::max_value())),
-        |(pos, acc_point), (i, &point)| {
-            if point.y < acc_point.y || point.y == acc_point.y && point.x < acc_point.x {
-                return (i, point);
-            }
-            (pos, acc_point)
-        },
-    );
+    let mut start_point_pos = 0;
+    let mut start_point = points[0];
+    for (i, &point) in points.iter().enumerate().skip(1) {
+        if point.y < start_point.y || point.y == start_point.y && point.x < start_point.x {
+            start_point_pos = i;
+            start_point = point;
+        }
+    }
     points.swap(0, start_point_pos);
     points.remove(0);
     points.sort_by(|a, b| {
