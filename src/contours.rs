@@ -4,7 +4,7 @@
 use crate::definitions::Point;
 use image::GrayImage;
 use num::{cast, Num, NumCast};
-use std::cmp::Ordering;
+use std::cmp::{Ord, Ordering};
 use std::collections::VecDeque;
 use std::f64::consts::PI;
 
@@ -311,7 +311,7 @@ fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Finds the minimal area rectangle that covers all of the points in the input
 /// contour in the following order -> (TL, TR, BR, BL).
 ///
-pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq>(
+pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     contour: &[Point<T>],
 ) -> Vec<Point<T>> {
     let hull = convex_hull(&contour);
@@ -399,11 +399,11 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 
     res.sort_by(|a, b| {
         if a.0 < b.0 {
-            std::cmp::Ordering::Less
+            Ordering::Less
         } else if a.0 > b.0 {
-            std::cmp::Ordering::Greater
+            Ordering::Greater
         } else {
-            std::cmp::Ordering::Equal
+            Ordering::Equal
         }
     });
     let i1 = if res[1].1 > res[0].1 { 0 } else { 1 };
@@ -434,39 +434,35 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Based on the [Graham scan algorithm].
 ///
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
-fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
+fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     points_slice: &[Point<T>],
 ) -> Vec<Point<T>> {
-    let mut points: Vec<Point<usize>> = points_slice
-        .iter()
-        .map(|p| Point::new(p.x.to_usize().unwrap(), p.y.to_usize().unwrap()))
-        .collect();
-    let (start_point_pos, start_point) = points.iter().enumerate().fold(
-        (
-            std::usize::MAX,
-            Point::new(std::usize::MAX, std::usize::MAX),
-        ),
-        |(pos, acc_point), (i, &point)| {
-            if point.y < acc_point.y || point.y == acc_point.y && point.x < acc_point.x {
-                return (i, point);
-            }
-            (pos, acc_point)
-        },
-    );
+    if points_slice.is_empty() {
+        return Vec::new();
+    }
+    let mut points: Vec<Point<T>> = points_slice.to_vec();
+    let mut start_point_pos = 0;
+    let mut start_point = points[0];
+    for (i, &point) in points.iter().enumerate().skip(1) {
+        if point.y < start_point.y || point.y == start_point.y && point.x < start_point.x {
+            start_point_pos = i;
+            start_point = point;
+        }
+    }
     points.swap(0, start_point_pos);
     points.remove(0);
     points.sort_by(|a, b| {
         let orientation = get_orientation(&start_point, a, b);
         if orientation == 0 {
             if get_distance(&start_point, a) < get_distance(&start_point, b) {
-                return std::cmp::Ordering::Less;
+                return Ordering::Less;
             }
-            return std::cmp::Ordering::Greater;
+            return Ordering::Greater;
         }
         if orientation == 2 {
-            std::cmp::Ordering::Less
+            Ordering::Less
         } else {
-            std::cmp::Ordering::Greater
+            Ordering::Greater
         }
     });
 
@@ -484,14 +480,13 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq>(
         cast(start_point.y).unwrap(),
     )];
 
-    for p in points.iter() {
-        let point = Point::new(cast(p.x).unwrap(), cast(p.y).unwrap());
+    for p in points {
         while stack.len() > 1
-            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &point) != 2
+            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &p) != 2
         {
             stack.pop();
         }
-        stack.push(point);
+        stack.push(p);
     }
     stack
 }
@@ -782,6 +777,39 @@ mod tests {
                 Point::new(130, 60),
                 Point::new(80, 55),
                 Point::new(60, 25)
+            ]
+        );
+    }
+
+    #[test]
+    fn get_convex_hull_points_empty_vec() {
+        let points = convex_hull::<i32>(&vec![]);
+        assert_eq!(points, []);
+    }
+
+    #[test]
+    fn get_convex_hull_points_with_negative_values() {
+        let star = vec![
+            Point::new(100, -20),
+            Point::new(90, 5),
+            Point::new(60, -15),
+            Point::new(90, 0),
+            Point::new(80, 15),
+            Point::new(101, 10),
+            Point::new(130, 20),
+            Point::new(115, 5),
+            Point::new(140, -10),
+            Point::new(120, -5),
+        ];
+        let points = convex_hull(&star);
+        assert_eq!(
+            points,
+            [
+                Point::new(100, -20),
+                Point::new(140, -10),
+                Point::new(130, 20),
+                Point::new(80, 15),
+                Point::new(60, -15)
             ]
         );
     }
