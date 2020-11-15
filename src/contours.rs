@@ -225,9 +225,9 @@ pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], cl
     }
     let mut length = arc
         .windows(2)
-        .fold(0., |acc, pts| acc + get_distance(&pts[0], &pts[1]));
+        .fold(0., |acc, pts| acc + distance(&pts[0], &pts[1]));
     if arc.len() > 2 && closed {
-        length += get_distance(&arc[0], &arc[arc.len() - 1]);
+        length += distance(&arc[0], &arc[arc.len() - 1]);
     }
     length
 }
@@ -313,12 +313,12 @@ fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
 ///
 pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     contour: &[Point<T>],
-) -> Vec<Point<T>> {
+) -> [Point<T>; 4] {
     let hull = convex_hull(&contour);
     match hull.len() {
         0 => panic!("no points are defined"),
-        1 => vec![hull[0]; 4],
-        2 => vec![hull[0], hull[1], hull[1], hull[0]],
+        1 => [hull[0]; 4],
+        2 => [hull[0], hull[1], hull[1], hull[0]],
         _ => rotating_calipers(&hull),
     }
 }
@@ -329,7 +329,7 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
 /// [rotating calipers]: https://en.wikipedia.org/wiki/Rotating_calipers
 fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     points: &[Point<T>],
-) -> Vec<Point<T>> {
+) -> [Point<T>; 4] {
     let n = points.len();
     let edges: Vec<(f64, f64)> = (0..n - 1)
         .map(|i| {
@@ -410,7 +410,7 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     let i2 = if res[3].1 > res[2].1 { 2 } else { 3 };
     let i3 = if res[3].1 > res[2].1 { 3 } else { 2 };
     let i4 = if res[1].1 > res[0].1 { 1 } else { 0 };
-    vec![
+    [
         Point::new(
             cast(res[i1].0.floor()).unwrap(),
             cast(res[i1].1.floor()).unwrap(),
@@ -451,25 +451,24 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     }
     points.swap(0, start_point_pos);
     points.remove(0);
-    points.sort_by(|a, b| {
-        let orientation = get_orientation(&start_point, a, b);
-        if orientation == 0 {
-            if get_distance(&start_point, a) < get_distance(&start_point, b) {
-                return Ordering::Less;
+    points.sort_by(|a, b| match orientation(&start_point, a, b) {
+        Orientation::Collinear => {
+            if distance(&start_point, a) < distance(&start_point, b) {
+                Ordering::Less
+            } else {
+                Ordering::Greater
             }
-            return Ordering::Greater;
         }
-        if orientation == 2 {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }
+        Orientation::Clockwise => Ordering::Greater,
+        Orientation::CounterClockwise => Ordering::Less,
     });
 
     let mut iter = points.iter().peekable();
     let mut remaining_points = Vec::with_capacity(points.len());
     while let Some(mut p) = iter.next() {
-        while iter.peek().is_some() && get_orientation(&start_point, p, iter.peek().unwrap()) == 0 {
+        while iter.peek().is_some()
+            && orientation(&start_point, p, iter.peek().unwrap()) == Orientation::Collinear
+        {
             p = iter.next().unwrap();
         }
         remaining_points.push(p);
@@ -482,7 +481,8 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
 
     for p in points {
         while stack.len() > 1
-            && get_orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &p) != 2
+            && orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &p)
+                != Orientation::CounterClockwise
         {
             stack.pop();
         }
@@ -491,25 +491,27 @@ fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     stack
 }
 
-fn get_orientation<T: Num + NumCast + Copy + PartialEq + Eq>(
-    p: &Point<T>,
-    q: &Point<T>,
-    r: &Point<T>,
-) -> u8 {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum Orientation {
+    Collinear,
+    Clockwise,
+    CounterClockwise,
+}
+
+fn orientation<T: NumCast>(p: &Point<T>, q: &Point<T>, r: &Point<T>) -> Orientation {
     let val = (q.y.to_i32().unwrap() - p.y.to_i32().unwrap())
         * (r.x.to_i32().unwrap() - q.x.to_i32().unwrap())
         - (q.x.to_i32().unwrap() - p.x.to_i32().unwrap())
             * (r.y.to_i32().unwrap() - q.y.to_i32().unwrap());
     match val.cmp(&0) {
-        Ordering::Equal => 0,   // colinear
-        Ordering::Greater => 1, // clockwise (right)
-        Ordering::Less => 2,    // counter-clockwise (left)
+        Ordering::Equal => Orientation::Collinear,
+        Ordering::Greater => Orientation::Clockwise,
+        Ordering::Less => Orientation::CounterClockwise,
     }
 }
 
 /// Calculates the distance between 2 points.
-///
-pub fn get_distance<T: Num + NumCast + Copy + PartialEq + Eq>(p1: &Point<T>, p2: &Point<T>) -> f64 {
+pub fn distance<T: Num + NumCast + Copy + PartialEq + Eq>(p1: &Point<T>, p2: &Point<T>) -> f64 {
     ((p1.x.to_f64().unwrap() - p2.x.to_f64().unwrap()).powf(2.)
         + (p1.y.to_f64().unwrap() - p2.y.to_f64().unwrap()).powf(2.))
     .sqrt()
