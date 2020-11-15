@@ -1,12 +1,7 @@
 //! Trait definitions and type aliases.
 
 use image::{Bgr, Bgra, ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
-use num::Num;
-use std::{
-    i16,
-    ops::{Add, Sub},
-    u16, u8,
-};
+use std::{i16, u16, u8};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather
@@ -16,38 +11,6 @@ use std::{
 /// When specialisation lands we should be able to do this by defining traits for images
 /// with contiguous storage.
 pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
-
-/// A 2D point.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Point<T> {
-    /// x-coordinate.
-    pub x: T,
-    /// y-coordinate.
-    pub y: T,
-}
-
-impl<T> Point<T> {
-    /// Construct a point at (x, y).
-    pub fn new(x: T, y: T) -> Point<T> {
-        Point::<T> { x, y }
-    }
-}
-
-impl<T: Num> Add for Point<T> {
-    type Output = Self;
-
-    fn add(self, other: Point<T>) -> Point<T> {
-        Point::new(self.x + other.x, self.y + other.y)
-    }
-}
-
-impl<T: Num> Sub for Point<T> {
-    type Output = Self;
-
-    fn sub(self, other: Point<T>) -> Point<T> {
-        Point::new(self.x - other.x, self.y - other.y)
-    }
-}
 
 /// Pixels which have a named Black value.
 pub trait HasBlack {

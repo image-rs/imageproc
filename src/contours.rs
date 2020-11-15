@@ -1,7 +1,7 @@
 //! Functions for detecting contours of polygons in an image and approximating
 //! polygon from set of points.
 
-use crate::definitions::Point;
+use crate::point::{Point, Rotation, distance};
 use image::GrayImage;
 use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
@@ -226,9 +226,9 @@ pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], cl
     }
     let mut length = arc
         .windows(2)
-        .fold(0., |acc, pts| acc + distance(&pts[0], &pts[1]));
+        .fold(0., |acc, pts| acc + distance(pts[0], pts[1]));
     if arc.len() > 2 && closed {
-        length += distance(&arc[0], &arc[arc.len() - 1]);
+        length += distance(arc[0], arc[arc.len() - 1]);
     }
     length
 }
@@ -250,7 +250,7 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     let mut dmax = 0.;
     let mut index = 0;
     let end = curve.len() - 1;
-    let line_args = line_params(&curve[0], &curve[end]);
+    let line_args = line_params(curve[0].to_f64(), curve[end].to_f64());
     for (i, point) in curve.iter().enumerate().skip(1) {
         let d = perpendicular_distance(line_args, point);
         if d > dmax {
@@ -284,13 +284,13 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
 }
 
 /// Returns the parameters of the [line equation] (Ax + By + C = 0) that passes through the
-/// given points p1 and p2.
+/// given points p and q.
 ///
 /// [line equation]: https://en.wikipedia.org/wiki/Linear_equation#Two-point_form
-fn line_params<T: Num + NumCast + Copy>(p1: &Point<T>, p2: &Point<T>) -> (f64, f64, f64) {
-    let a = p1.y.to_f64().unwrap() - p2.y.to_f64().unwrap();
-    let b = p2.x.to_f64().unwrap() - p1.x.to_f64().unwrap();
-    let c = (p1.x * p2.y).to_f64().unwrap() - (p2.x * p1.y).to_f64().unwrap();
+fn line_params(p: Point<f64>, q: Point<f64>) -> (f64, f64, f64) {
+    let a = p.y - q.y;
+    let b = q.x - p.x;
+    let c = p.x * q.y - q.x * p.y;
     (a, b, c)
 }
 
@@ -316,16 +316,6 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     }
 }
 
-impl<T: NumCast> Point<T> {
-    fn to_f64(&self) -> Point<f64> {
-        Point::new(self.x.to_f64().unwrap(), self.y.to_f64().unwrap())
-    }
-}
-
-fn rotate(p: Point<f64>, r: [[f64; 2]; 2]) -> Point<f64> {
-    Point::new(p.x * r[0][0] + p.y * r[1][0], p.x * r[0][1] + p.y * r[1][1])
-}
-
 /// The implementation of the [rotating calipers] used for determining the
 /// bounding rectangle with the smallest area.
 ///
@@ -346,11 +336,9 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     let mut min_area = f64::MAX;
     let mut res = vec![Point::new(0., 0.); 4];
     for angle in edge_angles {
-        let (sin, cos) = angle.sin_cos();
-        let r = [[cos, -sin], [sin, cos]];
-
+        let rotation = Rotation::new(angle);
         let rotated_points: Vec<Point<f64>> =
-            points.iter().map(|p| rotate(p.to_f64(), r)).collect();
+            points.iter().map(|p| p.to_f64().rotate(rotation)).collect();
 
         let (min_x, max_x, min_y, max_y) =
             rotated_points
@@ -367,11 +355,10 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
         let area = (max_x - min_x) * (max_y - min_y);
         if area < min_area {
             min_area = area;
-            let r = [[cos, sin], [-sin, cos]];
-            res[0] = rotate(Point::new(max_x, min_y), r);
-            res[1] = rotate(Point::new(min_x, min_y), r);
-            res[2] = rotate(Point::new(min_x, max_y), r);
-            res[3] = rotate(Point::new(max_x, max_y), r);
+            res[0] = Point::new(max_x, min_y).invert_rotation(rotation);
+            res[1] = Point::new(min_x, min_y).invert_rotation(rotation);
+            res[2] = Point::new(min_x, max_y).invert_rotation(rotation);
+            res[3] = Point::new(max_x, max_y).invert_rotation(rotation);
         }
     }
 
@@ -434,7 +421,7 @@ where
     points.remove(0);
     points.sort_by(|a, b| match orientation(&start_point, a, b) {
         Orientation::Collinear => {
-            if distance(&start_point, a) < distance(&start_point, b) {
+            if distance(start_point, *a) < distance(start_point, *b) {
                 Ordering::Less
             } else {
                 Ordering::Greater
@@ -491,17 +478,10 @@ fn orientation<T: NumCast>(p: &Point<T>, q: &Point<T>, r: &Point<T>) -> Orientat
     }
 }
 
-/// Calculates the distance between 2 points.
-pub fn distance<T: NumCast>(p1: &Point<T>, p2: &Point<T>) -> f64 {
-    ((p1.x.to_f64().unwrap() - p2.x.to_f64().unwrap()).powf(2.)
-        + (p1.y.to_f64().unwrap() - p2.y.to_f64().unwrap()).powf(2.))
-    .sqrt()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::definitions::Point;
+    use crate::point::Point;
     #[test]
     fn test_contours_structured() {
         use crate::drawing::draw_polygon_mut;
@@ -684,7 +664,7 @@ mod tests {
     fn line_params_test() {
         let p1 = Point::new(5, 7);
         let p2 = Point::new(10, 3);
-        assert_eq!(line_params(&p1, &p2), (4., 5., -55.));
+        assert_eq!(line_params(p1.to_f64(), p2.to_f64()), (4., 5., -55.));
     }
 
     #[test]

@@ -1,6 +1,7 @@
-use crate::definitions::{Image, Point};
+use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
+use crate::point::Point;
 use image::{GenericImage, ImageBuffer};
 use std::cmp::{max, min};
 use std::f32;
