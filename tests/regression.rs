@@ -1,5 +1,13 @@
 //! Compares results of image processing functions to existing "truth" images.
 //! All test images are taken from the caltech256 dataset.
+//!
+//! To update the truth file for a test, or to generate a truth file for a new test,
+//! set the REGENERATE environment variable:
+//!
+//! ```
+//! $ REGENERATE=1 cargo test
+//! ```
+//!
 //! http://authors.library.caltech.edu/7694/
 
 #![feature(test)]
@@ -10,22 +18,23 @@
 extern crate imageproc;
 
 use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
-use imageproc::definitions::{Clamp, HasBlack, HasWhite};
-use imageproc::edges::canny;
-use imageproc::filter::{gaussian_blur_f32, sharpen3x3};
-use imageproc::geometric_transformations::{rotate_about_center, warp, Interpolation, Projection};
-use imageproc::gradients;
-use imageproc::utils::load_image_or_panic;
-use std::f32;
-use std::ops::Deref;
-use std::path::Path;
+use imageproc::{
+    definitions::{Clamp, HasBlack, HasWhite},
+    edges::canny,
+    filter::{gaussian_blur_f32, sharpen3x3},
+    geometric_transformations::{rotate_about_center, warp, Interpolation, Projection},
+    gradients,
+    utils::load_image_or_panic,
+};
+use std::{env, f32, ops::Deref, path::Path};
 
-// If set to true then all calls to any compare_to_truth function will regenerate
-// the truth image.
-const REGENERATE: bool = false;
+// If the REGENERATE environment variable is set then running tests will update the truth files
+// to match the output of the current code.
+fn should_regenerate() -> bool {
+    env::var("REGENERATE").is_ok()
+}
 
 /// Save an image with the given name to the truth data directory "./tests/data/truth".
-/// Used when manually (re)generating test data, e.g. when REGENERATE is set to true.
 fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
 where
     P: Pixel<Subpixel = u8> + 'static,
@@ -77,7 +86,7 @@ fn compare_to_truth_rgb_with_tolerance<F>(
     let input = load_input_image(input_file_name).to_rgb();
     let actual = op.call((&input,));
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&actual, truth_file_name);
     } else {
         let truth = load_truth_image(truth_file_name).to_rgb();
@@ -98,7 +107,7 @@ fn compare_to_truth_rgba_with_tolerance<F>(
     let input = load_input_image(input_file_name).to_rgba();
     let actual = op.call((&input,));
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&actual, truth_file_name);
     } else {
         let truth = load_truth_image(truth_file_name).to_rgba();
@@ -115,7 +124,7 @@ where
     let input = load_input_image(input_file_name).to_luma();
     let actual = op.call((&input,));
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&actual, truth_file_name);
     } else {
         let truth = load_truth_image(truth_file_name).to_luma();
@@ -405,7 +414,7 @@ fn test_draw_antialiased_line_segment_rgb() {
     // Isolated segment, partially outside of image bounds
     draw_antialiased_line_segment_mut(&mut image, (150, 150), (210, 130), white, interpolate);
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "antialiased_lines_rgb.png");
     } else {
         let truth = load_truth_image("antialiased_lines_rgb.png").to_rgb();
@@ -474,7 +483,7 @@ fn test_draw_polygon() {
         .collect();
     draw_polygon_mut(&mut image, &hex, white);
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "polygon.png");
     } else {
         let truth = load_truth_image("polygon.png").to_luma();
@@ -505,7 +514,7 @@ fn test_draw_spiral_polygon() {
     ];
     draw_polygon_mut(&mut image, &polygon, Luma::white());
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "spiral_polygon.png");
     } else {
         let truth = load_truth_image("spiral_polygon.png").to_luma();
@@ -568,7 +577,7 @@ fn test_draw_cubic_bezier_curve() {
         red,
     );
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "cubic_bezier_curve.png");
     } else {
         let truth = load_truth_image("cubic_bezier_curve.png").to_rgb();
@@ -594,7 +603,7 @@ fn test_draw_hollow_ellipse() {
     // Partially off-screen
     draw_hollow_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "hollow_ellipse.png");
     } else {
         let truth = load_truth_image("hollow_ellipse.png").to_rgb();
@@ -620,7 +629,7 @@ fn test_draw_filled_ellipse() {
     // Partially off-screen
     draw_filled_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&image, "filled_ellipse.png");
     } else {
         let truth = load_truth_image("filled_ellipse.png").to_rgb();
@@ -674,7 +683,7 @@ fn test_hough_line_detection() {
     // Draw detected lines on top of original image
     let lines_image = draw_polar_lines(&color_edges, &lines, green);
 
-    if REGENERATE {
+    if should_regenerate() {
         save_truth_image(&lines_image, "hough_lines.png");
     } else {
         let truth = load_truth_image("hough_lines.png").to_rgb();
