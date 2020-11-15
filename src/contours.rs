@@ -6,7 +6,7 @@ use image::GrayImage;
 use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
 use std::collections::VecDeque;
-use std::f64::consts::PI;
+use std::f64::{self, consts::PI};
 
 /// Contour struct containing its points, is_outer flag to determine whether the
 /// contour is an outer border or hole border, and the parent option (the index
@@ -316,6 +316,13 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     }
 }
 
+fn rotate<T: NumCast>(p: Point<T>, r: [[f64; 2]; 2]) -> Point<f64> {
+    Point::new(
+        p.x.to_f64().unwrap() * r[0][0] + p.y.to_f64().unwrap() * r[1][0],
+        p.x.to_f64().unwrap() * r[0][1] + p.y.to_f64().unwrap() * r[1][1],
+    )
+}
+
 /// The implementation of the [rotating calipers] used for determining the
 /// bounding rectangle with the smallest area.
 ///
@@ -323,13 +330,11 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
 fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     points: &[Point<T>],
 ) -> [Point<T>; 4] {
-    let n = points.len();
-    let edges: Vec<(f64, f64)> = (0..n - 1)
+    let edges: Vec<(f64, f64)> = (0..points.len() - 1)
         .map(|i| {
-            let next = i + 1;
             (
-                points[next].x.to_f64().unwrap() - points[i].x.to_f64().unwrap(),
-                points[next].y.to_f64().unwrap() - points[i].y.to_f64().unwrap(),
+                points[i + 1].x.to_f64().unwrap() - points[i].x.to_f64().unwrap(),
+                points[i + 1].y.to_f64().unwrap() - points[i].y.to_f64().unwrap(),
             )
         })
         .collect();
@@ -340,28 +345,25 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
         .collect();
     edge_angles.dedup();
 
-    let mut min_area = std::f64::MAX;
-    let mut res = vec![(0., 0.); 4];
+    let mut min_area = f64::MAX;
+    let mut res = vec![Point::new(0., 0.); 4];
     for angle in edge_angles {
-        let r = [[angle.cos(), -angle.sin()], [angle.sin(), angle.cos()]];
+        let (sin, cos) = angle.sin_cos();
+        let r = [[cos, -sin], [sin, cos]];
 
-        let rotated_points: Vec<(f64, f64)> = points
+        let rotated_points: Vec<Point<f64>> = points
             .iter()
-            .map(|p| {
-                (
-                    p.x.to_f64().unwrap() * r[0][0] + p.y.to_f64().unwrap() * r[1][0],
-                    p.x.to_f64().unwrap() * r[0][1] + p.y.to_f64().unwrap() * r[1][1],
-                )
-            })
+            .map(|p| rotate(*p, r))
             .collect();
+
         let (min_x, max_x, min_y, max_y) = rotated_points.iter().fold(
-            (std::f64::MAX, std::f64::MIN, std::f64::MAX, std::f64::MIN),
+            (f64::MAX, f64::MIN, f64::MAX, f64::MIN),
             |acc, p| {
                 (
-                    acc.0.min(p.0),
-                    acc.1.max(p.0),
-                    acc.2.min(p.1),
-                    acc.3.max(p.1),
+                    acc.0.min(p.x),
+                    acc.1.max(p.x),
+                    acc.2.min(p.y),
+                    acc.3.max(p.y),
                 )
             },
         );
@@ -370,55 +372,43 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
         let area = width * height;
         if area < min_area {
             min_area = area;
-
-            res[0] = (
-                max_x * r[0][0] + min_y * r[0][1],
-                max_x * r[1][0] + min_y * r[1][1],
-            );
-            res[1] = (
-                min_x * r[0][0] + min_y * r[0][1],
-                min_x * r[1][0] + min_y * r[1][1],
-            );
-            res[2] = (
-                min_x * r[0][0] + max_y * r[0][1],
-                min_x * r[1][0] + max_y * r[1][1],
-            );
-            res[3] = (
-                max_x * r[0][0] + max_y * r[0][1],
-                max_x * r[1][0] + max_y * r[1][1],
-            );
+            let r = [[cos, sin], [-sin, cos]];
+            res[0] = rotate(Point::new(max_x, min_y), r);
+            res[1] = rotate(Point::new(min_x, min_y), r);
+            res[2] = rotate(Point::new(min_x, max_y), r);
+            res[3] = rotate(Point::new(max_x, max_y), r);
         }
     }
 
     res.sort_by(|a, b| {
-        if a.0 < b.0 {
+        if a.x < b.x {
             Ordering::Less
-        } else if a.0 > b.0 {
+        } else if a.x > b.x {
             Ordering::Greater
         } else {
             Ordering::Equal
         }
     });
-    let i1 = if res[1].1 > res[0].1 { 0 } else { 1 };
-    let i2 = if res[3].1 > res[2].1 { 2 } else { 3 };
-    let i3 = if res[3].1 > res[2].1 { 3 } else { 2 };
-    let i4 = if res[1].1 > res[0].1 { 1 } else { 0 };
+    let i1 = if res[1].y > res[0].y { 0 } else { 1 };
+    let i2 = if res[3].y > res[2].y { 2 } else { 3 };
+    let i3 = if res[3].y > res[2].y { 3 } else { 2 };
+    let i4 = if res[1].y > res[0].y { 1 } else { 0 };
     [
         Point::new(
-            cast(res[i1].0.floor()).unwrap(),
-            cast(res[i1].1.floor()).unwrap(),
+            cast(res[i1].x.floor()).unwrap(),
+            cast(res[i1].y.floor()).unwrap(),
         ),
         Point::new(
-            cast(res[i2].0.ceil()).unwrap(),
-            cast(res[i2].1.floor()).unwrap(),
+            cast(res[i2].x.ceil()).unwrap(),
+            cast(res[i2].y.floor()).unwrap(),
         ),
         Point::new(
-            cast(res[i3].0.ceil()).unwrap(),
-            cast(res[i3].1.ceil()).unwrap(),
+            cast(res[i3].x.ceil()).unwrap(),
+            cast(res[i3].y.ceil()).unwrap(),
         ),
         Point::new(
-            cast(res[i4].0.floor()).unwrap(),
-            cast(res[i4].1.ceil()).unwrap(),
+            cast(res[i4].x.floor()).unwrap(),
+            cast(res[i4].y.ceil()).unwrap(),
         ),
     ]
 }
@@ -427,9 +417,10 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Based on the [Graham scan algorithm].
 ///
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
-fn convex_hull<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
-    points_slice: &[Point<T>],
-) -> Vec<Point<T>> {
+fn convex_hull<T>(points_slice: &[Point<T>]) -> Vec<Point<T>>
+where
+    T: Num + NumCast + Copy + PartialEq + Eq + Ord,
+{
     if points_slice.is_empty() {
         return Vec::new();
     }
