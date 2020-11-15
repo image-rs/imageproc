@@ -65,6 +65,7 @@ where
             }
         }
     }
+
     let mut diffs = VecDeque::from(vec![
         Point::new(-1, 0),  // w
         Point::new(-1, -1), // nw
@@ -78,37 +79,29 @@ where
 
     let mut contours: Vec<Contour<T>> = Vec::new();
     let mut curr_border_num = 1;
-    let mut parent_border_num;
-    let mut pos2 = Point::new(0, 0);
 
     for y in 0..height {
-        parent_border_num = 1;
+        let mut parent_border_num = 1;
 
         for x in 0..width {
             if image_values[x][y] == 0 {
                 continue;
             }
 
-            let mut skip_tracing = false;
-            let is_outer;
-            if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
-                is_outer = true;
-                curr_border_num += 1;
-                pos2 = Point::new(x - 1, y);
-            } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
-                is_outer = false;
-                curr_border_num += 1;
-                pos2 = Point::new(x + 1, y);
-
-                if image_values[x][y] > 1 {
-                    parent_border_num = image_values[x][y] as usize;
+            if let Some((mut pos2, is_outer)) =
+                if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
+                    curr_border_num += 1;
+                    Some((Point::new(x - 1, y), true))
+                } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
+                    curr_border_num += 1;
+                    if image_values[x][y] > 1 {
+                        parent_border_num = image_values[x][y] as usize;
+                    }
+                    Some((Point::new(x + 1, y), false))
+                } else {
+                    None
                 }
-            } else {
-                is_outer = false;
-                skip_tracing = true;
-            }
-
-            if !skip_tracing {
+            {
                 let mut parent = None;
                 if parent_border_num > 1 {
                     let p_idx = parent_border_num - 2;
@@ -120,13 +113,10 @@ where
                 };
 
                 let mut contour_points = Vec::new();
-                rotate_to_value(&mut diffs, pos2.to_i32() - Point::new(x, y).to_i32());
+                let curr = Point::new(x, y);
+                rotate_to_value(&mut diffs, pos2.to_i32() - curr.to_i32());
                 if let Some(pos1) = diffs.iter().find_map(|diff| {
-                    get_position_if_non_zero_pixel(
-                        &image_values,
-                        x as i32 + diff.x,
-                        y as i32 + diff.y,
-                    )
+                    get_position_if_non_zero_pixel(&image_values, curr.to_i32() + diff.to_i32())
                 }) {
                     pos2 = pos1;
                     let mut pos3 = Point::new(x, y);
@@ -140,8 +130,7 @@ where
                             .find_map(|diff| {
                                 get_position_if_non_zero_pixel(
                                     &image_values,
-                                    pos3.x as i32 + diff.x,
-                                    pos3.y as i32 + diff.y,
+                                    pos3.to_i32() + diff.to_i32(),
                                 )
                             })
                             .unwrap();
@@ -190,18 +179,14 @@ fn rotate_to_value<T: Eq + Copy>(values: &mut VecDeque<T>, value: T) {
     values.rotate_left(rotate_pos);
 }
 
-fn get_position_if_non_zero_pixel(
-    image: &[Vec<i32>],
-    curr_x: i32,
-    curr_y: i32,
-) -> Option<Point<usize>> {
-    if curr_x > -1
-        && curr_x < image.len() as i32
-        && curr_y > -1
-        && curr_y < image[0].len() as i32
-        && image[curr_x as usize][curr_y as usize] != 0
+fn get_position_if_non_zero_pixel(image: &[Vec<i32>], curr: Point<i32>) -> Option<Point<usize>> {
+    if curr.x > -1
+        && curr.x < image.len() as i32
+        && curr.y > -1
+        && curr.y < image[0].len() as i32
+        && image[curr.x as usize][curr.y as usize] != 0
     {
-        return Some(Point::new(curr_x as usize, curr_y as usize));
+        return Some(Point::new(curr.x as usize, curr.y as usize));
     }
     None
 }
