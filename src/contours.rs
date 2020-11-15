@@ -1,7 +1,7 @@
 //! Functions for detecting contours of polygons in an image and approximating
 //! polygon from set of points.
 
-use crate::point::{Point, Rotation, distance};
+use crate::point::{distance, Line, Point, Rotation};
 use image::GrayImage;
 use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
@@ -250,9 +250,9 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     let mut dmax = 0.;
     let mut index = 0;
     let end = curve.len() - 1;
-    let line_args = line_params(curve[0].to_f64(), curve[end].to_f64());
+    let line = Line::from_points(curve[0].to_f64(), curve[end].to_f64());
     for (i, point) in curve.iter().enumerate().skip(1) {
-        let d = perpendicular_distance(line_args, point);
+        let d = line.distance_from_point(point.to_f64());
         if d > dmax {
             index = i;
             dmax = d;
@@ -281,25 +281,6 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     }
 
     res
-}
-
-/// Returns the parameters of the [line equation] (Ax + By + C = 0) that passes through the
-/// given points p and q.
-///
-/// [line equation]: https://en.wikipedia.org/wiki/Linear_equation#Two-point_form
-fn line_params(p: Point<f64>, q: Point<f64>) -> (f64, f64, f64) {
-    let a = p.y - q.y;
-    let b = q.x - p.x;
-    let c = p.x * q.y - q.x * p.y;
-    (a, b, c)
-}
-
-#[allow(clippy::many_single_char_names)]
-fn perpendicular_distance<T: NumCast>(line_args: (f64, f64, f64), point: &Point<T>) -> f64 {
-    let (a, b, c) = line_args;
-
-    (a * point.x.to_f64().unwrap() + b * point.y.to_f64().unwrap() + c).abs()
-        / (a.powf(2.) + b.powf(2.)).sqrt()
 }
 
 /// Finds the minimal area rectangle that covers all of the points in the input
@@ -658,20 +639,6 @@ mod tests {
         assert_eq!(contours[3].points, [Point::new(13, 6)]);
         assert_eq!(contours[3].parent, None);
         assert_eq!(contours.len(), 4);
-    }
-
-    #[test]
-    fn line_params_test() {
-        let p1 = Point::new(5, 7);
-        let p2 = Point::new(10, 3);
-        assert_eq!(line_params(p1.to_f64(), p2.to_f64()), (4., 5., -55.));
-    }
-
-    #[test]
-    fn perpendicular_distance_test() {
-        let line_args = (8., 7., 5.);
-        let point = Point::new(2, 3);
-        assert!(perpendicular_distance(line_args, &point) - 3.9510276472 < 1e-10);
     }
 
     #[test]

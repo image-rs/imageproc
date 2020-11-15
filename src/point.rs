@@ -1,4 +1,4 @@
-//! Basic operations on 2d points.
+//! A 2d point type, and some basic operations on points and lines.
 
 use num::{Num, NumCast};
 use std::ops::{Add, Sub};
@@ -50,7 +50,10 @@ impl Rotation {
     /// A rotation of `theta` radians.
     pub(crate) fn new(theta: f64) -> Rotation {
         let (sin_theta, cos_theta) = theta.sin_cos();
-        Rotation { sin_theta, cos_theta }
+        Rotation {
+            sin_theta,
+            cos_theta,
+        }
     }
 }
 
@@ -83,5 +86,61 @@ impl<T: Num> Sub for Point<T> {
 
     fn sub(self, other: Point<T>) -> Point<T> {
         Point::new(self.x - other.x, self.y - other.y)
+    }
+}
+
+/// A line of the form Ax + By + C = 0.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Line {
+    a: f64,
+    b: f64,
+    c: f64,
+}
+
+impl Line {
+    /// Returns the line Ax + By + C = 0
+    pub fn new(a: f64, b: f64, c: f64) -> Line {
+        Line { a, b, c }
+    }
+
+    /// Returns the `Line` that passes through p and q.
+    pub fn from_points(p: Point<f64>, q: Point<f64>) -> Line {
+        let a = p.y - q.y;
+        let b = q.x - p.x;
+        let c = p.x * q.y - q.x * p.y;
+        Line { a, b, c }
+    }
+
+    /// Computes the shortest distance from this line to the given point.
+    pub fn distance_from_point(&self, point: Point<f64>) -> f64 {
+        let (a, b, c) = (self.a, self.b, self.c);
+        (a * point.x + b * point.y + c).abs() / (a.powf(2.0) + b.powf(2.)).sqrt()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn line_from_points() {
+        let p = Point::new(5.0, 7.0);
+        let q = Point::new(10.0, 3.0);
+        assert_eq!(
+            Line::from_points(p, q),
+            Line {
+                a: 4.0,
+                b: 5.0,
+                c: -55.0
+            }
+        );
+    }
+
+    #[test]
+    fn distance_between_line_and_point() {
+        assert!(
+            Line::new(8.0, 7.0, 5.0).distance_from_point(Point::new(2.0, 3.0)) - 3.9510276472
+                < 1e-10
+        );
     }
 }
