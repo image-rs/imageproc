@@ -316,11 +316,14 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     }
 }
 
-fn rotate<T: NumCast>(p: Point<T>, r: [[f64; 2]; 2]) -> Point<f64> {
-    Point::new(
-        p.x.to_f64().unwrap() * r[0][0] + p.y.to_f64().unwrap() * r[1][0],
-        p.x.to_f64().unwrap() * r[0][1] + p.y.to_f64().unwrap() * r[1][1],
-    )
+impl<T: NumCast> Point<T> {
+    fn to_f64(&self) -> Point<f64> {
+        Point::new(self.x.to_f64().unwrap(), self.y.to_f64().unwrap())
+    }
+}
+
+fn rotate(p: Point<f64>, r: [[f64; 2]; 2]) -> Point<f64> {
+    Point::new(p.x * r[0][0] + p.y * r[1][0], p.x * r[0][1] + p.y * r[1][1])
 }
 
 /// The implementation of the [rotating calipers] used for determining the
@@ -330,19 +333,13 @@ fn rotate<T: NumCast>(p: Point<T>, r: [[f64; 2]; 2]) -> Point<f64> {
 fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     points: &[Point<T>],
 ) -> [Point<T>; 4] {
-    let edges: Vec<(f64, f64)> = (0..points.len() - 1)
+    let mut edge_angles: Vec<f64> = (0..points.len() - 1)
         .map(|i| {
-            (
-                points[i + 1].x.to_f64().unwrap() - points[i].x.to_f64().unwrap(),
-                points[i + 1].y.to_f64().unwrap() - points[i].y.to_f64().unwrap(),
-            )
+            let edge = points[i + 1].to_f64() - points[i].to_f64();
+            ((edge.y.atan2(edge.x) + PI) % (PI / 2.)).abs()
         })
         .collect();
 
-    let mut edge_angles: Vec<f64> = edges
-        .iter()
-        .map(|e| ((e.1.atan2(e.0) + PI) % (PI / 2.)).abs())
-        .collect();
     edge_angles.dedup();
 
     let mut min_area = f64::MAX;
@@ -353,7 +350,7 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
 
         let rotated_points: Vec<Point<f64>> = points
             .iter()
-            .map(|p| rotate(*p, r))
+            .map(|p| rotate(p.to_f64(), r))
             .collect();
 
         let (min_x, max_x, min_y, max_y) = rotated_points.iter().fold(
@@ -389,10 +386,12 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
             Ordering::Equal
         }
     });
+
     let i1 = if res[1].y > res[0].y { 0 } else { 1 };
     let i2 = if res[3].y > res[2].y { 2 } else { 3 };
     let i3 = if res[3].y > res[2].y { 3 } else { 2 };
     let i4 = if res[1].y > res[0].y { 1 } else { 0 };
+
     [
         Point::new(
             cast(res[i1].x.floor()).unwrap(),

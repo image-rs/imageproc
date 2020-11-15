@@ -1,7 +1,8 @@
 //! Trait definitions and type aliases.
 
 use image::{Bgr, Bgra, ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
-use std::{i16, u16, u8};
+use std::{i16, u16, u8, ops::{Add, Sub}};
+use num::Num;
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather
@@ -25,6 +26,22 @@ impl<T> Point<T> {
     /// Construct a point at (x, y).
     pub fn new(x: T, y: T) -> Point<T> {
         Point::<T> { x, y }
+    }
+}
+
+impl<T: Num> Add for Point<T> {
+    type Output = Self;
+
+    fn add(self, other: Point<T>) -> Point<T> {
+        Point::new(self.x + other.x, self.y + other.y)
+    }
+}
+
+impl<T: Num> Sub for Point<T> {
+    type Output = Self;
+
+    fn sub(self, other: Point<T>) -> Point<T> {
+        Point::new(self.x - other.x, self.y - other.y)
     }
 }
 
