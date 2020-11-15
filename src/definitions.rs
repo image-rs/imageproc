@@ -1,8 +1,12 @@
 //! Trait definitions and type aliases.
 
 use image::{Bgr, Bgra, ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
-use std::{i16, u16, u8, ops::{Add, Sub}};
 use num::Num;
+use std::{
+    i16,
+    ops::{Add, Sub},
+    u16, u8,
+};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather

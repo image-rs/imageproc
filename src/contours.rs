@@ -333,9 +333,10 @@ fn rotate(p: Point<f64>, r: [[f64; 2]; 2]) -> Point<f64> {
 fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     points: &[Point<T>],
 ) -> [Point<T>; 4] {
-    let mut edge_angles: Vec<f64> = (0..points.len() - 1)
-        .map(|i| {
-            let edge = points[i + 1].to_f64() - points[i].to_f64();
+    let mut edge_angles: Vec<f64> = points
+        .windows(2)
+        .map(|e| {
+            let edge = e[1].to_f64() - e[0].to_f64();
             ((edge.y.atan2(edge.x) + PI) % (PI / 2.)).abs()
         })
         .collect();
@@ -348,25 +349,22 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
         let (sin, cos) = angle.sin_cos();
         let r = [[cos, -sin], [sin, cos]];
 
-        let rotated_points: Vec<Point<f64>> = points
-            .iter()
-            .map(|p| rotate(p.to_f64(), r))
-            .collect();
+        let rotated_points: Vec<Point<f64>> =
+            points.iter().map(|p| rotate(p.to_f64(), r)).collect();
 
-        let (min_x, max_x, min_y, max_y) = rotated_points.iter().fold(
-            (f64::MAX, f64::MIN, f64::MAX, f64::MIN),
-            |acc, p| {
-                (
-                    acc.0.min(p.x),
-                    acc.1.max(p.x),
-                    acc.2.min(p.y),
-                    acc.3.max(p.y),
-                )
-            },
-        );
-        let width = max_x - min_x;
-        let height = max_y - min_y;
-        let area = width * height;
+        let (min_x, max_x, min_y, max_y) =
+            rotated_points
+                .iter()
+                .fold((f64::MAX, f64::MIN, f64::MAX, f64::MIN), |acc, p| {
+                    (
+                        acc.0.min(p.x),
+                        acc.1.max(p.x),
+                        acc.2.min(p.y),
+                        acc.3.max(p.y),
+                    )
+                });
+
+        let area = (max_x - min_x) * (max_y - min_y);
         if area < min_area {
             min_area = area;
             let r = [[cos, sin], [-sin, cos]];
