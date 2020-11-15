@@ -84,7 +84,9 @@ fn compare_to_truth_with_tolerance<P, F>(
     ImageBuffer<P, Vec<u8>>: FromDynamic,
     F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
-    let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(Path::new(INPUT_DIR).join(input_file_name)));
+    let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
+        Path::new(INPUT_DIR).join(input_file_name),
+    ));
     let actual = op.call((&input,));
     compare_to_truth_image_with_tolerance(&actual, truth_file_name, tol);
 }
@@ -99,15 +101,22 @@ where
 }
 
 /// Checks that an image matches a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_image_with_tolerance<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str, tol: u8)
-where
+fn compare_to_truth_image_with_tolerance<P>(
+    actual: &ImageBuffer<P, Vec<u8>>,
+    truth_file_name: &str,
+    tol: u8,
+) where
     P: Pixel<Subpixel = u8> + 'static,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     if should_regenerate() {
-        actual.save(Path::new(TRUTH_DIR).join(truth_file_name)).unwrap();
+        actual
+            .save(Path::new(TRUTH_DIR).join(truth_file_name))
+            .unwrap();
     } else {
-        let truth = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(Path::new(TRUTH_DIR).join(truth_file_name)));
+        let truth = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
+            Path::new(TRUTH_DIR).join(truth_file_name),
+        ));
         assert_pixels_eq_within!(*actual, truth, tol);
     }
 }
