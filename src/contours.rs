@@ -185,15 +185,14 @@ fn rotate_to_value<T: Eq + Copy>(values: &mut VecDeque<T>, value: T) {
 }
 
 fn get_position_if_non_zero_pixel(image: &[Vec<i32>], curr: Point<i32>) -> Option<Point<usize>> {
-    if curr.x > -1
-        && curr.x < image.len() as i32
-        && curr.y > -1
-        && curr.y < image[0].len() as i32
-        && image[curr.x as usize][curr.y as usize] != 0
-    {
-        return Some(Point::new(curr.x as usize, curr.y as usize));
+    let (width, height) = (image.len() as i32, image[0].len() as i32);
+    let in_bounds = curr.x > -1 && curr.x < width && curr.y > -1 && curr.y < height;
+
+    if in_bounds && image[curr.x as usize][curr.y as usize] != 0 {
+        Some(Point::new(curr.x as usize, curr.y as usize))
+    } else {
+        None
     }
-    None
 }
 
 /// Returns the length of the arc constructed with the provided points in
