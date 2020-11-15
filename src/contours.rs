@@ -84,97 +84,100 @@ where
 
     for y in 0..height {
         parent_border_num = 1;
+
         for x in 0..width {
-            if image_values[x][y] != 0 {
-                skip_tracing = false;
-                let is_outer;
-                if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
-                    curr_border_num += 1;
-                    pos2 = Point::new(x - 1, y);
-                    is_outer = true;
-                } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
-                    is_outer = false;
-                    curr_border_num += 1;
-                    pos2 = Point::new(x + 1, y);
-                    if image_values[x][y] > 1 {
-                        parent_border_num = image_values[x][y] as usize;
-                    }
-                } else {
-                    is_outer = false;
-                    skip_tracing = true;
+            if image_values[x][y] == 0 {
+                continue;
+            }
+
+            skip_tracing = false;
+            let is_outer;
+            if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
+                curr_border_num += 1;
+                pos2 = Point::new(x - 1, y);
+                is_outer = true;
+            } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
+                is_outer = false;
+                curr_border_num += 1;
+                pos2 = Point::new(x + 1, y);
+                if image_values[x][y] > 1 {
+                    parent_border_num = image_values[x][y] as usize;
                 }
+            } else {
+                is_outer = false;
+                skip_tracing = true;
+            }
 
-                if !skip_tracing {
-                    let mut parent = None;
-                    if parent_border_num > 1 {
-                        let p_idx = parent_border_num - 2;
-                        if is_outer ^ contours[p_idx].is_outer {
-                            parent = Some(p_idx);
-                        } else {
-                            parent = contours[p_idx].parent;
-                        }
-                    };
+            if !skip_tracing {
+                let mut parent = None;
+                if parent_border_num > 1 {
+                    let p_idx = parent_border_num - 2;
+                    if is_outer ^ contours[p_idx].is_outer {
+                        parent = Some(p_idx);
+                    } else {
+                        parent = contours[p_idx].parent;
+                    }
+                };
 
-                    let mut contour_points = Vec::new();
-                    rotate_to_value(&mut diffs, pos2.to_i32() - Point::new(x, y).to_i32());
-                    if let Some(pos1) = diffs.iter().find_map(|diff| {
-                        get_position_if_non_zero_pixel(
-                            &image_values,
-                            x as i32 + diff.x,
-                            y as i32 + diff.y,
-                        )
-                    }) {
-                        pos2 = pos1;
-                        let mut pos3 = Point::new(x, y);
-                        loop {
-                            contour_points
-                                .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
-                            rotate_to_value(&mut diffs, pos2.to_i32() - pos3.to_i32());
-                            let pos4 = diffs
-                                .iter()
-                                .rev() // counter-clockwise
-                                .find_map(|diff| {
-                                    get_position_if_non_zero_pixel(
-                                        &image_values,
-                                        pos3.x as i32 + diff.x,
-                                        pos3.y as i32 + diff.y,
-                                    )
-                                })
-                                .unwrap();
+                let mut contour_points = Vec::new();
+                rotate_to_value(&mut diffs, pos2.to_i32() - Point::new(x, y).to_i32());
+                if let Some(pos1) = diffs.iter().find_map(|diff| {
+                    get_position_if_non_zero_pixel(
+                        &image_values,
+                        x as i32 + diff.x,
+                        y as i32 + diff.y,
+                    )
+                }) {
+                    pos2 = pos1;
+                    let mut pos3 = Point::new(x, y);
+                    loop {
+                        contour_points
+                            .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
+                        rotate_to_value(&mut diffs, pos2.to_i32() - pos3.to_i32());
+                        let pos4 = diffs
+                            .iter()
+                            .rev() // counter-clockwise
+                            .find_map(|diff| {
+                                get_position_if_non_zero_pixel(
+                                    &image_values,
+                                    pos3.x as i32 + diff.x,
+                                    pos3.y as i32 + diff.y,
+                                )
+                            })
+                            .unwrap();
 
-                            let mut is_right_edge = false;
-                            let pos4_diff = pos4.to_i32() - pos3.to_i32();
-                            for diff in diffs.iter().rev() {
-                                if diff == &pos4_diff {
-                                    break;
-                                }
-                                if diff == &Point::new(1, 0) {
-                                    is_right_edge = true;
-                                    break;
-                                }
-                            }
-
-                            if pos3.x + 1 == width || is_right_edge {
-                                image_values[pos3.x][pos3.y] = -curr_border_num;
-                            } else if image_values[pos3.x][pos3.y] == 1 {
-                                image_values[pos3.x][pos3.y] = curr_border_num;
-                            }
-                            if pos4.x == x && pos4.y == y && pos3 == pos1 {
+                        let mut is_right_edge = false;
+                        let pos4_diff = pos4.to_i32() - pos3.to_i32();
+                        for diff in diffs.iter().rev() {
+                            if diff == &pos4_diff {
                                 break;
                             }
-                            pos2 = pos3;
-                            pos3 = pos4;
+                            if diff == &Point::new(1, 0) {
+                                is_right_edge = true;
+                                break;
+                            }
                         }
-                    } else {
-                        contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
-                        image_values[x][y] = -curr_border_num;
-                    }
-                    contours.push(Contour::new(contour_points, is_outer, parent));
-                }
 
-                if image_values[x][y] != 1 {
-                    parent_border_num = image_values[x][y].abs() as usize;
+                        if pos3.x + 1 == width || is_right_edge {
+                            image_values[pos3.x][pos3.y] = -curr_border_num;
+                        } else if image_values[pos3.x][pos3.y] == 1 {
+                            image_values[pos3.x][pos3.y] = curr_border_num;
+                        }
+                        if pos4.x == x && pos4.y == y && pos3 == pos1 {
+                            break;
+                        }
+                        pos2 = pos3;
+                        pos3 = pos4;
+                    }
+                } else {
+                    contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
+                    image_values[x][y] = -curr_border_num;
                 }
+                contours.push(Contour::new(contour_points, is_outer, parent));
+            }
+
+            if image_values[x][y] != 1 {
+                parent_border_num = image_values[x][y].abs() as usize;
             }
         }
     }
