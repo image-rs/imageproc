@@ -90,10 +90,8 @@ where
 
             if let Some((pos2, is_outer)) =
                 if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
-                    curr_border_num += 1;
                     Some((Point::new(x - 1, y), true))
                 } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
-                    curr_border_num += 1;
                     if image_values[x][y] > 1 {
                         parent_border_num = image_values[x][y] as usize;
                     }
@@ -102,6 +100,8 @@ where
                     None
                 }
             {
+                curr_border_num += 1;
+
                 let parent = if parent_border_num > 1 {
                     let parent_index = parent_border_num - 2;
                     let parent_contour = &contours[parent_index];
@@ -122,7 +122,8 @@ where
                     get_position_if_non_zero_pixel(&image_values, curr.to_i32() + diff.to_i32())
                 }) {
                     let mut pos2 = pos1;
-                    let mut pos3 = Point::new(x, y);
+                    let mut pos3 = curr;
+
                     loop {
                         contour_points
                             .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
@@ -139,12 +140,11 @@ where
                             .unwrap();
 
                         let mut is_right_edge = false;
-                        let pos4_diff = pos4.to_i32() - pos3.to_i32();
                         for diff in diffs.iter().rev() {
-                            if diff == &pos4_diff {
+                            if *diff == (pos4.to_i32() - pos3.to_i32()) {
                                 break;
                             }
-                            if diff == &Point::new(1, 0) {
+                            if *diff == Point::new(1, 0) {
                                 is_right_edge = true;
                                 break;
                             }
@@ -155,9 +155,11 @@ where
                         } else if image_values[pos3.x][pos3.y] == 1 {
                             image_values[pos3.x][pos3.y] = curr_border_num;
                         }
-                        if pos4.x == x && pos4.y == y && pos3 == pos1 {
+
+                        if pos4 == curr && pos3 == pos1 {
                             break;
                         }
+
                         pos2 = pos3;
                         pos3 = pos4;
                     }
