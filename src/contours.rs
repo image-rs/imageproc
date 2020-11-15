@@ -88,7 +88,7 @@ where
                 continue;
             }
 
-            if let Some((mut pos2, is_outer)) =
+            if let Some((pos2, is_outer)) =
                 if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
                     curr_border_num += 1;
                     Some((Point::new(x - 1, y), true))
@@ -102,23 +102,26 @@ where
                     None
                 }
             {
-                let mut parent = None;
-                if parent_border_num > 1 {
-                    let p_idx = parent_border_num - 2;
-                    if is_outer ^ contours[p_idx].is_outer {
-                        parent = Some(p_idx);
+                let parent = if parent_border_num > 1 {
+                    let parent_index = parent_border_num - 2;
+                    let parent_contour = &contours[parent_index];
+                    if is_outer ^ parent_contour.is_outer {
+                        Some(parent_index)
                     } else {
-                        parent = contours[p_idx].parent;
+                        parent_contour.parent
                     }
+                } else {
+                    None
                 };
 
                 let mut contour_points = Vec::new();
                 let curr = Point::new(x, y);
                 rotate_to_value(&mut diffs, pos2.to_i32() - curr.to_i32());
+
                 if let Some(pos1) = diffs.iter().find_map(|diff| {
                     get_position_if_non_zero_pixel(&image_values, curr.to_i32() + diff.to_i32())
                 }) {
-                    pos2 = pos1;
+                    let mut pos2 = pos1;
                     let mut pos3 = Point::new(x, y);
                     loop {
                         contour_points
