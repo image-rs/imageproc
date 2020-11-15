@@ -77,7 +77,6 @@ where
     ]);
 
     let mut contours: Vec<Contour<T>> = Vec::new();
-    let mut skip_tracing;
     let mut curr_border_num = 1;
     let mut parent_border_num;
     let mut pos2 = Point::new(0, 0);
@@ -90,16 +89,17 @@ where
                 continue;
             }
 
-            skip_tracing = false;
+            let mut skip_tracing = false;
             let is_outer;
             if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
+                is_outer = true;
                 curr_border_num += 1;
                 pos2 = Point::new(x - 1, y);
-                is_outer = true;
             } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
                 is_outer = false;
                 curr_border_num += 1;
                 pos2 = Point::new(x + 1, y);
+
                 if image_values[x][y] > 1 {
                     parent_border_num = image_values[x][y] as usize;
                 }
