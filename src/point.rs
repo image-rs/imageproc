@@ -24,6 +24,11 @@ impl<T: NumCast> Point<T> {
     pub(crate) fn to_f64(&self) -> Point<f64> {
         Point::new(self.x.to_f64().unwrap(), self.y.to_f64().unwrap())
     }
+
+    /// Converts to a Point<i32>. Panics if the cast fails.
+    pub(crate) fn to_i32(&self) -> Point<i32> {
+        Point::new(self.x.to_i32().unwrap(), self.y.to_i32().unwrap())
+    }
 }
 
 /// Returns the Euclidean distance between two points.

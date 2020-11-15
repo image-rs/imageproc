@@ -400,7 +400,7 @@ where
     }
     points.swap(0, start_point_pos);
     points.remove(0);
-    points.sort_by(|a, b| match orientation(&start_point, a, b) {
+    points.sort_by(|a, b| match orientation(start_point.to_i32(), a.to_i32(), b.to_i32()) {
         Orientation::Collinear => {
             if distance(start_point, *a) < distance(start_point, *b) {
                 Ordering::Less
@@ -416,7 +416,7 @@ where
     let mut remaining_points = Vec::with_capacity(points.len());
     while let Some(mut p) = iter.next() {
         while iter.peek().is_some()
-            && orientation(&start_point, p, iter.peek().unwrap()) == Orientation::Collinear
+            && orientation(start_point.to_i32(), p.to_i32(), iter.peek().unwrap().to_i32()) == Orientation::Collinear
         {
             p = iter.next().unwrap();
         }
@@ -430,7 +430,7 @@ where
 
     for p in points {
         while stack.len() > 1
-            && orientation(&stack[stack.len() - 2], &stack[stack.len() - 1], &p)
+            && orientation(stack[stack.len() - 2].to_i32(), stack[stack.len() - 1].to_i32(), p.to_i32())
                 != Orientation::CounterClockwise
         {
             stack.pop();
@@ -447,11 +447,8 @@ enum Orientation {
     CounterClockwise,
 }
 
-fn orientation<T: NumCast>(p: &Point<T>, q: &Point<T>, r: &Point<T>) -> Orientation {
-    let val = (q.y.to_i32().unwrap() - p.y.to_i32().unwrap())
-        * (r.x.to_i32().unwrap() - q.x.to_i32().unwrap())
-        - (q.x.to_i32().unwrap() - p.x.to_i32().unwrap())
-            * (r.y.to_i32().unwrap() - q.y.to_i32().unwrap());
+fn orientation(p: Point<i32>, q: Point<i32>, r: Point<i32>) -> Orientation {
+    let val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
     match val.cmp(&0) {
         Ordering::Equal => Orientation::Collinear,
         Ordering::Greater => Orientation::Clockwise,
