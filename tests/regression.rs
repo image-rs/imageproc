@@ -35,7 +35,6 @@ fn should_regenerate() -> bool {
 }
 
 /// Save an image with the given name to the truth data directory "./tests/data/truth".
-/// Used when manually (re)generating test data, e.g. when should_regenerate() is set to true.
 fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
 where
     P: Pixel<Subpixel = u8> + 'static,
