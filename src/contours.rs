@@ -12,7 +12,7 @@ use std::f64::consts::PI;
 /// contour is an outer border or hole border, and the parent option (the index
 /// of the parent contour in the contours vec).
 #[derive(Debug)]
-pub struct Contour<T: Num + NumCast + Copy + PartialEq + Eq> {
+pub struct Contour<T> {
     /// All the points on the contour.
     pub points: Vec<Point<T>>,
     /// Flag to determine whether the contour is an outer border or hole border.
@@ -21,7 +21,8 @@ pub struct Contour<T: Num + NumCast + Copy + PartialEq + Eq> {
     /// contour is the outermost contour in the image.
     pub parent: Option<usize>,
 }
-impl<T: Num + NumCast + Copy + PartialEq + Eq> Contour<T> {
+
+impl<T> Contour<T> {
     /// Construct a contour.
     pub fn new(points: Vec<Point<T>>, is_outer: bool, parent: Option<usize>) -> Self {
         Contour {
@@ -34,9 +35,10 @@ impl<T: Num + NumCast + Copy + PartialEq + Eq> Contour<T> {
 
 /// Finds all the points on the contours on the provided image.
 /// Handles all non-zero pixels as 1.
-pub fn find_contours<T: Num + NumCast + Copy + PartialEq + Eq>(
-    original_image: &GrayImage,
-) -> Vec<Contour<T>> {
+pub fn find_contours<T>(original_image: &GrayImage) -> Vec<Contour<T>>
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
     find_contours_with_thresh(original_image, 0)
 }
 
@@ -48,10 +50,10 @@ pub fn find_contours<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// Based on the algorithm proposed by Suzuki and Abe: Topological Structural
 /// Analysis of Digitized Binary Images by Border Following.
 ///
-pub fn find_contours_with_thresh<T: Num + NumCast + Copy + PartialEq + Eq>(
-    original_image: &GrayImage,
-    thresh: u8,
-) -> Vec<Contour<T>> {
+pub fn find_contours_with_thresh<T>(original_image: &GrayImage, thresh: u8) -> Vec<Contour<T>>
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
     let width = original_image.width() as usize;
     let height = original_image.height() as usize;
     let mut image_values = vec![vec![0i32; height]; width];
@@ -757,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn get_convex_hull_points() {
+    fn convex_hull_points() {
         let star = vec![
             Point::new(100, 20),
             Point::new(90, 35),
@@ -784,13 +786,13 @@ mod tests {
     }
 
     #[test]
-    fn get_convex_hull_points_empty_vec() {
+    fn convex_hull_points_empty_vec() {
         let points = convex_hull::<i32>(&vec![]);
         assert_eq!(points, []);
     }
 
     #[test]
-    fn get_convex_hull_points_with_negative_values() {
+    fn convex_hull_points_with_negative_values() {
         let star = vec![
             Point::new(100, -20),
             Point::new(90, 5),
