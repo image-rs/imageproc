@@ -1,5 +1,5 @@
 //! Compares results of image processing functions to existing "truth" images.
-//! All test images are taken from the caltech256 dataset.
+//! All test images are taken from the [caltech256 dataset].
 //!
 //! To update the truth file for a test, or to generate a truth file for a new test,
 //! set the REGENERATE environment variable:
@@ -8,7 +8,7 @@
 //! $ REGENERATE=1 cargo test
 //! ```
 //!
-//! http://authors.library.caltech.edu/7694/
+//! [caltech256 dataset]: http://authors.library.caltech.edu/7694/
 
 #![feature(test)]
 #![feature(unboxed_closures)]
@@ -26,7 +26,13 @@ use imageproc::{
     gradients,
     utils::load_image_or_panic,
 };
-use std::{env, f32, ops::Deref, path::Path};
+use std::{env, f32, path::Path};
+
+/// The directory containing the input images used in regression tests.
+const INPUT_DIR: &'static str = "./tests/data";
+
+/// The directory containing the truth images to compare against test outputs.
+const TRUTH_DIR: &'static str = "./tests/data/truth";
 
 // If the REGENERATE environment variable is set then running tests will update the truth files
 // to match the output of the current code.
@@ -34,101 +40,75 @@ fn should_regenerate() -> bool {
     env::var("REGENERATE").is_ok()
 }
 
-/// Save an image with the given name to the truth data directory "./tests/data/truth".
-fn save_truth_image<P, Container>(image: &ImageBuffer<P, Container>, file_name: &str)
+trait FromDynamic {
+    fn from_dynamic(image: &DynamicImage) -> Self;
+}
+
+impl FromDynamic for GrayImage {
+    fn from_dynamic(image: &DynamicImage) -> Self {
+        image.to_luma()
+    }
+}
+
+impl FromDynamic for RgbImage {
+    fn from_dynamic(image: &DynamicImage) -> Self {
+        image.to_rgb()
+    }
+}
+
+impl FromDynamic for RgbaImage {
+    fn from_dynamic(image: &DynamicImage) -> Self {
+        image.to_rgba()
+    }
+}
+
+/// Loads an input image, applies a function to it and checks that the result matches a 'truth' image.
+fn compare_to_truth<P, F>(input_file_name: &str, truth_file_name: &str, op: F)
 where
     P: Pixel<Subpixel = u8> + 'static,
-    Container: Deref<Target = [u8]>,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
-    image
-        .save(Path::new("./tests/data/truth").join(file_name))
-        .unwrap();
+    compare_to_truth_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
 
-/// Load an image with the given name from the input data directory "./tests/data/".
-/// Panics if unable to find or load an image at this path.
-fn load_input_image(file_name: &str) -> DynamicImage {
-    load_image_or_panic(Path::new("./tests/data").join(file_name))
-}
-
-/// Load an image with the given name from the truth data directory "./tests/data/truth".
-/// Panics if unable to find or load an image at this path.
-fn load_truth_image(file_name: &str) -> DynamicImage {
-    load_image_or_panic(Path::new("./tests/data/truth").join(file_name))
-}
-
-/// Load an input image, apply a function to it and check that the results match a 'truth' image.
-fn compare_to_truth_rgb<F>(input_file_name: &str, truth_file_name: &str, op: F)
-where
-    F: Fn(&RgbImage) -> RgbImage,
-{
-    compare_to_truth_rgb_with_tolerance(input_file_name, truth_file_name, op, 0u8);
-}
-
-/// Load an input image, apply a function to it and check that the results match a 'truth' image.
-fn compare_to_truth_rgba<F>(input_file_name: &str, truth_file_name: &str, op: F)
-where
-    F: Fn(&RgbaImage) -> RgbaImage,
-{
-    compare_to_truth_rgba_with_tolerance(input_file_name, truth_file_name, op, 0u8);
-}
-
-/// Load an input image, apply a function to it and check that the results
-/// match a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_rgb_with_tolerance<F>(
+/// Loads an input image, applies a function to it and checks that the result
+/// matches a 'truth' image to within a given per-pixel tolerance.
+fn compare_to_truth_with_tolerance<P, F>(
     input_file_name: &str,
     truth_file_name: &str,
     op: F,
     tol: u8,
 ) where
-    F: Fn(&RgbImage) -> RgbImage,
+    P: Pixel<Subpixel = u8> + 'static,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
-    let input = load_input_image(input_file_name).to_rgb();
+    let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(Path::new(INPUT_DIR).join(input_file_name)));
     let actual = op.call((&input,));
-
-    if should_regenerate() {
-        save_truth_image(&actual, truth_file_name);
-    } else {
-        let truth = load_truth_image(truth_file_name).to_rgb();
-        assert_pixels_eq_within!(actual, truth, tol);
-    }
+    compare_to_truth_image_with_tolerance(&actual, truth_file_name, tol);
 }
 
-/// Load an input image, apply a function to it and check that the results
-/// match a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_rgba_with_tolerance<F>(
-    input_file_name: &str,
-    truth_file_name: &str,
-    op: F,
-    tol: u8,
-) where
-    F: Fn(&RgbaImage) -> RgbaImage,
-{
-    let input = load_input_image(input_file_name).to_rgba();
-    let actual = op.call((&input,));
-
-    if should_regenerate() {
-        save_truth_image(&actual, truth_file_name);
-    } else {
-        let truth = load_truth_image(truth_file_name).to_rgba();
-        assert_pixels_eq_within!(actual, truth, tol);
-    }
-}
-
-/// Load an input image, apply a function to it and check that the results
-/// match a 'truth' image.
-fn compare_to_truth_grayscale<F>(input_file_name: &str, truth_file_name: &str, op: F)
+/// Checks that an image matches a 'truth' image.
+fn compare_to_truth_image<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str)
 where
-    F: Fn(&GrayImage) -> GrayImage,
+    P: Pixel<Subpixel = u8> + 'static,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
-    let input = load_input_image(input_file_name).to_luma();
-    let actual = op.call((&input,));
+    compare_to_truth_image_with_tolerance(actual, truth_file_name, 0u8);
+}
 
+/// Checks that an image matches a 'truth' image to within a given per-pixel tolerance.
+fn compare_to_truth_image_with_tolerance<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str, tol: u8)
+where
+    P: Pixel<Subpixel = u8> + 'static,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
+{
     if should_regenerate() {
-        save_truth_image(&actual, truth_file_name);
+        actual.save(Path::new(TRUTH_DIR).join(truth_file_name)).unwrap();
     } else {
-        let truth = load_truth_image(truth_file_name).to_luma();
-        assert_pixels_eq!(actual, truth);
+        let truth = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(Path::new(TRUTH_DIR).join(truth_file_name)));
+        assert_pixels_eq_within!(*actual, truth, tol);
     }
 }
 
@@ -142,7 +122,7 @@ fn test_rotate_nearest_rgb() {
             Rgb::black(),
         )
     }
-    compare_to_truth_rgb(
+    compare_to_truth(
         "elephant.png",
         "elephant_rotate_nearest.png",
         rotate_nearest_about_center,
@@ -159,7 +139,7 @@ fn test_rotate_nearest_rgba() {
             Rgba::black(),
         )
     }
-    compare_to_truth_rgba(
+    compare_to_truth(
         "elephant_rgba.png",
         "elephant_rotate_nearest_rgba.png",
         rotate_nearest_about_center,
@@ -169,7 +149,7 @@ fn test_rotate_nearest_rgba() {
 #[test]
 fn test_equalize_histogram_grayscale() {
     use imageproc::contrast::equalize_histogram;
-    compare_to_truth_grayscale("lumaphant.png", "lumaphant_eq.png", equalize_histogram);
+    compare_to_truth("lumaphant.png", "lumaphant_eq.png", equalize_histogram);
 }
 
 #[test]
@@ -182,7 +162,7 @@ fn test_rotate_bilinear_rgb() {
             Rgb::black(),
         )
     }
-    compare_to_truth_rgb_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant.png",
         "elephant_rotate_bilinear.png",
         rotate_bilinear_about_center,
@@ -200,7 +180,7 @@ fn test_rotate_bilinear_rgba() {
             Rgba::black(),
         )
     }
-    compare_to_truth_rgba_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant_rgba.png",
         "elephant_rotate_bilinear_rgba.png",
         rotate_bilinear_about_center,
@@ -218,7 +198,7 @@ fn test_rotate_bicubic_rgb() {
             Rgb::black(),
         )
     }
-    compare_to_truth_rgb_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant.png",
         "elephant_rotate_bicubic.png",
         rotate_bicubic_about_center,
@@ -236,7 +216,7 @@ fn test_rotate_bicubic_rgba() {
             Rgba::black(),
         )
     }
-    compare_to_truth_rgba_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant_rgba.png",
         "elephant_rotate_bicubic_rgba.png",
         rotate_bicubic_about_center,
@@ -257,7 +237,7 @@ fn test_affine_nearest_rgb() {
         .unwrap();
         warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
-    compare_to_truth_rgb(
+    compare_to_truth(
         "elephant.png",
         "elephant_affine_nearest.png",
         affine_nearest,
@@ -278,7 +258,7 @@ fn test_affine_bilinear_rgb() {
 
         warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
-    compare_to_truth_rgb_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant.png",
         "elephant_affine_bilinear.png",
         affine_bilinear,
@@ -299,7 +279,7 @@ fn test_affine_bicubic_rgb() {
 
         warp(image, &hom, Interpolation::Bicubic, Rgb::black())
     }
-    compare_to_truth_rgb_with_tolerance(
+    compare_to_truth_with_tolerance(
         "elephant.png",
         "elephant_affine_bicubic.png",
         affine_bilinear,
@@ -315,12 +295,12 @@ fn test_sobel_gradients() {
             <u8 as Clamp<u16>>::clamp,
         )
     }
-    compare_to_truth_grayscale("elephant.png", "elephant_gradients.png", sobel_gradients);
+    compare_to_truth("elephant.png", "elephant_gradients.png", sobel_gradients);
 }
 
 #[test]
 fn test_sharpen3x3() {
-    compare_to_truth_grayscale("robin.png", "robin_sharpen3x3.png", sharpen3x3);
+    compare_to_truth("robin.png", "robin_sharpen3x3.png", sharpen3x3);
 }
 
 #[test]
@@ -328,16 +308,16 @@ fn test_sharpen_gaussian() {
     fn sharpen(image: &GrayImage) -> GrayImage {
         imageproc::filter::sharpen_gaussian(image, 0.7, 7.0)
     }
-    compare_to_truth_grayscale("robin.png", "robin_sharpen_gaussian.png", sharpen);
+    compare_to_truth("robin.png", "robin_sharpen_gaussian.png", sharpen);
 }
 
 #[test]
 fn test_match_histograms() {
     fn match_to_zebra_histogram(image: &GrayImage) -> GrayImage {
-        let zebra = load_input_image("zebra.png").to_luma();
+        let zebra = load_image_or_panic(Path::new(INPUT_DIR).join("zebra.png")).to_luma();
         imageproc::contrast::match_histogram(image, &zebra)
     }
-    compare_to_truth_grayscale(
+    compare_to_truth(
         "elephant.png",
         "elephant_matched.png",
         match_to_zebra_histogram,
@@ -346,21 +326,21 @@ fn test_match_histograms() {
 
 #[test]
 fn test_canny() {
-    compare_to_truth_grayscale("zebra.png", "zebra_canny.png", |image| {
+    compare_to_truth("zebra.png", "zebra_canny.png", |image| {
         canny(image, 250.0, 300.0)
     });
 }
 
 #[test]
 fn test_gaussian_blur_stdev_3() {
-    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_3.png", |image| {
+    compare_to_truth("zebra.png", "zebra_gaussian_3.png", |image: &GrayImage| {
         gaussian_blur_f32(image, 3f32)
     });
 }
 
 #[test]
 fn test_gaussian_blur_stdev_10() {
-    compare_to_truth_grayscale("zebra.png", "zebra_gaussian_10.png", |image| {
+    compare_to_truth("zebra.png", "zebra_gaussian_10.png", |image: &GrayImage| {
         gaussian_blur_f32(image, 10f32)
     });
 }
@@ -368,7 +348,7 @@ fn test_gaussian_blur_stdev_10() {
 #[test]
 fn test_adaptive_threshold() {
     use imageproc::contrast::adaptive_threshold;
-    compare_to_truth_grayscale("zebra.png", "zebra_adaptive_threshold.png", |image| {
+    compare_to_truth("zebra.png", "zebra_adaptive_threshold.png", |image| {
         adaptive_threshold(image, 41)
     });
 }
@@ -380,7 +360,7 @@ fn test_otsu_threshold() {
         let level = otsu_level(image);
         threshold(image, level)
     }
-    compare_to_truth_grayscale("zebra.png", "zebra_otsu.png", otsu_threshold);
+    compare_to_truth("zebra.png", "zebra_otsu.png", otsu_threshold);
 }
 
 #[test]
@@ -414,12 +394,7 @@ fn test_draw_antialiased_line_segment_rgb() {
     // Isolated segment, partially outside of image bounds
     draw_antialiased_line_segment_mut(&mut image, (150, 150), (210, 130), white, interpolate);
 
-    if should_regenerate() {
-        save_truth_image(&image, "antialiased_lines_rgb.png");
-    } else {
-        let truth = load_truth_image("antialiased_lines_rgb.png").to_rgb();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "antialiased_lines_rgb.png");
 }
 
 #[test]
@@ -483,12 +458,7 @@ fn test_draw_polygon() {
         .collect();
     draw_polygon_mut(&mut image, &hex, white);
 
-    if should_regenerate() {
-        save_truth_image(&image, "polygon.png");
-    } else {
-        let truth = load_truth_image("polygon.png").to_luma();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "polygon.png");
 }
 
 #[test]
@@ -514,12 +484,7 @@ fn test_draw_spiral_polygon() {
     ];
     draw_polygon_mut(&mut image, &polygon, Luma::white());
 
-    if should_regenerate() {
-        save_truth_image(&image, "spiral_polygon.png");
-    } else {
-        let truth = load_truth_image("spiral_polygon.png").to_luma();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "spiral_polygon.png");
 }
 
 #[test]
@@ -577,12 +542,7 @@ fn test_draw_cubic_bezier_curve() {
         red,
     );
 
-    if should_regenerate() {
-        save_truth_image(&image, "cubic_bezier_curve.png");
-    } else {
-        let truth = load_truth_image("cubic_bezier_curve.png").to_rgb();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "cubic_bezier_curve.png");
 }
 
 #[test]
@@ -603,12 +563,7 @@ fn test_draw_hollow_ellipse() {
     // Partially off-screen
     draw_hollow_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
-    if should_regenerate() {
-        save_truth_image(&image, "hollow_ellipse.png");
-    } else {
-        let truth = load_truth_image("hollow_ellipse.png").to_rgb();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "hollow_ellipse.png");
 }
 
 #[test]
@@ -629,12 +584,7 @@ fn test_draw_filled_ellipse() {
     // Partially off-screen
     draw_filled_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
-    if should_regenerate() {
-        save_truth_image(&image, "filled_ellipse.png");
-    } else {
-        let truth = load_truth_image("filled_ellipse.png").to_rgb();
-        assert_pixels_eq!(image, truth);
-    }
+    compare_to_truth_image(&image, "filled_ellipse.png");
 }
 
 #[test]
@@ -683,10 +633,5 @@ fn test_hough_line_detection() {
     // Draw detected lines on top of original image
     let lines_image = draw_polar_lines(&color_edges, &lines, green);
 
-    if should_regenerate() {
-        save_truth_image(&lines_image, "hough_lines.png");
-    } else {
-        let truth = load_truth_image("hough_lines.png").to_rgb();
-        assert_pixels_eq!(lines_image, truth);
-    }
+    compare_to_truth_image(&lines_image, "hough_lines.png");
 }
