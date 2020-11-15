@@ -220,7 +220,6 @@ fn get_position_if_non_zero_pixel(
 /// Returns the length of the arc constructed with the provided points in
 /// incremental order. When the `closed` param is set to `true`, the distance
 /// between the last and the first point is included in the total length.
-///
 pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], closed: bool) -> f64 {
     if arc.len() < 2 {
         return 0.;
@@ -288,22 +287,15 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
 /// given points p1 and p2.
 ///
 /// [line equation]: https://en.wikipedia.org/wiki/Linear_equation#Two-point_form
-fn line_params<T: Num + NumCast + Copy + PartialEq + Eq>(
-    p1: &Point<T>,
-    p2: &Point<T>,
-) -> (f64, f64, f64) {
+fn line_params<T: Num + NumCast + Copy>(p1: &Point<T>, p2: &Point<T>) -> (f64, f64, f64) {
     let a = p1.y.to_f64().unwrap() - p2.y.to_f64().unwrap();
     let b = p2.x.to_f64().unwrap() - p1.x.to_f64().unwrap();
     let c = (p1.x * p2.y).to_f64().unwrap() - (p2.x * p1.y).to_f64().unwrap();
-
     (a, b, c)
 }
 
 #[allow(clippy::many_single_char_names)]
-fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
-    line_args: (f64, f64, f64),
-    point: &Point<T>,
-) -> f64 {
+fn perpendicular_distance<T: NumCast>(line_args: (f64, f64, f64), point: &Point<T>) -> f64 {
     let (a, b, c) = line_args;
 
     (a * point.x.to_f64().unwrap() + b * point.y.to_f64().unwrap() + c).abs()
@@ -312,7 +304,6 @@ fn perpendicular_distance<T: Num + NumCast + Copy + PartialEq + Eq>(
 
 /// Finds the minimal area rectangle that covers all of the points in the input
 /// contour in the following order -> (TL, TR, BR, BL).
-///
 pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
     contour: &[Point<T>],
 ) -> [Point<T>; 4] {
@@ -513,7 +504,7 @@ fn orientation<T: NumCast>(p: &Point<T>, q: &Point<T>, r: &Point<T>) -> Orientat
 }
 
 /// Calculates the distance between 2 points.
-pub fn distance<T: Num + NumCast + Copy + PartialEq + Eq>(p1: &Point<T>, p2: &Point<T>) -> f64 {
+pub fn distance<T: NumCast>(p1: &Point<T>, p2: &Point<T>) -> f64 {
     ((p1.x.to_f64().unwrap() - p2.x.to_f64().unwrap()).powf(2.)
         + (p1.y.to_f64().unwrap() - p2.y.to_f64().unwrap()).powf(2.))
     .sqrt()
