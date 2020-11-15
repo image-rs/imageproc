@@ -66,138 +66,124 @@ where
         }
     }
     let mut diffs = VecDeque::from(vec![
-        (-1, 0),  // w
-        (-1, -1), // nw
-        (0, -1),  // n
-        (1, -1),  // ne
-        (1, 0),   // e
-        (1, 1),   // se
-        (0, 1),   // s
-        (-1, 1),  // sw
+        Point::new(-1, 0),  // w
+        Point::new(-1, -1), // nw
+        Point::new(0, -1),  // n
+        Point::new(1, -1),  // ne
+        Point::new(1, 0),   // e
+        Point::new(1, 1),   // se
+        Point::new(0, 1),   // s
+        Point::new(-1, 1),  // sw
     ]);
-    let mut x = 0;
-    let mut y = 0;
-    let last_pixel = (width - 1, height - 1);
 
     let mut contours: Vec<Contour<T>> = Vec::new();
     let mut skip_tracing;
     let mut curr_border_num = 1;
-    let mut parent_border_num = 1;
+    let mut parent_border_num;
     let mut pos2 = Point::new(0, 0);
 
-    while (x, y) != last_pixel {
-        if image_values[x][y] != 0 {
-            skip_tracing = false;
-            let is_outer;
-            if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
-                curr_border_num += 1;
-                pos2 = Point::new(x - 1, y);
-                is_outer = true;
-            } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
-                is_outer = false;
-                curr_border_num += 1;
-                pos2 = Point::new(x + 1, y);
-                if image_values[x][y] > 1 {
-                    parent_border_num = image_values[x][y] as usize;
-                }
-            } else {
-                is_outer = false;
-                skip_tracing = true;
-            }
-
-            if !skip_tracing {
-                let mut parent = None;
-                if parent_border_num > 1 {
-                    let p_idx = parent_border_num - 2;
-                    if is_outer ^ contours[p_idx].is_outer {
-                        parent = Some(p_idx);
-                    } else {
-                        parent = contours[p_idx].parent;
-                    }
-                };
-
-                let mut contour_points = Vec::new();
-                rotate_to_value(
-                    &mut diffs,
-                    (pos2.x as i32 - x as i32, pos2.y as i32 - y as i32),
-                );
-                if let Some(pos1) = diffs.iter().find_map(|(x_diff, y_diff)| {
-                    get_position_if_non_zero_pixel(
-                        &image_values,
-                        x as i32 + *x_diff,
-                        y as i32 + *y_diff,
-                    )
-                }) {
-                    pos2 = pos1;
-                    let mut pos3 = Point::new(x, y);
-                    loop {
-                        contour_points
-                            .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
-                        rotate_to_value(
-                            &mut diffs,
-                            (pos2.x as i32 - pos3.x as i32, pos2.y as i32 - pos3.y as i32),
-                        );
-                        let pos4 = diffs
-                            .iter()
-                            .rev() // counter-clockwise
-                            .find_map(|(x_diff, y_diff)| {
-                                get_position_if_non_zero_pixel(
-                                    &image_values,
-                                    pos3.x as i32 + *x_diff,
-                                    pos3.y as i32 + *y_diff,
-                                )
-                            })
-                            .unwrap();
-
-                        let mut is_right_edge = false;
-                        let pos4_diff =
-                            (pos4.x as i32 - pos3.x as i32, pos4.y as i32 - pos3.y as i32);
-                        for diff in diffs.iter().rev() {
-                            if diff == &pos4_diff {
-                                break;
-                            }
-                            if diff == &(1, 0) {
-                                is_right_edge = true;
-                                break;
-                            }
-                        }
-
-                        if pos3.x + 1 == width || is_right_edge {
-                            image_values[pos3.x][pos3.y] = -curr_border_num;
-                        } else if image_values[pos3.x][pos3.y] == 1 {
-                            image_values[pos3.x][pos3.y] = curr_border_num;
-                        }
-                        if pos4.x == x && pos4.y == y && pos3 == pos1 {
-                            break;
-                        }
-                        pos2 = pos3;
-                        pos3 = pos4;
+    for y in 0..height {
+        parent_border_num = 1;
+        for x in 0..width {
+            if image_values[x][y] != 0 {
+                skip_tracing = false;
+                let is_outer;
+                if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
+                    curr_border_num += 1;
+                    pos2 = Point::new(x - 1, y);
+                    is_outer = true;
+                } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
+                    is_outer = false;
+                    curr_border_num += 1;
+                    pos2 = Point::new(x + 1, y);
+                    if image_values[x][y] > 1 {
+                        parent_border_num = image_values[x][y] as usize;
                     }
                 } else {
-                    contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
-                    image_values[x][y] = -curr_border_num;
+                    is_outer = false;
+                    skip_tracing = true;
                 }
-                contours.push(Contour::new(contour_points, is_outer, parent));
-            }
 
-            if image_values[x][y] != 1 {
-                parent_border_num = image_values[x][y].abs() as usize;
+                if !skip_tracing {
+                    let mut parent = None;
+                    if parent_border_num > 1 {
+                        let p_idx = parent_border_num - 2;
+                        if is_outer ^ contours[p_idx].is_outer {
+                            parent = Some(p_idx);
+                        } else {
+                            parent = contours[p_idx].parent;
+                        }
+                    };
+
+                    let mut contour_points = Vec::new();
+                    rotate_to_value(&mut diffs, pos2.to_i32() - Point::new(x, y).to_i32());
+                    if let Some(pos1) = diffs.iter().find_map(|diff| {
+                        get_position_if_non_zero_pixel(
+                            &image_values,
+                            x as i32 + diff.x,
+                            y as i32 + diff.y,
+                        )
+                    }) {
+                        pos2 = pos1;
+                        let mut pos3 = Point::new(x, y);
+                        loop {
+                            contour_points
+                                .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
+                            rotate_to_value(&mut diffs, pos2.to_i32() - pos3.to_i32());
+                            let pos4 = diffs
+                                .iter()
+                                .rev() // counter-clockwise
+                                .find_map(|diff| {
+                                    get_position_if_non_zero_pixel(
+                                        &image_values,
+                                        pos3.x as i32 + diff.x,
+                                        pos3.y as i32 + diff.y,
+                                    )
+                                })
+                                .unwrap();
+
+                            let mut is_right_edge = false;
+                            let pos4_diff = pos4.to_i32() - pos3.to_i32();
+                            for diff in diffs.iter().rev() {
+                                if diff == &pos4_diff {
+                                    break;
+                                }
+                                if diff == &Point::new(1, 0) {
+                                    is_right_edge = true;
+                                    break;
+                                }
+                            }
+
+                            if pos3.x + 1 == width || is_right_edge {
+                                image_values[pos3.x][pos3.y] = -curr_border_num;
+                            } else if image_values[pos3.x][pos3.y] == 1 {
+                                image_values[pos3.x][pos3.y] = curr_border_num;
+                            }
+                            if pos4.x == x && pos4.y == y && pos3 == pos1 {
+                                break;
+                            }
+                            pos2 = pos3;
+                            pos3 = pos4;
+                        }
+                    } else {
+                        contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
+                        image_values[x][y] = -curr_border_num;
+                    }
+                    contours.push(Contour::new(contour_points, is_outer, parent));
+                }
+
+                if image_values[x][y] != 1 {
+                    parent_border_num = image_values[x][y].abs() as usize;
+                }
             }
-        }
-        if x == last_pixel.0 {
-            x = 0;
-            y += 1;
-            parent_border_num = 1;
-        } else {
-            x += 1;
         }
     }
 
     contours
 }
 
-fn rotate_to_value(values: &mut VecDeque<(i32, i32)>, value: (i32, i32)) {
-    let rotate_pos = values.iter().position(|&x| x == value).unwrap();
+fn rotate_to_value<T: Eq + Copy>(values: &mut VecDeque<T>, value: T) {
+    let rotate_pos = values.iter().position(|x| *x == value).unwrap();
     values.rotate_left(rotate_pos);
 }
 
@@ -400,23 +386,29 @@ where
     }
     points.swap(0, start_point_pos);
     points.remove(0);
-    points.sort_by(|a, b| match orientation(start_point.to_i32(), a.to_i32(), b.to_i32()) {
-        Orientation::Collinear => {
-            if distance(start_point, *a) < distance(start_point, *b) {
-                Ordering::Less
-            } else {
-                Ordering::Greater
+    points.sort_by(
+        |a, b| match orientation(start_point.to_i32(), a.to_i32(), b.to_i32()) {
+            Orientation::Collinear => {
+                if distance(start_point, *a) < distance(start_point, *b) {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
             }
-        }
-        Orientation::Clockwise => Ordering::Greater,
-        Orientation::CounterClockwise => Ordering::Less,
-    });
+            Orientation::Clockwise => Ordering::Greater,
+            Orientation::CounterClockwise => Ordering::Less,
+        },
+    );
 
     let mut iter = points.iter().peekable();
     let mut remaining_points = Vec::with_capacity(points.len());
     while let Some(mut p) = iter.next() {
         while iter.peek().is_some()
-            && orientation(start_point.to_i32(), p.to_i32(), iter.peek().unwrap().to_i32()) == Orientation::Collinear
+            && orientation(
+                start_point.to_i32(),
+                p.to_i32(),
+                iter.peek().unwrap().to_i32(),
+            ) == Orientation::Collinear
         {
             p = iter.next().unwrap();
         }
@@ -430,8 +422,11 @@ where
 
     for p in points {
         while stack.len() > 1
-            && orientation(stack[stack.len() - 2].to_i32(), stack[stack.len() - 1].to_i32(), p.to_i32())
-                != Orientation::CounterClockwise
+            && orientation(
+                stack[stack.len() - 2].to_i32(),
+                stack[stack.len() - 1].to_i32(),
+                p.to_i32(),
+            ) != Orientation::CounterClockwise
         {
             stack.pop();
         }

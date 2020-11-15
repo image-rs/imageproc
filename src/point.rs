@@ -1,7 +1,7 @@
 //! A 2d point type, and some basic operations on points and lines.
 
 use num::{Num, NumCast};
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// A 2D point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -16,6 +16,36 @@ impl<T> Point<T> {
     /// Construct a point at (x, y).
     pub fn new(x: T, y: T) -> Point<T> {
         Point::<T> { x, y }
+    }
+}
+
+impl<T: Num> Add for Point<T> {
+    type Output = Self;
+
+    fn add(self, other: Point<T>) -> Point<T> {
+        Point::new(self.x + other.x, self.y + other.y)
+    }
+}
+
+impl<T: Num + Copy> AddAssign for Point<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x = self.x + rhs.x;
+        self.y = self.y + rhs.y;
+    }
+}
+
+impl<T: Num> Sub for Point<T> {
+    type Output = Self;
+
+    fn sub(self, other: Point<T>) -> Point<T> {
+        Point::new(self.x - other.x, self.y - other.y)
+    }
+}
+
+impl<T: Num + Copy> SubAssign for Point<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x = self.x - rhs.x;
+        self.y = self.y - rhs.y;
     }
 }
 
@@ -75,22 +105,6 @@ impl Point<f64> {
         let x = self.x * rotation.cos_theta - self.y * rotation.sin_theta;
         let y = self.y * rotation.cos_theta + self.x * rotation.sin_theta;
         Point::new(x, y)
-    }
-}
-
-impl<T: Num> Add for Point<T> {
-    type Output = Self;
-
-    fn add(self, other: Point<T>) -> Point<T> {
-        Point::new(self.x + other.x, self.y + other.y)
-    }
-}
-
-impl<T: Num> Sub for Point<T> {
-    type Output = Self;
-
-    fn sub(self, other: Point<T>) -> Point<T> {
-        Point::new(self.x - other.x, self.y - other.y)
     }
 }
 
