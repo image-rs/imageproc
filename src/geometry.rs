@@ -68,13 +68,14 @@ where
     res
 }
 
-/// Finds the minimal area rectangle that covers all of the points in the input
-/// contour in the following order -> (TL, TR, BR, BL).
-pub fn min_area_rect<T>(contour: &[Point<T>]) -> [Point<T>; 4]
+/// Finds the rectangle of least area that includes all input points. This rectangle need not be axis-aligned.
+///
+/// The returned points are the [top left, top right, bottom right, bottom left] points of this rectangle.
+pub fn min_area_rect<T>(points: &[Point<T>]) -> [Point<T>; 4]
 where
-    T: Num + NumCast + Copy + PartialEq + Eq + Ord,
+    T: NumCast + Copy + Ord,
 {
-    let hull = convex_hull(&contour);
+    let hull = convex_hull(&points);
     match hull.len() {
         0 => panic!("no points are defined"),
         1 => [hull[0]; 4],
@@ -89,7 +90,7 @@ where
 /// [rotating calipers]: https://en.wikipedia.org/wiki/Rotating_calipers
 fn rotating_calipers<T>(points: &[Point<T>]) -> [Point<T>; 4]
 where
-    T: Num + NumCast + Copy + PartialEq + Eq,
+    T: NumCast + Copy,
 {
     let mut edge_angles: Vec<f64> = points
         .windows(2)
@@ -170,7 +171,7 @@ where
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
 pub fn convex_hull<T>(points_slice: &[Point<T>]) -> Vec<Point<T>>
 where
-    T: Num + NumCast + Copy + PartialEq + Eq + Ord,
+    T: NumCast + Copy + Ord,
 {
     if points_slice.is_empty() {
         return Vec::new();
