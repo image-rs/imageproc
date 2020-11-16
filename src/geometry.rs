@@ -5,12 +5,12 @@ use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
 use std::f64::{self, consts::PI};
 
-/// Returns the length of the arc constructed with the provided points in
-/// incremental order. When the `closed` param is set to `true`, the distance
+/// Returns the length of the arc constructed from the provided points in
+/// increasing order. If `closed` is set to `true` then the distance
 /// between the last and the first point is included in the total length.
 pub fn arc_length<T>(arc: &[Point<T>], closed: bool) -> f64
 where
-    T: Num + NumCast + Copy + PartialEq + Eq,
+    T: NumCast + Copy,
 {
     let mut length = arc.windows(2).map(|pts| distance(pts[0], pts[1])).sum();
 
@@ -259,6 +259,30 @@ mod tests {
     use crate::point::Point;
 
     #[test]
+    fn test_arc_length() {
+        assert_eq!(
+            arc_length::<f64>(&[], false),
+            0.0
+        );
+        assert_eq!(
+            arc_length(&[Point::new(1.0, 1.0)], false),
+            0.0
+        );
+        assert_eq!(
+            arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0)], false),
+            5.0
+        );
+        assert_eq!(
+            arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0), Point::new(9.0, 17.0)], false),
+            18.0
+        );
+        assert_eq!(
+            arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0), Point::new(9.0, 17.0)], true),
+            18.0 + (8f64.powf(2.0) + 16f64.powf(2.0)).sqrt()
+        );
+    }
+
+    #[test]
     fn convex_hull_points() {
         let star = vec![
             Point::new(100, 20),
@@ -319,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    fn min_area_test() {
+    fn test_min_area() {
         assert_eq!(
             min_area_rect(&[
                 Point::new(100, 20),
