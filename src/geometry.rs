@@ -84,7 +84,7 @@ where
     }
 }
 
-/// The implementation of the [rotating calipers] used for determining the
+/// An implementation of [rotating calipers] used for determining the
 /// bounding rectangle with the smallest area.
 ///
 /// [rotating calipers]: https://en.wikipedia.org/wiki/Rotating_calipers
@@ -243,6 +243,7 @@ enum Orientation {
     CounterClockwise,
 }
 
+/// Determines whether p -> q -> r is a left turn, a right turn, or the points are collinear.
 fn orientation(p: Point<i32>, q: Point<i32>, r: Point<i32>) -> Orientation {
     let val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
     match val.cmp(&0) {
