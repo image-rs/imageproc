@@ -8,26 +8,35 @@ use std::cmp::{Ord, Ordering};
 use std::collections::VecDeque;
 use std::f64::{self, consts::PI};
 
-/// Contour struct containing its points, is_outer flag to determine whether the
-/// contour is an outer border or hole border, and the parent option (the index
-/// of the parent contour in the contours vec).
+/// Whether a border of a foreground region borders an enclosing background region or a contained background region.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum BorderType {
+    /// A border between a foreground region and the backround region enclosing it.
+    /// All points in the border lie within the foreground region.
+    Outer,
+    /// A border between a foreground region and a background region contained wihtin it.
+    /// All points in the border lie within the foreground region.
+    Hole,
+}
+
+/// A border of an 8-connected foreground region.
 #[derive(Debug)]
 pub struct Contour<T> {
-    /// All the points on the contour.
+    /// The points in the border.
     pub points: Vec<Point<T>>,
-    /// Flag to determine whether the contour is an outer border or hole border.
-    pub is_outer: bool,
-    /// the index of the parent contour in the contours vec, or None if the
-    /// contour is the outermost contour in the image.
+    /// Whether this is an outer border or a hole border.
+    pub border_type: BorderType,
+    /// Calls to `find_contours` and `find_contours_with_threshold` return a `Vec` of all borders
+    /// in an image. This field provides the index for the parent of the current contour in that `Vec`.
     pub parent: Option<usize>,
 }
 
 impl<T> Contour<T> {
     /// Construct a contour.
-    pub fn new(points: Vec<Point<T>>, is_outer: bool, parent: Option<usize>) -> Self {
+    pub fn new(points: Vec<Point<T>>, border_type: BorderType, parent: Option<usize>) -> Self {
         Contour {
             points,
-            is_outer,
+            border_type,
             parent,
         }
     }
@@ -39,7 +48,7 @@ pub fn find_contours<T>(original_image: &GrayImage) -> Vec<Contour<T>>
 where
     T: Num + NumCast + Copy + PartialEq + Eq,
 {
-    find_contours_with_thresh(original_image, 0)
+    find_contours_with_threshold(original_image, 0)
 }
 
 /// Finds all contours (contour - all the points on the edge of a polygon)
@@ -50,7 +59,7 @@ where
 /// Based on the algorithm proposed by Suzuki and Abe: Topological Structural
 /// Analysis of Digitized Binary Images by Border Following.
 ///
-pub fn find_contours_with_thresh<T>(original_image: &GrayImage, thresh: u8) -> Vec<Contour<T>>
+pub fn find_contours_with_threshold<T>(original_image: &GrayImage, thresh: u8) -> Vec<Contour<T>>
 where
     T: Num + NumCast + Copy + PartialEq + Eq,
 {
@@ -88,14 +97,14 @@ where
                 continue;
             }
 
-            if let Some((pos2, is_outer)) =
+            if let Some((adj, border_type)) =
                 if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
-                    Some((Point::new(x - 1, y), true))
+                    Some((Point::new(x - 1, y), BorderType::Outer))
                 } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
                     if image_values[x][y] > 1 {
                         parent_border_num = image_values[x][y] as usize;
                     }
-                    Some((Point::new(x + 1, y), false))
+                    Some((Point::new(x + 1, y), BorderType::Hole))
                 } else {
                     None
                 }
@@ -105,7 +114,9 @@ where
                 let parent = if parent_border_num > 1 {
                     let parent_index = parent_border_num - 2;
                     let parent_contour = &contours[parent_index];
-                    if is_outer ^ parent_contour.is_outer {
+                    if (border_type == BorderType::Outer)
+                        ^ (parent_contour.border_type == BorderType::Outer)
+                    {
                         Some(parent_index)
                     } else {
                         parent_contour.parent
@@ -116,10 +127,10 @@ where
 
                 let mut contour_points = Vec::new();
                 let curr = Point::new(x, y);
-                rotate_to_value(&mut diffs, pos2.to_i32() - curr.to_i32());
+                rotate_to_value(&mut diffs, adj.to_i32() - curr.to_i32());
 
                 if let Some(pos1) = diffs.iter().find_map(|diff| {
-                    get_position_if_non_zero_pixel(&image_values, curr.to_i32() + diff.to_i32())
+                    get_position_if_non_zero_pixel(&image_values, curr.to_i32() + *diff)
                 }) {
                     let mut pos2 = pos1;
                     let mut pos3 = curr;
@@ -132,10 +143,7 @@ where
                             .iter()
                             .rev() // counter-clockwise
                             .find_map(|diff| {
-                                get_position_if_non_zero_pixel(
-                                    &image_values,
-                                    pos3.to_i32() + diff.to_i32(),
-                                )
+                                get_position_if_non_zero_pixel(&image_values, pos3.to_i32() + *diff)
                             })
                             .unwrap();
 
@@ -167,7 +175,7 @@ where
                     contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
                     image_values[x][y] = -curr_border_num;
                 }
-                contours.push(Contour::new(contour_points, is_outer, parent));
+                contours.push(Contour::new(contour_points, border_type, parent));
             }
 
             if image_values[x][y] != 1 {
@@ -199,15 +207,12 @@ fn get_position_if_non_zero_pixel(image: &[Vec<i32>], curr: Point<i32>) -> Optio
 /// incremental order. When the `closed` param is set to `true`, the distance
 /// between the last and the first point is included in the total length.
 pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], closed: bool) -> f64 {
-    if arc.len() < 2 {
-        return 0.;
-    }
-    let mut length = arc
-        .windows(2)
-        .fold(0., |acc, pts| acc + distance(pts[0], pts[1]));
+    let mut length = arc.windows(2).map(|pts| distance(pts[0], pts[1])).sum();
+
     if arc.len() > 2 && closed {
         length += distance(arc[0], arc[arc.len() - 1]);
     }
+
     length
 }
 
@@ -221,11 +226,11 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
     epsilon: f64,
     closed: bool,
 ) -> Vec<Point<T>> {
-    if epsilon <= 0. {
-        panic!("epsilon must be greater than 0");
+    if epsilon <= 0.0 {
+        panic!("epsilon must be greater than 0.0");
     }
     // Find the point with the maximum distance
-    let mut dmax = 0.;
+    let mut dmax = 0.0;
     let mut index = 0;
     let end = curve.len() - 1;
     let line = Line::from_points(curve[0].to_f64(), curve[end].to_f64());
@@ -293,7 +298,7 @@ fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
     edge_angles.dedup();
 
     let mut min_area = f64::MAX;
-    let mut res = vec![Point::new(0., 0.); 4];
+    let mut res = vec![Point::new(0.0, 0.0); 4];
     for angle in edge_angles {
         let rotation = Rotation::new(angle);
         let rotated_points: Vec<Point<f64>> =
@@ -519,35 +524,35 @@ mod tests {
         assert!(contours[0].points.contains(&Point::new(280, 20)));
         assert!(contours[0].points.contains(&Point::new(280, 280)));
         assert!(contours[0].points.contains(&Point::new(20, 280)));
-        assert!(contours[0].is_outer, true);
+        assert_eq!(contours[0].border_type, BorderType::Outer);
         assert_eq!(contours[0].parent, None);
         // border 2
         assert!(contours[1].points.contains(&Point::new(39, 40)));
         assert!(contours[1].points.contains(&Point::new(261, 40)));
         assert!(contours[1].points.contains(&Point::new(261, 260)));
         assert!(contours[1].points.contains(&Point::new(39, 260)));
-        assert_eq!(contours[1].is_outer, false);
+        assert_eq!(contours[1].border_type, BorderType::Hole);
         assert_eq!(contours[1].parent, Some(0));
         // border 3
         assert!(contours[2].points.contains(&Point::new(60, 60)));
         assert!(contours[2].points.contains(&Point::new(240, 60)));
         assert!(contours[2].points.contains(&Point::new(240, 240)));
         assert!(contours[2].points.contains(&Point::new(60, 240)));
-        assert_eq!(contours[2].is_outer, true);
+        assert_eq!(contours[2].border_type, BorderType::Outer);
         assert_eq!(contours[2].parent, Some(1));
         // border 4
         assert!(contours[3].points.contains(&Point::new(79, 80)));
         assert!(contours[3].points.contains(&Point::new(221, 80)));
         assert!(contours[3].points.contains(&Point::new(221, 220)));
         assert!(contours[3].points.contains(&Point::new(79, 220)));
-        assert_eq!(contours[3].is_outer, false);
+        assert_eq!(contours[3].border_type, BorderType::Hole);
         assert_eq!(contours[3].parent, Some(2));
         // rectangle in the corner
         assert!(contours[4].points.contains(&Point::new(290, 290)));
         assert!(contours[4].points.contains(&Point::new(299, 290)));
         assert!(contours[4].points.contains(&Point::new(299, 299)));
         assert!(contours[4].points.contains(&Point::new(290, 299)));
-        assert_eq!(contours[4].is_outer, true);
+        assert_eq!(contours[4].border_type, BorderType::Outer);
         assert_eq!(contours[4].parent, None);
     }
 
@@ -591,7 +596,7 @@ mod tests {
         *image.get_pixel_mut(13, 6) = Luma::white();
 
         let contours = find_contours::<u32>(&image);
-        assert_eq!(contours[0].is_outer, true);
+        assert_eq!(contours[0].border_type, BorderType::Outer);
         assert!(contours[0].points.contains(&Point::new(5, 5)));
         assert!(contours[0].points.contains(&Point::new(11, 5)));
         assert!(contours[0].points.contains(&Point::new(5, 9)));
@@ -599,7 +604,7 @@ mod tests {
         assert!(!contours[0].points.contains(&Point::new(13, 6)));
         assert_eq!(contours[0].parent, None);
 
-        assert_eq!(contours[1].is_outer, false);
+        assert_eq!(contours[1].border_type, BorderType::Hole);
         assert!(contours[1].points.contains(&Point::new(5, 6)));
         assert!(contours[1].points.contains(&Point::new(8, 6)));
         assert!(!contours[1].points.contains(&Point::new(10, 5)));
@@ -609,7 +614,7 @@ mod tests {
         assert!(!contours[1].points.contains(&Point::new(13, 6)));
         assert_eq!(contours[1].parent, Some(0));
 
-        assert_eq!(contours[2].is_outer, false);
+        assert_eq!(contours[2].border_type, BorderType::Hole);
         assert!(!contours[2].points.contains(&Point::new(5, 6)));
         assert!(contours[2].points.contains(&Point::new(8, 6)));
         assert!(contours[2].points.contains(&Point::new(10, 5)));
@@ -619,7 +624,7 @@ mod tests {
         assert!(!contours[2].points.contains(&Point::new(13, 6)));
         assert_eq!(contours[2].parent, Some(0));
 
-        assert_eq!(contours[3].is_outer, true);
+        assert_eq!(contours[3].border_type, BorderType::Outer);
         assert_eq!(contours[3].points, [Point::new(13, 6)]);
         assert_eq!(contours[3].parent, None);
         assert_eq!(contours.len(), 4);

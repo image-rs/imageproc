@@ -1,9 +1,9 @@
-//! A 2d point type, and some basic operations on points and lines.
+//! A 2d point type.
 
 use num::{Num, NumCast};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-/// A 2D point.
+/// A 2d point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Point<T> {
     /// x-coordinate.
@@ -110,18 +110,13 @@ impl Point<f64> {
 
 /// A line of the form Ax + By + C = 0.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Line {
+pub(crate) struct Line {
     a: f64,
     b: f64,
     c: f64,
 }
 
 impl Line {
-    /// Returns the line Ax + By + C = 0
-    pub fn new(a: f64, b: f64, c: f64) -> Line {
-        Line { a, b, c }
-    }
-
     /// Returns the `Line` that passes through p and q.
     pub fn from_points(p: Point<f64>, q: Point<f64>) -> Line {
         let a = p.y - q.y;
@@ -158,7 +153,13 @@ mod tests {
     #[test]
     fn distance_between_line_and_point() {
         assert!(
-            Line::new(8.0, 7.0, 5.0).distance_from_point(Point::new(2.0, 3.0)) - 3.9510276472
+            Line {
+                a: 8.0,
+                b: 7.0,
+                c: 5.0
+            }
+            .distance_from_point(Point::new(2.0, 3.0))
+                - 3.9510276472
                 < 1e-10
         );
     }
