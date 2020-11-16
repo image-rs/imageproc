@@ -466,7 +466,7 @@ mod tests {
         draw_polygon_mut(&mut image, &star, white);
         let contours = find_contours::<u32>(&image);
 
-        let c1_approx = crate::geometry::approx_poly_dp(
+        let c1_approx = crate::geometry::approximate_polygon_dp(
             &contours[0].points,
             crate::geometry::arc_length(&contours[0].points, true) * 0.01,
             true,

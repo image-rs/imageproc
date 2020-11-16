@@ -5,8 +5,7 @@ use num::{cast, Num, NumCast};
 use std::cmp::{Ord, Ordering};
 use std::f64::{self, consts::PI};
 
-/// Returns the length of the arc constructed from the provided points in
-/// increasing order. If `closed` is set to `true` then the distance
+/// Computes the length of an arc. If `closed` is set to `true` then the distance
 /// between the last and the first point is included in the total length.
 pub fn arc_length<T>(arc: &[Point<T>], closed: bool) -> f64
 where
@@ -21,18 +20,17 @@ where
     length
 }
 
-/// Fits the polygon curve to a similar curve with fewer points.
-/// The input parameters include an ordered array of points and an distance
-/// dimension `epsilon` > 0. Based on the [Douglas–Peucker algorithm].
+/// Approximates a polygon using the [Douglas–Peucker algorithm].
 ///
 /// [Douglas–Peucker algorithm]: https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
-pub fn approx_poly_dp<T>(curve: &[Point<T>], epsilon: f64, closed: bool) -> Vec<Point<T>>
+pub fn approximate_polygon_dp<T>(curve: &[Point<T>], epsilon: f64, closed: bool) -> Vec<Point<T>>
 where
-    T: Num + NumCast + Copy + PartialEq + Eq,
+    T: NumCast + Copy,
 {
     if epsilon <= 0.0 {
         panic!("epsilon must be greater than 0.0");
     }
+
     // Find the point with the maximum distance
     let mut dmax = 0.0;
     let mut index = 0;
@@ -51,8 +49,8 @@ where
     // If max distance is greater than epsilon, recursively simplify
     if dmax > epsilon {
         // Recursive call
-        let mut partial1 = approx_poly_dp(&curve[0..=index], epsilon, false);
-        let mut partial2 = approx_poly_dp(&curve[index..=end], epsilon, false);
+        let mut partial1 = approximate_polygon_dp(&curve[0..=index], epsilon, false);
+        let mut partial2 = approximate_polygon_dp(&curve[index..=end], epsilon, false);
 
         // Build the result list
         partial1.pop();
@@ -260,24 +258,32 @@ mod tests {
 
     #[test]
     fn test_arc_length() {
-        assert_eq!(
-            arc_length::<f64>(&[], false),
-            0.0
-        );
-        assert_eq!(
-            arc_length(&[Point::new(1.0, 1.0)], false),
-            0.0
-        );
+        assert_eq!(arc_length::<f64>(&[], false), 0.0);
+        assert_eq!(arc_length(&[Point::new(1.0, 1.0)], false), 0.0);
         assert_eq!(
             arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0)], false),
             5.0
         );
         assert_eq!(
-            arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0), Point::new(9.0, 17.0)], false),
+            arc_length(
+                &[
+                    Point::new(1.0, 1.0),
+                    Point::new(4.0, 5.0),
+                    Point::new(9.0, 17.0)
+                ],
+                false
+            ),
             18.0
         );
         assert_eq!(
-            arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0), Point::new(9.0, 17.0)], true),
+            arc_length(
+                &[
+                    Point::new(1.0, 1.0),
+                    Point::new(4.0, 5.0),
+                    Point::new(9.0, 17.0)
+                ],
+                true
+            ),
             18.0 + (8f64.powf(2.0) + 16f64.powf(2.0)).sqrt()
         );
     }
