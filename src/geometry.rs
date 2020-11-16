@@ -1,7 +1,7 @@
 //! Computational geometry functions, for example finding convex hulls.
 
 use crate::point::{distance, Line, Point, Rotation};
-use num::{cast, Num, NumCast};
+use num::{cast, NumCast};
 use std::cmp::{Ord, Ordering};
 use std::f64::{self, consts::PI};
 
