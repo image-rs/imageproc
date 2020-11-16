@@ -8,7 +8,10 @@ use std::f64::{self, consts::PI};
 /// Returns the length of the arc constructed with the provided points in
 /// incremental order. When the `closed` param is set to `true`, the distance
 /// between the last and the first point is included in the total length.
-pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], closed: bool) -> f64 {
+pub fn arc_length<T>(arc: &[Point<T>], closed: bool) -> f64
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
     let mut length = arc.windows(2).map(|pts| distance(pts[0], pts[1])).sum();
 
     if arc.len() > 2 && closed {
@@ -23,11 +26,10 @@ pub fn arc_length<T: Num + NumCast + Copy + PartialEq + Eq>(arc: &[Point<T>], cl
 /// dimension `epsilon` > 0. Based on the [Douglas–Peucker algorithm].
 ///
 /// [Douglas–Peucker algorithm]: https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
-pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
-    curve: &[Point<T>],
-    epsilon: f64,
-    closed: bool,
-) -> Vec<Point<T>> {
+pub fn approx_poly_dp<T>(curve: &[Point<T>], epsilon: f64, closed: bool) -> Vec<Point<T>>
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
     if epsilon <= 0.0 {
         panic!("epsilon must be greater than 0.0");
     }
@@ -70,9 +72,10 @@ pub fn approx_poly_dp<T: Num + NumCast + Copy + PartialEq + Eq>(
 
 /// Finds the minimal area rectangle that covers all of the points in the input
 /// contour in the following order -> (TL, TR, BR, BL).
-pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
-    contour: &[Point<T>],
-) -> [Point<T>; 4] {
+pub fn min_area_rect<T>(contour: &[Point<T>]) -> [Point<T>; 4]
+where
+    T: Num + NumCast + Copy + PartialEq + Eq + Ord,
+{
     let hull = convex_hull(&contour);
     match hull.len() {
         0 => panic!("no points are defined"),
@@ -86,9 +89,10 @@ pub fn min_area_rect<T: Num + NumCast + Copy + PartialEq + Eq + Ord>(
 /// bounding rectangle with the smallest area.
 ///
 /// [rotating calipers]: https://en.wikipedia.org/wiki/Rotating_calipers
-fn rotating_calipers<T: Num + NumCast + Copy + PartialEq + Eq>(
-    points: &[Point<T>],
-) -> [Point<T>; 4] {
+fn rotating_calipers<T>(points: &[Point<T>]) -> [Point<T>; 4]
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
     let mut edge_angles: Vec<f64> = points
         .windows(2)
         .map(|e| {
