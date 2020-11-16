@@ -14,7 +14,7 @@ pub enum BorderType {
     /// A border between a foreground region and the backround region enclosing it.
     /// All points in the border lie within the foreground region.
     Outer,
-    /// A border between a foreground region and a background region contained wihtin it.
+    /// A border between a foreground region and a background region contained within it.
     /// All points in the border lie within the foreground region.
     Hole,
 }
@@ -27,7 +27,7 @@ pub struct Contour<T> {
     /// Whether this is an outer border or a hole border.
     pub border_type: BorderType,
     /// Calls to `find_contours` and `find_contours_with_threshold` return a `Vec` of all borders
-    /// in an image. This field provides the index for the parent of the current contour in that `Vec`.
+    /// in an image. This field provides the index for the parent of the current border in that `Vec`.
     pub parent: Option<usize>,
 }
 
@@ -42,34 +42,34 @@ impl<T> Contour<T> {
     }
 }
 
-/// Finds all the points on the contours on the provided image.
-/// Handles all non-zero pixels as 1.
-pub fn find_contours<T>(original_image: &GrayImage) -> Vec<Contour<T>>
-where
-    T: Num + NumCast + Copy + PartialEq + Eq,
-{
-    find_contours_with_threshold(original_image, 0)
-}
-
-/// Finds all contours (contour - all the points on the edge of a polygon)
-/// in the provided image. The algorithm works only with a binarized image,
-/// therefore, the `thresh` param defines the value for which every pixel with
-/// value higher then `thresh` will be considered as 1, and 0 otherwise.
+/// Finds all borders of foreground regions in an image. All non-zero pixels are
+/// treated as belonging to the foreground.
 ///
 /// Based on the algorithm proposed by Suzuki and Abe: Topological Structural
 /// Analysis of Digitized Binary Images by Border Following.
-///
-pub fn find_contours_with_threshold<T>(original_image: &GrayImage, thresh: u8) -> Vec<Contour<T>>
+pub fn find_contours<T>(image: &GrayImage) -> Vec<Contour<T>>
 where
     T: Num + NumCast + Copy + PartialEq + Eq,
 {
-    let width = original_image.width() as usize;
-    let height = original_image.height() as usize;
+    find_contours_with_threshold(image, 0)
+}
+
+/// Finds all borders of foreground regions in an image. All pixels with intensity strictly greater
+/// than `threshold` are treated as belonging to the foreground.
+///
+/// Based on the algorithm proposed by Suzuki and Abe: Topological Structural
+/// Analysis of Digitized Binary Images by Border Following.
+pub fn find_contours_with_threshold<T>(image: &GrayImage, threshold: u8) -> Vec<Contour<T>>
+where
+    T: Num + NumCast + Copy + PartialEq + Eq,
+{
+    let width = image.width() as usize;
+    let height = image.height() as usize;
     let mut image_values = vec![vec![0i32; height]; width];
 
     for y in 0..height {
         for x in 0..width {
-            if original_image.get_pixel(x as u32, y as u32).0[0] > thresh {
+            if image.get_pixel(x as u32, y as u32).0[0] > threshold {
                 image_values[x][y] = 1;
             }
         }
