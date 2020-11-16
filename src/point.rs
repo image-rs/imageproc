@@ -127,7 +127,7 @@ impl Line {
 
     /// Computes the shortest distance from this line to the given point.
     pub fn distance_from_point(&self, point: Point<f64>) -> f64 {
-        let (a, b, c) = (self.a, self.b, self.c);
+        let Line { a, b, c } = self;
         (a * point.x + b * point.y + c).abs() / (a.powf(2.0) + b.powf(2.)).sqrt()
     }
 }
@@ -152,15 +152,15 @@ mod tests {
 
     #[test]
     fn distance_between_line_and_point() {
-        assert!(
+        assert_approx_eq!(
             Line {
                 a: 8.0,
                 b: 7.0,
                 c: 5.0
             }
-            .distance_from_point(Point::new(2.0, 3.0))
-                - 3.9510276472
-                < 1e-10
+            .distance_from_point(Point::new(2.0, 3.0)),
+            3.9510276472,
+            1e-10
         );
     }
 }

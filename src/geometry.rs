@@ -131,15 +131,7 @@ where
         }
     }
 
-    res.sort_by(|a, b| {
-        if a.x < b.x {
-            Ordering::Less
-        } else if a.x > b.x {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    });
+    res.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
 
     let i1 = if res[1].y > res[0].y { 0 } else { 1 };
     let i2 = if res[3].y > res[2].y { 2 } else { 3 };
