@@ -204,6 +204,22 @@ fn get_position_if_non_zero_pixel(image: &[Vec<i32>], curr: Point<i32>) -> Optio
 mod tests {
     use super::*;
     use crate::point::Point;
+
+    // Checks that a contour has the expected border type and parent, and
+    // that it contains each of a given set of points.
+    fn check_contour<T: Eq>(
+        contour: &Contour<T>,
+        expected_border_type: BorderType,
+        expected_parent: Option<usize>,
+        required_points: &[Point<T>],
+    ) {
+        for point in required_points {
+            assert!(contour.points.contains(point));
+        }
+        assert_eq!(contour.border_type, expected_border_type);
+        assert_eq!(contour.parent, expected_parent);
+    }
+
     #[test]
     fn test_contours_structured() {
         use crate::drawing::draw_polygon_mut;
@@ -268,44 +284,74 @@ mod tests {
             ],
             white,
         );
-        let contours = find_contours::<i32>(&image);
 
+        let contours = find_contours::<i32>(&image);
         assert_eq!(contours.len(), 5);
+
         // border 1
-        assert!(contours[0].points.contains(&Point::new(20, 20)));
-        assert!(contours[0].points.contains(&Point::new(280, 20)));
-        assert!(contours[0].points.contains(&Point::new(280, 280)));
-        assert!(contours[0].points.contains(&Point::new(20, 280)));
-        assert_eq!(contours[0].border_type, BorderType::Outer);
-        assert_eq!(contours[0].parent, None);
+        check_contour(
+            &contours[0],
+            BorderType::Outer,
+            None,
+            &[
+                Point::new(20, 20),
+                Point::new(280, 20),
+                Point::new(280, 280),
+                Point::new(20, 280),
+            ],
+        );
+
         // border 2
-        assert!(contours[1].points.contains(&Point::new(39, 40)));
-        assert!(contours[1].points.contains(&Point::new(261, 40)));
-        assert!(contours[1].points.contains(&Point::new(261, 260)));
-        assert!(contours[1].points.contains(&Point::new(39, 260)));
-        assert_eq!(contours[1].border_type, BorderType::Hole);
-        assert_eq!(contours[1].parent, Some(0));
+        check_contour(
+            &contours[1],
+            BorderType::Hole,
+            Some(0),
+            &[
+                Point::new(39, 40),
+                Point::new(261, 40),
+                Point::new(261, 260),
+                Point::new(39, 260),
+            ],
+        );
+
         // border 3
-        assert!(contours[2].points.contains(&Point::new(60, 60)));
-        assert!(contours[2].points.contains(&Point::new(240, 60)));
-        assert!(contours[2].points.contains(&Point::new(240, 240)));
-        assert!(contours[2].points.contains(&Point::new(60, 240)));
-        assert_eq!(contours[2].border_type, BorderType::Outer);
-        assert_eq!(contours[2].parent, Some(1));
+        check_contour(
+            &contours[2],
+            BorderType::Outer,
+            Some(1),
+            &[
+                Point::new(60, 60),
+                Point::new(240, 60),
+                Point::new(240, 240),
+                Point::new(60, 220),
+            ],
+        );
+
         // border 4
-        assert!(contours[3].points.contains(&Point::new(79, 80)));
-        assert!(contours[3].points.contains(&Point::new(221, 80)));
-        assert!(contours[3].points.contains(&Point::new(221, 220)));
-        assert!(contours[3].points.contains(&Point::new(79, 220)));
-        assert_eq!(contours[3].border_type, BorderType::Hole);
-        assert_eq!(contours[3].parent, Some(2));
+        check_contour(
+            &contours[3],
+            BorderType::Hole,
+            Some(2),
+            &[
+                Point::new(79, 80),
+                Point::new(221, 80),
+                Point::new(221, 220),
+                Point::new(79, 220),
+            ],
+        );
+
         // rectangle in the corner
-        assert!(contours[4].points.contains(&Point::new(290, 290)));
-        assert!(contours[4].points.contains(&Point::new(299, 290)));
-        assert!(contours[4].points.contains(&Point::new(299, 299)));
-        assert!(contours[4].points.contains(&Point::new(290, 299)));
-        assert_eq!(contours[4].border_type, BorderType::Outer);
-        assert_eq!(contours[4].parent, None);
+        check_contour(
+            &contours[4],
+            BorderType::Outer,
+            None,
+            &[
+                Point::new(290, 290),
+                Point::new(299, 290),
+                Point::new(299, 299),
+                Point::new(290, 299),
+            ],
+        );
     }
 
     #[test]
@@ -348,38 +394,54 @@ mod tests {
         *image.get_pixel_mut(13, 6) = Luma::white();
 
         let contours = find_contours::<u32>(&image);
-        assert_eq!(contours[0].border_type, BorderType::Outer);
-        assert!(contours[0].points.contains(&Point::new(5, 5)));
-        assert!(contours[0].points.contains(&Point::new(11, 5)));
-        assert!(contours[0].points.contains(&Point::new(5, 9)));
-        assert!(contours[0].points.contains(&Point::new(11, 9)));
-        assert!(!contours[0].points.contains(&Point::new(13, 6)));
-        assert_eq!(contours[0].parent, None);
+        assert_eq!(contours.len(), 4);
 
-        assert_eq!(contours[1].border_type, BorderType::Hole);
-        assert!(contours[1].points.contains(&Point::new(5, 6)));
-        assert!(contours[1].points.contains(&Point::new(8, 6)));
+        check_contour(
+            &contours[0],
+            BorderType::Outer,
+            None,
+            &[
+                Point::new(5, 5),
+                Point::new(11, 5),
+                Point::new(5, 9),
+                Point::new(11, 9),
+            ],
+        );
+        assert!(!contours[0].points.contains(&Point::new(13, 6)));
+
+        check_contour(
+            &contours[1],
+            BorderType::Hole,
+            Some(0),
+            &[
+                Point::new(5, 6),
+                Point::new(8, 6),
+                Point::new(6, 9),
+                Point::new(8, 8),
+            ],
+        );
         assert!(!contours[1].points.contains(&Point::new(10, 5)));
-        assert!(contours[1].points.contains(&Point::new(6, 9)));
-        assert!(contours[1].points.contains(&Point::new(8, 8)));
         assert!(!contours[1].points.contains(&Point::new(10, 9)));
         assert!(!contours[1].points.contains(&Point::new(13, 6)));
-        assert_eq!(contours[1].parent, Some(0));
 
-        assert_eq!(contours[2].border_type, BorderType::Hole);
-        assert!(!contours[2].points.contains(&Point::new(5, 6)));
-        assert!(contours[2].points.contains(&Point::new(8, 6)));
-        assert!(contours[2].points.contains(&Point::new(10, 5)));
+        check_contour(
+            &contours[2],
+            BorderType::Hole,
+            Some(0),
+            &[
+                Point::new(8, 6),
+                Point::new(10, 5),
+                Point::new(8, 8),
+                Point::new(10, 9),
+            ],
+        );
         assert!(!contours[2].points.contains(&Point::new(6, 9)));
-        assert!(contours[2].points.contains(&Point::new(8, 8)));
-        assert!(contours[2].points.contains(&Point::new(10, 9)));
+        assert!(!contours[2].points.contains(&Point::new(5, 6)));
         assert!(!contours[2].points.contains(&Point::new(13, 6)));
-        assert_eq!(contours[2].parent, Some(0));
 
         assert_eq!(contours[3].border_type, BorderType::Outer);
         assert_eq!(contours[3].points, [Point::new(13, 6)]);
         assert_eq!(contours[3].parent, None);
-        assert_eq!(contours.len(), 4);
     }
 
     #[test]
