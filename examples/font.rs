@@ -1,7 +1,7 @@
 //! An example of drawing text. Writes to the user-provided target file.
 
 use image::{Rgb, RgbImage};
-use imageproc::drawing::draw_text_mut;
+use imageproc::drawing::{draw_text_mut, text_size};
 use rusttype::{Font, Scale};
 use std::env;
 use std::path::Path;
@@ -25,15 +25,11 @@ fn main() {
         x: height * 2.0,
         y: height,
     };
-    draw_text_mut(
-        &mut image,
-        Rgb([0u8, 0u8, 255u8]),
-        0,
-        0,
-        scale,
-        &font,
-        "Hello, world!",
-    );
+
+    let text = "Hello, world!";
+    draw_text_mut(&mut image, Rgb([0u8, 0u8, 255u8]), 0, 0, scale, &font, text);
+    let (w, h) = text_size(scale, &font, text);
+    println!("Text size: {}x{}", w, h);
 
     let _ = image.save(path).unwrap();
 }
