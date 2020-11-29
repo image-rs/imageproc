@@ -30,7 +30,7 @@ pub use self::rect::{
 };
 
 mod text;
-pub use self::text::{draw_text, draw_text_mut};
+pub use self::text::{draw_text, draw_text_mut, text_size};
 
 // Set pixel at (x, y) to color if this point lies within image bounds,
 // otherwise do nothing.
