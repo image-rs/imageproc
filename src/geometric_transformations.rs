@@ -55,6 +55,12 @@ impl Projection {
         })
     }
 
+    /// Combine the transformation with another one. The resulting transformation is equivalent to
+    /// applying this transformation followed by the `other` transformation.
+    pub fn and_then(self, other: Projection) -> Projection {
+        other * self
+    }
+
     /// A translation by (tx, ty).
     #[rustfmt::skip]
     pub fn translate(tx: f32, ty: f32) -> Projection {
