@@ -228,15 +228,27 @@ impl Mul<Projection> for Projection {
 
     fn mul(self, rhs: Projection) -> Projection {
         use TransformationClass as TC;
-        let t = mul3x3(self.transform, rhs.transform);
-        let i = mul3x3(rhs.inverse, self.inverse);
+        let (a, b) = (self.transform, rhs.transform);
+        let (_a, _b) = (rhs.inverse, self.inverse);
 
-        let class = match (self.class, rhs.class) {
-            (TC::Translation, TC::Translation) => TC::Translation,
-            (TC::Translation, TC::Affine) => TC::Affine,
-            (TC::Affine, TC::Translation) => TC::Affine,
-            (TC::Affine, TC::Affine) => TC::Affine,
-            (_, _) => TC::Projection,
+        let (class, t, i) = match (self.class, rhs.class) {
+            (TC::Translation, TC::Translation) => (
+                TC::Translation,
+                translationxtranslation(a, b),
+                translationxtranslation(_a, _b),
+            ),
+            (TC::Translation, TC::Affine) => (
+                TC::Affine,
+                translationxaffine(a, b),
+                affinextranslation(_a, _b),
+            ),
+            (TC::Affine, TC::Translation) => (
+                TC::Affine,
+                affinextranslation(a, b),
+                translationxaffine(_a, _b),
+            ),
+            (TC::Affine, TC::Affine) => (TC::Affine, affinexaffine(a, b), affinexaffine(_a, _b)),
+            (_, _) => (TC::Projection, mul3x3(a, b), mul3x3(_a, _b)),
         };
 
         Projection {
@@ -595,6 +607,54 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
         a20 * b00 + a21 * b10 + a22 * b20,
         a20 * b01 + a21 * b11 + a22 * b21,
         a20 * b02 + a21 * b12 + a22 * b22,
+    ]
+}
+
+#[rustfmt::skip]
+fn affinexaffine(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+    let [a00, a01, a02, a10, a11, a12, ..] = a;
+    let [b00, b01, b02, b10, b11, b12, ..] = b;
+    [
+        a00 * b00 + a01 * b10,
+        a00 * b01 + a01 * b11,
+        a00 * b02 + a01 * b12 + a02,
+        a10 * b00 + a11 * b10,
+        a10 * b01 + a11 * b11,
+        a10 * b02 + a11 * b12 + a12,
+        0., 0., 1.,
+    ]
+}
+
+#[rustfmt::skip]
+fn affinextranslation(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+    let [a00, a01, a02, a10, a11, a12, ..] = a;
+    let (b02, b12) = (b[2], b[5]);
+    [
+        a00, a01, a00 * b02 + a01 * b12 + a02,
+        a10, a11, a10 * b02 + a11 * b12 + a12,
+        0.0, 0.0, 1.0,
+    ]
+}
+
+#[rustfmt::skip]
+fn translationxaffine(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+    let (a02, a12) = (a[2], a[5]);
+    let [b00, b01, b02, b10, b11, b12, ..] = b;
+    [
+        b00, b01, a02 + b02,
+        b10, b11, a12 + b12,
+        0.0, 0.0, 1.0,
+    ]
+}
+
+#[rustfmt::skip]
+fn translationxtranslation(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
+    let (a02, a12) = (a[2], a[5]);
+    let (b02, b12) = (b[2], b[5]);
+    [
+        1., 0., a02 + b02,
+        0., 1., a12 + b12,
+        0., 0., 1.
     ]
 }
 
