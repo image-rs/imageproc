@@ -33,6 +33,7 @@ assert_approx_eq = "1.1.0"
 image = "0.23.6"
 quickcheck = "0.9.2"
 wasm-bindgen-test = "0.3.14"
+lazy_static = "1.4.0"
 
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358
