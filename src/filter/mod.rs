@@ -18,6 +18,18 @@ use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
 
+
+/// Some documentation comment
+pub fn bilateral_filter(image: &GrayImage ) -> Image<Luma<u8>> {
+    let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::new(width, height);
+    
+    println!("\nExecuting bilateral filter!\n");
+
+    return out
+}
+
+
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
 /// sum to one. i.e. each output pixel is the unweighted mean of
@@ -433,6 +445,12 @@ mod tests {
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
+
+    #[test]
+    fn test_bilateral_filter() {
+	let _ = bilateral_filter(&GrayImage::new(0, 0));
+    }
+
 
     #[test]
     fn test_box_filter_handles_empty_images() {
