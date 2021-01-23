@@ -19,12 +19,114 @@ use std::cmp::{max, min};
 use std::f32;
 
 
+
+
+
+
+// def _gaussian_weight(array, sigma_squared, *, dtype=float):
+//     """Helping function. Define a Gaussian weighting from array and
+//     sigma_square.
+//     Parameters
+//     ----------
+//     array : ndarray
+//         Input array.
+//     sigma_squared : float
+//         The squared standard deviation used in the filter.
+//     dtype : data type object, optional (default : float)
+//         The type and size of the data to be returned.
+//     Returns
+//     -------
+//     gaussian : ndarray
+//         The input array filtered by the Gaussian.
+//     """
+//     return np.exp(-0.5 * (array ** 2  / sigma_squared), dtype=dtype)
+
+
+// def _compute_color_lut(bins, sigma, max_value, *, dtype=float):
+//     """Helping function. Define a lookup table containing Gaussian filter
+//     values using the color distance sigma.
+//     Parameters
+//     ----------
+//      bins : int
+//         Number of discrete values for Gaussian weights of color filtering.
+//         A larger value results in improved accuracy.
+//     sigma : float
+//         Standard deviation for grayvalue/color distance (radiometric
+//         similarity). A larger value results in averaging of pixels with larger
+//         radiometric differences. Note, that the image will be converted using
+//         the `img_as_float` function and thus the standard deviation is in
+//         respect to the range ``[0, 1]``. If the value is ``None`` the standard
+//         deviation of the ``image`` will be used.
+//     max_value : float
+//         Maximum value of the input image.
+//     dtype : data type object, optional (default : float)
+//         The type and size of the data to be returned.
+//     Returns
+//     -------
+//     color_lut : ndarray
+//         Lookup table for the color distance sigma.
+//     """
+//     values = np.linspace(0, max_value, bins, endpoint=False)
+//     return _gaussian_weight(values, sigma**2, dtype=dtype)
+
+
+// def _compute_spatial_lut(win_size, sigma, *, dtype=float):
+//     """Helping function. Define a lookup table containing Gaussian filter
+//     values using the spatial sigma.
+//     Parameters
+//     ----------
+//     win_size : int
+//         Window size for filtering.
+//         If win_size is not specified, it is calculated as
+//         ``max(5, 2 * ceil(3 * sigma_spatial) + 1)``.
+//     sigma : float
+//         Standard deviation for range distance. A larger value results in
+//         averaging of pixels with larger spatial differences.
+//     dtype : data type object
+//         The type and size of the data to be returned.
+//     Returns
+//     -------
+//     spatial_lut : ndarray
+//         Lookup table for the spatial sigma.
+//     """
+//     grid_points = np.arange(-win_size // 2, win_size // 2 + 1)
+//     rr, cc = np.meshgrid(grid_points, grid_points, indexing='ij')
+//     distances = np.hypot(rr, cc)
+//     return _gaussian_weight(distances, sigma**2, dtype=dtype).ravel()
+
+
+
+
+fn color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
+
+    let v = (0..bins as i32).collect::<Vec<i32>>();
+    let step_size = max_value / bins as f32;
+    let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
+    let gauss_weights = values.iter()
+	.map(|&x| (
+	    (2.0 * f32::consts::PI).sqrt() * sigma) * gaussian(x as f32, sigma)
+	)
+	.collect::<Vec<_>>();
+
+    gauss_weights
+}
+
+
+
 /// Some documentation comment
 pub fn bilateral_filter(image: &GrayImage ) -> Image<Luma<u8>> {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
     
     println!("\nExecuting bilateral filter!\n");
+
+    let bins = 25;
+    let sigma = 50.0;
+    let max_value = 256.0;
+    let hi = color_lut(bins, sigma, max_value);
+
+    println!("\n{:?}", hi);
+
 
     return out
 }
