@@ -652,7 +652,7 @@ fn test_bilateral_filter() {
 
     fn bilat_filt(image: &GrayImage) -> GrayImage {
 	// use skimage.restoration.denoise_bilateral defaults
-	let sigma_color: f32 = 37.7; // use std of image. how to get the damn std of the imag?? TODO
+	let sigma_color: f32 = 37.731749596413444; // use std of image. how to get the damn std of the imag?? TODO
 	let sigma_spatial: f32 = 1.0;
 	let win_size = max(5, (2 * (3. * sigma_spatial).ceil() as i32) + 1) as u32;
 	let n_bins: u32 = 10000;
@@ -673,10 +673,10 @@ fn test_bilateral_filter() {
     actual.save(Path::new(INPUT_DIR).join(img_save_name)).unwrap();
 
     //// Currently fails due to unknown reasons. Border cases?
-    // compare_to_truth_with_tolerance(
-	// "lumaphant.png", 
-	// "lumaphant_bilat_filt_skimage_mode_edge.png",
-	// bilat_filt, 
-	// 2
-    // )
+    compare_to_truth_with_tolerance(
+	"lumaphant.png", 
+	"lumaphant_bilat_filt_skimage_mode_edge.png",
+	bilat_filt, 
+	20
+    )
 }

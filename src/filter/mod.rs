@@ -108,11 +108,10 @@ pub fn bilateral_filter(
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
     
-    println!("\nExecuting bilateral filter!\n");
-
-    let max_value = 255.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
+    let max_value = 234.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
+    let max_color_lut_bin = (n_bins - 1) as usize;
 
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
 
@@ -131,14 +130,14 @@ pub fn bilateral_filter(
 		    let win_col_abs = min(n_cols - 1, max(0, win_col_abs) as u32); // Wrapping mode: Edge
 		    let kc = win_col + win_extent;
 
-		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
-
 		    let range_lut_bin = kr * (win_size as i32) + kc;
 		    let range_weight = range_lut[range_lut_bin as usize];
 
+		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
 		    let color_dist = abs(win_center_val as i32 - val as i32);
-		    let color_lut_bin = color_dist as f32 * color_dist_scale;
-		    let color_weight = color_lut[color_lut_bin as usize];
+		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
+		    let color_lut_bin = min(color_lut_bin, max_color_lut_bin);
+		    let color_weight = color_lut[color_lut_bin];
 
 		    let weight = range_weight * color_weight;
 
