@@ -672,10 +672,11 @@ fn test_bilateral_filter() {
     let img_save_name = "lumaphant_bilat_filt.png";
     actual.save(Path::new(INPUT_DIR).join(img_save_name)).unwrap();
 
+    //// Currently fails due to unknown reasons. Border cases?
     // compare_to_truth_with_tolerance(
-    // 	"lumaphant.png", 
-    // 	"lumaphant_bilat_filt_skimage_defaults.png",
-    // 	bilat_filt, 
-    // 	2
+	// "lumaphant.png", 
+	// "lumaphant_bilat_filt_skimage_mode_edge.png",
+	// bilat_filt, 
+	// 2
     // )
 }

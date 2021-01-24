@@ -570,6 +570,15 @@ mod tests {
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
+    #[bench]
+    fn bench_bilateral_filter(b: &mut Bencher) {
+	let image = gray_bench_image(500, 500);
+	b.iter(|| {
+        let filtered = bilateral_filter(&image, 6, 50., 1., 1000);
+        black_box(filtered);
+	});
+    }
+
     #[test]
     fn test_box_filter_handles_empty_images() {
         let _ = box_filter(&GrayImage::new(0, 0), 3, 3);
