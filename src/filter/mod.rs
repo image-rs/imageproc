@@ -98,58 +98,57 @@ fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
 
 /// Some documentation comment
 /// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
-pub fn bilateral_filter(image: &GrayImage ) -> Image<Luma<u8>> {
+pub fn bilateral_filter(
+    image: &GrayImage, 
+    max_value: f32,
+    win_size: u32,
+    sigma_color: f32, 
+    sigma_spatial: f32,  
+    n_bins: u32
+) -> Image<Luma<u8>> {
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
     
     println!("\nExecuting bilateral filter!\n");
 
-    // let n_bins = 1000;
-    // let sigma_color = 50.0;
-    // let max_value = 255.0;
-    // let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
-    // let color_dist_scale = n_bins as f32 / max_value;
+    let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
+    let color_dist_scale = n_bins as f32 / max_value;
 
-    let sigma_spatial = 2.0;
-    let win_size = 5;
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
-    println!("\n{:?}", range_lut);
 
+    let win_extent = ((win_size - 1) / 2) as i32;
+    for row in 0..n_rows {
+        for col in 0..n_cols {
+	    let mut total_values = 0.0;
+	    let mut total_weight = 0.0;
+	    let win_center_val = image.get_pixel(col, row)[0];
+	    for win_row in -win_extent..win_extent + 1 {
+		let win_row_abs = row as i32 + win_row;
+		let kr = win_row + win_extent;
+		for win_col in -win_extent..win_extent + 1 {
+		    let win_col_abs = col as i32 + win_col;
+		    let kc = win_col + win_extent;
 
-    // let win_size = 11;
+		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
 
-    // let win_extent: i32 = (win_size - 1) / 2;
-    // let win_range = 0..win_size; //-win_extent..win_extent + 1;
-    // for row in 0..n_rows {
-    //     for col in 0..n_cols {
-    // 	    let mut total_weight = 0.0;
-    // 	    let win_center_val = image.get_pixel(col, row)[0];
+		    let range_lut_bin = kr * (win_size as i32) + kc;
+		    let range_weight = range_lut[range_lut_bin as usize];
 
-    // 	    for win_row in win_range {
+		    let color_dist = abs(win_center_val as i32 - val as i32);
+		    let color_lut_bin = color_dist as f32 * color_dist_scale;
+		    let color_weight = color_lut[color_lut_bin as usize];
 
-    // 		let win_row_abs = row + (win_row - win_extent) as u32;
+		    let weight = range_weight * color_weight;
 
-    // 		for win_col_rel in win_range {
-    // 		    let win_col_abs = col + win_col_rel as u32;
-		    
-    // 		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
+		    total_values += val as f32 * weight;
+		    total_weight += weight;
 
-    // 		    let color_dist = abs(win_center_val - val);
-    // 		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
-    // 		    let color_weight = color_lut[color_lut_bin];
-
-		    // let range_dist = range_lut[];
-
-
-
-	// 	}
-	//     }
-	// }
-    // }
-
-    // out.put_pixel(x, y, Luma([val as u8]));
-
-    return out
+		}
+	    }
+	    out.put_pixel(col, row, Luma([(total_values / total_weight) as u8]));
+	}
+    }
+    out
 }
 
 
@@ -571,7 +570,20 @@ mod tests {
 
     #[test]
     fn test_bilateral_filter() {
-	let _ = bilateral_filter(&GrayImage::new(0, 0));
+	let image = &GrayImage::new(1, 0);
+	let max_value: f32 = 255.0;
+	let win_size: u32 = 10;
+	let sigma_color: f32 = 50.0;
+	let sigma_spatial: f32 = 10.0;
+	let n_bins: u32 = 100;
+	let out = bilateral_filter(
+	    image,
+	    max_value,
+	    win_size,
+	    sigma_color,
+	    sigma_spatial,
+	    n_bins
+	);
     }
 
 
