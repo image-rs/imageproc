@@ -21,12 +21,13 @@ use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rg
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
-    filter::{gaussian_blur_f32, sharpen3x3},
+    filter::{gaussian_blur_f32, sharpen3x3, bilateral_filter},
     geometric_transformations::{rotate_about_center, warp, Interpolation, Projection},
     gradients,
     utils::load_image_or_panic,
 };
 use std::{env, f32, path::Path};
+use std::cmp::{max, min};
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &'static str = "./tests/data";
@@ -643,4 +644,30 @@ fn test_hough_line_detection() {
     let lines_image = draw_polar_lines(&color_edges, &lines, green);
 
     compare_to_truth_image(&lines_image, "hough_lines.png");
+}
+
+#[test]
+fn test_bilateral_filter() {
+
+    fn bilat_filt(image: &GrayImage) -> GrayImage {
+	// use skimage.restoration.denoise_bilateral defaults
+	let sigma_color: f32 = 50.0; // use std of image. how to get the damn std of the imag?? TODO
+	let sigma_spatial: f32 = 1.0;
+	let win_size = max(5, (2 * (3. * sigma_spatial).ceil() as i32) + 1) as u32;
+	let n_bins: u32 = 10000;
+	bilateral_filter(
+	    image,
+	    win_size,
+	    sigma_color,
+	    sigma_spatial,
+	    n_bins
+	)
+    }
+
+    compare_to_truth_with_tolerance(
+	"lumaphant.png", 
+	"lumaphant_bilat_filt.png", 
+	bilat_filt, 
+	2
+    )
 }

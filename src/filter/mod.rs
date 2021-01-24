@@ -99,8 +99,7 @@ fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
 /// Some documentation comment
 /// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
 pub fn bilateral_filter(
-    image: &GrayImage, 
-    max_value: f32,
+    image: &GrayImage,
     win_size: u32,
     sigma_color: f32, 
     sigma_spatial: f32,  
@@ -111,6 +110,7 @@ pub fn bilateral_filter(
     
     println!("\nExecuting bilateral filter!\n");
 
+    let max_value = 255.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
 
@@ -124,9 +124,11 @@ pub fn bilateral_filter(
 	    let win_center_val = image.get_pixel(col, row)[0];
 	    for win_row in -win_extent..win_extent + 1 {
 		let win_row_abs = row as i32 + win_row;
+		let win_row_abs = min(n_rows - 1, max(0, win_row_abs) as u32); // Wrapping mode: Edge
 		let kr = win_row + win_extent;
 		for win_col in -win_extent..win_extent + 1 {
 		    let win_col_abs = col as i32 + win_col;
+		    let win_col_abs = min(n_cols - 1, max(0, win_col_abs) as u32); // Wrapping mode: Edge
 		    let kc = win_col + win_extent;
 
 		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
@@ -567,25 +569,6 @@ mod tests {
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
-
-    #[test]
-    fn test_bilateral_filter() {
-	let image = &GrayImage::new(1, 0);
-	let max_value: f32 = 255.0;
-	let win_size: u32 = 10;
-	let sigma_color: f32 = 50.0;
-	let sigma_spatial: f32 = 10.0;
-	let n_bins: u32 = 100;
-	let out = bilateral_filter(
-	    image,
-	    max_value,
-	    win_size,
-	    sigma_color,
-	    sigma_spatial,
-	    n_bins
-	);
-    }
-
 
     #[test]
     fn test_box_filter_handles_empty_images() {
