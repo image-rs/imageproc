@@ -11,7 +11,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::Num;
+use num::{Num, abs, pow};
 
 use crate::math::cast;
 use conv::ValueInto;
@@ -19,30 +19,6 @@ use std::cmp::{max, min};
 use std::f32;
 
 
-
-
-
-
-// def _gaussian_weight(array, sigma_squared, *, dtype=float):
-//     """Helping function. Define a Gaussian weighting from array and
-//     sigma_square.
-//     Parameters
-//     ----------
-//     array : ndarray
-//         Input array.
-//     sigma_squared : float
-//         The squared standard deviation used in the filter.
-//     dtype : data type object, optional (default : float)
-//         The type and size of the data to be returned.
-//     Returns
-//     -------
-//     gaussian : ndarray
-//         The input array filtered by the Gaussian.
-//     """
-//     return np.exp(-0.5 * (array ** 2  / sigma_squared), dtype=dtype)
-
-
-// def _compute_color_lut(bins, sigma, max_value, *, dtype=float):
 //     """Helping function. Define a lookup table containing Gaussian filter
 //     values using the color distance sigma.
 //     Parameters
@@ -59,18 +35,24 @@ use std::f32;
 //         deviation of the ``image`` will be used.
 //     max_value : float
 //         Maximum value of the input image.
-//     dtype : data type object, optional (default : float)
-//         The type and size of the data to be returned.
 //     Returns
 //     -------
 //     color_lut : ndarray
 //         Lookup table for the color distance sigma.
-//     """
-//     values = np.linspace(0, max_value, bins, endpoint=False)
-//     return _gaussian_weight(values, sigma**2, dtype=dtype)
+fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
 
+    let v = (0..bins as i32).collect::<Vec<i32>>();
+    let step_size = max_value / bins as f32;
+    let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
+    let gauss_weights = values.iter()
+	.map(|&x|
+	    (2.0 * f32::consts::PI).sqrt() * sigma * gaussian(x, sigma)
+	)
+	.collect::<Vec<_>>();
 
-// def _compute_spatial_lut(win_size, sigma, *, dtype=float):
+    gauss_weights
+}
+
 //     """Helping function. Define a lookup table containing Gaussian filter
 //     values using the spatial sigma.
 //     Parameters
@@ -82,51 +64,90 @@ use std::f32;
 //     sigma : float
 //         Standard deviation for range distance. A larger value results in
 //         averaging of pixels with larger spatial differences.
-//     dtype : data type object
-//         The type and size of the data to be returned.
 //     Returns
 //     -------
 //     spatial_lut : ndarray
 //         Lookup table for the spatial sigma.
-//     """
-//     grid_points = np.arange(-win_size // 2, win_size // 2 + 1)
-//     rr, cc = np.meshgrid(grid_points, grid_points, indexing='ij')
-//     distances = np.hypot(rr, cc)
-//     return _gaussian_weight(distances, sigma**2, dtype=dtype).ravel()
+fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
 
+    let win_start = (-(win_size as f32) / 2.0).floor() as i32;
+    let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
+    let win_range = win_start..win_end;
 
+    let v = win_range.collect::<Vec<i32>>();
+    let rr: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
 
-
-fn color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-
-    let v = (0..bins as i32).collect::<Vec<i32>>();
-    let step_size = max_value / bins as f32;
-    let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
-    let gauss_weights = values.iter()
-	.map(|&x| (
-	    (2.0 * f32::consts::PI).sqrt() * sigma) * gaussian(x as f32, sigma)
+    let mut cc = Vec::new();
+    let win_range = win_start..win_end;
+    for i in win_range {
+	cc.append(&mut vec![i; win_size as usize]);
+    }
+    
+    let mut gauss_weights = Vec::new();
+    let it = rr.iter().zip(cc.iter());
+    for (r, c) in it {
+	let dist = f32::sqrt(pow(**r as f32, 2) + pow(*c as f32, 2));
+	gauss_weights.push(
+	    (2.0 * f32::consts::PI).sqrt() * sigma * gaussian(dist, sigma)
 	)
-	.collect::<Vec<_>>();
+    }
 
     gauss_weights
 }
-
-
+    
 
 /// Some documentation comment
+/// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
 pub fn bilateral_filter(image: &GrayImage ) -> Image<Luma<u8>> {
-    let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let (n_cols, n_rows) = image.dimensions();
+    let mut out = ImageBuffer::new(n_cols, n_rows);
     
     println!("\nExecuting bilateral filter!\n");
 
-    let bins = 25;
-    let sigma = 50.0;
-    let max_value = 256.0;
-    let hi = color_lut(bins, sigma, max_value);
+    // let n_bins = 1000;
+    // let sigma_color = 50.0;
+    // let max_value = 255.0;
+    // let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
+    // let color_dist_scale = n_bins as f32 / max_value;
 
-    println!("\n{:?}", hi);
+    let sigma_spatial = 2.0;
+    let win_size = 5;
+    let range_lut = compute_spatial_lut(win_size, sigma_spatial);
+    println!("\n{:?}", range_lut);
 
+
+    // let win_size = 11;
+
+    // let win_extent: i32 = (win_size - 1) / 2;
+    // let win_range = 0..win_size; //-win_extent..win_extent + 1;
+    // for row in 0..n_rows {
+    //     for col in 0..n_cols {
+    // 	    let mut total_weight = 0.0;
+    // 	    let win_center_val = image.get_pixel(col, row)[0];
+
+    // 	    for win_row in win_range {
+
+    // 		let win_row_abs = row + (win_row - win_extent) as u32;
+
+    // 		for win_col_rel in win_range {
+    // 		    let win_col_abs = col + win_col_rel as u32;
+		    
+    // 		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
+
+    // 		    let color_dist = abs(win_center_val - val);
+    // 		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
+    // 		    let color_weight = color_lut[color_lut_bin];
+
+		    // let range_dist = range_lut[];
+
+
+
+	// 	}
+	//     }
+	// }
+    // }
+
+    // out.put_pixel(x, y, Luma([val as u8]));
 
     return out
 }
