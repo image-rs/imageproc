@@ -22,7 +22,7 @@ pub use self::line::{
 };
 
 mod polygon;
-pub use self::polygon::{draw_convex_polygon, draw_convex_polygon_mut, Point};
+pub use self::polygon::{draw_polygon, draw_polygon_mut};
 
 mod rect;
 pub use self::rect::{
@@ -30,7 +30,7 @@ pub use self::rect::{
 };
 
 mod text;
-pub use self::text::{draw_text, draw_text_mut};
+pub use self::text::{draw_text, draw_text_mut, text_size};
 
 // Set pixel at (x, y) to color if this point lies within image bounds,
 // otherwise do nothing.

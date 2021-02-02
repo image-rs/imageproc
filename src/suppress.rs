@@ -112,7 +112,7 @@ where
     T: Position + Score + Copy,
 {
     let mut ordered_ts = ts.to_vec();
-    ordered_ts.sort_by(|c, d| (c.y(), c.x()).cmp(&(d.y(), d.x())));
+    ordered_ts.sort_by_key(|&c| (c.y(), c.x()));
     let height = match ordered_ts.last() {
         Some(t) => t.y(),
         None => 0,

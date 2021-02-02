@@ -55,6 +55,12 @@ impl Projection {
         })
     }
 
+    /// Combine the transformation with another one. The resulting transformation is equivalent to
+    /// applying this transformation followed by the `other` transformation.
+    pub fn and_then(self, other: Projection) -> Projection {
+        other * self
+    }
+
     /// A translation by (tx, ty).
     #[rustfmt::skip]
     pub fn translate(tx: f32, ty: f32) -> Projection {
@@ -76,8 +82,7 @@ impl Projection {
     /// A clockwise rotation around the top-left corner of the image by theta radians.
     #[rustfmt::skip]
     pub fn rotate(theta: f32) -> Projection {
-        let s = theta.sin();
-        let c = theta.cos();
+        let (s, c) = theta.sin_cos();
         Projection {
             transform: [
                   c,  -s, 0.0,
@@ -553,8 +558,7 @@ fn normalize(mx: [f32; 9]) -> [f32; 9] {
 
 // TODO: write me in f64
 fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
-    let (t00, t01, t02, t10, t11, t12, t20, t21, t22) =
-        (t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8]);
+    let [t00, t01, t02, t10, t11, t12, t20, t21, t22] = t;
 
     let m00 = t11 * t22 - t12 * t21;
     let m01 = t10 * t22 - t12 * t20;
@@ -584,21 +588,18 @@ fn try_inverse(t: &[f32; 9]) -> Option<[f32; 9]> {
 }
 
 fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
-    let (a11, a12, a13, a21, a22, a23, a31, a32, a33) =
-        (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
-    let (b11, b12, b13, b21, b22, b23, b31, b32, b33) =
-        (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8]);
-
+    let [a00, a01, a02, a10, a11, a12, a20, a21, a22] = a;
+    let [b00, b01, b02, b10, b11, b12, b20, b21, b22] = b;
     [
-        a11 * b11 + a12 * b21 + a13 * b31,
-        a11 * b12 + a12 * b22 + a13 * b32,
-        a11 * b13 + a12 * b23 + a13 * b33,
-        a21 * b11 + a22 * b21 + a23 * b31,
-        a21 * b12 + a22 * b22 + a23 * b32,
-        a21 * b13 + a22 * b23 + a23 * b33,
-        a31 * b11 + a32 * b21 + a33 * b31,
-        a31 * b12 + a32 * b22 + a33 * b32,
-        a31 * b13 + a32 * b23 + a33 * b33,
+        a00 * b00 + a01 * b10 + a02 * b20,
+        a00 * b01 + a01 * b11 + a02 * b21,
+        a00 * b02 + a01 * b12 + a02 * b22,
+        a10 * b00 + a11 * b10 + a12 * b20,
+        a10 * b01 + a11 * b11 + a12 * b21,
+        a10 * b02 + a11 * b12 + a12 * b22,
+        a20 * b00 + a21 * b10 + a22 * b20,
+        a20 * b01 + a21 * b11 + a22 * b21,
+        a20 * b02 + a21 * b12 + a22 * b22,
     ]
 }
 

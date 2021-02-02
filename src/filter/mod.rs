@@ -111,7 +111,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         P: Pixel + 'static,
         <P as Pixel>::Subpixel: ValueInto<K>,
         Q: Pixel + 'static,
-        F: FnMut(&mut Q::Subpixel, K) -> (),
+        F: FnMut(&mut Q::Subpixel, K),
     {
         let (width, height) = image.dimensions();
         let mut out = Image::<Q>::new(width, height);
