@@ -8,7 +8,7 @@
 //! $ REGENERATE=1 cargo test
 //! ```
 //!
-//! [caltech256 dataset]: http://authors.library.caltech.edu/7694/
+//! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
 #![feature(test)]
 #![feature(unboxed_closures)]

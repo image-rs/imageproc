@@ -180,7 +180,7 @@ unsafe fn check(
 /// Uses the algorithm from [Distance Transforms of Sampled Functions] to achieve time linear
 /// in the size of the image.
 ///
-/// [Distance Transforms of Sampled Functions]: http://www.cs.cornell.edu/~dph/papers%5Cdt.pdf
+/// [Distance Transforms of Sampled Functions]: https://www.cs.cornell.edu/~dph/papers/dt.pdf
 pub fn euclidean_squared_distance_transform(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
     let (width, height) = image.dimensions();
     let mut result = ImageBuffer::new(width, height);
