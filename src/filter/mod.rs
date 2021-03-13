@@ -131,9 +131,6 @@ pub fn bilateral_filter(
 
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
 
-    // println!("\n{:?}", range_lut);
-    println!("\n{:?}", color_lut);
-
     let win_extent = ((win_size - 1) / 2) as i32;
     for row in 0..n_rows {
         for col in 0..n_cols {
