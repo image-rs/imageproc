@@ -95,6 +95,22 @@ fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
     gauss_weights
 }
     
+//// Partial working on working for color image
+// pub fn bilateral_filter<P>(
+//     image: &Image<P>,
+//     win_size: u32,
+//     sigma_color: f32, 
+//     sigma_spatial: f32,  
+//     n_bins: u32
+// ) -> Image<P> 
+// where
+//     P: Pixel<Subpixel = u8> + 'static,
+// {
+//     let n_chan = P::CHANNEL_COUNT;
+//     let (n_cols, n_rows) = image.dimensions();
+//     // let mut out = ImageBuffer::new(n_cols, n_rows);
+//     let mut out = Image::<P>::new(n_cols, n_rows);
+
 
 /// Some documentation comment
 /// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
@@ -108,7 +124,7 @@ pub fn bilateral_filter(
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
     
-    let max_value = 234.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
+    let max_value = 255.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_lut_bin = (n_bins - 1) as usize;

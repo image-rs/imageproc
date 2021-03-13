@@ -652,10 +652,10 @@ fn test_bilateral_filter() {
 
     fn bilat_filt(image: &GrayImage) -> GrayImage {
 	// use skimage.restoration.denoise_bilateral defaults
-	let sigma_color: f32 = 37.731749596413444; // use std of image. how to get the damn std of the imag?? TODO
-	let sigma_spatial: f32 = 1.0;
-	let win_size = max(5, (2 * (3. * sigma_spatial).ceil() as i32) + 1) as u32;
-	let n_bins: u32 = 10000;
+	let sigma_color: f32 = 10.0;
+	let sigma_spatial: f32 = 2.0;
+	let win_size = (2 * (3. * sigma_spatial).ceil() as u32) + 1;
+	let n_bins: u32 = 255;
 	bilateral_filter(
 	    image,
 	    win_size,
