@@ -46,7 +46,7 @@ fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
     let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
     let gauss_weights = values.iter()
 	.map(|&x|
-	    (2.0 * f32::consts::PI).sqrt() * sigma * gaussian(x, sigma)
+	    (-x.powi(2) / (2.0 * sigma.powi(2))).exp()
 	)
 	.collect::<Vec<_>>();
 
