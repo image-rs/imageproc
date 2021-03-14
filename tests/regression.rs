@@ -653,9 +653,9 @@ fn test_bilateral_filter() {
     fn bilat_filt(image: &GrayImage) -> GrayImage {
 	let sigma_color: f32 = 20.0;
 	let sigma_spatial: f32 = 2.0;
-	let radius: f32 = 5.0;
-	let win_size = (radius * 2. + 1.) as u32;
 	let n_bins: u32 = 255;
+	let radius: f32 = 3. * sigma_spatial;
+	let win_size = (radius * 2. + 1.) as u32;
 	bilateral_filter(
 	    image,
 	    win_size,
@@ -666,12 +666,12 @@ fn test_bilateral_filter() {
     }
 
     // run func and save result
-    // let input_file_name = "lumaphant.png";
-    // let input_file_path = Path::new(INPUT_DIR).join(input_file_name);
-    // let input = ImageBuffer::<Luma<u8>, Vec<u8>>::from_dynamic(&load_image_or_panic(input_file_path));
-    // let actual: ImageBuffer<Luma<u8>, Vec<u8>> = bilat_filt.call((&input,));
-    // let img_save_name = "lumaphant_bilateral.png";
-    // actual.save(Path::new(INPUT_DIR).join(img_save_name)).unwrap();
+    let input_file_name = "lumaphant.png";
+    let input_file_path = Path::new(INPUT_DIR).join(input_file_name);
+    let input = ImageBuffer::<Luma<u8>, Vec<u8>>::from_dynamic(&load_image_or_panic(input_file_path));
+    let actual: ImageBuffer<Luma<u8>, Vec<u8>> = bilat_filt.call((&input,));
+    let img_save_name = "lumaphant_bilateral.png";
+    actual.save(Path::new(INPUT_DIR).join(img_save_name)).unwrap();
 
     // note this will run the op a second time. I'm doin this because i can't get 
     // compare_to_truth_image_with_tolerance working. wrong input type.
@@ -679,7 +679,7 @@ fn test_bilateral_filter() {
 	"lumaphant.png", 
 	"lumaphant_bilateral.png",
 	bilat_filt, 
-	2
+	10
     )
 
 }

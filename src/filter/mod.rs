@@ -88,7 +88,7 @@ fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
     for (r, c) in it {
 	let dist = f32::sqrt(pow(**r as f32, 2) + pow(*c as f32, 2));
 	gauss_weights.push(
-	    (2.0 * f32::consts::PI).sqrt() * sigma * gaussian(dist, sigma)
+	    (-dist.powi(2) / (2.0 * sigma.powi(2))).exp()
 	)
     }
 
@@ -125,7 +125,6 @@ pub fn bilateral_filter(
     let mut out = ImageBuffer::new(n_cols, n_rows);
    
     let max_value = *image.iter().max().unwrap() as f32;
-    println!("\n{:?}", max_value);
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_lut_bin = (n_bins - 1) as usize;
@@ -152,7 +151,7 @@ pub fn bilateral_filter(
 
 		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
 		    let color_dist = abs(win_center_val as i32 - val as i32);
-		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
+		    let color_lut_bin = (color_dist as f32 * color_dist_scale).round() as usize;
 		    let color_lut_bin = min(color_lut_bin, max_color_lut_bin);
 		    let color_weight = color_lut[color_lut_bin];
 
@@ -163,7 +162,8 @@ pub fn bilateral_filter(
 
 		}
 	    }
-	    out.put_pixel(col, row, Luma([(total_values / total_weight) as u8]));
+	    let new_val = (total_values / total_weight).round() as u8;
+	    out.put_pixel(col, row, Luma([new_val]));
 	}
     }
     out
