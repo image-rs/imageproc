@@ -123,8 +123,9 @@ pub fn bilateral_filter(
 ) -> Image<Luma<u8>> {
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
-    
-    let max_value = 234.0; // HOW TO GET THE DAMN MAX OF THE IMAGE? TODO
+   
+    let max_value = *image.iter().max().unwrap() as f32;
+    println!("\n{:?}", max_value);
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_lut_bin = (n_bins - 1) as usize;
