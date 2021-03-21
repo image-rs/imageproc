@@ -17,6 +17,7 @@ use crate::math::cast;
 use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
+use itertools::Itertools;
 
 
 //     """Helping function. Define a lookup table containing Gaussian filter
@@ -75,26 +76,37 @@ fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
     let win_range = win_start..win_end;
 
     let v = win_range.collect::<Vec<i32>>();
-    let rr: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
+    let cc: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
 
-    let mut cc = Vec::new();
+    let mut rr = Vec::new();
     let win_range = win_start..win_end;
     for i in win_range {
-	cc.append(&mut vec![i; win_size as usize]);
+	rr.append(&mut vec![i; (win_size + 1) as usize]);
     }
     
-    let mut gauss_weights = Vec::new();
+    let mut distances = Vec::new();
     let it = rr.iter().zip(cc.iter());
     for (r, c) in it {
-	let dist = f32::sqrt(pow(**r as f32, 2) + pow(*c as f32, 2));
-	gauss_weights.push(
-	    (-dist.powi(2) / (2.0 * sigma.powi(2))).exp()
-	)
+	let dist = f32::sqrt(pow(*r as f32, 2) + pow(**c as f32, 2));
+	distances.push(dist);
+    }
+
+    let mut gauss_weights = Vec::new();
+    let sigma_squared = sigma.powi(2);
+    for dist in distances.iter() {
+	let gw = guassian_weight(*dist, sigma_squared);
+	gauss_weights.push(gw)
     }
 
     gauss_weights
 }
     
+
+fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
+    return (-0.5 * x.powi(2) / sigma_squared).exp()
+}
+
+
 //// Partial working on working for color image
 // pub fn bilateral_filter<P>(
 //     image: &Image<P>,
@@ -130,6 +142,8 @@ pub fn bilateral_filter(
     let max_color_lut_bin = (n_bins - 1) as usize;
 
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
+
+    println!("\n{:+e}", range_lut[160..170].iter().format(", "));
 
     let win_extent = ((win_size - 1) / 2) as i32;
     for row in 0..n_rows {
