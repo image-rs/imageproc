@@ -34,6 +34,20 @@ pub fn bilateral_filter(
 	return (-0.5 * x.powi(2) / sigma_squared).exp()
     }
 
+    fn win_coords(win_size: u32) -> (Vec<i32>, Vec<i32>) {
+	let win_start = (-(win_size as f32) / 2.0).floor() as i32;
+	let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
+	let win_range = win_start..win_end;
+	let v = win_range.collect::<Vec<i32>>();
+	let cc: Vec<i32> = v.iter().cycle().take(v.len() * v.len()).into_iter().cloned().collect();
+	let mut rr = Vec::new();
+	let win_range = win_start..win_end;
+	for i in win_range {
+	    rr.append(&mut vec![i; (win_size + 1) as usize]);
+	}
+	return (rr, cc)
+    }
+
     fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
 	let v = (0..bins as i32).collect::<Vec<i32>>();
 	let step_size = max_value / bins as f32;
@@ -46,20 +60,11 @@ pub fn bilateral_filter(
     }
 
     fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
-	let win_start = (-(win_size as f32) / 2.0).floor() as i32;
-	let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
-	let win_range = win_start..win_end;
-	let v = win_range.collect::<Vec<i32>>();
-	let cc: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
-	let mut rr = Vec::new();
-	let win_range = win_start..win_end;
-	for i in win_range {
-	    rr.append(&mut vec![i; (win_size + 1) as usize]);
-	}
+	let (rr, cc) = win_coords(win_size);
 	let mut distances = Vec::new();
 	let it = rr.iter().zip(cc.iter());
 	for (r, c) in it {
-	    let dist = f32::sqrt(pow(*r as f32, 2) + pow(**c as f32, 2));
+	    let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
 	    distances.push(dist);
 	}
 	let mut gauss_weights = Vec::new();
