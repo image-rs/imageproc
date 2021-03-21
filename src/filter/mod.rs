@@ -20,110 +20,6 @@ use std::f32;
 use itertools::Itertools;
 
 
-//     """Helping function. Define a lookup table containing Gaussian filter
-//     values using the color distance sigma.
-//     Parameters
-//     ----------
-//      bins : int
-//         Number of discrete values for Gaussian weights of color filtering.
-//         A larger value results in improved accuracy.
-//     sigma : float
-//         Standard deviation for grayvalue/color distance (radiometric
-//         similarity). A larger value results in averaging of pixels with larger
-//         radiometric differences. Note, that the image will be converted using
-//         the `img_as_float` function and thus the standard deviation is in
-//         respect to the range ``[0, 1]``. If the value is ``None`` the standard
-//         deviation of the ``image`` will be used.
-//     max_value : float
-//         Maximum value of the input image.
-//     Returns
-//     -------
-//     color_lut : ndarray
-//         Lookup table for the color distance sigma.
-fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-
-    let v = (0..bins as i32).collect::<Vec<i32>>();
-    let step_size = max_value / bins as f32;
-    let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
-    let gauss_weights = values.iter()
-	.map(|&x|
-	    (-x.powi(2) / (2.0 * sigma.powi(2))).exp()
-	)
-	.collect::<Vec<_>>();
-
-    gauss_weights
-}
-
-//     """Helping function. Define a lookup table containing Gaussian filter
-//     values using the spatial sigma.
-//     Parameters
-//     ----------
-//     win_size : int
-//         Window size for filtering.
-//         If win_size is not specified, it is calculated as
-//         ``max(5, 2 * ceil(3 * sigma_spatial) + 1)``.
-//     sigma : float
-//         Standard deviation for range distance. A larger value results in
-//         averaging of pixels with larger spatial differences.
-//     Returns
-//     -------
-//     spatial_lut : ndarray
-//         Lookup table for the spatial sigma.
-fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
-
-    let win_start = (-(win_size as f32) / 2.0).floor() as i32;
-    let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
-    let win_range = win_start..win_end;
-
-    let v = win_range.collect::<Vec<i32>>();
-    let cc: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
-
-    let mut rr = Vec::new();
-    let win_range = win_start..win_end;
-    for i in win_range {
-	rr.append(&mut vec![i; (win_size + 1) as usize]);
-    }
-    
-    let mut distances = Vec::new();
-    let it = rr.iter().zip(cc.iter());
-    for (r, c) in it {
-	let dist = f32::sqrt(pow(*r as f32, 2) + pow(**c as f32, 2));
-	distances.push(dist);
-    }
-
-    let mut gauss_weights = Vec::new();
-    let sigma_squared = sigma.powi(2);
-    for dist in distances.iter() {
-	let gw = guassian_weight(*dist, sigma_squared);
-	gauss_weights.push(gw)
-    }
-
-    gauss_weights
-}
-    
-
-fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
-    return (-0.5 * x.powi(2) / sigma_squared).exp()
-}
-
-
-//// Partial working on working for color image
-// pub fn bilateral_filter<P>(
-//     image: &Image<P>,
-//     win_size: u32,
-//     sigma_color: f32, 
-//     sigma_spatial: f32,  
-//     n_bins: u32
-// ) -> Image<P> 
-// where
-//     P: Pixel<Subpixel = u8> + 'static,
-// {
-//     let n_chan = P::CHANNEL_COUNT;
-//     let (n_cols, n_rows) = image.dimensions();
-//     // let mut out = ImageBuffer::new(n_cols, n_rows);
-//     let mut out = Image::<P>::new(n_cols, n_rows);
-
-
 /// Some documentation comment
 /// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
 pub fn bilateral_filter(
@@ -133,6 +29,48 @@ pub fn bilateral_filter(
     sigma_spatial: f32,  
     n_bins: u32
 ) -> Image<Luma<u8>> {
+
+    fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
+	return (-0.5 * x.powi(2) / sigma_squared).exp()
+    }
+
+    fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
+	let v = (0..bins as i32).collect::<Vec<i32>>();
+	let step_size = max_value / bins as f32;
+	let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
+	let sigma_squared = sigma.powi(2);
+	let gauss_weights = values.iter()
+	    .map(|&x| guassian_weight(x, sigma_squared))
+	    .collect::<Vec<_>>();
+	gauss_weights
+    }
+
+    fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
+	let win_start = (-(win_size as f32) / 2.0).floor() as i32;
+	let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
+	let win_range = win_start..win_end;
+	let v = win_range.collect::<Vec<i32>>();
+	let cc: Vec<&i32> = v.iter().cycle().take(v.len() * v.len()).collect();
+	let mut rr = Vec::new();
+	let win_range = win_start..win_end;
+	for i in win_range {
+	    rr.append(&mut vec![i; (win_size + 1) as usize]);
+	}
+	let mut distances = Vec::new();
+	let it = rr.iter().zip(cc.iter());
+	for (r, c) in it {
+	    let dist = f32::sqrt(pow(*r as f32, 2) + pow(**c as f32, 2));
+	    distances.push(dist);
+	}
+	let mut gauss_weights = Vec::new();
+	let sigma_squared = sigma.powi(2);
+	for dist in distances.iter() {
+	    let gw = guassian_weight(*dist, sigma_squared);
+	    gauss_weights.push(gw)
+	}
+	gauss_weights
+    }
+
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
    
@@ -142,8 +80,6 @@ pub fn bilateral_filter(
     let max_color_lut_bin = (n_bins - 1) as usize;
 
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
-
-    println!("\n{:+e}", range_lut[160..170].iter().format(", "));
 
     let win_extent = ((win_size - 1) / 2) as i32;
     for row in 0..n_rows {
