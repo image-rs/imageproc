@@ -61,17 +61,12 @@ pub fn bilateral_filter(
 
     fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
 	let (rr, cc) = win_coords(win_size);
-	let mut distances = Vec::new();
+	let mut gauss_weights = Vec::new();
 	let it = rr.iter().zip(cc.iter());
+	let sigma_squared = sigma.powi(2);
 	for (r, c) in it {
 	    let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
-	    distances.push(dist);
-	}
-	let mut gauss_weights = Vec::new();
-	let sigma_squared = sigma.powi(2);
-	for dist in distances.iter() {
-	    let gw = guassian_weight(*dist, sigma_squared);
-	    gauss_weights.push(gw)
+	    gauss_weights.push(guassian_weight(dist, sigma_squared));
 	}
 	gauss_weights
     }
@@ -114,7 +109,6 @@ pub fn bilateral_filter(
 
 		    total_values += val as f32 * weight;
 		    total_weight += weight;
-
 		}
 	    }
 	    let new_val = (total_values / total_weight).round() as u8;
