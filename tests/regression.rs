@@ -651,7 +651,7 @@ fn test_hough_line_detection() {
 fn test_bilateral_filter() {
 
     fn bilat_filt(image: &GrayImage) -> GrayImage {
-	let sigma_color: f32 = 5.0;
+	let sigma_color: f32 = 20.0;
 	let sigma_spatial: f32 = 2.0;
 	let n_bins: u32 = 255;
 	let radius: f32 = 3. * sigma_spatial;
@@ -679,7 +679,7 @@ fn test_bilateral_filter() {
 	"lumaphant.png", 
 	"lumaphant_bilateral.png",
 	bilat_filt, 
-	1
+	0
     )
 
 }
