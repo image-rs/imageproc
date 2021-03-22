@@ -101,7 +101,7 @@ pub fn bilateral_filter(
 
 		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
 		    let color_dist = abs(win_center_val as i32 - val as i32);
-		    let color_lut_bin = (color_dist as f32 * color_dist_scale).round() as usize;
+		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
 		    let color_lut_bin = min(color_lut_bin, max_color_lut_bin);
 		    let color_weight = color_lut[color_lut_bin];
 
