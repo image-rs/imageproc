@@ -679,7 +679,7 @@ fn test_bilateral_filter() {
 	"lumaphant.png", 
 	"lumaphant_bilateral.png",
 	bilat_filt, 
-	0
+	1
     )
 
 }
