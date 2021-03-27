@@ -19,8 +19,7 @@ use std::cmp::{max, min};
 use std::f32;
 
 
-/// Some documentation comment
-/// https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/_denoise_cy.pyx
+/// Bilateral filtering of grayscale images.
 pub fn bilateral_filter(
     image: &GrayImage,
     win_size: u32,
@@ -29,10 +28,12 @@ pub fn bilateral_filter(
     n_bins: u32
 ) -> Image<Luma<u8>> {
 
+    /// Un-normalized Gaussian weights for look-up tables.
     fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
 	return (-0.5 * x.powi(2) / sigma_squared).exp()
     }
 
+    /// Effectively a meshgrid command with flattened outputs.
     fn win_coords(win_size: u32) -> (Vec<i32>, Vec<i32>) {
 	let win_start = (-(win_size as f32) / 2.0).floor() as i32;
 	let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
@@ -47,6 +48,7 @@ pub fn bilateral_filter(
 	return (rr, cc)
     }
 
+    /// Create look-up table of Gaussian weights for color dimension.
     fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
 	let v = (0..bins as i32).collect::<Vec<i32>>();
 	let step_size = max_value / bins as f32;
@@ -58,6 +60,7 @@ pub fn bilateral_filter(
 	gauss_weights
     }
 
+    /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
     fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
 	let (rr, cc) = win_coords(win_size);
 	let mut gauss_weights = Vec::new();
