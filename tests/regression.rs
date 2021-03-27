@@ -27,7 +27,6 @@ use imageproc::{
     utils::load_image_or_panic,
 };
 use std::{env, f32, path::Path};
-use std::cmp::{max, min};
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &'static str = "./tests/data";
@@ -121,7 +120,6 @@ fn compare_to_truth_image_with_tolerance<P>(
         assert_pixels_eq_within!(*actual, truth, tol);
     }
 }
-
 
 #[test]
 fn test_rotate_nearest_rgb() {
