@@ -81,38 +81,41 @@ pub fn bilateral_filter(
 
     let range_lut = compute_spatial_lut(win_size, sigma_spatial);
 
-    let win_extent = ((win_size - 1) / 2) as i32;
+    let win_size = win_size as i32;
+    let win_extent = (win_size - 1) / 2;
+    let n_rows = n_rows as i32;
+    let n_cols = n_cols as i32;
     for row in 0..n_rows {
         for col in 0..n_cols {
-	    let mut total_values = 0.0;
-	    let mut total_weight = 0.0;
-	    let win_center_val = image.get_pixel(col, row)[0];
+	    let mut total_values: f32 = 0.;
+	    let mut total_weight: f32 = 0.;
+	    let win_center_val: u8 = image.get_pixel(col as u32, row as u32)[0];
 	    for win_row in -win_extent..win_extent + 1 {
-		let win_row_abs = row as i32 + win_row;
-		let win_row_abs = min(n_rows - 1, max(0, win_row_abs) as u32); // Wrapping mode: Edge
-		let kr = win_row + win_extent;
+		let win_row_abs: i32 = row + win_row;
+		let win_row_abs: i32 = min(n_rows - 1, max(0, win_row_abs)); // Wrapping mode: Edge
+		let kr: i32 = win_row + win_extent;
 		for win_col in -win_extent..win_extent + 1 {
-		    let win_col_abs = col as i32 + win_col;
-		    let win_col_abs = min(n_cols - 1, max(0, win_col_abs) as u32); // Wrapping mode: Edge
-		    let kc = win_col + win_extent;
+		    let win_col_abs: i32 = col + win_col;
+		    let win_col_abs: i32 = min(n_cols - 1, max(0, win_col_abs)); // Wrapping mode: Edge
+		    let kc: i32 = win_col + win_extent;
 
-		    let range_lut_bin = kr * (win_size as i32) + kc;
-		    let range_weight = range_lut[range_lut_bin as usize];
+		    let range_lut_bin: usize = (kr * win_size + kc) as usize;
+		    let range_weight: f32 = range_lut[range_lut_bin];
 
-		    let val = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
-		    let color_dist = abs(win_center_val as i32 - val as i32);
-		    let color_lut_bin = (color_dist as f32 * color_dist_scale) as usize;
-		    let color_lut_bin = min(color_lut_bin, max_color_lut_bin);
-		    let color_weight = color_lut[color_lut_bin];
+		    let val: u8 = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
+		    let color_dist: i32 = abs(win_center_val as i32 - val as i32);
+		    let color_lut_bin: usize = (color_dist as f32 * color_dist_scale) as usize;
+		    let color_lut_bin: usize = min(color_lut_bin, max_color_lut_bin);
+		    let color_weight: f32 = color_lut[color_lut_bin];
 
-		    let weight = range_weight * color_weight;
+		    let weight: f32 = range_weight * color_weight;
 
 		    total_values += val as f32 * weight;
 		    total_weight += weight;
 		}
 	    }
 	    let new_val = (total_values / total_weight).round() as u8;
-	    out.put_pixel(col, row, Luma([new_val]));
+	    out.put_pixel(col as u32, row as u32, Luma([new_val]));
 	}
     }
     out
