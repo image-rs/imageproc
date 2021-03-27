@@ -18,7 +18,6 @@ use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
 
-
 /// Bilateral filtering of grayscale images.
 pub fn bilateral_filter(
     image: &GrayImage,
