@@ -89,7 +89,7 @@ pub fn bilateral_filter(
         for col in 0..n_cols {
 	    let mut total_values: f32 = 0.;
 	    let mut total_weight: f32 = 0.;
-	    let win_center_val: u8 = image.get_pixel(col as u32, row as u32)[0];
+	    let win_center_val: i32 = image.get_pixel(col as u32, row as u32)[0] as i32;
 	    for win_row in -win_extent..win_extent + 1 {
 		let win_row_abs: i32 = row + win_row;
 		let win_row_abs: i32 = min(n_rows - 1, max(0, win_row_abs)); // Wrapping mode: Edge
@@ -103,7 +103,7 @@ pub fn bilateral_filter(
 		    let range_weight: f32 = range_lut[range_lut_bin];
 
 		    let val: u8 = image.get_pixel(win_col_abs as u32, win_row_abs as u32)[0];
-		    let color_dist: i32 = abs(win_center_val as i32 - val as i32);
+		    let color_dist: i32 = abs(win_center_val - val as i32);
 		    let color_lut_bin: usize = (color_dist as f32 * color_dist_scale) as usize;
 		    let color_lut_bin: usize = min(color_lut_bin, max_color_lut_bin);
 		    let color_weight: f32 = color_lut[color_lut_bin];
