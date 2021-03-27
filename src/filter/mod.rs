@@ -11,7 +11,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::{Num, abs, pow};
+use num::{abs, pow, Num};
 
 use crate::math::cast;
 use conv::ValueInto;
@@ -22,59 +22,65 @@ use std::f32;
 pub fn bilateral_filter(
     image: &GrayImage,
     win_size: u32,
-    sigma_color: f32, 
-    sigma_spatial: f32,  
-    n_bins: u32
+    sigma_color: f32,
+    sigma_spatial: f32,
+    n_bins: u32,
 ) -> Image<Luma<u8>> {
-
     /// Un-normalized Gaussian weights for look-up tables.
     fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
-	return (-0.5 * x.powi(2) / sigma_squared).exp()
+        return (-0.5 * x.powi(2) / sigma_squared).exp();
     }
 
     /// Effectively a meshgrid command with flattened outputs.
     fn win_coords(win_size: u32) -> (Vec<i32>, Vec<i32>) {
-	let win_start = (-(win_size as f32) / 2.0).floor() as i32;
-	let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
-	let win_range = win_start..win_end;
-	let v = win_range.collect::<Vec<i32>>();
-	let cc: Vec<i32> = v.iter().cycle().take(v.len() * v.len()).into_iter().cloned().collect();
-	let mut rr = Vec::new();
-	let win_range = win_start..win_end;
-	for i in win_range {
-	    rr.append(&mut vec![i; (win_size + 1) as usize]);
-	}
-	return (rr, cc)
+        let win_start = (-(win_size as f32) / 2.0).floor() as i32;
+        let win_end = (win_size as f32 / 2.0).floor() as i32 + 1;
+        let win_range = win_start..win_end;
+        let v = win_range.collect::<Vec<i32>>();
+        let cc: Vec<i32> = v
+            .iter()
+            .cycle()
+            .take(v.len() * v.len())
+            .into_iter()
+            .cloned()
+            .collect();
+        let mut rr = Vec::new();
+        let win_range = win_start..win_end;
+        for i in win_range {
+            rr.append(&mut vec![i; (win_size + 1) as usize]);
+        }
+        return (rr, cc);
     }
 
     /// Create look-up table of Gaussian weights for color dimension.
     fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-	let v = (0..bins as i32).collect::<Vec<i32>>();
-	let step_size = max_value / bins as f32;
-	let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
-	let sigma_squared = sigma.powi(2);
-	let gauss_weights = values.iter()
-	    .map(|&x| guassian_weight(x, sigma_squared))
-	    .collect::<Vec<_>>();
-	gauss_weights
+        let v = (0..bins as i32).collect::<Vec<i32>>();
+        let step_size = max_value / bins as f32;
+        let values = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
+        let sigma_squared = sigma.powi(2);
+        let gauss_weights = values
+            .iter()
+            .map(|&x| guassian_weight(x, sigma_squared))
+            .collect::<Vec<_>>();
+        gauss_weights
     }
 
     /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
-    fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32>{
-	let (rr, cc) = win_coords(win_size);
-	let mut gauss_weights = Vec::new();
-	let it = rr.iter().zip(cc.iter());
-	let sigma_squared = sigma.powi(2);
-	for (r, c) in it {
-	    let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
-	    gauss_weights.push(guassian_weight(dist, sigma_squared));
-	}
-	gauss_weights
+    fn compute_spatial_lut(win_size: u32, sigma: f32) -> Vec<f32> {
+        let (rr, cc) = win_coords(win_size);
+        let mut gauss_weights = Vec::new();
+        let it = rr.iter().zip(cc.iter());
+        let sigma_squared = sigma.powi(2);
+        for (r, c) in it {
+            let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
+            gauss_weights.push(guassian_weight(dist, sigma_squared));
+        }
+        gauss_weights
     }
 
     let (n_cols, n_rows) = image.dimensions();
     let mut out = ImageBuffer::new(n_cols, n_rows);
-   
+
     let max_value = *image.iter().max().unwrap() as f32;
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
@@ -88,43 +94,43 @@ pub fn bilateral_filter(
     let n_cols = n_cols as i32;
     for row in 0..n_rows {
         for col in 0..n_cols {
-	    let mut total_values: f32 = 0.;
-	    let mut total_weight: f32 = 0.;
-            let win_center_val = unsafe {image.unsafe_get_pixel(col as u32, row as u32)}[0] as i32;
-	    for win_row in -win_extent..win_extent + 1 {
-		let win_row_abs: i32 = row + win_row;
-		let win_row_abs: i32 = min(n_rows - 1, max(0, win_row_abs)); // Wrapping mode: Edge
-		let kr: i32 = win_row + win_extent;
-		for win_col in -win_extent..win_extent + 1 {
-		    let win_col_abs: i32 = col + win_col;
-		    let win_col_abs: i32 = min(n_cols - 1, max(0, win_col_abs)); // Wrapping mode: Edge
-		    let kc: i32 = win_col + win_extent;
+            let mut total_values: f32 = 0.;
+            let mut total_weight: f32 = 0.;
+            let win_center_val =
+                unsafe { image.unsafe_get_pixel(col as u32, row as u32) }[0] as i32;
+            for win_row in -win_extent..win_extent + 1 {
+                let win_row_abs: i32 = row + win_row;
+                let win_row_abs: i32 = min(n_rows - 1, max(0, win_row_abs)); // Wrapping mode: Edge
+                let kr: i32 = win_row + win_extent;
+                for win_col in -win_extent..win_extent + 1 {
+                    let win_col_abs: i32 = col + win_col;
+                    let win_col_abs: i32 = min(n_cols - 1, max(0, win_col_abs)); // Wrapping mode: Edge
+                    let kc: i32 = win_col + win_extent;
 
-		    let range_lut_bin: usize = (kr * win_size + kc) as usize;
-		    let range_weight: f32 = range_lut[range_lut_bin];
+                    let range_lut_bin: usize = (kr * win_size + kc) as usize;
+                    let range_weight: f32 = range_lut[range_lut_bin];
 
-		    let val: i32 = unsafe {
-			image.unsafe_get_pixel(win_col_abs as u32, win_row_abs as u32)
-		    }[0] as i32;
+                    let val: i32 = unsafe {
+                        image.unsafe_get_pixel(win_col_abs as u32, win_row_abs as u32)
+                    }[0] as i32;
 
-		    let color_dist: i32 = abs(win_center_val - val);
-		    let color_lut_bin: usize = (color_dist as f32 * color_dist_scale) as usize;
-		    let color_lut_bin: usize = min(color_lut_bin, max_color_lut_bin);
-		    let color_weight: f32 = color_lut[color_lut_bin];
+                    let color_dist: i32 = abs(win_center_val - val);
+                    let color_lut_bin: usize = (color_dist as f32 * color_dist_scale) as usize;
+                    let color_lut_bin: usize = min(color_lut_bin, max_color_lut_bin);
+                    let color_weight: f32 = color_lut[color_lut_bin];
 
-		    let weight: f32 = range_weight * color_weight;
+                    let weight: f32 = range_weight * color_weight;
 
-		    total_values += val as f32 * weight;
-		    total_weight += weight;
-		}
-	    }
-	    let new_val = (total_values / total_weight).round() as u8;
-	    unsafe {out.unsafe_put_pixel(col as u32, row as u32, Luma([new_val]))};
-	}
+                    total_values += val as f32 * weight;
+                    total_weight += weight;
+                }
+            }
+            let new_val = (total_values / total_weight).round() as u8;
+            unsafe { out.unsafe_put_pixel(col as u32, row as u32, Luma([new_val])) };
+        }
     }
     out
 }
-
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
@@ -544,11 +550,11 @@ mod tests {
 
     #[bench]
     fn bench_bilateral_filter(b: &mut Bencher) {
-	let image = gray_bench_image(500, 500);
-	b.iter(|| {
-        let filtered = bilateral_filter(&image, 6, 50., 1., 1000);
-        black_box(filtered);
-	});
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = bilateral_filter(&image, 6, 50., 1., 1000);
+            black_box(filtered);
+        });
     }
 
     #[test]
