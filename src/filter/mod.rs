@@ -91,11 +91,9 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
         assert!(
             width * height == data.len() as u32,
-            format!(
-                "Invalid kernel len: expecting {}, found {}",
-                width * height,
-                data.len()
-            )
+            "Invalid kernel len: expecting {}, found {}",
+            width * height,
+            data.len()
         );
         Kernel {
             data,
