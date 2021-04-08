@@ -39,8 +39,8 @@ pub fn text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
 pub fn draw_text_mut<'a, C>(
     canvas: &'a mut C,
     color: C::Pixel,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     scale: Scale,
     font: &'a Font<'a>,
     text: &'a str,
@@ -56,8 +56,8 @@ pub fn draw_text_mut<'a, C>(
             let gx = gx as i32 + bb.min.x;
             let gy = gy as i32 + bb.min.y;
 
-            let image_x = gx + x as i32;
-            let image_y = gy + y as i32;
+            let image_x = gx + x;
+            let image_y = gy + y;
 
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
                 let pixel = canvas.get_pixel(image_x as u32, image_y as u32);
@@ -72,8 +72,8 @@ pub fn draw_text_mut<'a, C>(
 pub fn draw_text<'a, I>(
     image: &'a mut I,
     color: I::Pixel,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     scale: Scale,
     font: &'a Font<'a>,
     text: &'a str,
