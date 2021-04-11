@@ -18,16 +18,37 @@ use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
 
-/// Denoise grayscale image using bilateral filtering.
+/// Denoise 8-bit grayscale image using bilateral filtering.
+///
+/// Parameters
+/// ----------
+/// `image` : Grayscale image to be filtered.
+/// `window_size` : Window size for filtering.
+/// `sigma_color` : Standard deviation for grayscale value distance. A larger value results
+///     in averaging of pixels with larger differences in grayscale value.
+/// `sigma_spatial` : Standard deviation for range distance. A larger value results in
+///     averaging of pixels separated by larger distances.
+///
+/// This is a denoising filter designed to preserve edges. It averages pixels based on their spatial
+/// closeness and radiometric similarity [1]. Spatial closeness is measured by the Gaussian function
+/// of the Euclidean distance between two pixels with user-specified standard deviation
+/// (`sigma_spatial`). Radiometric similarity is measured by the Gaussian function of the difference
+/// between two grayscale values with user-specified standard deviation (`sigma_color`).
+///
+/// References
+/// ----------
+///   [1] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
+///        Images." IEEE International Conference on Computer Vision (1998)
+///        839-846. :DOI:`10.1109/ICCV.1998.710815`
+///
 pub fn bilateral_filter(
     image: &GrayImage,
     window_size: u32,
     sigma_color: f32,
     sigma_spatial: f32,
-    n_bins: u32,
 ) -> Image<Luma<u8>> {
     /// Un-normalized Gaussian weights for look-up tables.
-    fn guassian_weight(x: f32, sigma_squared: f32) -> f32 {
+    fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
         return (-0.5 * x.powi(2) / sigma_squared).exp();
     }
 
@@ -60,7 +81,7 @@ pub fn bilateral_filter(
         let sigma_squared = sigma.powi(2);
         let gauss_weights = vals
             .iter()
-            .map(|&x| guassian_weight(x, sigma_squared))
+            .map(|&x| gaussian_weight(x, sigma_squared))
             .collect::<Vec<_>>();
         gauss_weights
     }
@@ -73,7 +94,7 @@ pub fn bilateral_filter(
         let sigma_squared = sigma.powi(2);
         for (r, c) in it {
             let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
-            gauss_weights.push(guassian_weight(dist, sigma_squared));
+            gauss_weights.push(gaussian_weight(dist, sigma_squared));
         }
         gauss_weights
     }
@@ -82,6 +103,7 @@ pub fn bilateral_filter(
     let mut out = ImageBuffer::new(width, height);
 
     let max_value = *image.iter().max().unwrap() as f32;
+    let n_bins: u32 = 255; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_bin = (n_bins - 1) as usize;
@@ -107,7 +129,7 @@ pub fn bilateral_filter(
                     let window_col_abs: i32 = min(width - 1, max(0, window_col_abs)); // Wrapping mode: Edge
                     let kc: i32 = window_col + window_extent;
 
-                    let range_bin: usize = (kr * window_size + kc) as usize;
+                    let range_bin = (kr * window_size + kc) as usize;
                     let range_weight: f32 = range_lut[range_bin];
 
                     let val: i32 = unsafe {
@@ -115,7 +137,7 @@ pub fn bilateral_filter(
                     }[0] as i32;
 
                     let color_dist: i32 = abs(window_center_val - val);
-                    let color_bin: usize = (color_dist as f32 * color_dist_scale) as usize;
+                    let color_bin = (color_dist as f32 * color_dist_scale) as usize;
                     let color_bin: usize = min(color_bin, max_color_bin);
                     let color_weight: f32 = color_lut[color_bin];
 
@@ -552,7 +574,7 @@ mod tests {
     fn bench_bilateral_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let filtered = bilateral_filter(&image, 6, 50., 1., 1000);
+            let filtered = bilateral_filter(&image, 6, 50., 1.);
             black_box(filtered);
         });
     }
