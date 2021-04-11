@@ -55,7 +55,6 @@ pub fn bilateral_filter(
     sigma_color: f32,
     sigma_spatial: f32,
 ) -> Image<Luma<u8>> {
-
     /// Un-normalized Gaussian weights for look-up tables.
     fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
         return (-0.5 * x.powi(2) / sigma_squared).exp();
