@@ -45,7 +45,7 @@ use std::f32;
 /// ----------
 /// ```
 /// use imageproc::filter::bilateral_filter;
-/// imageproc::utils::gray_bench_image;
+/// use imageproc::utils::gray_bench_image;
 /// let image = gray_bench_image(500, 500);
 /// let filtered = bilateral_filter(&image, 10, 10., 3.);
 /// ```
