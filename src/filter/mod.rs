@@ -135,9 +135,7 @@ pub fn bilateral_filter(
                     let kc: i32 = window_col + window_extent;
                     let range_bin = (kr * window_size + kc) as usize;
                     let range_weight: f32 = range_lut[range_bin];
-                    let val: i32 = 
-                        image.get_pixel(window_col_abs as u32, window_row_abs as u32)
-                    [0] as i32;
+                    let val: i32 = image.get_pixel(window_col_abs as u32, window_row_abs as u32)[0] as i32;
                     let color_dist: i32 = abs(window_center_val - val);
                     let color_bin = (color_dist as f32 * color_dist_scale) as usize;
                     let color_bin: usize = min(color_bin, max_color_bin);
