@@ -41,12 +41,21 @@ use std::f32;
 ///        Images." IEEE International Conference on Computer Vision (1998)
 ///        839-846. :DOI:`10.1109/ICCV.1998.710815`
 ///
+/// Examples
+/// ----------
+/// ```
+/// use imageproc::filter::bilateral_filter;
+/// imageproc::utils::gray_bench_image;
+/// let image = gray_bench_image(500, 500);
+/// let filtered = bilateral_filter(&image, 10, 10., 3.);
+/// ```
 pub fn bilateral_filter(
     image: &GrayImage,
     window_size: u32,
     sigma_color: f32,
     sigma_spatial: f32,
 ) -> Image<Luma<u8>> {
+
     /// Un-normalized Gaussian weights for look-up tables.
     fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
         return (-0.5 * x.powi(2) / sigma_squared).exp();
@@ -101,15 +110,12 @@ pub fn bilateral_filter(
 
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
-
     let max_value = *image.iter().max().unwrap() as f32;
     let n_bins: u32 = 255; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_bin = (n_bins - 1) as usize;
-
     let range_lut = compute_spatial_lut(window_size, sigma_spatial);
-
     let window_size = window_size as i32;
     let window_extent = (window_size - 1) / 2;
     let height = height as i32;
@@ -118,37 +124,31 @@ pub fn bilateral_filter(
         for col in 0..width {
             let mut total_val: f32 = 0.;
             let mut total_weight: f32 = 0.;
-            let window_center_val =
-                unsafe { image.unsafe_get_pixel(col as u32, row as u32) }[0] as i32;
+            let window_center_val = image.get_pixel(col as u32, row as u32)[0] as i32;
             for window_row in -window_extent..window_extent + 1 {
                 let window_row_abs: i32 = row + window_row;
-                let window_row_abs: i32 = min(height - 1, max(0, window_row_abs)); // Wrapping mode: Edge
+                let window_row_abs: i32 = min(height - 1, max(0, window_row_abs)); // Wrap to edge.
                 let kr: i32 = window_row + window_extent;
                 for window_col in -window_extent..window_extent + 1 {
                     let window_col_abs: i32 = col + window_col;
-                    let window_col_abs: i32 = min(width - 1, max(0, window_col_abs)); // Wrapping mode: Edge
+                    let window_col_abs: i32 = min(width - 1, max(0, window_col_abs)); // Wrap to edge.
                     let kc: i32 = window_col + window_extent;
-
                     let range_bin = (kr * window_size + kc) as usize;
                     let range_weight: f32 = range_lut[range_bin];
-
-                    let val: i32 = unsafe {
-                        image.unsafe_get_pixel(window_col_abs as u32, window_row_abs as u32)
-                    }[0] as i32;
-
+                    let val: i32 = 
+                        image.get_pixel(window_col_abs as u32, window_row_abs as u32)
+                    [0] as i32;
                     let color_dist: i32 = abs(window_center_val - val);
                     let color_bin = (color_dist as f32 * color_dist_scale) as usize;
                     let color_bin: usize = min(color_bin, max_color_bin);
                     let color_weight: f32 = color_lut[color_bin];
-
                     let weight: f32 = range_weight * color_weight;
-
                     total_val += val as f32 * weight;
                     total_weight += weight;
                 }
             }
             let new_val = (total_val / total_weight).round() as u8;
-            unsafe { out.unsafe_put_pixel(col as u32, row as u32, Luma([new_val])) };
+            out.put_pixel(col as u32, row as u32, Luma([new_val]));
         }
     }
     out
@@ -574,7 +574,7 @@ mod tests {
     fn bench_bilateral_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let filtered = bilateral_filter(&image, 6, 50., 1.);
+            let filtered = bilateral_filter(&image, 10, 10., 3.);
             black_box(filtered);
         });
     }

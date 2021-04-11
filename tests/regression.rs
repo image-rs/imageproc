@@ -648,8 +648,8 @@ fn test_hough_line_detection() {
 #[test]
 fn test_bilateral_filter() {
     fn filter(image: &GrayImage) -> GrayImage {
-        let sigma_color: f32 = 20.0;
-        let sigma_spatial: f32 = 2.0;
+        let sigma_color: f32 = 20.;
+        let sigma_spatial: f32 = 2.;
         let radius: f32 = 3. * sigma_spatial;
         let win_size = (radius * 2. + 1.) as u32;
         bilateral_filter(image, win_size, sigma_color, sigma_spatial)
