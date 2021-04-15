@@ -131,7 +131,7 @@ impl Projection {
     /// Calculates a projection from a set of four control point pairs.
     pub fn from_control_points(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Projection> {
         use approx::AbsDiffEq;
-        use nalgebra::{linalg::SVD, Matrix, VectorN, U8};
+        use nalgebra::{linalg::SVD, OMatrix, OVector, U8};
 
         let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = (
             from[0].0 as f64,
@@ -156,7 +156,7 @@ impl Projection {
         );
 
         #[rustfmt::skip]
-        let a = Matrix::<_, U8, U8, _>::from_row_slice(&[
+        let a = OMatrix::<_, U8, U8>::from_row_slice(&[
             0.0, 0.0, 0.0, -xf1, -yf1, -1.0,  y1 * xf1,  y1 * yf1,
             xf1, yf1, 1.0,  0.0,  0.0,  0.0, -x1 * xf1, -x1 * yf1,
             0.0, 0.0, 0.0, -xf2, -yf2, -1.0,  y2 * xf2,  y2 * yf2,
@@ -167,7 +167,7 @@ impl Projection {
             xf4, yf4, 1.0,  0.0,  0.0,  0.0, -x4 * xf4, -x4 * yf4,
         ]);
 
-        let b = VectorN::<_, U8>::from_row_slice(&[-y1, x1, -y2, x2, -y3, x3, -y4, x4]);
+        let b = OVector::<_, U8>::from_row_slice(&[-y1, x1, -y2, x2, -y3, x3, -y4, x4]);
 
         SVD::try_new(a, true, true, f64::default_epsilon(), 0)
             .and_then(|svd| svd.solve(&b, f64::default_epsilon()).ok())
@@ -181,7 +181,6 @@ impl Projection {
                     h[5] as f32,
                     h[6] as f32,
                     h[7] as f32,
-                    h[8] as f32,
                     1.0,
                 ];
 
