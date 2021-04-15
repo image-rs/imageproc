@@ -20,13 +20,13 @@ use std::f32;
 
 /// Denoise 8-bit grayscale image using bilateral filtering.
 ///
-/// Parameters
-/// ----------
-/// `image` : Grayscale image to be filtered.
-/// `window_size` : Window size for filtering.
-/// `sigma_color` : Standard deviation for grayscale value distance. A larger value results
-///     in averaging of pixels with larger differences in grayscale value.
-/// `sigma_spatial` : Standard deviation for range distance. A larger value results in
+/// # Arguments
+///
+/// * `image` - Grayscale image to be filtered.
+/// * `window_size` - Window size for filtering.
+/// * `sigma_color` - Standard deviation for grayscale distance. A larger value results
+///     in averaging of pixels with larger grayscale differences.
+/// * `sigma_spatial` - Standard deviation for range distance. A larger value results in
 ///     averaging of pixels separated by larger distances.
 ///
 /// This is a denoising filter designed to preserve edges. It averages pixels based on their spatial
@@ -35,14 +35,14 @@ use std::f32;
 /// (`sigma_spatial`). Radiometric similarity is measured by the Gaussian function of the difference
 /// between two grayscale values with user-specified standard deviation (`sigma_color`).
 ///
-/// References
-/// ----------
+/// # References
+///
 ///   [1] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
 ///        Images." IEEE International Conference on Computer Vision (1998)
-///        839-846. :DOI:`10.1109/ICCV.1998.710815`
+///        839-846. DOI: 10.1109/ICCV.1998.710815
 ///
-/// Examples
-/// ----------
+/// # Examples
+///
 /// ```
 /// use imageproc::filter::bilateral_filter;
 /// use imageproc::utils::gray_bench_image;
