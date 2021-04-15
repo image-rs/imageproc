@@ -10,7 +10,7 @@ be overlap between the functions in this library and those in image::imageops.
 
 This is very much a work in progress. If you have ideas for things that could be done better, or new features you'd like to see, then please create issues for them. Nothing's set in stone.
 
-[API documentation](http://docs.rs/imageproc)
+[API documentation](https://docs.rs/imageproc)
 
 # Goals
 

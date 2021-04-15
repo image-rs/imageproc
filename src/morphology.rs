@@ -1,6 +1,6 @@
 //! Functions for computing [morphological operators].
 //!
-//! [morphological operators]: http://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
+//! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
 use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
