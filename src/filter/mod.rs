@@ -11,12 +11,146 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::Num;
+use num::{abs, pow, Num};
 
 use crate::math::cast;
 use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
+
+/// Denoise 8-bit grayscale image using bilateral filtering.
+///
+/// # Arguments
+///
+/// * `image` - Grayscale image to be filtered.
+/// * `window_size` - Window size for filtering.
+/// * `sigma_color` - Standard deviation for grayscale distance. A larger value results
+///     in averaging of pixels with larger grayscale differences.
+/// * `sigma_spatial` - Standard deviation for range distance. A larger value results in
+///     averaging of pixels separated by larger distances.
+///
+/// This is a denoising filter designed to preserve edges. It averages pixels based on their spatial
+/// closeness and radiometric similarity [1]. Spatial closeness is measured by the Gaussian function
+/// of the Euclidean distance between two pixels with user-specified standard deviation
+/// (`sigma_spatial`). Radiometric similarity is measured by the Gaussian function of the difference
+/// between two grayscale values with user-specified standard deviation (`sigma_color`).
+///
+/// # References
+///
+///   [1] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
+///        Images." IEEE International Conference on Computer Vision (1998)
+///        839-846. DOI: 10.1109/ICCV.1998.710815
+///
+/// # Examples
+///
+/// ```
+/// use imageproc::filter::bilateral_filter;
+/// use imageproc::utils::gray_bench_image;
+/// let image = gray_bench_image(500, 500);
+/// let filtered = bilateral_filter(&image, 10, 10., 3.);
+/// ```
+pub fn bilateral_filter(
+    image: &GrayImage,
+    window_size: u32,
+    sigma_color: f32,
+    sigma_spatial: f32,
+) -> Image<Luma<u8>> {
+    /// Un-normalized Gaussian weights for look-up tables.
+    fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
+        return (-0.5 * x.powi(2) / sigma_squared).exp();
+    }
+
+    /// Effectively a meshgrid command with flattened outputs.
+    fn window_coords(window_size: u32) -> (Vec<i32>, Vec<i32>) {
+        let window_start = (-(window_size as f32) / 2.0).floor() as i32;
+        let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
+        let window_range = window_start..window_end;
+        let v = window_range.collect::<Vec<i32>>();
+        let cc: Vec<i32> = v
+            .iter()
+            .cycle()
+            .take(v.len() * v.len())
+            .into_iter()
+            .cloned()
+            .collect();
+        let mut rr = Vec::new();
+        let window_range = window_start..window_end;
+        for i in window_range {
+            rr.append(&mut vec![i; (window_size + 1) as usize]);
+        }
+        return (rr, cc);
+    }
+
+    /// Create look-up table of Gaussian weights for color dimension.
+    fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
+        let v = (0..bins as i32).collect::<Vec<i32>>();
+        let step_size = max_value / bins as f32;
+        let vals = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
+        let sigma_squared = sigma.powi(2);
+        let gauss_weights = vals
+            .iter()
+            .map(|&x| gaussian_weight(x, sigma_squared))
+            .collect::<Vec<_>>();
+        gauss_weights
+    }
+
+    /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
+    fn compute_spatial_lut(window_size: u32, sigma: f32) -> Vec<f32> {
+        let (rr, cc) = window_coords(window_size);
+        let mut gauss_weights = Vec::new();
+        let it = rr.iter().zip(cc.iter());
+        let sigma_squared = sigma.powi(2);
+        for (r, c) in it {
+            let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
+            gauss_weights.push(gaussian_weight(dist, sigma_squared));
+        }
+        gauss_weights
+    }
+
+    let (width, height) = image.dimensions();
+    let mut out = ImageBuffer::new(width, height);
+    let max_value = *image.iter().max().unwrap() as f32;
+    let n_bins: u32 = 255; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
+    let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
+    let color_dist_scale = n_bins as f32 / max_value;
+    let max_color_bin = (n_bins - 1) as usize;
+    let range_lut = compute_spatial_lut(window_size, sigma_spatial);
+    let window_size = window_size as i32;
+    let window_extent = (window_size - 1) / 2;
+    let height = height as i32;
+    let width = width as i32;
+    for row in 0..height {
+        for col in 0..width {
+            let mut total_val: f32 = 0.;
+            let mut total_weight: f32 = 0.;
+            let window_center_val = image.get_pixel(col as u32, row as u32)[0] as i32;
+            for window_row in -window_extent..window_extent + 1 {
+                let window_row_abs: i32 = row + window_row;
+                let window_row_abs: i32 = min(height - 1, max(0, window_row_abs)); // Wrap to edge.
+                let kr: i32 = window_row + window_extent;
+                for window_col in -window_extent..window_extent + 1 {
+                    let window_col_abs: i32 = col + window_col;
+                    let window_col_abs: i32 = min(width - 1, max(0, window_col_abs)); // Wrap to edge.
+                    let kc: i32 = window_col + window_extent;
+                    let range_bin = (kr * window_size + kc) as usize;
+                    let range_weight: f32 = range_lut[range_bin];
+                    let val: i32 =
+                        image.get_pixel(window_col_abs as u32, window_row_abs as u32)[0] as i32;
+                    let color_dist: i32 = abs(window_center_val - val);
+                    let color_bin = (color_dist as f32 * color_dist_scale) as usize;
+                    let color_bin: usize = min(color_bin, max_color_bin);
+                    let color_weight: f32 = color_lut[color_bin];
+                    let weight: f32 = range_weight * color_weight;
+                    total_val += val as f32 * weight;
+                    total_weight += weight;
+                }
+            }
+            let new_val = (total_val / total_weight).round() as u8;
+            out.put_pixel(col as u32, row as u32, Luma([new_val]));
+        }
+    }
+    out
+}
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
@@ -431,6 +565,15 @@ mod tests {
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_bilateral_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = bilateral_filter(&image, 10, 10., 3.);
+            black_box(filtered);
+        });
+    }
 
     #[test]
     fn test_box_filter_handles_empty_images() {

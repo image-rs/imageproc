@@ -21,7 +21,7 @@ use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rg
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
-    filter::{gaussian_blur_f32, sharpen3x3},
+    filter::{bilateral_filter, gaussian_blur_f32, sharpen3x3},
     geometric_transformations::{rotate_about_center, warp, Interpolation, Projection},
     gradients,
     utils::load_image_or_panic,
@@ -643,4 +643,17 @@ fn test_hough_line_detection() {
     let lines_image = draw_polar_lines(&color_edges, &lines, green);
 
     compare_to_truth_image(&lines_image, "hough_lines.png");
+}
+
+#[test]
+fn test_bilateral_filter() {
+    fn filter(image: &GrayImage) -> GrayImage {
+        let sigma_color: f32 = 20.;
+        let sigma_spatial: f32 = 2.;
+        let radius: f32 = 3. * sigma_spatial;
+        let win_size = (radius * 2. + 1.) as u32;
+        bilateral_filter(image, win_size, sigma_color, sigma_spatial)
+    }
+
+    compare_to_truth_with_tolerance("lumaphant.png", "lumaphant_bilateral.png", filter, 1)
 }
