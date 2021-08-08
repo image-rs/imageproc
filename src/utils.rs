@@ -368,7 +368,7 @@ macro_rules! assert_pixels_eq {
         $crate::assert_dimensions_match!($actual, $expected);
         match $crate::utils::pixel_diff_summary(&$actual, &$expected) {
             None => {}
-            Some(err) => panic!(err),
+            Some(err) => panic!("{}", err),
         };
     }};
 }
@@ -407,9 +407,10 @@ macro_rules! assert_pixels_eq_within {
             large_diff
         });
         if !diffs.is_empty() {
-            panic!($crate::utils::describe_pixel_diffs(
-                &$actual, &$expected, &diffs
-            ))
+            panic!(
+                "{}",
+                $crate::utils::describe_pixel_diffs(&$actual, &$expected, &diffs,)
+            )
         }
     }};
 }
