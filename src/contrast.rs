@@ -266,6 +266,59 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
     out
 }
 
+/// Normalizes contrast of image such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
+/// if (Min,Max) of current image is (0,255) image is unchanged
+pub fn normalize_linear(image: &mut GrayImage, new_min:u8, new_max:u8) {
+    let mut min = u8::MAX;
+    let mut max = u8::MIN;
+    for y in 0..image.height(){
+        for x in 0..image.width(){
+            let current_pixel = image.get_pixel(x, y);
+            let brightness= current_pixel.0[0];
+            if brightness < min{
+                min = brightness;
+            }
+            if brightness > max {
+                max = brightness;
+            }
+        }
+    }
+    if min == u8::MIN && max == u8::MAX {
+        return ;
+    }
+    let fraction = (new_max-new_min)/(max-min);
+
+    for y in 0..image.height(){
+        for x in 0..image.width(){
+            let current_pixel = image.get_pixel_mut(x, y);
+            current_pixel.0[0]= ((current_pixel.0[0] - min ) * fraction) + new_min;
+        }
+    }
+}
+
+/// Normalizes contrast of original such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
+/// Where alpha (α) defines the width of the input intensity range, and beta (β) defines the intensity around which the range is centered
+pub fn normalize_non_linear(image: &mut GrayImage, new_min:u8, new_max:u8, alpha: u8, beta:u8) {
+    let mut min = u8::MAX;
+    let mut max = u8::MIN;
+    for y in 0..image.height(){
+        for x in 0..image.width(){
+            let current_pixel = image.get_pixel(x, y);
+            let brightness= current_pixel.0[0];
+            if brightness < min{
+                min = brightness;
+            }
+            if brightness > max {
+                max = brightness;
+            }
+        }
+    }
+
+    todo!("implement function ")
+}
+
+
+
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
 /// histogram is as close as possible to that of the target image.
 pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
