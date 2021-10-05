@@ -1,6 +1,6 @@
 //! Demonstrates adding a color tint and applying a color gradient to a grayscale image.
 
-use image::{open, Luma, Rgb};
+use image::{GrayImage, Luma, Rgb, open};
 use imageproc::map::map_colors;
 use imageproc::pixelops::weighted_sum;
 use std::env;
@@ -53,4 +53,7 @@ fn main() {
     let yellow = Rgb([255u8, 255u8, 0u8]);
     let gradient = map_colors(&image, |pix| color_gradient(pix, black, red, yellow));
     gradient.save(path.with_file_name("gradient.png")).unwrap();
+
+    let c = GrayImage::from_pixel(100, 100, Luma([50]));
+
 }

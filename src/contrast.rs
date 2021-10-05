@@ -266,9 +266,18 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
     out
 }
 
+
+
+/// Normalizes contrast of image in place, such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
+/// See also  [Normalizes Equalization (wikipedia)] https://en.wikipedia.org/wiki/Normalization_(image_processing)
+pub fn normalize_linear(image: GrayImage, new_min:u8, new_max:u8) -> GrayImage {
+    let mut out = image.clone();
+    normalize_linear_mut(&mut out,new_min, new_max);
+    out
+}
 /// Normalizes contrast of image such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
-/// if (Min,Max) of current image is (0,255) image is unchanged
-pub fn normalize_linear(image: &mut GrayImage, new_min:u8, new_max:u8) {
+pub fn normalize_linear_mut(image: &mut GrayImage, new_min:u8, new_max:u8) {
+    assert!(new_max > new_min, "new_max must be strictly greater than new_min");
     let mut min = u8::MAX;
     let mut max = u8::MIN;
     for y in 0..image.height(){
@@ -283,38 +292,31 @@ pub fn normalize_linear(image: &mut GrayImage, new_min:u8, new_max:u8) {
             }
         }
     }
-    if min == u8::MIN && max == u8::MAX {
-        return ;
-    }
-    let fraction = (new_max-new_min)/(max-min);
-
+    let fraction = (new_max-new_min) as f64/(max-min) as f64;
     for y in 0..image.height(){
         for x in 0..image.width(){
             let current_pixel = image.get_pixel_mut(x, y);
-            current_pixel.0[0]= ((current_pixel.0[0] - min ) * fraction) + new_min;
+            let new_value =  ((current_pixel.0[0] - min ) as f64 * fraction) + new_min as f64;
+            current_pixel.0[0] = new_value as u8;
         }
     }
 }
 
+
 /// Normalizes contrast of original such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
 /// Where alpha (α) defines the width of the input intensity range, and beta (β) defines the intensity around which the range is centered
-pub fn normalize_non_linear(image: &mut GrayImage, new_min:u8, new_max:u8, alpha: u8, beta:u8) {
-    let mut min = u8::MAX;
-    let mut max = u8::MIN;
+pub fn normalize_non_linear(image: &mut GrayImage, new_min:u8, new_max:u8, alpha: f64, beta:f64) {
+    use std::f64::consts::E;
     for y in 0..image.height(){
         for x in 0..image.width(){
-            let current_pixel = image.get_pixel(x, y);
-            let brightness= current_pixel.0[0];
-            if brightness < min{
-                min = brightness;
-            }
-            if brightness > max {
-                max = brightness;
-            }
+            let current_pixel = image.get_pixel_mut(x, y);
+            let px = current_pixel.0[0] as f64;
+            let exp = -(px-beta)/alpha;
+            let denom = 1f64+E.powf(exp);
+            let i_x= (new_max -new_min )*((1f64/denom) as u8)+new_min;
+            current_pixel.0[0] = i_x;
         }
     }
-
-    todo!("implement function ")
 }
 
 
@@ -635,6 +637,17 @@ mod benches {
         b.iter(|| {
             match_histogram_mut(&mut image, &target);
         });
+    }
+
+    #[test]
+    fn test_normalize() {
+        let mut const_min = gray_bench_image(4,4);
+        let buf= vec![10, 28, 46, 65, 28, 46, 65, 83, 46, 65, 83, 101, 65, 83, 101, 120];
+        normalize_linear_mut(&mut const_min, 10, 120);
+        let const_min_expected = GrayImage::from_vec(4, 4, buf).unwrap();
+        assert_eq!(const_min,const_min_expected);
+        // assert_eq!(,);
+        // assert_eq!(,);
     }
 
     #[bench]
