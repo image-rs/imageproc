@@ -3,7 +3,9 @@ use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer};
 use std::i32;
 
-/// Draws a colored cross on an image in place. Handles coordinates outside image bounds.
+/// Draws a colored cross on an image in place.
+///
+/// Handles coordinates outside image bounds.
 #[rustfmt::skip]
 pub fn draw_cross_mut<C>(canvas: &mut C, color: C::Pixel, x: i32, y: i32)
 where
@@ -34,7 +36,9 @@ where
     }
 }
 
-/// Draws a colored cross on an image. Handles coordinates outside image bounds.
+/// Draws a colored cross on a new copy of an image.
+///
+/// Handles coordinates outside image bounds.
 pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
 where
     I: GenericImage,

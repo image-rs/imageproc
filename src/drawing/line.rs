@@ -165,7 +165,10 @@ impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIterMut<'a, P> {
     }
 }
 
+/// Draws a line segment on a new copy of an image.
+///
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
+///
 /// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
 pub fn draw_line_segment<I>(
     image: &I,
@@ -183,7 +186,10 @@ where
     out
 }
 
+/// Draws a line segment on an image in place.
+///
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
+///
 /// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
 pub fn draw_line_segment_mut<C>(canvas: &mut C, start: (f32, f32), end: (f32, f32), color: C::Pixel)
 where
@@ -205,9 +211,13 @@ where
     }
 }
 
-/// Draws as much of the line segment between start and end as lies inside the image bounds.
+/// Draws an antialised line segment on a new copy of an image.
+///
+/// Draws as much of the line segment between `start` and `end` as lies inside the image bounds.
+///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate`](fn.interpolate.html) for blend.
+///
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment<I, B>(
     image: &I,
@@ -227,9 +237,13 @@ where
     out
 }
 
-/// Draws as much of the line segment between start and end as lies inside the image bounds.
+/// Draws an antialised line segment on an image in place.
+///
+/// Draws as much of the line segment between `start` and `end` as lies inside the image bounds.
+///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate`](fn.interpolate.html) for blend.
+///
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 pub fn draw_antialiased_line_segment_mut<I, B>(
     image: &mut I,

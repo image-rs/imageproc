@@ -30,12 +30,18 @@ fn layout_glyphs(
     (w, h)
 }
 
-/// Get the width and height of the given text, rendered with the given font and scale. Note that this function *does not* support newlines, you must do this manually.
+/// Get the width and height of the given text, rendered with the given font and scale.
+///
+/// Note that this function *does not* support newlines, you must do this manually.
 pub fn text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
     layout_glyphs(scale, font, text, |_, _| {})
 }
 
-/// Draws colored text on an image in place. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually.
+/// Draws colored text on an image in place.
+///
+/// `scale` is augmented font scaling on both the x and y axis (in pixels).
+///
+/// Note that this function *does not* support newlines, you must do this manually.
 pub fn draw_text_mut<'a, C>(
     canvas: &'a mut C,
     color: C::Pixel,
@@ -68,7 +74,11 @@ pub fn draw_text_mut<'a, C>(
     });
 }
 
-/// Draws colored text on a new copy of the image. `scale` is augmented font scaling on both the x and y axis (in pixels). Note that this function *does not* support newlines, you must do this manually.
+/// Draws colored text on a new copy of an image.
+///
+/// `scale` is augmented font scaling on both the x and y axis (in pixels).
+///
+/// Note that this function *does not* support newlines, you must do this manually.
 pub fn draw_text<'a, I>(
     image: &'a mut I,
     color: I::Pixel,
