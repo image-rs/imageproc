@@ -7,6 +7,8 @@ use std::cmp::{max, min};
 use std::f32;
 use std::i32;
 
+/// Draws a polygon and its contents on a new copy of an image.
+///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
 /// list of points should be an open path, i.e. the first and last points must not be equal.
 /// An implicit edge is added from the last to the first point in the slice.
@@ -21,6 +23,8 @@ where
     out
 }
 
+/// Draws a polygon and its contents on an image in place.
+///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
 /// list of points should be an open path, i.e. the first and last points must not be equal.
 /// An implicit edge is added from the last to the first point in the slice.

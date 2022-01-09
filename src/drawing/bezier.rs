@@ -5,7 +5,9 @@ use image::{GenericImage, ImageBuffer};
 use std::f32;
 use std::i32;
 
-/// Draws as much of a cubic bezier curve as lies within image bounds.
+/// Draws a cubic Bézier curve on a new copy of an image.
+///
+/// Draws as much of the curve as lies within image bounds.
 pub fn draw_cubic_bezier_curve<I>(
     image: &I,
     start: (f32, f32),
@@ -24,7 +26,9 @@ where
     out
 }
 
-/// Draws as much of a cubic bezier curve as lies within image bounds.
+/// Draws a cubic Bézier curve on an image in place.
+///
+/// Draws as much of the curve as lies within image bounds.
 pub fn draw_cubic_bezier_curve_mut<C>(
     canvas: &mut C,
     start: (f32, f32),

@@ -5,7 +5,9 @@ use crate::rect::Rect;
 use image::{GenericImage, ImageBuffer};
 use std::f32;
 
-/// Draws as much of the boundary of a rectangle as lies inside the image bounds.
+/// Draws the outline of a rectangle on a new copy of an image.
+///
+/// Draws as much of the boundary of the rectangle as lies inside the image bounds.
 pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
@@ -17,7 +19,9 @@ where
     out
 }
 
-/// Draws as much of the boundary of a rectangle as lies inside the image bounds.
+/// Draws the outline of a rectangle on an image in place.
+///
+/// Draws as much of the boundary of the rectangle as lies inside the image bounds.
 pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
@@ -34,7 +38,9 @@ where
     draw_line_segment_mut(canvas, (right, top), (right, bottom), color);
 }
 
-/// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
+/// Draws a rectangle and its contents on a new copy of an image.
+///
+/// Draws as much of the rectangle and its contents as lies inside the image bounds.
 pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
@@ -46,7 +52,9 @@ where
     out
 }
 
-/// Draw as much of a rectangle, including its boundary, as lies inside the image bounds.
+/// Draws a rectangle and its contents on an image in place.
+///
+/// Draws as much of the rectangle and its contents as lies inside the image bounds.
 pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
