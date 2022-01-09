@@ -7,7 +7,9 @@ use std::f32;
 use std::i32;
 
 /// Draw as much of an ellipse as lies inside the image bounds.
-/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
+/// (Modified from Bresenham's algorithm)
 ///
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
@@ -30,7 +32,9 @@ where
 }
 
 /// Draw as much of an ellipse as lies inside the image bounds.
-/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
+/// (Modified from Bresenham's algorithm)
 ///
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
@@ -62,7 +66,9 @@ pub fn draw_hollow_ellipse_mut<C>(
 }
 
 /// Draw as much of an ellipse, including its contents, as lies inside the image bounds.
-/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
+/// (Modified from Bresenham's algorithm)
 ///
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
@@ -85,7 +91,9 @@ where
 }
 
 /// Draw as much of an ellipse, including its contents, as lies inside the image bounds.
-/// Uses Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+///
+/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
+/// (Modified from Bresenham's algorithm)
 ///
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
@@ -124,7 +132,8 @@ pub fn draw_filled_ellipse_mut<C>(
     draw_ellipse(draw_line_pairs, center, width_radius, height_radius);
 }
 
-// Implements the Midpoint Ellipse Drawing Algorithm. (Modified from Bresenham's algorithm) (http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/)
+// Implements the Midpoint Ellipse Drawing Algorithm https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/). (Modified from Bresenham's algorithm)
+//
 // Takes a function that determines how to render the points on the ellipse.
 fn draw_ellipse<F>(mut render_func: F, center: (i32, i32), width_radius: i32, height_radius: i32)
 where
