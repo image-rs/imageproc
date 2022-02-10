@@ -16,6 +16,7 @@ use std::i32;
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
 /// (`x^2 / width_radius^2) + (y^2 / height_radius^2) = 1`
+#[must_use = "the function does not modify the original image"]
 pub fn draw_hollow_ellipse<I>(
     image: &I,
     center: (i32, i32),
@@ -79,6 +80,7 @@ pub fn draw_hollow_ellipse_mut<C>(
 /// The ellipse is axis-aligned and satisfies the following equation:
 ///
 /// `(x^2 / width_radius^2) + (y^2 / height_radius^2) <= 1`
+#[must_use = "the function does not modify the original image"]
 pub fn draw_filled_ellipse<I>(
     image: &I,
     center: (i32, i32),
@@ -193,6 +195,7 @@ where
 /// Draws the outline of a circle on a new copy of an image.
 ///
 /// Draw as much of the circle as lies inside the image bounds.
+#[must_use = "the function does not modify the original image"]
 pub fn draw_hollow_circle<I>(
     image: &I,
     center: (i32, i32),
@@ -296,6 +299,7 @@ where
 /// Draws a circle and its contents on a new copy of the image.
 ///
 /// Draws as much of a circle and its contents as lies inside the image bounds.
+#[must_use = "the function does not modify the original image"]
 pub fn draw_filled_circle<I>(
     image: &I,
     center: (i32, i32),

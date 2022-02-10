@@ -8,6 +8,7 @@ use std::i32;
 /// Draws a cubic Bézier curve on a new copy of an image.
 ///
 /// Draws as much of the curve as lies within image bounds.
+#[must_use = "the function does not modify the original image"]
 pub fn draw_cubic_bezier_curve<I>(
     image: &I,
     start: (f32, f32),

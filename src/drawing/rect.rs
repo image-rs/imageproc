@@ -8,6 +8,7 @@ use std::f32;
 /// Draws the outline of a rectangle on a new copy of an image.
 ///
 /// Draws as much of the boundary of the rectangle as lies inside the image bounds.
+#[must_use = "the function does not modify the original image"]
 pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
@@ -41,6 +42,7 @@ where
 /// Draws a rectangle and its contents on a new copy of an image.
 ///
 /// Draws as much of the rectangle and its contents as lies inside the image bounds.
+#[must_use = "the function does not modify the original image"]
 pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
