@@ -105,6 +105,7 @@ use std::cmp::{max, min};
 /// assert_pixels_eq!(median_filter(&image, 2, 1), filtered);
 /// # }
 /// ```
+#[must_use = "the function does not modify the original image"]
 pub fn median_filter<P>(image: &Image<P>, x_radius: u32, y_radius: u32) -> Image<P>
 where
     P: Pixel<Subpixel = u8> + 'static,
