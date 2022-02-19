@@ -58,7 +58,7 @@ where
     y_min = max(0, min(y_min, height as i32 - 1));
     y_max = max(0, min(y_max, height as i32 - 1));
 
-    let mut closed: Vec<Point<i32>> = poly.iter().copied().collect();
+    let mut closed: Vec<Point<i32>> = poly.to_vec();
     closed.push(poly[0]);
 
     let edges: Vec<&[Point<i32>]> = closed.windows(2).collect();

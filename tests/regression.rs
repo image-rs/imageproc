@@ -46,19 +46,19 @@ trait FromDynamic {
 
 impl FromDynamic for GrayImage {
     fn from_dynamic(image: &DynamicImage) -> Self {
-        image.to_luma()
+        image.to_luma8()
     }
 }
 
 impl FromDynamic for RgbImage {
     fn from_dynamic(image: &DynamicImage) -> Self {
-        image.to_rgb()
+        image.to_rgb8()
     }
 }
 
 impl FromDynamic for RgbaImage {
     fn from_dynamic(image: &DynamicImage) -> Self {
-        image.to_rgba()
+        image.to_rgba8()
     }
 }
 
@@ -323,7 +323,7 @@ fn test_sharpen_gaussian() {
 #[test]
 fn test_match_histograms() {
     fn match_to_zebra_histogram(image: &GrayImage) -> GrayImage {
-        let zebra = load_image_or_panic(Path::new(INPUT_DIR).join("zebra.png")).to_luma();
+        let zebra = load_image_or_panic(Path::new(INPUT_DIR).join("zebra.png")).to_luma8();
         imageproc::contrast::match_histogram(image, &zebra)
     }
     compare_to_truth(

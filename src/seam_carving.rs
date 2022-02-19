@@ -54,7 +54,7 @@ where
         "Cannot find seams if image width is < 2"
     );
 
-    let mut gradients = sobel_gradient_map(&image, |p| {
+    let mut gradients = sobel_gradient_map(image, |p| {
         let gradient_sum: u16 = p.channels().iter().sum();
         let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
         Luma([gradient_mean as u32])

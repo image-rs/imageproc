@@ -209,8 +209,8 @@ fn hog_descriptor_from_hist_grid(grid: View3d<'_, f32>, spec: HogSpec) -> Vec<f3
 
         for by in 0..spec.blocks_high {
             for bx in 0..spec.blocks_wide {
-                let mut block_data = block_view.inner_slice_mut(bx, by);
-                let mut block = View3d::from_raw(&mut block_data, spec.block_internal_lengths());
+                let block_data = block_view.inner_slice_mut(bx, by);
+                let mut block = View3d::from_raw(block_data, spec.block_internal_lengths());
 
                 for iy in 0..spec.options.block_side {
                     let cy = by * spec.options.block_stride + iy;

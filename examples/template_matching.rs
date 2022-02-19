@@ -131,7 +131,7 @@ fn main() {
     // Load image and convert to grayscale
     let image = open(input_path)
         .expect(&format!("Could not load image at {:?}", input_path))
-        .to_luma();
+        .to_luma8();
 
     // Extract the requested image sub-region to use as the template
     let template = copy_sub_image(

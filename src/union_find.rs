@@ -16,7 +16,7 @@ impl DisjointSetForest {
     /// Constructs forest of singletons with count elements.
     pub fn new(count: usize) -> DisjointSetForest {
         let parent: Vec<usize> = (0..count).collect();
-        let tree_size = vec![1 as usize; count];
+        let tree_size = vec![1_usize; count];
         DisjointSetForest {
             count,
             parent,

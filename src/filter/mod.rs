@@ -58,7 +58,7 @@ pub fn bilateral_filter(
 ) -> Image<Luma<u8>> {
     /// Un-normalized Gaussian weights for look-up tables.
     fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
-        return (-0.5 * x.powi(2) / sigma_squared).exp();
+        (-0.5 * x.powi(2) / sigma_squared).exp()
     }
 
     /// Effectively a meshgrid command with flattened outputs.
@@ -79,7 +79,7 @@ pub fn bilateral_filter(
         for i in window_range {
             rr.append(&mut vec![i; (window_size + 1) as usize]);
         }
-        return (rr, cc);
+        (rr, cc)
     }
 
     /// Create look-up table of Gaussian weights for color dimension.

@@ -56,12 +56,12 @@ pub fn match_template(
     MatchTemplateMethod::SumOfSquaredErrorsNormalized
     | MatchTemplateMethod::CrossCorrelationNormalized };
     let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(&image))
+        Some(integral_squared_image(image))
     } else {
         None
     };
     let template_squared_sum = if should_normalize {
-        Some(sum_squares(&template))
+        Some(sum_squares(template))
     } else {
         None
     };

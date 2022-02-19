@@ -489,12 +489,12 @@ where
     let mut err = "pixels do not match.\n".to_owned();
 
     // Find the boundaries of the region containing diffs
-    let top_left = diffs.iter().fold((u32::MAX, u32::MAX), |acc, ref d| {
+    let top_left = diffs.iter().fold((u32::MAX, u32::MAX), |acc, d| {
         (acc.0.min(d.x), acc.1.min(d.y))
     });
     let bottom_right = diffs
         .iter()
-        .fold((0, 0), |acc, ref d| (acc.0.max(d.x), acc.1.max(d.y)));
+        .fold((0, 0), |acc, d| (acc.0.max(d.x), acc.1.max(d.y)));
 
     // If all the diffs are contained in a small region of the image then render all of this
     // region, with a small margin.
@@ -506,7 +506,7 @@ where
 
         let diff_locations = diffs.iter().map(|d| (d.x, d.y)).collect::<HashSet<_>>();
 
-        err.push_str(&colored(&"Actual:", Color::Red));
+        err.push_str(&colored("Actual:", Color::Red));
         let actual_rendered = render_image_region(actual, left, top, right, bottom, |x, y| {
             if diff_locations.contains(&(x, y)) {
                 Color::Red
@@ -516,7 +516,7 @@ where
         });
         err.push_str(&actual_rendered);
 
-        err.push_str(&colored(&"Expected:", Color::Green));
+        err.push_str(&colored("Expected:", Color::Green));
         let expected_rendered = render_image_region(expected, left, top, right, bottom, |x, y| {
             if diff_locations.contains(&(x, y)) {
                 Color::Green

@@ -19,7 +19,7 @@ fn main() {
 
     let image = image::open(&image_path)
         .expect("No image found at provided path")
-        .to_rgba();
+        .to_rgba8();
 
     display_image("", &image, 500, 500);
 }

@@ -9,7 +9,7 @@ fn create_hog_image(input: &Path, signed: bool) {
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(input)
         .expect(&format!("Could not load image at {:?}", input))
-        .to_luma();
+        .to_luma8();
 
     // We're not going to do anything interesting with the block sizes here - they're
     // only relevant when combining and normalising per-cell histograms, and in this

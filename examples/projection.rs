@@ -30,7 +30,7 @@ fn main() -> ImageResult<()> {
 
     let image = open(input_path)
         .expect(&format!("Could not load image at {:?}", input_path))
-        .to_rgb();
+        .to_rgb8();
 
     let translate = Projection::translate(90.0, 10.0);
     warp(

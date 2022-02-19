@@ -89,7 +89,7 @@ where
 pub fn percentile(image: &GrayImage, p: u8) -> u8 {
     assert!(p <= 100, "requested percentile must be <= 100");
 
-    let cum_hist = cumulative_histogram(&image).channels[0];
+    let cum_hist = cumulative_histogram(image).channels[0];
     let total = cum_hist[255] as u64;
 
     for i in 0..256 {
