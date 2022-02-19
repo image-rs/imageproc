@@ -69,13 +69,13 @@ fn non_maximum_suppression(
                 angle += 180.0
             }
             // Clamp angle.
-            let clamped_angle = if angle >= 157.5 || angle < 22.5 {
+            let clamped_angle = if !(22.5..157.5).contains(&angle) {
                 0
-            } else if angle >= 22.5 && angle < 67.5 {
+            } else if (22.5..67.5).contains(&angle) {
                 45
-            } else if angle >= 67.5 && angle < 112.5 {
+            } else if (67.5..112.5).contains(&angle) {
                 90
-            } else if angle >= 112.5 && angle < 157.5 {
+            } else if (112.5..157.5).contains(&angle) {
                 135
             } else {
                 unreachable!()

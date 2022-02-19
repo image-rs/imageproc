@@ -75,7 +75,7 @@ pub fn min_area_rect<T>(points: &[Point<T>]) -> [Point<T>; 4]
 where
     T: NumCast + Copy + Ord,
 {
-    let hull = convex_hull(&points);
+    let hull = convex_hull(points);
     match hull.len() {
         0 => panic!("no points are defined"),
         1 => [hull[0]; 4],

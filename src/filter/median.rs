@@ -120,16 +120,16 @@ where
     let rx = x_radius as i32;
     let ry = y_radius as i32;
 
-    let mut hist = initialise_histogram_for_top_left_pixel(&image, x_radius, y_radius);
-    slide_down_column(&mut hist, &image, &mut out, 0, rx, ry);
+    let mut hist = initialise_histogram_for_top_left_pixel(image, x_radius, y_radius);
+    slide_down_column(&mut hist, image, &mut out, 0, rx, ry);
 
     for x in 1..width {
         if x % 2 == 0 {
-            slide_right(&mut hist, &image, x, 0, rx, ry);
-            slide_down_column(&mut hist, &image, &mut out, x, rx, ry);
+            slide_right(&mut hist, image, x, 0, rx, ry);
+            slide_down_column(&mut hist, image, &mut out, x, rx, ry);
         } else {
-            slide_right(&mut hist, &image, x, height - 1, rx, ry);
-            slide_up_column(&mut hist, &image, &mut out, x, rx, ry);
+            slide_right(&mut hist, image, x, height - 1, rx, ry);
+            slide_up_column(&mut hist, image, &mut out, x, rx, ry);
         }
     }
     out
