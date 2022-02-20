@@ -16,7 +16,7 @@ impl BinaryDescriptor {
         self.0.len() as u32
     }
     /// Returns the number of bits that are different between the two descriptors.
-    /// 
+    ///
     /// Panics if the two descriptors have unequal lengths. The descriptors
     /// should have been computed using the same set of test pairs, otherwise
     /// comparing them has no meaning.
@@ -49,12 +49,12 @@ pub struct TestPair {
 /// If `override_test_pairs` is `Some`, then those test pairs are used, and none
 /// are generated. Use this when you already have test pairs from another run
 /// and want to compare the descriptors later.
-/// 
+///
 /// If `override_test_pairs` is `None`, then `TestPair`s are generated according
 /// to an isotropic Gaussian.
-/// 
+///
 /// Before testing, patches are smoothed with a 9x9 Gaussian.
-/// 
+///
 /// See [Calonder, et. al. (2010)][https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf]
 pub fn brief(
     image: &GrayImage,
@@ -136,9 +136,9 @@ pub fn brief(
 /// For each descriptor in `d1`, find the descriptor in `d2` with the minimum
 /// Hamming distance below `threshold`. If no such descriptor exists in `d2`,
 /// the descriptor in `d1` is left unmatched.
-/// 
+///
 /// Descriptors in `d2` may be matched with more than one descriptor in `d1`.
-/// 
+///
 /// Returns a vector of tuples describing the matched pairs. The first value is
 /// an index into `d1`, and the second value is an index into `d2`.
 pub fn match_binary_descriptors(
