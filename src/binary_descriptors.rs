@@ -3,7 +3,7 @@
 use image::{GenericImageView, GrayImage};
 use rand_distr::{Distribution, Normal};
 
-use crate::filter::gaussian_blur_f32;
+use crate::filter::box_filter;
 
 /// A thin wrapper around a vector of bits
 #[derive(Debug)]
@@ -115,7 +115,17 @@ pub fn brief(
             PATCH_DIAMETER,
         );
         // apply a Gaussian blur to the patch
-        let blurred_patch = gaussian_blur_f32(&patch.to_image(), 4.5);
+        // three successive box filters approximate a Gaussian within about 3%
+        let blur_radius = 4;
+        let blurred_patch = box_filter(
+            &box_filter(
+                &box_filter(&patch.to_image(), blur_radius, blur_radius),
+                blur_radius,
+                blur_radius,
+            ),
+            blur_radius,
+            blur_radius,
+        );
 
         let mut descriptor = BinaryDescriptor(Vec::with_capacity(length));
         // for each test pair, compare the pixels within the patch at those points
