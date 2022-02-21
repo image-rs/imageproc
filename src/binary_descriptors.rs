@@ -7,13 +7,13 @@ use crate::filter::box_filter;
 
 /// A thin wrapper around a vector of bits
 #[derive(Debug)]
-pub struct BinaryDescriptor(Vec<bool>);
+pub struct BinaryDescriptor(Vec<u128>);
 
 impl BinaryDescriptor {
     /// Returns the length of the descriptor in bits. Typical values are 128,
     /// 256, and 512.
     pub fn get_size(&self) -> u32 {
-        self.0.len() as u32
+        (self.0.len() * 128) as u32
     }
     /// Returns the number of bits that are different between the two descriptors.
     ///
@@ -25,7 +25,7 @@ impl BinaryDescriptor {
         self.0
             .iter()
             .zip(other.0.iter())
-            .fold(0, |acc, x| acc + (x.0 ^ x.1) as u32)
+            .fold(0, |acc, x| acc + (x.0 ^ x.1).count_ones())
     }
 }
 
@@ -46,6 +46,8 @@ pub struct TestPair {
 /// pixels from any edge. If any keypoints are too close to an edge, their
 /// corresponding element in the descriptor vector is `None`.
 ///
+/// `length` must be a multiple of 128 bits.
+///
 /// If `override_test_pairs` is `Some`, then those test pairs are used, and none
 /// are generated. Use this when you already have test pairs from another run
 /// and want to compare the descriptors later.
@@ -62,6 +64,11 @@ pub fn brief(
     length: usize,
     override_test_pairs: Option<Vec<TestPair>>,
 ) -> (Vec<Option<BinaryDescriptor>>, Vec<TestPair>) {
+    assert!(
+        length % 128 == 0,
+        "BRIEF descriptor length must be a multiple of 128 bits"
+    );
+
     const PATCH_RADIUS: u32 = 16;
     const PATCH_DIAMETER: u32 = PATCH_RADIUS * 2 + 1;
 
@@ -127,15 +134,22 @@ pub fn brief(
             blur_radius,
         );
 
-        let mut descriptor = BinaryDescriptor(Vec::with_capacity(length));
+        let mut descriptor = BinaryDescriptor(Vec::with_capacity(length / 128));
+        let mut descriptor_chunk = 0u128;
         // for each test pair, compare the pixels within the patch at those points
-        for test_pair in &test_pairs {
+        for (idx, test_pair) in test_pairs.iter().enumerate() {
             // if p0 < p1, then record true for this test; otherwise, record false
             let (p0, p1) = (test_pair.p0, test_pair.p1);
-            descriptor.0.push(
-                blurred_patch.get_pixel(p0.0, p0.1)[0] < blurred_patch.get_pixel(p1.0, p1.1)[0],
-            );
+            descriptor_chunk += (blurred_patch.get_pixel(p0.0, p0.1)[0]
+                < blurred_patch.get_pixel(p1.0, p1.1)[0]) as u128;
+            descriptor_chunk <<= 1;
+            // if this is the last bit in this chunk, then roll over to a new one
+            if idx % 127 == 0 {
+                descriptor.0.push(descriptor_chunk);
+                descriptor_chunk = 0;
+            }
         }
+        descriptor.0.push(descriptor_chunk);
         descriptors.push(Some(descriptor));
     }
 

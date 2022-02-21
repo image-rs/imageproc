@@ -44,7 +44,7 @@ fn main() -> ImageResult<()> {
     let first_image = open(first_image_path)?.to_luma8();
     let second_image = open(second_image_path)?.to_luma8();
 
-    const CORNER_THRESHOLD: u8 = 96;
+    const CORNER_THRESHOLD: u8 = 84;
     let first_corners = corners_fast9(&first_image, CORNER_THRESHOLD)
         .iter()
         .map(|c| (c.x, c.y))
@@ -68,13 +68,15 @@ fn main() -> ImageResult<()> {
         elapsed / (first_descriptors.len() + first_descriptors.len()) as u32
     );
 
+    let start = std::time::Instant::now();
     let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 32);
     let elapsed = start.elapsed();
     println!(
-        "Matched {} pairs in {:.2?} ({:.2?} per match)",
+        "Matched {} pairs from {} candidates in {:.2?} ({:?} per candidate)",
         matches.len(),
+        first_descriptors.len() * second_descriptors.len(),
         elapsed,
-        elapsed / matches.len() as u32
+        elapsed / (first_descriptors.len() * second_descriptors.len()) as u32
     );
 
     let first_image = open(first_image_path)?.to_rgb8();
