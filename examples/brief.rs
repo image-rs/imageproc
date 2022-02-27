@@ -22,6 +22,13 @@ use imageproc::{
 
 use std::{env, path::Path};
 
+fn filter_edge_keypoints(keypoint: (u32, u32), height: u32, width: u32, radius: u32) -> bool {
+    keypoint.0 >= radius
+        && keypoint.0 <= width - radius
+        && keypoint.1 >= radius
+        && keypoint.1 <= height - radius
+}
+
 fn main() -> ImageResult<()> {
     if env::args().len() != 4 {
         panic!("Please enter two input files and one output file")
@@ -44,20 +51,25 @@ fn main() -> ImageResult<()> {
     let first_image = open(first_image_path)?.to_luma8();
     let second_image = open(second_image_path)?.to_luma8();
 
-    const CORNER_THRESHOLD: u8 = 84;
+    let (first_image_height, first_image_width) = (first_image.height(), first_image.width());
+    let (second_image_height, second_image_width) = (second_image.height(), second_image.width());
+
+    const CORNER_THRESHOLD: u8 = 70;
     let first_corners = corners_fast9(&first_image, CORNER_THRESHOLD)
         .iter()
         .map(|c| (c.x, c.y))
+        .filter(|c| filter_edge_keypoints(*c, first_image_height, first_image_width, 17))
         .collect::<Vec<(u32, u32)>>();
     let second_corners = corners_fast9(&second_image, CORNER_THRESHOLD)
         .iter()
         .map(|c| (c.x, c.y))
+        .filter(|c| filter_edge_keypoints(*c, second_image_height, second_image_width, 17))
         .collect::<Vec<(u32, u32)>>();
 
     let start = std::time::Instant::now();
-    let (first_descriptors, test_pairs) = brief(&first_image, &first_corners, 256, None);
+    let (first_descriptors, test_pairs) = brief(&first_image, &first_corners, 256, None).unwrap();
     let (second_descriptors, _test_pairs) =
-        brief(&second_image, &second_corners, 256, Some(test_pairs));
+        brief(&second_image, &second_corners, 256, Some(test_pairs)).unwrap();
     let elapsed = start.elapsed();
     println!(
         "Computed {} + {} = {} descriptors in {:.2?} ({:.2?} per descriptor)",
@@ -69,7 +81,7 @@ fn main() -> ImageResult<()> {
     );
 
     let start = std::time::Instant::now();
-    let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 32);
+    let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 24);
     let elapsed = start.elapsed();
     println!(
         "Matched {} pairs from {} candidates in {:.2?} ({:?} per candidate)",
@@ -83,8 +95,8 @@ fn main() -> ImageResult<()> {
     let second_image = open(second_image_path)?.to_rgb8();
 
     let (output_width, output_height) = (
-        first_image.width() + second_image.width(),
-        u32::max(first_image.height(), second_image.height()),
+        first_image_width + second_image_width,
+        u32::max(first_image_height, second_image_height),
     );
     let mut output_image = Image::new(output_width, output_height);
     output_image.copy_from(&first_image, 0, 0).unwrap();

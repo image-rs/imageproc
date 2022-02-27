@@ -21,7 +21,7 @@ impl BinaryDescriptor {
     /// should have been computed using the same set of test pairs, otherwise
     /// comparing them has no meaning.
     pub fn compute_hamming_distance(&self, other: &Self) -> u32 {
-        assert_eq!(self.0.len(), other.0.len());
+        assert_eq!(self.get_size(), other.get_size());
         self.0
             .iter()
             .zip(other.0.iter())
@@ -40,13 +40,12 @@ pub struct TestPair {
 
 /// Generates BRIEF descriptors for small patches around keypoints in an image.
 ///
-/// Returns a tuple containing a vector of `Option<BinaryDescriptor>` and a
-/// vector of `TestPair`. All returned descriptors are based on the same
-/// `TestPair` set. Patches are 33x33 pixels, so keypoints must be at least 17
-/// pixels from any edge. If any keypoints are too close to an edge, their
-/// corresponding element in the descriptor vector is `None`.
+/// Returns a tuple containing a vector of `BinaryDescriptor` and a vector of
+/// `TestPair`. All returned descriptors are based on the same `TestPair` set.
+/// Patches are 33x33 pixels, so keypoints must be at least 17 pixels from any
+/// edge. If any keypoints are too close to an edge, returns an error.
 ///
-/// `length` must be a multiple of 128 bits.
+/// `length` must be a multiple of 128 bits. Returns an error otherwise.
 ///
 /// If `override_test_pairs` is `Some`, then those test pairs are used, and none
 /// are generated. Use this when you already have test pairs from another run
@@ -55,7 +54,8 @@ pub struct TestPair {
 /// If `override_test_pairs` is `None`, then `TestPair`s are generated according
 /// to an isotropic Gaussian.
 ///
-/// Before testing, patches are smoothed with a 9x9 Gaussian.
+/// Before testing, patches are smoothed with a 9x9 Gaussian approximated by
+/// three box filters.
 ///
 /// See [Calonder, et. al. (2010)][https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf]
 pub fn brief(
@@ -63,16 +63,18 @@ pub fn brief(
     keypoints: &[(u32, u32)],
     length: usize,
     override_test_pairs: Option<Vec<TestPair>>,
-) -> (Vec<Option<BinaryDescriptor>>, Vec<TestPair>) {
-    assert!(
-        length % 128 == 0,
-        "BRIEF descriptor length must be a multiple of 128 bits"
-    );
+) -> Result<(Vec<BinaryDescriptor>, Vec<TestPair>), String> {
+    if length % 128 != 0 {
+        return Err(format!(
+            "BRIEF descriptor length must be a multiple of 128 bits (found {})",
+            length
+        ));
+    }
 
     const PATCH_RADIUS: u32 = 16;
     const PATCH_DIAMETER: u32 = PATCH_RADIUS * 2 + 1;
 
-    let mut descriptors: Vec<Option<BinaryDescriptor>> = Vec::with_capacity(keypoints.len());
+    let mut descriptors: Vec<BinaryDescriptor> = Vec::with_capacity(keypoints.len());
 
     // if we have test pairs already, use them; otherwise, generate some
     let test_pairs = if let Some(t) = override_test_pairs {
@@ -104,15 +106,19 @@ pub fn brief(
     };
 
     for keypoint in keypoints {
-        // if the keypoint is too close to the edge, record None
+        // if the keypoint is too close to the edge, return an error
         let (width, height) = (image.width(), image.height());
         if keypoint.0 <= PATCH_RADIUS
             || keypoint.0 >= width - PATCH_RADIUS
             || keypoint.1 <= PATCH_RADIUS
             || keypoint.1 >= height - PATCH_RADIUS
         {
-            descriptors.push(None);
-            continue;
+            return Err(format!(
+                "Found keypoint within {}px of image edge: ({}, {})",
+                PATCH_RADIUS + 1,
+                keypoint.0,
+                keypoint.1
+            ));
         }
         // otherwise, grab a 33x33 patch around the keypoint
         let patch = image.view(
@@ -138,23 +144,24 @@ pub fn brief(
         let mut descriptor_chunk = 0u128;
         // for each test pair, compare the pixels within the patch at those points
         for (idx, test_pair) in test_pairs.iter().enumerate() {
+            // if we've entered a new chunk, then save the previous one
+            if idx != 0 && idx % 128 == 0 {
+                descriptor.0.push(descriptor_chunk);
+                descriptor_chunk = 0;
+            }
             // if p0 < p1, then record true for this test; otherwise, record false
             let (p0, p1) = (test_pair.p0, test_pair.p1);
             descriptor_chunk += (blurred_patch.get_pixel(p0.0, p0.1)[0]
                 < blurred_patch.get_pixel(p1.0, p1.1)[0]) as u128;
             descriptor_chunk <<= 1;
-            // if this is the last bit in this chunk, then roll over to a new one
-            if idx % 127 == 0 {
-                descriptor.0.push(descriptor_chunk);
-                descriptor_chunk = 0;
-            }
         }
+        // save the final chunk too
         descriptor.0.push(descriptor_chunk);
-        descriptors.push(Some(descriptor));
+        descriptors.push(descriptor);
     }
 
     // return the descriptors for all the keypoints and the test pairs used
-    (descriptors, test_pairs)
+    Ok((descriptors, test_pairs))
 }
 
 /// For each descriptor in `d1`, find the descriptor in `d2` with the minimum
@@ -166,24 +173,16 @@ pub fn brief(
 /// Returns a vector of tuples describing the matched pairs. The first value is
 /// an index into `d1`, and the second value is an index into `d2`.
 pub fn match_binary_descriptors(
-    d1: &[Option<BinaryDescriptor>],
-    d2: &[Option<BinaryDescriptor>],
+    d1: &[BinaryDescriptor],
+    d2: &[BinaryDescriptor],
     threshold: u32,
 ) -> Vec<(usize, usize)> {
-    let mut matches = Vec::with_capacity(d1.len());
+    let mut matches = Vec::with_capacity(d2.len());
+    // perform linear scan to find the best match
     for (d_a_idx, d_a) in d1.iter().enumerate() {
-        if d_a.is_none() {
-            continue;
-        }
         let mut best = (u32::MAX, (0usize, 0usize));
         for (d_b_idx, d_b) in d2.iter().enumerate() {
-            if d_b.is_none() {
-                continue;
-            }
-            let distance = d_a
-                .as_ref()
-                .unwrap()
-                .compute_hamming_distance(d_b.as_ref().unwrap());
+            let distance = d_a.compute_hamming_distance(d_b);
             if distance < best.0 {
                 best.0 = distance;
                 best.1 = (d_a_idx, d_b_idx);
