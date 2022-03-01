@@ -15,7 +15,7 @@ pub struct ChannelHistogram {
 /// Returns a vector of per-channel histograms.
 pub fn histogram<P>(image: &Image<P>) -> ChannelHistogram
 where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8>,
 {
     let mut hist = vec![[0u32; 256]; P::CHANNEL_COUNT as usize];
 
@@ -37,7 +37,7 @@ pub struct CumulativeChannelHistogram {
 /// Returns per-channel cumulative histograms.
 pub fn cumulative_histogram<P>(image: &Image<P>) -> CumulativeChannelHistogram
 where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8>,
 {
     let mut hist = histogram(image);
 

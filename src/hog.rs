@@ -392,7 +392,6 @@ pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) ->
 fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     use crate::drawing::draw_line_segment_mut;
     use std::cmp;

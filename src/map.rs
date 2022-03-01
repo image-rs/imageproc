@@ -9,7 +9,7 @@ use crate::definitions::Image;
 /// several algorithms will produce incorrect results or panic.
 pub trait WithChannel<C: Primitive>: Pixel {
     /// The new pixel type.
-    type Pixel: Pixel<Subpixel = C> + 'static;
+    type Pixel: Pixel<Subpixel = C>;
 }
 
 /// Alias to make uses of `WithChannel` less syntactically noisy.
@@ -17,32 +17,32 @@ pub type ChannelMap<Pix, Sub> = <Pix as WithChannel<Sub>>::Pixel;
 
 impl<T, U> WithChannel<U> for Rgb<T>
 where
-    T: Primitive + 'static,
-    U: Primitive + 'static,
+    T: Primitive,
+    U: Primitive,
 {
     type Pixel = Rgb<U>;
 }
 
 impl<T, U> WithChannel<U> for Rgba<T>
 where
-    T: Primitive + 'static,
-    U: Primitive + 'static,
+    T: Primitive,
+    U: Primitive,
 {
     type Pixel = Rgba<U>;
 }
 
 impl<T, U> WithChannel<U> for Luma<T>
 where
-    T: Primitive + 'static,
-    U: Primitive + 'static,
+    T: Primitive,
+    U: Primitive,
 {
     type Pixel = Luma<U>;
 }
 
 impl<T, U> WithChannel<U> for LumaA<T>
 where
-    T: Primitive + 'static,
-    U: Primitive + 'static,
+    T: Primitive,
+    U: Primitive,
 {
     type Pixel = LumaA<U>;
 }
@@ -73,8 +73,8 @@ where
 pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
 where
     I: GenericImage<Pixel = P>,
-    P: WithChannel<S> + 'static,
-    S: Primitive + 'static,
+    P: WithChannel<S>,
+    S: Primitive,
     F: Fn(P::Subpixel) -> S,
 {
     let (width, height) = image.dimensions();
@@ -172,7 +172,7 @@ pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
-    Q: Pixel + 'static,
+    Q: Pixel,
     F: Fn(P) -> Q,
 {
     let (width, height) = image.dimensions();
@@ -273,7 +273,7 @@ where
     J: GenericImage<Pixel = Q>,
     P: Pixel,
     Q: Pixel,
-    R: Pixel + 'static,
+    R: Pixel,
     F: Fn(P, Q) -> R,
 {
     assert_eq!(image1.dimensions(), image2.dimensions());
@@ -324,7 +324,7 @@ pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
-    Q: Pixel + 'static,
+    Q: Pixel,
     F: Fn(u32, u32, P) -> Q,
 {
     let (width, height) = image.dimensions();
@@ -414,7 +414,7 @@ where
 pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| Luma([p[0]]))
 }
@@ -445,7 +445,7 @@ where
 pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -480,7 +480,7 @@ where
 pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| Luma([p[1]]))
 }
@@ -511,7 +511,7 @@ where
 pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];
@@ -546,7 +546,7 @@ where
 pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| Luma([p[2]]))
 }
@@ -577,7 +577,7 @@ where
 pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + 'static,
+    C: Primitive,
 {
     map_colors(image, |p| {
         let mut cs = [C::zero(); 3];

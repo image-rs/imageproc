@@ -16,7 +16,6 @@ use std::i32;
 pub fn draw_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -32,7 +31,6 @@ where
 pub fn draw_polygon_mut<C>(canvas: &mut C, poly: &[Point<i32>], color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: 'static,
 {
     if poly.is_empty() {
         return;

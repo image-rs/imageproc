@@ -147,7 +147,7 @@ pub struct Extremes<T> {
 /// If there are multiple such values then the lexicographically smallest is returned.
 pub fn find_extremes<T>(image: &Image<Luma<T>>) -> Extremes<T>
 where
-    T: Primitive + 'static,
+    T: Primitive,
 {
     assert!(
         image.width() > 0 && image.height() > 0,

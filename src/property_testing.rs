@@ -51,7 +51,6 @@ pub trait ArbitraryPixel {
 fn shrink<I>(image: &I) -> Box<dyn Iterator<Item = Image<I::Pixel>>>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut subs = vec![];
 
@@ -77,7 +76,6 @@ where
 fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(width, height);
     for dy in 0..height {
@@ -90,7 +88,7 @@ where
     out
 }
 
-impl<T: fmt::Debug + Pixel + 'static> fmt::Debug for TestBuffer<T> {
+impl<T: fmt::Debug + Pixel> fmt::Debug for TestBuffer<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

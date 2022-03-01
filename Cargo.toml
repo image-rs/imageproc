@@ -18,7 +18,7 @@ display-window = ["sdl2"]
 [dependencies]
 approx = "0.5"
 conv = "0.3.3"
-image = { version = "0.23.6", default-features = false }
+image = { version = "0.24.1", default-features = false }
 itertools = "0.10"
 nalgebra = { version = "0.30", default-features = false, features = ["std"] }
 num = "0.4"
@@ -31,7 +31,7 @@ sdl2 = { version = "0.35", optional = true, default-features = false, features =
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
-image = "0.23.6"
+image = "0.24.1"
 quickcheck = "0.9.2"
 wasm-bindgen-test = "0.3.14"
 

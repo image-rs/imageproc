@@ -22,7 +22,7 @@ pub struct VerticalSeam(Vec<u32>);
 pub fn shrink_width<P>(image: &Image<P>, target_width: u32) -> Image<P>
 // TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
     <P as WithChannel<u16>>::Pixel: HasBlack,
 {
     assert!(
@@ -45,7 +45,7 @@ where
 /// gradient magnitudes is minimal.
 pub fn find_vertical_seam<P>(image: &Image<P>) -> VerticalSeam
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
     <P as WithChannel<u16>>::Pixel: HasBlack,
 {
     let (width, height) = image.dimensions();
@@ -134,7 +134,7 @@ fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
 // it would make them a lot slower.
 pub fn remove_vertical_seam<P>(image: &Image<P>, seam: &VerticalSeam) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
 {
     assert!(
         seam.0.len() as u32 == image.height(),

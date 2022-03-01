@@ -92,12 +92,12 @@ fn clamp_point<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
 
 /// Iterates over the image pixels in a line segment using
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
-pub struct BresenhamLinePixelIter<'a, P: Pixel + 'static> {
+pub struct BresenhamLinePixelIter<'a, P: Pixel> {
     iter: BresenhamLineIter,
     image: &'a Image<P>,
 }
 
-impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
+impl<'a, P: Pixel> BresenhamLinePixelIter<'a, P> {
     /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
@@ -114,7 +114,7 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIter<'a, P> {
     }
 }
 
-impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
+impl<'a, P: Pixel> Iterator for BresenhamLinePixelIter<'a, P> {
     type Item = &'a P;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -126,12 +126,12 @@ impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIter<'a, P> {
 
 /// Iterates over the image pixels in a line segment using
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
-pub struct BresenhamLinePixelIterMut<'a, P: Pixel + 'static> {
+pub struct BresenhamLinePixelIterMut<'a, P: Pixel> {
     iter: BresenhamLineIter,
     image: &'a mut Image<P>,
 }
 
-impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
+impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
     /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
@@ -154,7 +154,7 @@ impl<'a, P: Pixel + 'static> BresenhamLinePixelIterMut<'a, P> {
     }
 }
 
-impl<'a, P: Pixel + 'static> Iterator for BresenhamLinePixelIterMut<'a, P> {
+impl<'a, P: Pixel> Iterator for BresenhamLinePixelIterMut<'a, P> {
     type Item = &'a mut P;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -179,7 +179,6 @@ pub fn draw_line_segment<I>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -195,7 +194,6 @@ where
 pub fn draw_line_segment_mut<C>(canvas: &mut C, start: (f32, f32), end: (f32, f32), color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: 'static,
 {
     let (width, height) = canvas.dimensions();
     let in_bounds = |x, y| x >= 0 && x < width as i32 && y >= 0 && y < height as i32;
@@ -230,7 +228,7 @@ pub fn draw_antialiased_line_segment<I, B>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
+
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
@@ -255,7 +253,7 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
     blend: B,
 ) where
     I: GenericImage,
-    I::Pixel: 'static,
+
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
     let (mut x0, mut y0) = (start.0, start.1);
@@ -295,7 +293,7 @@ fn plot_wu_line<I, T, B>(
     color: I::Pixel,
 ) where
     I: GenericImage,
-    I::Pixel: 'static,
+
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
@@ -314,7 +312,7 @@ fn plot_wu_line<I, T, B>(
 struct Plotter<'a, I, T, B>
 where
     I: GenericImage,
-    I::Pixel: 'static,
+
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
@@ -326,7 +324,7 @@ where
 impl<'a, I, T, B> Plotter<'a, I, T, B>
 where
     I: GenericImage,
-    I::Pixel: 'static,
+
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
