@@ -37,8 +37,6 @@ where
 
 impl<T, U> WithChannel<U> for Luma<T>
 where
-    Luma<T>: Pixel<Subpixel = T>,
-    Luma<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
@@ -47,8 +45,6 @@ where
 
 impl<T, U> WithChannel<U> for LumaA<T>
 where
-    LumaA<T>: Pixel<Subpixel = T>,
-    LumaA<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
