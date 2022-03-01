@@ -110,6 +110,8 @@ impl<I: GenericImage> Canvas for Blend<I> {
     }
 
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
-        self.0.get_pixel_mut(x, y).blend(&color)
+        let mut pix = self.0.get_pixel(x, y);
+        pix.blend(&color);
+        self.0.put_pixel(x, y, pix);
     }
 }

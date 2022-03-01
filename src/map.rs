@@ -140,14 +140,13 @@ where
 
     for y in 0..height {
         for x in 0..width {
-            for c in 0..P::CHANNEL_COUNT {
-                image.get_pixel_mut(x, y).channels_mut()[c as usize] = f(unsafe {
-                    *image
-                        .unsafe_get_pixel(x, y)
-                        .channels()
-                        .get_unchecked(c as usize)
-                });
+            let mut pixel = image.get_pixel(x, y);
+            let channels = pixel.channels_mut();
+            for c in 0..P::CHANNEL_COUNT as usize {
+                channels[c] =
+                    f(unsafe { *image.unsafe_get_pixel(x, y).channels().get_unchecked(c) });
             }
+            image.put_pixel(x, y, pixel);
         }
     }
 }
