@@ -169,8 +169,8 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// # }
 pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    Q: Pixel + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
+    Q: Pixel,
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {
@@ -193,8 +193,8 @@ fn gradients<P, F, Q>(
     f: F,
 ) -> Image<Q>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + 'static,
-    Q: Pixel + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
+    Q: Pixel,
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {

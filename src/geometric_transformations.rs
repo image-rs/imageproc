@@ -284,7 +284,7 @@ pub fn rotate_about_center<P>(
     default: P,
 ) -> Image<P>
 where
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
@@ -309,7 +309,7 @@ pub fn rotate<P>(
     default: P,
 ) -> Image<P>
 where
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
@@ -326,7 +326,7 @@ where
 // TODO: attempting the equivalent transformation using Projection.
 pub fn translate<P>(image: &Image<P>, t: (i32, i32)) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
 {
     let (width, height) = image.dimensions();
     let (tx, ty) = t;
@@ -381,7 +381,7 @@ pub fn warp<P>(
     default: P,
 ) -> Image<P>
 where
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
@@ -401,7 +401,7 @@ pub fn warp_into<P>(
     default: P,
     out: &mut Image<P>,
 ) where
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
 {
@@ -453,7 +453,7 @@ pub fn warp_with<P, F>(
 ) -> Image<P>
 where
     F: Fn(f32, f32) -> (f32, f32) + Sync + Send,
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
@@ -475,7 +475,7 @@ pub fn warp_into_with<P, F>(
     out: &mut Image<P>,
 ) where
     F: Fn(f32, f32) -> (f32, f32) + Send + Sync,
-    P: Pixel + Send + Sync + 'static,
+    P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
@@ -495,7 +495,7 @@ pub fn warp_into_with<P, F>(
 // TODO: make faster by avoiding boundary checks in inner section of src image
 fn warp_inner<P, Fc, Fi>(out: &mut Image<P>, mapping: Fc, get_pixel: Fi)
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
     Fc: Fn(f32, f32) -> (f32, f32) + Send + Sync,
@@ -618,7 +618,7 @@ where
 
 fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let left = x.floor() - 1f32;
@@ -680,7 +680,7 @@ where
 
 fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     let left = x.floor();
@@ -709,7 +709,7 @@ where
 }
 
 #[inline(always)]
-fn interpolate_nearest<P: Pixel + 'static>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
+fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
     let rx = x.round();
     let ry = y.round();
 

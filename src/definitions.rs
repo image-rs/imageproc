@@ -1,6 +1,6 @@
 //! Trait definitions and type aliases.
 
-use image::{Bgr, Bgra, ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
+use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
 use std::{i16, u16, u8};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
@@ -63,18 +63,6 @@ impl_black_white!(
     Rgba<u16>,
     Rgba([u16::MIN, u16::MIN, u16::MIN, u16::MAX]),
     Rgba([u16::MAX, u16::MAX, u16::MAX, u16::MAX])
-);
-impl_black_white!(Bgr<u8>, Bgr([u8::MIN; 3]), Bgr([u8::MAX; 3]));
-impl_black_white!(Bgr<u16>, Bgr([u16::MIN; 3]), Bgr([u16::MAX; 3]));
-impl_black_white!(
-    Bgra<u8>,
-    Bgra([u8::MIN, u8::MIN, u8::MIN, u8::MAX]),
-    Bgra([u8::MAX, u8::MAX, u8::MAX, u8::MAX])
-);
-impl_black_white!(
-    Bgra<u16>,
-    Bgra([u16::MIN, u16::MIN, u16::MIN, u16::MAX]),
-    Bgra([u16::MAX, u16::MAX, u16::MAX, u16::MAX])
 );
 
 /// Something with a 2d position.
