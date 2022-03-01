@@ -17,6 +17,8 @@ pub type ChannelMap<Pix, Sub> = <Pix as WithChannel<Sub>>::Pixel;
 
 impl<T, U> WithChannel<U> for Rgb<T>
 where
+    Rgb<T>: Pixel<Subpixel = T>,
+    Rgb<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
@@ -25,6 +27,8 @@ where
 
 impl<T, U> WithChannel<U> for Rgba<T>
 where
+    Rgba<T>: Pixel<Subpixel = T>,
+    Rgba<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
@@ -33,6 +37,8 @@ where
 
 impl<T, U> WithChannel<U> for Luma<T>
 where
+    Luma<T>: Pixel<Subpixel = T>,
+    Luma<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
@@ -41,6 +47,8 @@ where
 
 impl<T, U> WithChannel<U> for LumaA<T>
 where
+    LumaA<T>: Pixel<Subpixel = T>,
+    LumaA<U>: Pixel<Subpixel = U>,
     T: Primitive,
     U: Primitive,
 {
@@ -414,6 +422,7 @@ where
 pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| Luma([p[0]]))
@@ -445,6 +454,7 @@ where
 pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| {
@@ -480,6 +490,7 @@ where
 pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| Luma([p[1]]))
@@ -511,6 +522,7 @@ where
 pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| {
@@ -546,6 +558,7 @@ where
 pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Rgb<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| Luma([p[2]]))
@@ -577,6 +590,7 @@ where
 pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
+    Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
     map_colors(image, |p| {

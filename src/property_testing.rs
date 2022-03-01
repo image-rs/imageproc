@@ -51,6 +51,7 @@ pub trait ArbitraryPixel {
 fn shrink<I>(image: &I) -> Box<dyn Iterator<Item = Image<I::Pixel>>>
 where
     I: GenericImage,
+    I::Pixel: 'static,
 {
     let mut subs = vec![];
 
