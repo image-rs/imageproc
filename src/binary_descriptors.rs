@@ -1,12 +1,12 @@
 //! Functions for generating compact binary patch descriptions.
 
-use image::{GenericImageView, GrayImage};
+use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use rand_distr::{Distribution, Normal};
 
-use crate::filter::box_filter;
+use crate::integral_image::{integral_image, sum_image_pixels};
 
 /// A thin wrapper around a vector of bits
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinaryDescriptor(Vec<u128>);
 
 impl BinaryDescriptor {
@@ -30,7 +30,7 @@ impl BinaryDescriptor {
 }
 
 /// Collection of two points that a BRIEF descriptor uses to generate its bits.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TestPair {
     /// The first point in the pair.
     pub p0: (u32, u32),
@@ -42,7 +42,7 @@ pub struct TestPair {
 ///
 /// Returns a tuple containing a vector of `BinaryDescriptor` and a vector of
 /// `TestPair`. All returned descriptors are based on the same `TestPair` set.
-/// Patches are 33x33 pixels, so keypoints must be at least 17 pixels from any
+/// Patches are 31x31 pixels, so keypoints must be at least 17 pixels from any
 /// edge. If any keypoints are too close to an edge, returns an error.
 ///
 /// `length` must be a multiple of 128 bits. Returns an error otherwise.
@@ -62,7 +62,7 @@ pub fn brief(
     image: &GrayImage,
     keypoints: &[(u32, u32)],
     length: usize,
-    override_test_pairs: Option<Vec<TestPair>>,
+    override_test_pairs: Option<&Vec<TestPair>>,
 ) -> Result<(Vec<BinaryDescriptor>, Vec<TestPair>), String> {
     if length % 128 != 0 {
         return Err(format!(
@@ -71,16 +71,17 @@ pub fn brief(
         ));
     }
 
-    const PATCH_RADIUS: u32 = 16;
+    const PATCH_RADIUS: u32 = 15;
     const PATCH_DIAMETER: u32 = PATCH_RADIUS * 2 + 1;
+    const SUB_PATCH_RADIUS: u32 = 5;
 
     let mut descriptors: Vec<BinaryDescriptor> = Vec::with_capacity(keypoints.len());
 
     // if we have test pairs already, use them; otherwise, generate some
     let test_pairs = if let Some(t) = override_test_pairs {
-        t
+        t.clone()
     } else {
-        // generate a set of test pairs within a 33x33 grid with a Gaussian bias (sigma = 6.6)
+        // generate a set of test pairs within a 31x31 grid with a Gaussian bias (sigma = 6.6)
         let test_pair_distribution = Normal::new(PATCH_RADIUS as f32 + 1.0, 6.6).unwrap();
         let mut rng = rand::thread_rng();
         let mut test_pairs: Vec<TestPair> = Vec::with_capacity(length);
@@ -102,16 +103,16 @@ pub fn brief(
                 });
             }
         }
-        test_pairs
+        test_pairs.clone()
     };
 
     for keypoint in keypoints {
         // if the keypoint is too close to the edge, return an error
         let (width, height) = (image.width(), image.height());
         if keypoint.0 <= PATCH_RADIUS
-            || keypoint.0 >= width - PATCH_RADIUS
+            || keypoint.0 + PATCH_RADIUS >= width
             || keypoint.1 <= PATCH_RADIUS
-            || keypoint.1 >= height - PATCH_RADIUS
+            || keypoint.1 + PATCH_RADIUS >= height
         {
             return Err(format!(
                 "Found keypoint within {}px of image edge: ({}, {})",
@@ -120,25 +121,18 @@ pub fn brief(
                 keypoint.1
             ));
         }
-        // otherwise, grab a 33x33 patch around the keypoint
+        // otherwise, grab a 31x31 patch around the keypoint
         let patch = image.view(
             keypoint.0 - (PATCH_RADIUS + 1),
             keypoint.1 - (PATCH_RADIUS + 1),
             PATCH_DIAMETER,
             PATCH_DIAMETER,
         );
-        // apply a Gaussian blur to the patch
-        // three successive box filters approximate a Gaussian within about 3%
-        let blur_radius = 4;
-        let blurred_patch = box_filter(
-            &box_filter(
-                &box_filter(&patch.to_image(), blur_radius, blur_radius),
-                blur_radius,
-                blur_radius,
-            ),
-            blur_radius,
-            blur_radius,
-        );
+
+        // the original paper applies a Gaussian blur to the patch, but for
+        // speed we will use an integral image to find the average intensities
+        // around each test point
+        let integral_patch: ImageBuffer<Luma<u32>, Vec<u32>> = integral_image(&patch.to_image());
 
         let mut descriptor = BinaryDescriptor(Vec::with_capacity(length / 128));
         let mut descriptor_chunk = 0u128;
@@ -149,10 +143,63 @@ pub fn brief(
                 descriptor.0.push(descriptor_chunk);
                 descriptor_chunk = 0;
             }
-            // if p0 < p1, then record true for this test; otherwise, record false
+
             let (p0, p1) = (test_pair.p0, test_pair.p1);
-            descriptor_chunk += (blurred_patch.get_pixel(p0.0, p0.1)[0]
-                < blurred_patch.get_pixel(p1.0, p1.1)[0]) as u128;
+
+            // check bounds for the sub-patch around the test point
+            let p0_left = if SUB_PATCH_RADIUS >= p0.0 {
+                0
+            } else {
+                p0.0 - SUB_PATCH_RADIUS
+            };
+            let p0_right = if p0.0 + SUB_PATCH_RADIUS >= PATCH_DIAMETER {
+                PATCH_DIAMETER - 1
+            } else {
+                p0.0 + SUB_PATCH_RADIUS - 1
+            };
+            let p0_top = if SUB_PATCH_RADIUS >= p0.1 {
+                0
+            } else {
+                p0.1 - SUB_PATCH_RADIUS
+            };
+            let p0_bottom = if p0.1 + SUB_PATCH_RADIUS >= PATCH_DIAMETER {
+                PATCH_DIAMETER - 1
+            } else {
+                p0.1 + SUB_PATCH_RADIUS - 1
+            };
+            let p1_left = if SUB_PATCH_RADIUS >= p1.0 {
+                0
+            } else {
+                p1.0 - SUB_PATCH_RADIUS
+            };
+            let p1_right = if p1.0 + SUB_PATCH_RADIUS >= PATCH_DIAMETER {
+                PATCH_DIAMETER - 1
+            } else {
+                p1.0 + SUB_PATCH_RADIUS - 1
+            };
+            let p1_top = if SUB_PATCH_RADIUS >= p1.1 {
+                0
+            } else {
+                p1.1 - SUB_PATCH_RADIUS
+            };
+            let p1_bottom = if p1.1 + SUB_PATCH_RADIUS >= PATCH_DIAMETER {
+                PATCH_DIAMETER - 1
+            } else {
+                p1.1 + SUB_PATCH_RADIUS - 1
+            };
+
+            // use the integral image to compute the average intensity for the test point sub-patches
+            let p0_total_intensity =
+                sum_image_pixels(&integral_patch, p0_left, p0_top, p0_right, p0_bottom);
+            let p0_avg_intensity =
+                p0_total_intensity[0] / ((p0_bottom - p0_top) * (p0_right - p0_left));
+            let p1_total_intensity =
+                sum_image_pixels(&integral_patch, p1_left, p1_top, p1_right, p1_bottom);
+            let p1_avg_intensity =
+                p1_total_intensity[0] / ((p1_bottom - p1_top) * (p1_right - p1_left));
+
+            // if p0 < p1, then record true for this test; otherwise, record false
+            descriptor_chunk += (p0_avg_intensity < p1_avg_intensity) as u128;
             descriptor_chunk <<= 1;
         }
         // save the final chunk too
@@ -177,6 +224,13 @@ pub fn match_binary_descriptors(
     d2: &[BinaryDescriptor],
     threshold: u32,
 ) -> Vec<(usize, usize)> {
+    // let m = 8; // d1[0].get_size() / log_2 (d2.len())
+    // let mut substring_tables: Vec<HashMap<BinaryDescriptor, usize>> = vec![HashMap::new(); m];
+    // for j in 0..m {
+    //     for (i, d2_el) in d2.iter().enumerate() {
+
+    //     }
+    // }
     let mut matches = Vec::with_capacity(d2.len());
     // perform linear scan to find the best match
     for (d_a_idx, d_a) in d1.iter().enumerate() {

@@ -55,29 +55,44 @@ fn main() -> ImageResult<()> {
     let (second_image_height, second_image_width) = (second_image.height(), second_image.width());
 
     const CORNER_THRESHOLD: u8 = 70;
+    let start = std::time::Instant::now();
     let first_corners = corners_fast9(&first_image, CORNER_THRESHOLD)
         .iter()
         .map(|c| (c.x, c.y))
-        .filter(|c| filter_edge_keypoints(*c, first_image_height, first_image_width, 17))
+        .filter(|c| filter_edge_keypoints(*c, first_image_height, first_image_width, 16))
         .collect::<Vec<(u32, u32)>>();
     let second_corners = corners_fast9(&second_image, CORNER_THRESHOLD)
         .iter()
         .map(|c| (c.x, c.y))
-        .filter(|c| filter_edge_keypoints(*c, second_image_height, second_image_width, 17))
+        .filter(|c| filter_edge_keypoints(*c, second_image_height, second_image_width, 16))
         .collect::<Vec<(u32, u32)>>();
-
-    let start = std::time::Instant::now();
-    let (first_descriptors, test_pairs) = brief(&first_image, &first_corners, 256, None).unwrap();
-    let (second_descriptors, _test_pairs) =
-        brief(&second_image, &second_corners, 256, Some(test_pairs)).unwrap();
     let elapsed = start.elapsed();
     println!(
-        "Computed {} + {} = {} descriptors in {:.2?} ({:.2?} per descriptor)",
+        "Found {} + {} = {} corners in {:.2?} ({:.2?} per corner)",
+        first_corners.len(),
+        second_corners.len(),
+        first_corners.len() + second_corners.len(),
+        elapsed,
+        elapsed / (first_corners.len() + second_corners.len()) as u32
+    );
+
+    let (first_descriptors, test_pairs) = brief(&first_image, &first_corners, 256, None).unwrap();
+    let (second_descriptors, _test_pairs) =
+        brief(&second_image, &second_corners, 256, Some(&test_pairs)).unwrap();
+
+    let start = std::time::Instant::now();
+    for _ in 0..100 {
+        let _ = brief(&first_image, &first_corners, 256, None).unwrap();
+        let _ = brief(&second_image, &second_corners, 256, Some(&test_pairs)).unwrap();
+    }
+    let elapsed = start.elapsed();
+    println!(
+        "Computed {} + {} = {} descriptors 100 times in {:.2?} ({:.2?} per descriptor)",
         first_descriptors.len(),
         second_descriptors.len(),
         first_descriptors.len() + second_descriptors.len(),
         elapsed,
-        elapsed / (first_descriptors.len() + first_descriptors.len()) as u32
+        elapsed / ((first_descriptors.len() + second_descriptors.len()) * 100) as u32
     );
 
     let start = std::time::Instant::now();
@@ -91,6 +106,8 @@ fn main() -> ImageResult<()> {
         elapsed / (first_descriptors.len() * second_descriptors.len()) as u32
     );
 
+    // now that we've matched descriptors in both images, put them side by side
+    // and draw lines connecting the descriptors together
     let first_image = open(first_image_path)?.to_rgb8();
     let second_image = open(second_image_path)?.to_rgb8();
 
