@@ -95,15 +95,17 @@ fn main() -> ImageResult<()> {
         elapsed / ((first_descriptors.len() + second_descriptors.len()) * 100) as u32
     );
 
-    let start = std::time::Instant::now();
     let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 24);
+    let start = std::time::Instant::now();
+    for _ in 0..100 {
+        let _ = match_binary_descriptors(&first_descriptors, &second_descriptors, 24);
+    }
     let elapsed = start.elapsed();
     println!(
-        "Matched {} pairs from {} candidates in {:.2?} ({:?} per candidate)",
+        "Matched {} descriptor pairs 100 times in {:.2?} ({:?} per descriptor)",
         matches.len(),
-        first_descriptors.len() * second_descriptors.len(),
         elapsed,
-        elapsed / (first_descriptors.len() * second_descriptors.len()) as u32
+        elapsed / ((first_descriptors.len() + second_descriptors.len()) * 100) as u32
     );
 
     // now that we've matched descriptors in both images, put them side by side

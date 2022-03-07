@@ -1,7 +1,12 @@
-//! Functions for generating compact binary patch descriptions.
+//! Functions for generating and comparing compact binary patch descriptions.
 
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+use rand::Rng;
 use rand_distr::{Distribution, Normal};
+use std::{
+    collections::HashMap,
+    hash::{BuildHasher, Hash, Hasher},
+};
 
 use crate::integral_image::{integral_image, sum_image_pixels};
 
@@ -11,7 +16,7 @@ pub struct BinaryDescriptor(Vec<u128>);
 
 impl BinaryDescriptor {
     /// Returns the length of the descriptor in bits. Typical values are 128,
-    /// 256, and 512.
+    /// 256, and 512. Will always be a multiple of 128.
     pub fn get_size(&self) -> u32 {
         (self.0.len() * 128) as u32
     }
@@ -26,6 +31,70 @@ impl BinaryDescriptor {
             .iter()
             .zip(other.0.iter())
             .fold(0, |acc, x| acc + (x.0 ^ x.1).count_ones())
+    }
+}
+
+impl Hash for BinaryDescriptor {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for chunk in self.0.iter() {
+            state.write_u128(*chunk);
+        }
+    }
+}
+
+#[derive(Clone)]
+struct LocalityHasher {
+    bits: Vec<u32>,
+    bit_index: usize,
+    index: u32,
+    state: u64,
+}
+
+impl LocalityHasher {
+    fn new(bits: &[u32]) -> Self {
+        // sorting lets us check the bits in order, which is more efficient than
+        // having to call self.bits.contains() all the time in Hasher::write()
+        let mut sorted_bits = bits.to_vec();
+        sorted_bits.sort_unstable();
+
+        LocalityHasher {
+            bits: sorted_bits,
+            bit_index: 0,
+            index: 0,
+            state: 0,
+        }
+    }
+}
+
+impl BuildHasher for LocalityHasher {
+    type Hasher = LocalityHasher;
+    fn build_hasher(&self) -> Self::Hasher {
+        self.clone()
+    }
+}
+
+impl Hasher for LocalityHasher {
+    fn finish(&self) -> u64 {
+        self.state
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        // extract the bits we want (given by the indices in self.bits) and
+        // concatenate them into the hash output
+        for b in bytes {
+            for i in 0..8 {
+                if self.bits[self.bit_index] == self.index + i {
+                    self.state <<= 1;
+                    // check whether the ith bit of this byte is set
+                    // if it is, then increment the hasher state
+                    // this value gets shifted left on the next loop
+                    self.state += ((*b as u32 & u32::pow(2, i)) >> i) as u64;
+                    if self.bit_index < self.bits.len() - 1 {
+                        self.bit_index += 1;
+                    }
+                }
+            }
+            self.index += 8;
+        }
     }
 }
 
@@ -54,10 +123,18 @@ pub struct TestPair {
 /// If `override_test_pairs` is `None`, then `TestPair`s are generated according
 /// to an isotropic Gaussian.
 ///
-/// Before testing, patches are smoothed with a 9x9 Gaussian approximated by
-/// three box filters.
+/// Calonder used Gaussian smoothing to decrease the effects of noise in the
+/// patches. This is slow, even with a box filter approximation. For maximum
+/// performance, the average intensities of sub-patches of radius 5 around the
+/// test points are computed and used instead of the intensities of the test
+/// points themselves. This is much faster because the averages come from
+/// integral images. Calonder suggests that this approach may be faster, and
+/// [Rublee et. al. (2012)][rublee] use this approach to quickly compute ORB
+/// descriptors.
 ///
-/// See [Calonder, et. al. (2010)][https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf]
+/// [rublee]: http://www.gwylab.com/download/ORB_2012.pdf
+///
+/// See [Calonder et. al. (2010)][https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf]
 pub fn brief(
     image: &GrayImage,
     keypoints: &[(u32, u32)],
@@ -217,33 +294,94 @@ pub fn brief(
 ///
 /// Descriptors in `d2` may be matched with more than one descriptor in `d1`.
 ///
+/// Uses [locality-sensitive hashing][lsh] (LSH) for efficient matching. The
+/// number of tables is fixed at three, but the hash length is proportional to
+/// the log of the size of the largest input array.
+///
 /// Returns a vector of tuples describing the matched pairs. The first value is
 /// an index into `d1`, and the second value is an index into `d2`.
+///
+/// [lsh]: https://en.wikipedia.org/wiki/Locality_sensitive_hashing#Bit_sampling_for_Hamming_distance
 pub fn match_binary_descriptors(
     d1: &[BinaryDescriptor],
     d2: &[BinaryDescriptor],
     threshold: u32,
 ) -> Vec<(usize, usize)> {
-    // let m = 8; // d1[0].get_size() / log_2 (d2.len())
-    // let mut substring_tables: Vec<HashMap<BinaryDescriptor, usize>> = vec![HashMap::new(); m];
-    // for j in 0..m {
-    //     for (i, d2_el) in d2.iter().enumerate() {
+    // early return if either input is empty
+    if d1.is_empty() || d2.is_empty() {
+        return Vec::new();
+    }
 
-    //     }
-    // }
-    let mut matches = Vec::with_capacity(d2.len());
-    // perform linear scan to find the best match
-    for (d_a_idx, d_a) in d1.iter().enumerate() {
-        let mut best = (u32::MAX, (0usize, 0usize));
-        for (d_b_idx, d_b) in d2.iter().enumerate() {
-            let distance = d_a.compute_hamming_distance(d_b);
-            if distance < best.0 {
-                best.0 = distance;
-                best.1 = (d_a_idx, d_b_idx);
+    let mut rng = rand::thread_rng();
+
+    // locality-sensitive hashing (LSH)
+    // this algorithm is log(d2.len()) but linear in d1.len(), so swap the inputs if needed
+    let (queries, database, swapped) = if d1.len() > d2.len() {
+        (d2, d1, true)
+    } else {
+        (d1, d2, false)
+    };
+
+    // build l hash tables by selecting k random bits from each descriptor
+    let l = 3;
+    // k grows as the log of the database size
+    // this keeps bucket size roughly constant
+    let k = (database.len() as f32).log2() as i32;
+    let mut hash_tables = Vec::with_capacity(l);
+    for _ in 0..l {
+        // choose k random bits (not necessarily unique)
+        let bits = (0..k)
+            .into_iter()
+            .map(|_| rng.gen_range(0, queries[0].get_size()))
+            .collect::<Vec<u32>>();
+
+        let mut new_hashmap = HashMap::<u64, Vec<usize>>::with_capacity(database.len());
+
+        // compute the hash of each descriptor in the database and store its index
+        // there will be collisions --- we want that to happen
+        for (idx, d) in database.iter().enumerate() {
+            let mut hasher = LocalityHasher::new(&bits).build_hasher();
+            d.hash(&mut hasher);
+            let hash = hasher.finish();
+            if let Some(v) = new_hashmap.get_mut(&hash) {
+                v.push(idx);
+            } else {
+                new_hashmap.insert(hash, vec![idx]);
             }
         }
+        hash_tables.push((bits, new_hashmap));
+    }
+
+    // find the hash buckets corresponding to each query descriptor
+    // then check all bucket members to find the (probable) best match
+    let mut matches = Vec::with_capacity(queries.len());
+    for (query_idx, query) in queries.iter().enumerate() {
+        // find all buckets for the query descriptor
+        let mut candidates = Vec::with_capacity(l);
+        for (bits, table) in hash_tables.iter() {
+            let mut hasher = LocalityHasher::new(bits).build_hasher();
+            query.hash(&mut hasher);
+            let query_hash = hasher.finish();
+            if let Some(m) = table.get(&query_hash) {
+                candidates.append(&mut m.clone());
+            }
+        }
+        // perform linear scan to find the best match
+        let mut best = (u32::MAX, 0usize);
+        for c in candidates {
+            let distance = query.compute_hamming_distance(&database[c]);
+            if distance < best.0 {
+                best.0 = distance;
+                best.1 = c;
+            }
+        }
+        // ignore the match if it's beyond our threshold
         if best.0 < threshold {
-            matches.push(best.1);
+            if swapped {
+                matches.push((best.1, query_idx));
+            } else {
+                matches.push((query_idx, best.1));
+            }
         }
     }
     matches
