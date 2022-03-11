@@ -3,10 +3,7 @@
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash, Hasher},
-};
+use std::collections::HashMap;
 
 use crate::integral_image::{integral_image, sum_image_pixels};
 
@@ -32,69 +29,23 @@ impl BinaryDescriptor {
             .zip(other.0.iter())
             .fold(0, |acc, x| acc + (x.0 ^ x.1).count_ones())
     }
-}
-
-impl Hash for BinaryDescriptor {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for chunk in self.0.iter() {
-            state.write_u128(*chunk);
+    /// Given a set of bit indices, returns those bits from the descriptor as a
+    /// single concatenated value.
+    ///
+    /// Panics if `bits.len() > 128`.
+    pub fn get_bit_subset(&self, bits: &Vec<u32>) -> u128 {
+        assert!(
+            bits.len() <= 128,
+            "Can't extract more than 128 bits (found {})",
+            bits.len()
+        );
+        let mut subset = 0;
+        for b in bits {
+            subset <<= 1;
+            // isolate the bit at index b
+            subset += (self.0[(b / 128) as usize] >> (b % 128)) % 2;
         }
-    }
-}
-
-#[derive(Clone)]
-struct LocalityHasher {
-    bits: Vec<u32>,
-    bit_index: usize,
-    index: u32,
-    state: u64,
-}
-
-impl LocalityHasher {
-    fn new(bits: &[u32]) -> Self {
-        // sorting lets us check the bits in order, which is more efficient than
-        // having to call self.bits.contains() all the time in Hasher::write()
-        let mut sorted_bits = bits.to_vec();
-        sorted_bits.sort_unstable();
-
-        LocalityHasher {
-            bits: sorted_bits,
-            bit_index: 0,
-            index: 0,
-            state: 0,
-        }
-    }
-}
-
-impl BuildHasher for LocalityHasher {
-    type Hasher = LocalityHasher;
-    fn build_hasher(&self) -> Self::Hasher {
-        self.clone()
-    }
-}
-
-impl Hasher for LocalityHasher {
-    fn finish(&self) -> u64 {
-        self.state
-    }
-    fn write(&mut self, bytes: &[u8]) {
-        // extract the bits we want (given by the indices in self.bits) and
-        // concatenate them into the hash output
-        for b in bytes {
-            for i in 0..8 {
-                if self.bits[self.bit_index] == self.index + i {
-                    self.state <<= 1;
-                    // check whether the ith bit of this byte is set
-                    // if it is, then increment the hasher state
-                    // this value gets shifted left on the next loop
-                    self.state += ((*b as u32 & u32::pow(2, i)) >> i) as u64;
-                    if self.bit_index < self.bits.len() - 1 {
-                        self.bit_index += 1;
-                    }
-                }
-            }
-            self.index += 8;
-        }
+        subset
     }
 }
 
@@ -183,9 +134,10 @@ pub fn brief(
         test_pairs.clone()
     };
 
+    let (width, height) = (image.width(), image.height());
+
     for keypoint in keypoints {
         // if the keypoint is too close to the edge, return an error
-        let (width, height) = (image.width(), image.height());
         if keypoint.0 <= PATCH_RADIUS
             || keypoint.0 + PATCH_RADIUS >= width
             || keypoint.1 <= PATCH_RADIUS
@@ -335,14 +287,12 @@ pub fn match_binary_descriptors(
             .map(|_| rng.gen_range(0, queries[0].get_size()))
             .collect::<Vec<u32>>();
 
-        let mut new_hashmap = HashMap::<u64, Vec<usize>>::with_capacity(database.len());
+        let mut new_hashmap = HashMap::<u128, Vec<usize>>::with_capacity(database.len());
 
         // compute the hash of each descriptor in the database and store its index
         // there will be collisions --- we want that to happen
         for (idx, d) in database.iter().enumerate() {
-            let mut hasher = LocalityHasher::new(&bits).build_hasher();
-            d.hash(&mut hasher);
-            let hash = hasher.finish();
+            let hash = d.get_bit_subset(&bits);
             if let Some(v) = new_hashmap.get_mut(&hash) {
                 v.push(idx);
             } else {
@@ -359,9 +309,7 @@ pub fn match_binary_descriptors(
         // find all buckets for the query descriptor
         let mut candidates = Vec::with_capacity(l);
         for (bits, table) in hash_tables.iter() {
-            let mut hasher = LocalityHasher::new(bits).build_hasher();
-            query.hash(&mut hasher);
-            let query_hash = hasher.finish();
+            let query_hash = query.get_bit_subset(bits);
             if let Some(m) = table.get(&query_hash) {
                 candidates.append(&mut m.clone());
             }
