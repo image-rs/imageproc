@@ -99,6 +99,14 @@ pub fn brief(
         ));
     }
 
+    if override_test_pairs.is_some() && length != override_test_pairs.unwrap().len() {
+        return Err(format!(
+            "BRIEF descriptor length must be equal to the number or test pairs ({} != {})",
+            length,
+            override_test_pairs.unwrap().len()
+        ));
+    }
+
     const PATCH_RADIUS: u32 = 15;
     const PATCH_DIAMETER: u32 = PATCH_RADIUS * 2 + 1;
     const SUB_PATCH_RADIUS: u32 = 5;
@@ -333,4 +341,98 @@ pub fn match_binary_descriptors(
         }
     }
     matches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
+
+    #[test]
+    fn test_compute_hamming_distance() {
+        let d1 = BinaryDescriptor(vec![
+            0xe41749023c71b74df05b57165519a180,
+            0x9c06c422620e05d01105618cb3a2dcf1,
+        ]);
+        let d2 = BinaryDescriptor(vec![
+            0x8af22bb0596edc267c6f72cf425ebe1a,
+            0xc1f6291520e474e8fa114e15420413d1,
+        ]);
+        assert_eq!(d1.compute_hamming_distance(&d2), 134);
+    }
+
+    #[test]
+    fn test_get_bit_subset() {
+        let d = BinaryDescriptor(vec![
+            0xdbe3de5bd950adf3d730034f9e4a55f7,
+            0xf275f00f6243892a18ffefd0499996ee,
+        ]);
+        let bits = vec![
+            226, 38, 212, 210, 60, 205, 68, 184, 47, 105, 152, 169, 11, 39, 76, 217, 183, 113, 189,
+            251, 37, 181, 62, 28, 148, 92, 251, 77, 222, 148, 56, 142,
+        ];
+        assert_eq!(d.get_bit_subset(&bits), 0b11001010011100011100011111011110);
+    }
+
+    #[bench]
+    fn bench_brief_random_test_pairs_1000_keypoints(b: &mut Bencher) {
+        let image = gray_bench_image(640, 480);
+        let mut rng = rand::thread_rng();
+        let keypoints = (0..1000)
+            .into_iter()
+            .map(|_| {
+                (
+                    rng.gen_range(16, image.width() - 16),
+                    rng.gen_range(16, image.height() - 16),
+                )
+            })
+            .collect::<Vec<(u32, u32)>>();
+        b.iter(|| {
+            black_box(brief(&image, &keypoints, 256, None)).unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_brief_fixed_test_pairs_1000_keypoints(b: &mut Bencher) {
+        let image = gray_bench_image(640, 480);
+        let mut rng = rand::thread_rng();
+        let keypoints = (0..1000)
+            .into_iter()
+            .map(|_| {
+                (
+                    rng.gen_range(16, image.width() - 16),
+                    rng.gen_range(16, image.height() - 16),
+                )
+            })
+            .collect::<Vec<(u32, u32)>>();
+        let (_, test_pairs) = brief(&image, &keypoints, 256, None).unwrap();
+        b.iter(|| {
+            black_box(brief(&image, &keypoints, 256, Some(&test_pairs))).unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_matcher_1000_keypoints_each(b: &mut Bencher) {
+        let image = gray_bench_image(640, 480);
+        let mut rng = rand::thread_rng();
+        let keypoints = (0..1000)
+            .into_iter()
+            .map(|_| {
+                (
+                    rng.gen_range(16, image.width() - 16),
+                    rng.gen_range(16, image.height() - 16),
+                )
+            })
+            .collect::<Vec<(u32, u32)>>();
+        let (first_descriptors, test_pairs) = brief(&image, &keypoints, 256, None).unwrap();
+        let (second_descriptors, _) = brief(&image, &keypoints, 256, Some(&test_pairs)).unwrap();
+        b.iter(|| {
+            black_box(match_binary_descriptors(
+                &first_descriptors,
+                &second_descriptors,
+                24,
+            ));
+        });
+    }
 }
