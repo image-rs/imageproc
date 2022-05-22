@@ -17,10 +17,7 @@
 #[macro_use]
 extern crate imageproc;
 
-use image::{
-    DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
-    RgbaImage,
-};
+use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -497,6 +494,71 @@ fn test_draw_spiral_polygon() {
     draw_polygon_mut(&mut image, &polygon, Luma::white());
 
     compare_to_truth_image(&image, "spiral_polygon.png");
+}
+
+#[test]
+fn test_draw_antialised_polygon() {
+    use imageproc::drawing::draw_antialiased_polygon_mut;
+    use imageproc::point::Point;
+    use imageproc::pixelops::interpolate;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let star = vec![
+        Point::new(100, 20),
+        Point::new(120, 35),
+        Point::new(140, 30),
+        Point::new(115, 45),
+        Point::new(130, 60),
+        Point::new(100, 50),
+        Point::new(80, 55),
+        Point::new(90, 40),
+        Point::new(60, 25),
+        Point::new(90, 35),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &star, white, interpolate);
+
+    let partially_out_of_bounds_star = vec![
+        Point::new(275, 20),
+        Point::new(295, 35),
+        Point::new(315, 30),
+        Point::new(290, 45),
+        Point::new(305, 60),
+        Point::new(275, 50),
+        Point::new(255, 55),
+        Point::new(265, 40),
+        Point::new(235, 25),
+        Point::new(265, 35),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_star, white, interpolate);
+
+    let triangle = vec![Point::new(35, 80), Point::new(145, 110), Point::new(5, 90)];
+    draw_antialiased_polygon_mut(&mut image, &triangle, white, interpolate);
+
+    let partially_out_of_bounds_triangle = vec![
+        Point::new(250, 80),
+        Point::new(350, 130),
+        Point::new(250, 120),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white, interpolate);
+
+    let quad = vec![
+        Point::new(190, 250),
+        Point::new(240, 210),
+        Point::new(270, 200),
+        Point::new(220, 280),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &quad, white, interpolate);
+
+    let hex: Vec<Point<i32>> = (0..6)
+        .map(|i| i as f32 * f32::consts::PI / 3f32)
+        .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
+        .map(|(x, y)| Point::new(x as i32, y as i32))
+        .collect();
+    draw_antialiased_polygon_mut(&mut image, &hex, white, interpolate);
+
+    compare_to_truth_image(&image, "polygon_antialiased.png");
 }
 
 #[test]
