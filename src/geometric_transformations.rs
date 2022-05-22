@@ -710,8 +710,8 @@ where
 
 #[inline(always)]
 fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
-    let rx = (x + if x > 0.0 { 0.5 } else { -0.5 }) as i32;
-    let ry = (y + if y > 0.0 { 0.5 } else { -0.5 }) as i32;
+    let rx = (x + if x.is_sign_positive() { 0.5 } else { -0.5 }) as i32;
+    let ry = (y + if y.is_sign_positive() { 0.5 } else { -0.5 }) as i32;
 
     let (width, height) = image.dimensions();
     if rx < 0 || rx >= width as i32 || ry < 0 || ry >= height as i32 {
