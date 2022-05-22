@@ -95,12 +95,12 @@ where
         });
 
         intersections.clear();
+    }
 
-        for edge in &edges {
-            let start = (edge[0].x as f32, edge[0].y as f32);
-            let end = (edge[1].x as f32, edge[1].y as f32);
-            plotter(canvas, start, end, color);
-        }
+    for edge in &edges {
+        let start = (edge[0].x as f32, edge[0].y as f32);
+        let end = (edge[1].x as f32, edge[1].y as f32);
+        plotter(canvas, start, end, color);
     }
 }
 
@@ -126,31 +126,6 @@ where
     C: Canvas,
 {
     draw_polygon_with_mut(canvas, poly, color, draw_line_segment_mut);
-}
-
-/// Draws a polygon and its contents on a new copy of an image, without edges.
-///
-/// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
-pub fn draw_unbordered_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
-where
-    I: GenericImage,
-{
-    // plotter does a no-op
-    draw_polygon_with(image, poly, color, |_, _, _, _| ())
-}
-
-/// Draws a polygon and its contents on an image in place, without edges.
-///
-/// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
-pub fn draw_unbordered_polygon_mut<C>(canvas: &mut C, poly: &[Point<i32>], color: C::Pixel)
-where
-    C: Canvas,
-{
-    draw_polygon_with_mut(canvas, poly, color, |_, _, _, _| ());
 }
 
 /// Draws an anti-aliased polygon polygon and its contents on a new copy of an image.

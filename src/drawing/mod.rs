@@ -27,7 +27,6 @@ pub use self::line::{
 mod polygon;
 pub use self::polygon::{
     draw_polygon, draw_polygon_mut,
-    draw_unbordered_polygon, draw_unbordered_polygon_mut,
     draw_antialiased_polygon, draw_antialiased_polygon_mut
 };
 
