@@ -25,7 +25,10 @@ pub use self::line::{
 };
 
 mod polygon;
-pub use self::polygon::{draw_polygon, draw_polygon_mut};
+pub use self::polygon::{
+    draw_polygon, draw_polygon_mut,
+    draw_antialiased_polygon, draw_antialiased_polygon_mut
+};
 
 mod rect;
 pub use self::rect::{
