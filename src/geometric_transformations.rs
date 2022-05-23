@@ -714,7 +714,7 @@ fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, default: P) -
     let ry = (y + if y.is_sign_positive() { 0.5 } else { -0.5 }) as i32;
 
     let (width, height) = image.dimensions();
-    if rx < 0 || rx >= width as i32 || ry < 0 || ry >= height as i32 {
+    if rx < 0 || ry < 0 || rx as u32 >= width || ry as u32 >= height {
         default
     } else {
         unsafe { image.unsafe_get_pixel(rx as u32, ry as u32) }
