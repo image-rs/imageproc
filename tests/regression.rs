@@ -562,6 +562,76 @@ fn test_draw_antialised_polygon() {
 }
 
 #[test]
+fn test_draw_hollow_polygon() {
+    use imageproc::drawing::draw_hollow_polygon_mut;
+    use imageproc::point::Point;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let star = vec![
+        Point::new(100.0, 20.0),
+        Point::new(120.0, 35.0),
+        Point::new(140.0, 30.0),
+        Point::new(115.0, 45.0),
+        Point::new(130.0, 60.0),
+        Point::new(100.0, 50.0),
+        Point::new(80.0, 55.0),
+        Point::new(90.0, 40.0),
+        Point::new(60.0, 25.0),
+        Point::new(90.0, 35.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &star, white);
+
+    let partially_out_of_bounds_star = vec![
+        Point::new(275.0, 20.0),
+        Point::new(295.0, 35.0),
+        Point::new(315.0, 30.0),
+        Point::new(290.0, 45.0),
+        Point::new(305.0, 60.0),
+        Point::new(275.0, 50.0),
+        Point::new(255.0, 55.0),
+        Point::new(265.0, 40.0),
+        Point::new(235.0, 25.0),
+        Point::new(265.0, 35.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &partially_out_of_bounds_star, white);
+
+    let triangle = vec![
+        Point::new(35.0, 80.0),
+        Point::new(145.0, 110.0),
+        Point::new(5.0, 90.0)
+    ];
+    draw_hollow_polygon_mut(&mut image, &triangle, white);
+
+    let partially_out_of_bounds_triangle = vec![
+        Point::new(250.0, 80.0),
+        Point::new(350.0, 130.0),
+        Point::new(250.0, 120.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
+
+    let quad = vec![
+        Point::new(190.0, 250.0),
+        Point::new(240.0, 210.0),
+        Point::new(270.0, 200.0),
+        Point::new(220.0, 280.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &quad, white);
+
+    let hex: Vec<Point<f32>> = (0..6)
+        .map(|i| i as f32 * f32::consts::PI / 3f32)
+        .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+
+    draw_hollow_polygon_mut(&mut image, &hex, white);
+
+    compare_to_truth_image(&image, "polygon_hollow.png");
+
+}
+
+#[test]
 fn test_draw_cubic_bezier_curve() {
     use imageproc::drawing::draw_cubic_bezier_curve_mut;
 
