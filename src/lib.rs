@@ -7,7 +7,7 @@
 //! a standard image processing function in this crate.
 //!
 //! [image]: https://github.com/image-rs/image
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 #![allow(
     clippy::cast_lossless,

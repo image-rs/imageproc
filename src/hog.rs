@@ -2,7 +2,7 @@
 //! and helpers for visualizing them.
 
 use crate::definitions::{Clamp, Image};
-use crate::gradients::{horizontal_sobel, vertical_sobel};
+use crate::gradients::{GradientKernel::Sobel};
 use crate::math::l2_norm;
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use num::Zero;
@@ -257,8 +257,8 @@ pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
     let mut grid = Array3d::new(spec.cell_grid_lengths());
     let cell_area = spec.cell_area() as f32;
     let cell_side = spec.options.cell_side as f32;
-    let horizontal = horizontal_sobel(image);
-    let vertical = vertical_sobel(image);
+    let horizontal = Sobel.horizontal_gradient(image);
+    let vertical = Sobel.vertical_gradient(image);
     let interval = orientation_bin_width(spec.options);
     let range = direction_range(spec.options);
 

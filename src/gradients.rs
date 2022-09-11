@@ -1,252 +1,252 @@
 //! Functions for computing gradients of image intensities.
 
-use crate::definitions::{HasBlack, Image};
-use crate::filter::filter3x3;
+use crate::definitions::{Clamp, HasBlack, Image};
+use crate::filter::{filter3x3, Kernel};
 use crate::map::{ChannelMap, WithChannel};
-use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel, Primitive};
 use itertools::multizip;
+use num::Num;
 
-/// Sobel filter for detecting vertical gradients.
+// region Gradient kernels
+
+/// Sobel kernel for detecting vertical gradients.
 ///
 /// Used by the [`vertical_sobel`](fn.vertical_sobel.html) function.
 #[rustfmt::skip]
-pub static VERTICAL_SOBEL: [i32; 9] = [
-    -1, -2, -1,
-     0,  0,  0,
-     1,  2,  1];
+pub static VERTICAL_SOBEL: Kernel<i32> = Kernel {
+    data:
+        &[-1, -2, -1,
+           0,  0,  0,
+           1,  2,  1],
+    width: 3,
+    height: 3
+};
 
-/// Sobel filter for detecting horizontal gradients.
+/// Sobel kernel for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_sobel`](fn.horizontal_sobel.html) function.
 #[rustfmt::skip]
-pub static HORIZONTAL_SOBEL: [i32; 9] = [
-    -1, 0, 1,
-    -2, 0, 2,
-    -1, 0, 1];
+pub static HORIZONTAL_SOBEL: Kernel<i32> = Kernel {
+    data:
+    &[-1, 0, 1,
+      -2, 0, 2,
+      -1, 0, 1],
+    width: 3,
+    height: 3
+};
 
-/// Scharr filter for detecting vertical gradients.
+/// Scharr kernel for detecting vertical gradients.
 ///
 /// Used by the [`vertical_scharr`](fn.vertical_scharr.html) function.
 #[rustfmt::skip]
-pub static VERTICAL_SCHARR: [i32; 9] = [
-    -3, -10,  -3,
-     0,   0,   0,
-     3,  10,   3];
+pub static VERTICAL_SCHARR: Kernel<i32> = Kernel {
+    data:
+    &[-3, -10, -3,
+       0,   0,  0,
+       3,  10,  3],
+    width: 3,
+    height: 3
+};
 
-/// Scharr filter for detecting horizontal gradients.
+
+/// Scharr kernel for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_scharr`](fn.horizontal_scharr.html) function.
 #[rustfmt::skip]
-pub static HORIZONTAL_SCHARR: [i32; 9] = [
-     -3,  0,   3,
-    -10,  0,  10,
-     -3,  0,   3];
+pub static HORIZONTAL_SCHARR: Kernel<i32> = Kernel {
+    data:
+    &[ -3,  0,   3,
+      -10,  0,  10,
+       -3,  0,   3],
+    width: 3,
+    height: 3
+};
 
-/// Prewitt filter for detecting vertical gradients.
+
+/// Prewitt kernel for detecting vertical gradients.
 ///
 /// Used by the [`vertical_prewitt`](fn.vertical_prewitt.html) function.
 #[rustfmt::skip]
-pub static VERTICAL_PREWITT: [i32; 9] = [
-    -1, -1, -1,
-     0,  0,  0,
-     1,  1,  1];
+pub static VERTICAL_PREWITT: Kernel<i32> = Kernel {
+    data:
+    &[-1, -1, -1,
+       0,  0,  0,
+       1,  1,  1],
+    width: 3,
+    height: 3
+};
 
-/// Prewitt filter for detecting horizontal gradients.
+
+/// Prewitt kernel for detecting horizontal gradients.
 ///
 /// Used by the [`horizontal_prewitt`](fn.horizontal_prewitt.html) function.
 #[rustfmt::skip]
-pub static HORIZONTAL_PREWITT: [i32; 9] = [
-    -1, 0, 1,
-    -1, 0, 1,
-    -1, 0, 1];
+pub static HORIZONTAL_PREWITT: Kernel<i32> = Kernel {
+    data:
+    &[-1, 0, 1,
+      -1, 0, 1,
+      -1, 0, 1],
+    width: 3,
+    height: 3
+};
 
-/// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
-/// kernel to detect horizontal gradients.
-pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &HORIZONTAL_SOBEL)
-}
 
-/// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
-/// kernel to detect vertical gradients.
-pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &VERTICAL_SOBEL)
-}
-
-/// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
-/// kernel to detect horizontal gradients.
-pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &HORIZONTAL_SCHARR)
-}
-
-/// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
-/// kernel to detect vertical gradients.
-pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &VERTICAL_SCHARR)
-}
-
-/// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
-/// kernel to detect horizontal gradients.
-pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &HORIZONTAL_PREWITT)
-}
-
-/// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
-/// kernel to detect vertical gradients.
-pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter3x3(image, &VERTICAL_PREWITT)
-}
-
-/// Returns the magnitudes of gradients in an image using Sobel filters.
-pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, |p| p)
-}
-
-/// Computes per-channel gradients using Sobel filters and calls `f`
-/// to compute each output pixel.
+/// Roberts kernel for detecting vertical gradients.
 ///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::gradients::{sobel_gradient_map};
-/// use image::Luma;
-/// use std::cmp;
+/// Used by the [`vertical_roberts`](fn.vertical_roberts.html) function.
+#[rustfmt::skip]
+pub static VERTICAL_ROBERTS: Kernel<i32> = Kernel {
+    data:
+    &[ 0, 1,
+      -1, 0],
+    width: 2,
+    height: 2
+};
+
+
+/// Roberts kernel for detecting horizontal gradients.
 ///
-/// // A shallow horizontal gradient in the red
-/// // channel, a steeper vertical gradient in the
-/// // blue channel, constant in the green channel.
-/// let input = rgb_image!(
-///     [0, 5, 0], [1, 5, 0], [2, 5, 0];
-///     [0, 5, 2], [1, 5, 2], [2, 5, 2];
-///     [0, 5, 4], [1, 5, 4], [2, 5, 4]
-/// );
-///
-/// // Computing independent per-channel gradients.
-/// let channel_gradient = rgb_image!(type: u16,
-///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8];
-///     [ 4,  0, 16], [ 8,  0, 16], [ 4,  0, 16];
-///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
-/// );
-///
-/// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| p),
-///     channel_gradient
-/// );
-///
-/// // Defining the gradient of an RGB image to be the
-/// // mean of its per-channel gradients.
-/// let mean_gradient = gray_image!(type: u16,
-///     4, 5, 4;
-///     6, 8, 6;
-///     4, 5, 4
-/// );
-///
-/// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| {
-///         let mean = (p[0] + p[1] + p[2]) / 3;
-///         Luma([mean])
-///     }),
-///     mean_gradient
-/// );
-///
-/// // Defining the gradient of an RGB image to be the pixelwise
-/// // maximum of its per-channel gradients.
-/// let max_gradient = gray_image!(type: u16,
-///      8,  8,  8;
-///     16, 16, 16;
-///      8,  8,  8
-/// );
-///
-/// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| {
-///         let max = cmp::max(cmp::max(p[0], p[1]), p[2]);
-///         Luma([max])
-///     }),
-///     max_gradient
-/// );
-/// # }
-pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
-where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
-    Q: Pixel,
-    ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q,
-{
-    gradients(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, f)
+/// Used by the [`horizontal_roberts`](fn.horizontal_roberts.html) function.
+#[rustfmt::skip]
+pub static HORIZONTAL_ROBERTS: Kernel<i32> = Kernel {
+    data:
+    &[ 1,  0,
+       0, -1],
+    width: 2,
+    height: 2
+};
+
+// endregion
+
+/// Used for specifying a gradient kernel for new API
+pub enum GradientKernel {
+    Sobel,
+    Scharr,
+    Prewitt,
+    Roberts
 }
 
-/// Returns the magnitudes of gradients in an image using Prewitt filters.
-pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT, |p| p)
-}
-
-// TODO: Returns directions as well as magnitudes.
-// TODO: Support filtering without allocating a fresh image - filtering functions could
-// TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
-// TODO: and directions without allocating intermediates for vertical and horizontal gradients.
-fn gradients<P, F, Q>(
-    image: &Image<P>,
-    horizontal_kernel: &[i32; 9],
-    vertical_kernel: &[i32; 9],
-    f: F,
-) -> Image<Q>
-where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
-    Q: Pixel,
-    ChannelMap<P, u16>: HasBlack,
-    F: Fn(ChannelMap<P, u16>) -> Q,
-{
-    let horizontal: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, horizontal_kernel);
-    let vertical: Image<ChannelMap<P, i16>> = filter3x3::<_, _, i16>(image, vertical_kernel);
-
-    let (width, height) = image.dimensions();
-    let mut out = Image::<Q>::new(width, height);
-
-    // This would be more concise using itertools::multizip over image pixels, but that increased runtime by around 20%
-    for y in 0..height {
-        for x in 0..width {
-            // JUSTIFICATION
-            //  Benefit
-            //      Using checked indexing here makes this sobel_gradients 1.1x slower,
-            //      as measured by bench_sobel_gradients
-            //  Correctness
-            //      x and y are in bounds for image by construction,
-            //      vertical and horizontal are the result of calling filter3x3 on image,
-            //      and filter3x3 returns an image of the same size as its input
-            let (h, v) = unsafe {
-                (
-                    horizontal.unsafe_get_pixel(x, y),
-                    vertical.unsafe_get_pixel(x, y),
-                )
-            };
-            let mut p = ChannelMap::<P, u16>::black();
-
-            for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
-                *p = gradient_magnitude(*h as f32, *v as f32);
-            }
-
-            // JUSTIFICATION
-            //  Benefit
-            //      Using checked indexing here makes this sobel_gradients 1.1x slower,
-            //      as measured by bench_sobel_gradients
-            //  Correctness
-            //      x and y are in bounds for image by construction,
-            //      and out has the same dimensions
-            unsafe {
-                out.unsafe_put_pixel(x, y, f(p));
-            }
+impl GradientKernel {
+    pub fn horizontal_kernel(&self) -> &Kernel<i32> {
+        match self {
+            GradientKernel::Sobel   => {&HORIZONTAL_SOBEL}
+            GradientKernel::Scharr  => {&HORIZONTAL_SCHARR}
+            GradientKernel::Prewitt => {&HORIZONTAL_PREWITT}
+            GradientKernel::Roberts => {&HORIZONTAL_ROBERTS}
         }
     }
 
-    out
+    pub fn vertical_kernel(&self) -> &Kernel<i32> {
+        match self {
+            GradientKernel::Sobel   => {&VERTICAL_SOBEL}
+            GradientKernel::Scharr  => {&VERTICAL_SCHARR}
+            GradientKernel::Prewitt => {&VERTICAL_PREWITT}
+            GradientKernel::Roberts => {&VERTICAL_ROBERTS}
+        }
+    }
+
+    pub fn horizontal_gradient(&self, image: &GrayImage) -> Image<Luma<i16>> {
+        self.horizontal_kernel().filter::<_, _, Luma<i16>>(
+            image,
+            |channel, acc| *channel = u16::clamp(acc)
+        )
+    }
+
+    pub fn vertical_gradient(&self, image: &GrayImage) -> Image<Luma<i16>> {
+        self.vertical_kernel().filter::<_, _, Luma<i16>>(
+            image,
+            |channel, acc| *channel = u16::clamp(acc)
+        )
+    }
+
+    /// Computes the vertical and horizontal gradients and calls `f` with the gradient vector to compute each output
+    /// pixel.
+    ///
+    /// Classic use cases for `gradient_map` provide a function `f` that computes a norm or the angle of the
+    /// gradient vector.
+    // todo: Give examples.
+    pub fn gradient_map<P, F, Q>(&self, image: &GrayImage, f: F) -> Image<Q>
+        where
+            P: Pixel<Subpixel  = u8> + WithChannel<u16> + WithChannel<i16>,
+            F: Fn(ChannelMap<P, u16>) -> Q,
+            Q: Pixel,
+            ChannelMap<P, u16>: HasBlack,
+    {
+        let horizontal = self.horizontal_gradient(image);
+        let vertical = self.vertical_gradient(image);
+
+        let (width, height) = image.dimensions();
+        let mut out = Image::<Q>::new(width, height);
+
+        // This would be more concise using itertools::multizip over image pixels, but that increased runtime by around 20%
+        for y in 0..height {
+            for x in 0..width {
+                // JUSTIFICATION
+                //  Benefit
+                //      Using checked indexing here makes this sobel_gradients 1.1x slower,
+                //      as measured by bench_sobel_gradients
+                //  Correctness
+                //      x and y are in bounds for image by construction,
+                //      vertical and horizontal are the result of calling filter3x3 on image,
+                //      and filter3x3 returns an image of the same size as its input
+                let (h, v) = unsafe {
+                    (
+                        horizontal.unsafe_get_pixel(x, y),
+                        vertical.unsafe_get_pixel(x, y),
+                    )
+                };
+                let mut p = ChannelMap::<P, u16>::black();
+
+                for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
+                    *p = f(*h, *v);
+                }
+
+                // JUSTIFICATION
+                //  Benefit
+                //      Using checked indexing here makes this sobel_gradients 1.1x slower,
+                //      as measured by bench_sobel_gradients
+                //  Correctness
+                //      x and y are in bounds for image by construction,
+                //      and out has the same dimensions
+                unsafe {
+                    out.unsafe_put_pixel(x, y, p);
+                }
+            }
+        }
+
+        out
+
+    }
+
+
+    /// Computes the magnitude of the gradient at every point. Uses the usual euclidean ($L_2$) norm.
+    pub fn gradient_magnitude(&self, image: &GrayImage) -> Image<Luma<i16>> {
+        self.gradient_map(image, |h, v| f32::sqrt(h*h + v*v)  )
+    }
+
+    // ToDo: Implement gradient magnitude AND angle, as both can be computed simultaneously.
+    // ToDo: Get peer review regarding intermediate data types and `Clamp`. I think it is not correct as written.
+
+    // TODO: Returns directions as well as magnitudes.
+    // TODO: Support filtering without allocating a fresh image - filtering functions could
+    //       take some kind of pixel-sink. This would allow us to compute gradient magnitudes
+    //       and directions without allocating intermediates for vertical and horizontal gradients.
+    // TODO: As an alternative to the above, reuse the allocated `horizontal` and `vertical` to return
+    //       Both magnitude and angle.
 }
 
-#[inline]
-fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
-    (dx.powi(2) + dy.powi(2)).sqrt() as u16
+
+/// A synonym for `method.horizontal_gradient(image)`
+pub fn horizontal_gradient(image: &GrayImage, method: GradientKernel ) -> Image<Luma<i16>> {
+    method.horizontal_gradient(image)
 }
+
+
+/// A synonym for `method.vertical_gradient(image)`
+pub fn vertical_gradient(image: &GrayImage, method: GradientKernel ) -> Image<Luma<i16>> {
+    method.vertical_gradient(image)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -254,18 +254,21 @@ mod tests {
     use crate::utils::gray_bench_image;
     use image::{ImageBuffer, Luma};
     use test::{black_box, Bencher};
+    use GradientKernel::*;
 
     #[rustfmt::skip::macros(gray_image)]
     #[test]
     fn test_gradients_constant_image() {
         let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
         let expected = ImageBuffer::from_pixel(5, 5, Luma([0i16]));
-        assert_pixels_eq!(horizontal_sobel(&image), expected);
-        assert_pixels_eq!(vertical_sobel(&image), expected);
-        assert_pixels_eq!(horizontal_scharr(&image), expected);
-        assert_pixels_eq!(vertical_scharr(&image), expected);
-        assert_pixels_eq!(horizontal_prewitt(&image), expected);
-        assert_pixels_eq!(vertical_prewitt(&image), expected);
+        assert_pixels_eq!(Sobel.horizontal_gradient(&image), expected);
+        assert_pixels_eq!(Sobel.vertical_gradient(&image), expected);
+        assert_pixels_eq!(Scharr.horizontal_gradient(&image), expected);
+        assert_pixels_eq!(Scharr.vertical_gradient(&image), expected);
+        assert_pixels_eq!(Prewitt.horizontal_gradient(&image), expected);
+        assert_pixels_eq!(Prewitt.vertical_gradient(&image), expected);
+        assert_pixels_eq!(Roberts.horizontal_gradient(&image), expected);
+        assert_pixels_eq!(Roberts.vertical_gradient(&image), expected);
     }
 
     #[test]
@@ -280,7 +283,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = horizontal_sobel(&image);
+        let filtered = Sobel.horizontal_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -296,7 +299,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = vertical_sobel(&image);
+        let filtered = Sobel.vertical_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -312,7 +315,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = horizontal_scharr(&image);
+        let filtered = Scharr.horizontal_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -328,7 +331,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = vertical_scharr(&image);
+        let filtered = Scharr.vertical_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -344,7 +347,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = horizontal_prewitt(&image);
+        let filtered = Prewitt.horizontal_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -360,7 +363,39 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = vertical_prewitt(&image);
+        let filtered = Prewitt.vertical_gradient(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_horizontal_roberts_gradient_image() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -2, -2, -3;
+            -2, -2, -3;
+             1,  1,  0);
+
+        let filtered = Roberts.horizontal_gradient(&image);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_vertical_roberts_gradient_image() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            4, 4, 1;
+            4, 4, 1;
+            3, 3, 0);
+
+        let filtered = Roberts.vertical_gradient(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -368,7 +403,7 @@ mod tests {
     fn bench_sobel_gradients(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let gradients = sobel_gradients(&image);
+            let gradients = Sobel.gradient_magnitude(&image);
             black_box(gradients);
         });
     }

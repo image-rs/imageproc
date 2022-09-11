@@ -215,9 +215,9 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
 
 /// A 2D kernel, used to filter images via convolution.
 pub struct Kernel<'a, K> {
-    data: &'a [K],
-    width: u32,
-    height: u32,
+    pub(crate) data: &'a [K],
+    pub(crate) width: u32,
+    pub(crate) height: u32,
 }
 
 impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
