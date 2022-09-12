@@ -6,7 +6,7 @@
 use crate::definitions::{HasBlack, Image};
 use crate::gradients::GradientKernel::Sobel;
 use crate::map::{map_colors, WithChannel};
-use image::{GrayImage, Luma, Pixel, Rgb};
+use image::{GrayImage, Luma, Pixel, Rgb, imageops::colorops::grayscale};
 use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
@@ -54,11 +54,9 @@ where
         "Cannot find seams if image width is < 2"
     );
 
-    let mut gradients = Sobel.gradient_map(image, |p| {
-        let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
-        Luma([gradient_mean as u32])
-    });
+    let image = grayscale(image);
+
+    let mut gradients = Sobel.gradient_magnitude(&image);
 
     // Find the least energy path through the gradient image.
     for y in 1..height {
@@ -110,7 +108,7 @@ where
 }
 
 /// Assumes that the previous rows have all been processed.
-fn set_path_energy(path_energies: &mut Image<Luma<u32>>, x: u32, y: u32) {
+fn set_path_energy(path_energies: &mut Image<Luma<i16>>, x: u32, y: u32) {
     let above = path_energies.get_pixel(x, y - 1)[0];
     let mut min_energy = above;
 

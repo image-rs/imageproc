@@ -1,11 +1,10 @@
 //! Functions for computing gradients of image intensities.
 
 use crate::definitions::{Clamp, HasBlack, Image};
-use crate::filter::{filter3x3, Kernel};
+use crate::filter::{Kernel};
 use crate::map::{ChannelMap, WithChannel};
-use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel, Primitive};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
-use num::Num;
 
 // region Gradient kernels
 
@@ -148,14 +147,14 @@ impl GradientKernel {
     pub fn horizontal_gradient(&self, image: &GrayImage) -> Image<Luma<i16>> {
         self.horizontal_kernel().filter::<_, _, Luma<i16>>(
             image,
-            |channel, acc| *channel = u16::clamp(acc)
+            |channel, acc| *channel = <i16 as Clamp<i32>>::clamp(acc)
         )
     }
 
     pub fn vertical_gradient(&self, image: &GrayImage) -> Image<Luma<i16>> {
         self.vertical_kernel().filter::<_, _, Luma<i16>>(
             image,
-            |channel, acc| *channel = u16::clamp(acc)
+            |channel, acc| *channel = <i16 as Clamp<i32>>::clamp(acc)
         )
     }
 
@@ -165,18 +164,17 @@ impl GradientKernel {
     /// Classic use cases for `gradient_map` provide a function `f` that computes a norm or the angle of the
     /// gradient vector.
     // todo: Give examples.
-    pub fn gradient_map<P, F, Q>(&self, image: &GrayImage, f: F) -> Image<Q>
+    pub fn gradient_map<F>(&self, image: &GrayImage, f: F) -> Image<Luma<i16>>
         where
-            P: Pixel<Subpixel  = u8> + WithChannel<u16> + WithChannel<i16>,
-            F: Fn(ChannelMap<P, u16>) -> Q,
-            Q: Pixel,
-            ChannelMap<P, u16>: HasBlack,
+            // P: Pixel<Subpixel  = u8> + WithChannel<u16> + WithChannel<i16>,
+            F: Fn(f32, f32) -> i16, //Luma<u16>,
+            ChannelMap<Luma<u8>, u16>: HasBlack,
     {
         let horizontal = self.horizontal_gradient(image);
         let vertical = self.vertical_gradient(image);
 
         let (width, height) = image.dimensions();
-        let mut out = Image::<Q>::new(width, height);
+        let mut out = Image::<Luma<i16>>::new(width, height);
 
         // This would be more concise using itertools::multizip over image pixels, but that increased runtime by around 20%
         for y in 0..height {
@@ -195,10 +193,11 @@ impl GradientKernel {
                         vertical.unsafe_get_pixel(x, y),
                     )
                 };
-                let mut p = ChannelMap::<P, u16>::black();
+
+                let mut p: Luma<i16> = Luma([0i16]);
 
                 for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
-                    *p = f(*h, *v);
+                    *p = f(*h as f32, *v as f32) as i16;
                 }
 
                 // JUSTIFICATION
@@ -221,7 +220,7 @@ impl GradientKernel {
 
     /// Computes the magnitude of the gradient at every point. Uses the usual euclidean ($L_2$) norm.
     pub fn gradient_magnitude(&self, image: &GrayImage) -> Image<Luma<i16>> {
-        self.gradient_map(image, |h, v| f32::sqrt(h*h + v*v)  )
+        self.gradient_map(image, |h, v| f32::sqrt(h*h + v*v) as i16)
     }
 
     // ToDo: Implement gradient magnitude AND angle, as both can be computed simultaneously.
