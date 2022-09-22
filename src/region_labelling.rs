@@ -1,9 +1,11 @@
 //! Functions for finding and labelling connected components of an image.
 
-use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, ImageBuffer, Luma, Pixel};
 
-use crate::definitions::Image;
+use crate::definitions::{Image,Position};
 use crate::union_find::DisjointSetForest;
+use crate::point::Point;
+
 use std::cmp;
 
 /// Determines which neighbors of a pixel we consider
@@ -241,6 +243,232 @@ where
 
     out
 }
+
+/// Returns an [Iterator]<Item=[Point]<[u32]>> containing the indices of the nearest four/eight neighbors (based on the [Connectivity] value passed to the function) of the given point, performing boundary
+/// checks. Note that (u32,u32) implements [From]<[Point]<[u32]>> so conversion is trivial.
+/// 
+/// ## Example
+///
+/// ```
+/// /*
+/// This simple image is used for the test below, where P is the point whose neighbors we want to
+/// obtain. The 4s indicate the indices which will be yielded by [Connectivity::Four]; if
+/// [Connectivity::Eight] is used instead, the indices of pixels labeled 8 will be included as
+/// well. Note that this test covers an instance where the indices on the left side are out of
+/// bounds -- they will not be included.
+/// 
+///   0 0 0 0 0
+///   4 8 0 0 0
+///   P 4 0 0 0
+///   4 8 0 0 0
+///   0 0 0 0 0
+///
+/// */
+///
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::definitions::Position;
+/// use imageproc::point::Point;
+/// use imageproc::region_labelling::{Connectivity, neighbor_indices};
+/// let pos = (0,2); // X and Y indices of the point P in the image above
+///
+/// // Nearest 4 neighbors
+/// let mut neighbors: Vec<(u32,u32)> = neighbor_indices(&pos, 5, 5, &Connectivity::Four)
+///     .map(|p| <(u32,u32)>::from(p))
+///     .collect();
+/// assert_eq!(neighbors.sort(), [(0,1), (1,2), (0,3)].to_vec().sort());
+///
+/// // Nearest 8 neighbors
+/// neighbors = neighbor_indices(&pos, 5, 5, &Connectivity::Eight)
+///     .map(|p| <(u32,u32)>::from(p))
+///     .collect();
+/// assert_eq!(neighbors.sort(), [(0,1), (1,1), (1,2), (0,3), (1,3)].to_vec().sort());
+///
+/// # }
+/// ```
+///
+///
+pub fn neighbor_indices<T: Position>(point: &T, height: u32, width: u32, connectivity: &Connectivity) -> impl Iterator<Item=Point<u32>> {
+    let (x,y) = (point.x(), point.y());
+    if y >= height || x >= width { // no need to bounds check for negative inputs as the Position trait guarantees u32 indices
+        Vec::new().into_iter() // no allocation needed
+    }
+    else {
+        let mut out = match connectivity {
+            Connectivity::Four => Vec::with_capacity(4),
+            Connectivity::Eight => Vec::with_capacity(8),
+        };
+        if y >= 1 {
+            out.push(Point::new(x, y-1)); // North
+        }
+        if x >= 1 {
+            out.push(Point::new(x-1, y)); // West
+        }
+        if x+1 < width {
+            out.push(Point::new(x+1, y)); // East
+        }
+        if y+1 < height {
+            out.push(Point::new(x, y+1)); // South
+        }
+        if connectivity == &Connectivity::Eight {
+            if x >= 1 && y >= 1 {
+                out.push(Point::new(x-1, y-1)); // Northwest
+            }
+            if x+1 < width && y >= 1 {
+                out.push(Point::new(x+1, y-1)); // Northeast
+            }
+            if x+1 < width && y+1 < height {
+                out.push(Point::new(x+1, y+1)); // Southeast
+            }
+            if x >= 1 && y+1 < height {
+                out.push(Point::new(x-1, y+1)); // Southwest
+            }
+        }
+        out.into_iter()
+    }
+}
+
+/// Given a reference to an image, the index of a certain pixel, and a [Connectivity] value,
+/// returns an iterator containing references to the neighboring pixels
+/// 
+/// ## Example
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+///
+/// use image::Luma;
+/// use imageproc::region_labelling::{neighbors,Connectivity};
+/// use imageproc::point::Point;
+///
+///
+/// let image = gray_image!(
+///     4, 0, 1, 2, 1;
+///     0, 3, 255, 4, 0;
+///     0, 5, 6, 7, 1;
+///     1, 0, 0, 1, 4);
+///
+/// let point: Point<u32> = Point::new(2, 1);
+/// let n4: Vec<&Luma<u8>> = neighbors(&image, &point, &Connectivity::Four)
+///     .collect();
+/// assert_eq!(n4, [&image[(2,0)], &image[(1,1)], &image[(3,1)], &image[(2,2)]].to_vec());
+/// 
+///
+/// # }
+///
+/// ```
+pub fn neighbors<'a, T,P>(image: &'a Image<P>, point: &T, connectivity: &Connectivity) -> impl Iterator<Item= &'a P>
+where
+P: Pixel,
+T: Position,
+{
+    let (width,height) = image.dimensions();
+    neighbor_indices(point, height, width, connectivity)
+        .map(move |n| {
+            let tuple = <(u32,u32)>::from(n);
+            &image[tuple]
+        }
+    )
+}
+
+/// Given a seed point to start at and a new color to fill the region with,
+/// fill all connected pixels matching the original color of the seed point with the
+/// new color
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+///
+/// use image::Luma;
+/// use imageproc::region_labelling::floodfill_mut;
+///
+/// let fill_color = Luma([5u8]);
+///
+/// let mut image = gray_image!(
+///     4, 0, 1, 1, 1;
+///     0, 1, 1, 2, 0;
+///     0, 0, 1, 0, 1;
+///     1, 0, 0, 1, 4);
+/// let seed_point = (2, 1);
+/// floodfill_mut(&mut image, &seed_point, fill_color);
+///
+/// let expected_output = gray_image!(
+///     4, 0, 5, 5, 5;
+///     0, 5, 5, 2, 0;
+///     0, 0, 5, 0, 1;
+///     1, 0, 0, 1, 4);
+///
+/// assert_pixels_eq!(image, expected_output);
+///
+/// # }
+///
+/// ```
+pub fn floodfill_mut<P,T>(image: &mut Image<P>, seed_point: &T, fill_color: P)
+where
+    P: Pixel+PartialEq,
+    T: Position
+{
+    let seed_point = (seed_point.x(), seed_point.y());
+    let (width, height) = image.dimensions();
+    let old_color = image[seed_point]; // connected pixels matching this color will be filled in with the fill_color
+    if old_color == fill_color || seed_point.0 >= width || seed_point.1 >= height {
+        return;
+    }
+    else {
+        let mut frontier = Vec::with_capacity(50); // preallocation size chosen arbitrarily as the required size varies
+        frontier.push(seed_point);
+        image[seed_point] = fill_color;
+        let connectivity = Connectivity::Four;
+        while !frontier.is_empty() {
+            let q = frontier.pop().unwrap(); // unwrap will not panic here as we have checked that frontier is not empty
+            let neighbors = neighbor_indices(&q, height, width, &connectivity);
+            for neighbor in neighbors {
+                if image[neighbor.into()] == old_color {
+                    let neighbor: (u32,u32) = neighbor.into();
+                    frontier.push(neighbor);
+                    image[neighbor] = fill_color;
+                }
+            }
+        }
+
+    }
+}
+
+/// Creates a clone of the input image and performs an in-place floodfill operation on 
+/// the clone using [floodfill_mut]
+///
+pub fn floodfill<P,T>(image: &Image<P>, seed_point: &T, fill_color: P) -> Image<P>
+where
+    P: Pixel+PartialEq,
+    T: Position
+{
+    let mut out = image.clone();
+    floodfill_mut(&mut out, seed_point, fill_color);
+    out
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #[cfg(test)]
 mod tests {

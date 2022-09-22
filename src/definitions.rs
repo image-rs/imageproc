@@ -73,6 +73,11 @@ pub trait Position {
     fn y(&self) -> u32;
 }
 
+impl Position for (u32, u32) {
+    fn x(&self) -> u32 { self.0 }
+    fn y(&self) -> u32 { self.1 }
+}
+
 /// Something with a score.
 pub trait Score {
     /// Score of this item.
