@@ -2,21 +2,14 @@
 
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma, Pixel};
 
-use crate::definitions::{Image,Position};
-use crate::union_find::DisjointSetForest;
-use crate::point::Point;
+use crate::{
+    definitions::{Image,Position},
+    union_find::DisjointSetForest,
+    connectivity::{Connectivity,neighbor_indices},
+};
+
 
 use std::cmp;
-
-/// Determines which neighbors of a pixel we consider
-/// to be connected to it.
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum Connectivity {
-    /// A pixel is connected to its N, S, E and W neighbors.
-    Four,
-    /// A pixel is connected to all of its neighbors.
-    Eight,
-}
 
 /// Returns an image of the same size as the input, where each pixel
 /// is labelled by the connected foreground component it belongs to,
@@ -35,7 +28,8 @@ pub enum Connectivity {
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::region_labelling::{connected_components, Connectivity};
+/// use imageproc::region_labelling::{connected_components};
+/// use imageproc::connectivity::Connectivity;
 ///
 /// let background_color = Luma([0u8]);
 ///
@@ -82,7 +76,8 @@ pub enum Connectivity {
 /// // as belonging to the same connected component.
 ///
 /// use image::Luma;
-/// use imageproc::region_labelling::{connected_components, Connectivity};
+/// use imageproc::region_labelling::connected_components;
+/// use imageproc::connectivity::Connectivity;
 ///
 /// let background_color = Luma([0u8]);
 ///
@@ -243,136 +238,6 @@ where
 
     out
 }
-
-/// Returns an [Iterator]<Item=[Point]<[u32]>> containing the indices of the nearest four/eight neighbors (based on the [Connectivity] value passed to the function) of the given point, performing boundary
-/// checks. Note that (u32,u32) implements [From]<[Point]<[u32]>> so conversion is trivial.
-/// 
-/// ## Example
-///
-/// ```
-/// /*
-/// This simple image is used for the test below, where P is the point whose neighbors we want to
-/// obtain. The 4s indicate the indices which will be yielded by [Connectivity::Four]; if
-/// [Connectivity::Eight] is used instead, the indices of pixels labeled 8 will be included as
-/// well. Note that this test covers an instance where the indices on the left side are out of
-/// bounds -- they will not be included.
-/// 
-///   0 0 0 0 0
-///   4 8 0 0 0
-///   P 4 0 0 0
-///   4 8 0 0 0
-///   0 0 0 0 0
-///
-/// */
-///
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::definitions::Position;
-/// use imageproc::point::Point;
-/// use imageproc::region_labelling::{Connectivity, neighbor_indices};
-/// let pos = (0,2); // X and Y indices of the point P in the image above
-///
-/// // Nearest 4 neighbors
-/// let mut neighbors: Vec<(u32,u32)> = neighbor_indices(&pos, 5, 5, &Connectivity::Four)
-///     .map(|p| <(u32,u32)>::from(p))
-///     .collect();
-/// assert_eq!(neighbors.sort(), [(0,1), (1,2), (0,3)].to_vec().sort());
-///
-/// // Nearest 8 neighbors
-/// neighbors = neighbor_indices(&pos, 5, 5, &Connectivity::Eight)
-///     .map(|p| <(u32,u32)>::from(p))
-///     .collect();
-/// assert_eq!(neighbors.sort(), [(0,1), (1,1), (1,2), (0,3), (1,3)].to_vec().sort());
-///
-/// # }
-/// ```
-///
-///
-pub fn neighbor_indices<T: Position>(point: &T, height: u32, width: u32, connectivity: &Connectivity) -> impl Iterator<Item=Point<u32>> {
-    let (x,y) = (point.x(), point.y());
-    if y >= height || x >= width { // no need to bounds check for negative inputs as the Position trait guarantees u32 indices
-        Vec::new().into_iter() // no allocation needed
-    }
-    else {
-        let mut out = match connectivity {
-            Connectivity::Four => Vec::with_capacity(4),
-            Connectivity::Eight => Vec::with_capacity(8),
-        };
-        if y >= 1 {
-            out.push(Point::new(x, y-1)); // North
-        }
-        if x >= 1 {
-            out.push(Point::new(x-1, y)); // West
-        }
-        if x+1 < width {
-            out.push(Point::new(x+1, y)); // East
-        }
-        if y+1 < height {
-            out.push(Point::new(x, y+1)); // South
-        }
-        if connectivity == &Connectivity::Eight {
-            if x >= 1 && y >= 1 {
-                out.push(Point::new(x-1, y-1)); // Northwest
-            }
-            if x+1 < width && y >= 1 {
-                out.push(Point::new(x+1, y-1)); // Northeast
-            }
-            if x+1 < width && y+1 < height {
-                out.push(Point::new(x+1, y+1)); // Southeast
-            }
-            if x >= 1 && y+1 < height {
-                out.push(Point::new(x-1, y+1)); // Southwest
-            }
-        }
-        out.into_iter()
-    }
-}
-
-/// Given a reference to an image, the index of a certain pixel, and a [Connectivity] value,
-/// returns an iterator containing references to the neighboring pixels
-/// 
-/// ## Example
-///
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-///
-/// use image::Luma;
-/// use imageproc::region_labelling::{neighbors,Connectivity};
-/// use imageproc::point::Point;
-///
-///
-/// let image = gray_image!(
-///     4, 0, 1, 2, 1;
-///     0, 3, 255, 4, 0;
-///     0, 5, 6, 7, 1;
-///     1, 0, 0, 1, 4);
-///
-/// let point: Point<u32> = Point::new(2, 1);
-/// let n4: Vec<&Luma<u8>> = neighbors(&image, &point, &Connectivity::Four)
-///     .collect();
-/// assert_eq!(n4, [&image[(2,0)], &image[(1,1)], &image[(3,1)], &image[(2,2)]].to_vec());
-/// 
-///
-/// # }
-///
-/// ```
-pub fn neighbors<'a, T,P>(image: &'a Image<P>, point: &T, connectivity: &Connectivity) -> impl Iterator<Item= &'a P>
-where
-P: Pixel,
-T: Position,
-{
-    let (width,height) = image.dimensions();
-    neighbor_indices(point, height, width, connectivity)
-        .map(move |n| {
-            let tuple = <(u32,u32)>::from(n);
-            &image[tuple]
-        }
-    )
-}
-
 /// Given a seed point to start at and a new color to fill the region with,
 /// fill all connected pixels matching the original color of the seed point with the
 /// new color
@@ -425,7 +290,7 @@ where
         let connectivity = Connectivity::Four;
         while !frontier.is_empty() {
             let q = frontier.pop().unwrap(); // unwrap will not panic here as we have checked that frontier is not empty
-            let neighbors = neighbor_indices(&q, height, width, &connectivity);
+            let neighbors = neighbor_indices(image, &q, &connectivity);
             for neighbor in neighbors {
                 if image[neighbor.into()] == old_color {
                     let neighbor: (u32,u32) = neighbor.into();
