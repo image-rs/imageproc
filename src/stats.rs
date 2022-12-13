@@ -1,5 +1,10 @@
 //! Statistical properties of images.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::Image;
 use crate::math::cast;
 use conv::ValueInto;

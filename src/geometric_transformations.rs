@@ -4,10 +4,10 @@
 use crate::definitions::{Clamp, Image};
 use crate::math::cast;
 use conv::ValueInto;
+use core::{cmp, ops::Mul};
 use image::{GenericImageView, ImageBuffer, Pixel};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-use std::{cmp, ops::Mul};
 
 #[derive(Copy, Clone, Debug)]
 enum TransformationClass {

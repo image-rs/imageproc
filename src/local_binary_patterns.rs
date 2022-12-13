@@ -1,7 +1,7 @@
 //! Functions for computing [local binary patterns](https://en.wikipedia.org/wiki/Local_binary_patterns).
 
+use core::cmp;
 use image::{GenericImage, Luma};
-use std::cmp;
 
 /// Computes the basic local binary pattern of a pixel, or None
 /// if it's too close to the image boundary.

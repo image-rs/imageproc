@@ -1,9 +1,9 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
+use core::f32;
+use core::i32;
+use core::mem::{swap, transmute};
 use image::{GenericImage, ImageBuffer, Pixel};
-use std::f32;
-use std::i32;
-use std::mem::{swap, transmute};
 
 /// Iterates over the coordinates in a line segment using
 /// [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).

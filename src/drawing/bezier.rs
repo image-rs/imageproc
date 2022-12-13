@@ -1,9 +1,9 @@
 use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
+use core::f32;
+use core::i32;
 use image::{GenericImage, ImageBuffer};
-use std::f32;
-use std::i32;
 
 /// Draws a cubic Bézier curve on a new copy of an image.
 ///

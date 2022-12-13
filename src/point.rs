@@ -1,7 +1,7 @@
 //! A 2d point type.
 
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 use num::{Num, NumCast};
-use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// A 2d point.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

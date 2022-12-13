@@ -1,9 +1,17 @@
 //! Functions for finding border contours within binary images.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::collections::VecDeque;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+#[cfg(not(feature = "sgx"))]
+use std::collections::VecDeque;
+
 use crate::point::Point;
 use image::GrayImage;
 use num::{cast, Num, NumCast};
-use std::collections::VecDeque;
 
 /// Whether a border of a foreground region borders an enclosing background region or a contained background region.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

@@ -7,6 +7,8 @@
 //! a standard image processing function in this crate.
 //!
 //! [image]: https://github.com/image-rs/image
+// #![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 #![allow(

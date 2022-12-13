@@ -1,14 +1,22 @@
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::Image;
-use crate::drawing::line::{draw_line_segment_mut, draw_antialiased_line_segment_mut};
+use crate::drawing::line::{draw_antialiased_line_segment_mut, draw_line_segment_mut};
 use crate::drawing::Canvas;
 use crate::point::Point;
+use core::cmp::{max, min};
+use core::f32;
+use core::i32;
 use image::{GenericImage, ImageBuffer};
-use std::cmp::{max, min};
-use std::f32;
-use std::i32;
 
 #[must_use = "the function does not modify the original image"]
-fn draw_polygon_with<I, L>(image: &I, poly: &[Point<i32>], color: I::Pixel, plotter: L) -> Image<I::Pixel>
+fn draw_polygon_with<I, L>(
+    image: &I,
+    poly: &[Point<i32>],
+    color: I::Pixel,
+    plotter: L,
+) -> Image<I::Pixel>
 where
     I: GenericImage,
     L: Fn(&mut Image<I::Pixel>, (f32, f32), (f32, f32), I::Pixel) -> (),
@@ -136,14 +144,25 @@ where
 ///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate`](fn.interpolate.html) for blend.
-pub fn draw_antialiased_polygon<I, B>(image: &I, poly: &[Point<i32>], color: I::Pixel, blend: B) -> Image<I::Pixel>
+pub fn draw_antialiased_polygon<I, B>(
+    image: &I,
+    poly: &[Point<i32>],
+    color: I::Pixel,
+    blend: B,
+) -> Image<I::Pixel>
 where
     I: GenericImage,
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
-    draw_polygon_with(image, poly, color, |image, start, end, color|
-        draw_antialiased_line_segment_mut(image, (start.0 as i32, start.1 as i32), (end.0 as i32, end.1 as i32), color, &blend)
-    )
+    draw_polygon_with(image, poly, color, |image, start, end, color| {
+        draw_antialiased_line_segment_mut(
+            image,
+            (start.0 as i32, start.1 as i32),
+            (end.0 as i32, end.1 as i32),
+            color,
+            &blend,
+        )
+    })
 }
 
 /// Draws an anti-aliased polygon and its contents on an image in place.
@@ -154,14 +173,24 @@ where
 ///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate`](fn.interpolate.html) for blend.
-pub fn draw_antialiased_polygon_mut<I, B>(image: &mut I, poly: &[Point<i32>], color: I::Pixel, blend: B)
-where
+pub fn draw_antialiased_polygon_mut<I, B>(
+    image: &mut I,
+    poly: &[Point<i32>],
+    color: I::Pixel,
+    blend: B,
+) where
     I: GenericImage,
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
-    draw_polygon_with_mut(image, poly, color, |image, start, end, color|
-        draw_antialiased_line_segment_mut(image, (start.0 as i32, start.1 as i32), (end.0 as i32, end.1 as i32), color, &blend)
-    );
+    draw_polygon_with_mut(image, poly, color, |image, start, end, color| {
+        draw_antialiased_line_segment_mut(
+            image,
+            (start.0 as i32, start.1 as i32),
+            (end.0 as i32, end.1 as i32),
+            color,
+            &blend,
+        )
+    });
 }
 
 /// Draws the outline of a polygon on an image in place.
@@ -171,7 +200,11 @@ where
 /// and last points must not be equal. The edges of the polygon will be drawn in the order
 /// that they are provided, and an implicit edge will be added from the last to the first
 /// point in the slice.
-pub fn draw_hollow_polygon<I>(image: &mut I, poly: &[Point<f32>], color: I::Pixel) -> Image<I::Pixel>
+pub fn draw_hollow_polygon<I>(
+    image: &mut I,
+    poly: &[Point<f32>],
+    color: I::Pixel,
+) -> Image<I::Pixel>
 where
     I: GenericImage,
 {
@@ -209,7 +242,12 @@ where
         );
     }
     for window in poly.windows(2) {
-        crate::drawing::draw_line_segment_mut(canvas, (window[0].x, window[0].y), (window[1].x, window[1].y), color);
+        crate::drawing::draw_line_segment_mut(
+            canvas,
+            (window[0].x, window[0].y),
+            (window[1].x, window[1].y),
+            color,
+        );
     }
     let first = poly[0];
     let last = poly.iter().last().unwrap();

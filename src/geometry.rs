@@ -1,9 +1,14 @@
 //! Computational geometry functions, for example finding convex hulls.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::point::{distance, Line, Point, Rotation};
+use core::cmp::{Ord, Ordering};
+use core::f64::{self, consts::PI};
 use num::{cast, NumCast};
-use std::cmp::{Ord, Ordering};
-use std::f64::{self, consts::PI};
 
 /// Computes the length of an arc. If `closed` is set to `true` then the distance
 /// between the last and the first point is included in the total length.

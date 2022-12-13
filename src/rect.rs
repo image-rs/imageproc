@@ -1,6 +1,6 @@
 //! Basic manipulation of rectangles.
 
-use std::cmp;
+use core::cmp;
 
 /// A rectangular region of non-zero width and height.
 /// # Examples

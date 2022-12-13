@@ -1,10 +1,13 @@
 //! Functions for detecting edges in images.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{HasBlack, HasWhite};
 use crate::filter::gaussian_blur_f32;
 use crate::gradients::{horizontal_sobel, vertical_sobel};
+use core::f32;
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
-use std::f32;
 
 /// Runs the canny edge detection algorithm.
 ///
@@ -162,8 +165,8 @@ mod tests {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;
-    use ::test;
     use image::{GrayImage, Luma};
+    use test;
 
     fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
         let mut image = GrayImage::new(width, height);

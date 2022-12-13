@@ -3,11 +3,16 @@
 //!
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{HasBlack, Image};
 use crate::gradients::sobel_gradient_map;
 use crate::map::{map_colors, WithChannel};
+use core::cmp::min;
 use image::{GrayImage, Luma, Pixel, Rgb};
-use std::cmp::min;
 
 /// An image seam connecting the bottom of an image to its top (in that order).
 pub struct VerticalSeam(Vec<u32>);

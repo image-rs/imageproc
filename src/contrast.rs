@@ -3,10 +3,10 @@
 use crate::definitions::{HasBlack, HasWhite};
 use crate::integral_image::{integral_image, sum_image_pixels};
 use crate::stats::{cumulative_histogram, histogram};
+use core::cmp::{max, min};
 use image::{GrayImage, ImageBuffer, Luma};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-use std::cmp::{max, min};
 
 /// Applies an adaptive threshold to an image.
 ///

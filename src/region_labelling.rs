@@ -1,10 +1,13 @@
 //! Functions for finding and labelling connected components of an image.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 
 use crate::definitions::Image;
 use crate::union_find::DisjointSetForest;
-use std::cmp;
+use core::cmp;
 
 /// Determines which neighbors of a pixel we consider
 /// to be connected to it.
@@ -249,8 +252,8 @@ mod tests {
     use super::connected_components;
     use super::Connectivity::{Eight, Four};
     use crate::definitions::{HasBlack, HasWhite};
-    use ::test;
     use image::{GrayImage, ImageBuffer, Luma};
+    use test;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 

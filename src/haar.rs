@@ -2,11 +2,16 @@
 //!
 //! [Haar-like features]: https://en.wikipedia.org/wiki/Haar-like_features
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{HasBlack, HasWhite, Image};
+use core::marker::PhantomData;
+use core::ops::Range;
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 use itertools::Itertools;
-use std::marker::PhantomData;
-use std::ops::Range;
 
 /// A [Haar-like feature].
 ///
@@ -425,7 +430,7 @@ mod tests {
     use super::*;
     use crate::integral_image::{integral_image, sum_image_pixels};
     use crate::utils::gray_bench_image;
-    use ::test;
+    use test;
 
     #[test]
     fn test_block_sizes() {

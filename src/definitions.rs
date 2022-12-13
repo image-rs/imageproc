@@ -1,7 +1,10 @@
 //! Trait definitions and type aliases.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
+use core::{i16, u16, u8};
 use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
-use std::{i16, u16, u8};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather

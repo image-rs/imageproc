@@ -1,12 +1,21 @@
 //! [HoG features](https://en.wikipedia.org/wiki/Histogram_of_oriented_gradients)
 //! and helpers for visualizing them.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::format;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::string::String;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{Clamp, Image};
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use crate::math::l2_norm;
+use core::f32;
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use num::Zero;
-use std::f32;
 
 /// Parameters for HoG descriptors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -394,7 +403,7 @@ where
     I: GenericImage,
 {
     use crate::drawing::draw_line_segment_mut;
-    use std::cmp;
+    use core::cmp;
 
     let (width, height) = image.dimensions();
     let scale = cmp::max(width, height) as f32 / 2f32;
@@ -498,7 +507,7 @@ fn data_length(lengths: [usize; 3]) -> usize {
 mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
-    use ::test;
+    use test;
 
     #[test]
     fn test_num_blocks() {

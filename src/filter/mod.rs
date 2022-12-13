@@ -1,5 +1,10 @@
 //! Functions for filtering images.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 mod median;
 pub use self::median::median_filter;
 
@@ -15,8 +20,8 @@ use num::{abs, pow, Num};
 
 use crate::math::cast;
 use conv::ValueInto;
-use std::cmp::{max, min};
-use std::f32;
+use core::cmp::{max, min};
+use core::f32;
 
 /// Denoise 8-bit grayscale image using bilateral filtering.
 ///

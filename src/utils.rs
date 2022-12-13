@@ -1,16 +1,33 @@
 //! Utils for testing and debugging.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::borrow::ToOwned;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::collections::HashSet;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::format;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::path::Path;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::string::String;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+#[cfg(feature = "std")]
+use std::collections::HashSet;
+#[cfg(feature = "std")]
+use std::path::Path;
+
+use core::fmt;
+use core::fmt::Write;
 use image::{
     open, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Pixel, Rgb, RgbImage,
 };
 
+use core::cmp::{max, min};
+use core::u32;
 use itertools::Itertools;
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::fmt;
-use std::fmt::Write;
-use std::path::Path;
-use std::u32;
 
 /// Helper for defining greyscale images.
 ///
@@ -670,7 +687,7 @@ pub fn gray_bench_image(width: u32, height: u32) -> GrayImage {
 
 /// RGB image to use in benchmarks. See comment on `gray_bench_image`.
 pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
-    use std::cmp;
+    use core::cmp;
     let mut image = RgbImage::new(width, height);
     for y in 0..image.height() {
         for x in 0..image.width() {

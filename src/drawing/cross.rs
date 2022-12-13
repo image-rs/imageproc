@@ -1,7 +1,7 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
+use core::i32;
 use image::{GenericImage, ImageBuffer};
-use std::i32;
 
 /// Draws a colored cross on an image in place.
 ///

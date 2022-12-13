@@ -1,5 +1,10 @@
 //! Functions for detecting corners, also known as interest points.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{Position, Score};
 use image::{GenericImageView, GrayImage};
 

@@ -1,5 +1,12 @@
 //! An implementation of disjoint set forests for union find.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd as std;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 /// Data structure for efficient union find.
 pub struct DisjointSetForest {
     /// Number of forest elements.
@@ -108,9 +115,9 @@ impl DisjointSetForest {
 #[cfg(test)]
 mod tests {
     use super::DisjointSetForest;
-    use ::test;
     use rand::{rngs::StdRng, SeedableRng};
     use rand_distr::{Distribution, Uniform};
+    use test;
 
     #[test]
     fn test_trees() {

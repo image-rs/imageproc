@@ -1,13 +1,13 @@
 use crate::definitions::{Clamp, Image};
 use crate::drawing::Canvas;
 use conv::ValueInto;
+use core::f32;
+use core::i32;
 use image::{GenericImage, ImageBuffer, Pixel};
-use std::f32;
-use std::i32;
 
 use crate::pixelops::weighted_sum;
+use core::cmp::max;
 use rusttype::{point, Font, PositionedGlyph, Rect, Scale};
-use std::cmp::max;
 
 fn layout_glyphs(
     scale: Scale,

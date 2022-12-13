@@ -2,8 +2,8 @@ use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use crate::rect::Rect;
+use core::f32;
 use image::{GenericImage, ImageBuffer};
-use std::f32;
 
 /// Draws the outline of a rectangle on a new copy of an image.
 ///

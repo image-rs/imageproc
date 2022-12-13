@@ -1,10 +1,13 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+
 use crate::definitions::Image;
 use crate::map::{ChannelMap, WithChannel};
+use core::ops::AddAssign;
 use image::{GenericImageView, GrayImage, Luma, Pixel, Primitive, Rgb, Rgba};
-use std::ops::AddAssign;
 
 /// Computes the 2d running sum of an image. Channels are summed independently.
 ///
@@ -463,9 +466,9 @@ mod tests {
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
     use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
-    use ::test;
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
+    use test;
 
     #[test]
     fn test_integral_image_gray() {

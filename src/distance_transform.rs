@@ -1,10 +1,15 @@
 //! Functions for computing distance transforms - the distance of each pixel in an
 //! image from the nearest pixel of interest.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::Image;
+use core::cmp::min;
+use core::{f64, u8};
 use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
-use std::cmp::min;
-use std::{f64, u8};
 
 /// How to measure distance between coordinates.
 /// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.

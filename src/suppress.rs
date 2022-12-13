@@ -1,8 +1,13 @@
 //! Functions for suppressing non-maximal values.
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd::vec::Vec;
+
 use crate::definitions::{Position, Score};
+use core::cmp;
 use image::{GenericImage, ImageBuffer, Luma, Primitive};
-use std::cmp;
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
