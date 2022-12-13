@@ -15,14 +15,14 @@ default = [ "rayon", "std" ]
 property-testing = [ "quickcheck" ]
 display-window = ["sdl2"]
 sgx = ["image/sgx", "sgx_tstd", "rusttype/libm-math"]
-std = ["image/std", "rusttype/std"]
+std = ["image/std", "rusttype/std", "nalgebra/std"]
 
 [dependencies]
 approx = "0.5"
 conv = "0.3.3"
 image = { version = "0.24.1", default-features = false }
 itertools = { version = "0.10.0", default-features = false, features = ["use_alloc"] }
-nalgebra = { version = "0.30", default-features = false, features = ["std"] }
+nalgebra = { version = "0.30", default-features = false }
 num = "0.4"
 rand = "0.7.3"
 rand_distr = "0.2.2"
