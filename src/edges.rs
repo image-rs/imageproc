@@ -8,6 +8,7 @@ use crate::filter::gaussian_blur_f32;
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use core::f32;
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+use num_traits::float::FloatCore;
 
 /// Runs the canny edge detection algorithm.
 ///

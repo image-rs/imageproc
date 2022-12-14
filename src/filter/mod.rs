@@ -11,17 +11,15 @@ pub use self::median::median_filter;
 mod sharpen;
 pub use self::sharpen::*;
 
-use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
-
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::{abs, pow, Num};
-
 use crate::math::cast;
-use conv::ValueInto;
 use core::cmp::{max, min};
+use core::convert::TryInto;
 use core::f32;
+use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
+use num::{abs, pow, Num};
 
 /// Denoise 8-bit grayscale image using bilateral filtering.
 ///
@@ -248,7 +246,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
         P: Pixel,
-        <P as Pixel>::Subpixel: ValueInto<K>,
+        <P as Pixel>::Subpixel: TryInto<K>,
         Q: Pixel,
         F: FnMut(&mut Q::Subpixel, K),
     {
@@ -315,7 +313,7 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     assert!(sigma > 0.0, "sigma must be > 0.0");
     let kernel = gaussian_kernel_f32(sigma);
@@ -328,7 +326,7 @@ where
 pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: TryInto<K> + Clamp<K>,
     K: Num + Copy,
 {
     let h = horizontal_filter(image, h_kernel);
@@ -341,7 +339,7 @@ where
 pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: TryInto<K> + Clamp<K>,
     K: Num + Copy,
 {
     separable_filter(image, kernel, kernel)
@@ -352,7 +350,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
-    P::Subpixel: ValueInto<K>,
+    P::Subpixel: TryInto<K>,
     S: Clamp<K> + Primitive,
     P: WithChannel<S>,
     K: Num + Copy,
@@ -368,7 +366,7 @@ where
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: TryInto<K> + Clamp<K>,
     K: Num + Copy,
 {
     // Don't replace this with a call to Kernel::filter without
@@ -464,7 +462,7 @@ where
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: TryInto<K> + Clamp<K>,
     K: Num + Copy,
 {
     // Don't replace this with a call to Kernel::filter without
@@ -561,7 +559,7 @@ where
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K>,
+    <P as Pixel>::Subpixel: TryInto<K>,
     K: Num + Copy,
 {
     for i in 0..(P::CHANNEL_COUNT as usize) {

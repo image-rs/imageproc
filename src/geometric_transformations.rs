@@ -3,7 +3,7 @@
 
 use crate::definitions::{Clamp, Image};
 use crate::math::cast;
-use conv::ValueInto;
+use core::convert::TryInto;
 use core::{cmp, ops::Mul};
 use image::{GenericImageView, ImageBuffer, Pixel};
 #[cfg(feature = "rayon")]
@@ -286,7 +286,7 @@ pub fn rotate_about_center<P>(
 where
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let (w, h) = image.dimensions();
     rotate(
@@ -311,7 +311,7 @@ pub fn rotate<P>(
 where
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let (cx, cy) = center;
     let projection =
@@ -383,7 +383,7 @@ pub fn warp<P>(
 where
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -403,7 +403,7 @@ pub fn warp_into<P>(
 ) where
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32> + Sync,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32> + Sync,
 {
     let projection = projection.invert();
     let nn = |x, y| interpolate_nearest(image, x, y, default);
@@ -455,7 +455,7 @@ where
     F: Fn(f32, f32) -> (f32, f32) + Sync + Send,
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let (width, height) = image.dimensions();
     let mut out = ImageBuffer::new(width, height);
@@ -477,7 +477,7 @@ pub fn warp_into_with<P, F>(
     F: Fn(f32, f32) -> (f32, f32) + Send + Sync,
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let nn = |x, y| interpolate_nearest(image, x, y, default);
     let bl = |x, y| interpolate_bilinear(image, x, y, default);
@@ -497,7 +497,7 @@ fn warp_inner<P, Fc, Fi>(out: &mut Image<P>, mapping: Fc, get_pixel: Fi)
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Send + Sync,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
     Fc: Fn(f32, f32) -> (f32, f32) + Send + Sync,
     Fi: Fn(f32, f32) -> P + Send + Sync,
 {
@@ -599,7 +599,7 @@ fn mul3x3(a: [f32; 9], b: [f32; 9]) -> [f32; 9] {
 fn blend_cubic<P>(px0: &P, px1: &P, px2: &P, px3: &P, x: f32) -> P
 where
     P: Pixel,
-    P::Subpixel: ValueInto<f32> + Clamp<f32>,
+    P::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let mut outp = *px0;
 
@@ -619,7 +619,7 @@ where
 fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let left = x.floor() - 1f32;
     let right = left + 4f32;
@@ -663,7 +663,7 @@ fn blend_bilinear<P>(
 ) -> P
 where
     P: Pixel,
-    P::Subpixel: ValueInto<f32> + Clamp<f32>,
+    P::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let top = top_left.map2(&top_right, |u, v| {
         P::Subpixel::clamp((1f32 - right_weight) * cast(u) + right_weight * cast(v))
@@ -681,7 +681,7 @@ where
 fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let left = x.floor();
     let right = left + 1f32;

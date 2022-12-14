@@ -14,19 +14,21 @@ exclude = ["examples/*.ttf"]
 default = [ "rayon", "std" ]
 property-testing = [ "quickcheck" ]
 display-window = ["sdl2"]
-sgx = ["image/sgx", "sgx_tstd", "rusttype/libm-math"]
-std = ["image/std", "rusttype/std", "nalgebra/std"]
+sgx = ["image/sgx", "sgx_tstd", "rusttype/libm-math", "rand/getrandom"]
+std = ["image/std", "rusttype/std", "rand/std", "rand_core/getrandom"]
 
 [dependencies]
 approx = { version = "0.5", default-features = false }
-# no_std is only supported in 0.3.4 which is not released on crates.io
-conv = { git = "https://github.com/DanielKeep/rust-conv.git", rev = "90a1e85edcc6d63616436a6049b08ba87c76d703", default-features = false }
 image = { version = "0.24.1", default-features = false }
 itertools = { version = "0.10.0", default-features = false, features = ["use_alloc"] }
-nalgebra = { version = "0.30", default-features = false }
-num = "0.4"
-rand = "0.7.3"
-rand_distr = "0.2.2"
+nalgebra = { version = "0.30", default-features = false, features = ["libm"] }
+# libm: "Uncomment if you wish to use `Float` and `Real` without `std`"
+num-traits = { version = "0.2", default-features = false, features = ["libm"] }
+num = { version = "0.4", default-features = false, features = ["libm", "alloc"] }
+rand = { version = "0.8.5", default-features = false }
+rand_core = {  version = "0.6.4", default-features = false }
+rand_chacha = { version = "0.3.1", default-features = false }
+rand_distr = { version = "0.4.3", default-features = false, features = ["alloc"] }
 rusttype = { version = "0.9.3", default-features = false }
 rayon = { version = "1.5.1", optional = true }
 quickcheck = { version = "0.9.2", optional = true }
@@ -39,6 +41,10 @@ assert_approx_eq = "1.1.0"
 image = "0.24.1"
 quickcheck = "0.9.2"
 wasm-bindgen-test = "0.3.14"
+
+# TODO(interstellar) remove patch
+[patch.crates-io]
+image = { path = "../../../../image" }
 
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358

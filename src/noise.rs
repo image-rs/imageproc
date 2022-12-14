@@ -2,9 +2,9 @@
 
 use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
 use crate::math::cast;
-use conv::ValueInto;
+use core::convert::TryInto;
 use image::Pixel;
-use rand::{rngs::StdRng, SeedableRng};
+use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use rand_distr::{Distribution, Normal, Uniform};
 
 /// Adds independent additive Gaussian noise to all channels
@@ -12,7 +12,7 @@ use rand_distr::{Distribution, Normal, Uniform};
 pub fn gaussian_noise<P>(image: &Image<P>, mean: f64, stddev: f64, seed: u64) -> Image<P>
 where
     P: Pixel,
-    P::Subpixel: ValueInto<f64> + Clamp<f64>,
+    P::Subpixel: TryInto<f64> + Clamp<f64>,
 {
     let mut out = image.clone();
     gaussian_noise_mut(&mut out, mean, stddev, seed);
@@ -24,9 +24,9 @@ where
 pub fn gaussian_noise_mut<P>(image: &mut Image<P>, mean: f64, stddev: f64, seed: u64)
 where
     P: Pixel,
-    P::Subpixel: ValueInto<f64> + Clamp<f64>,
+    P::Subpixel: TryInto<f64> + Clamp<f64>,
 {
-    let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
+    let mut rng: ChaChaRng = ChaChaRng::seed_from_u64(seed);
     let normal = Normal::new(mean, stddev).unwrap();
 
     for p in image.pixels_mut() {
@@ -54,7 +54,7 @@ pub fn salt_and_pepper_noise_mut<P>(image: &mut Image<P>, rate: f64, seed: u64)
 where
     P: Pixel + HasBlack + HasWhite,
 {
-    let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
+    let mut rng: ChaChaRng = ChaChaRng::seed_from_u64(seed);
     let uniform = Uniform::new(0.0, 1.0);
 
     for p in image.pixels_mut() {

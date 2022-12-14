@@ -1,10 +1,9 @@
 use crate::definitions::{Clamp, Image};
 use crate::drawing::Canvas;
-use conv::ValueInto;
 use core::f32;
 use core::i32;
 use image::{GenericImage, ImageBuffer, Pixel};
-
+use core::convert::TryInto;
 use crate::pixelops::weighted_sum;
 use core::cmp::max;
 use rusttype::{point, Font, PositionedGlyph, Rect, Scale};
@@ -52,7 +51,7 @@ pub fn draw_text_mut<'a, C>(
     text: &'a str,
 ) where
     C: Canvas,
-    <C::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <C::Pixel as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let image_width = canvas.width() as i32;
     let image_height = canvas.height() as i32;
@@ -91,7 +90,7 @@ pub fn draw_text<'a, I>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-    <I::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <I::Pixel as Pixel>::Subpixel: TryInto<f32> + Clamp<f32>,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();

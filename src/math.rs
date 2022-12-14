@@ -1,6 +1,6 @@
 //! Assorted mathematical helper functions.
 
-use conv::ValueInto;
+use core::convert::TryInto;
 
 /// L1 norm of a vector.
 pub fn l1_norm(xs: &[f32]) -> f32 {
@@ -15,9 +15,9 @@ pub fn l2_norm(xs: &[f32]) -> f32 {
 /// Helper for a conversion that we know can't fail.
 pub fn cast<T, U>(x: T) -> U
 where
-    T: ValueInto<U>,
+    T: TryInto<U>,
 {
-    match x.value_into() {
+    match x.try_into() {
         Ok(y) => y,
         Err(_) => panic!("Failed to convert"),
     }

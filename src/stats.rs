@@ -7,7 +7,7 @@ use sgx_tstd::vec::Vec;
 
 use crate::definitions::Image;
 use crate::math::cast;
-use conv::ValueInto;
+use core::convert::TryInto;
 use image::{GenericImageView, GrayImage, Pixel, Primitive};
 use num::Bounded;
 
@@ -115,7 +115,7 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64>,
+    P::Subpixel: TryInto<f64>,
 {
     mean_squared_error(left, right).sqrt()
 }
@@ -129,7 +129,7 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64> + Primitive,
+    P::Subpixel: TryInto<f64> + Primitive,
 {
     let max: f64 = cast(<P::Subpixel as Bounded>::max_value());
     let mse = mean_squared_error(original, noisy);
@@ -141,7 +141,7 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64>,
+    P::Subpixel: TryInto<f64>,
 {
     assert_dimensions_match!(left, right);
     let mut sum_squared_diffs = 0f64;
