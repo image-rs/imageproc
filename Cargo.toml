@@ -18,8 +18,9 @@ sgx = ["image/sgx", "sgx_tstd", "rusttype/libm-math"]
 std = ["image/std", "rusttype/std", "nalgebra/std"]
 
 [dependencies]
-approx = "0.5"
-conv = "0.3.3"
+approx = { version = "0.5", default-features = false }
+# no_std is only supported in 0.3.4 which is not released on crates.io
+conv = { git = "https://github.com/DanielKeep/rust-conv.git", rev = "90a1e85edcc6d63616436a6049b08ba87c76d703", default-features = false }
 image = { version = "0.24.1", default-features = false }
 itertools = { version = "0.10.0", default-features = false, features = ["use_alloc"] }
 nalgebra = { version = "0.30", default-features = false }
