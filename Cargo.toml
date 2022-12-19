@@ -14,17 +14,18 @@ exclude = ["examples/*.ttf"]
 default = [ "rayon", "std" ]
 property-testing = [ "quickcheck" ]
 display-window = ["sdl2"]
-sgx = ["image/sgx", "sgx_tstd", "rusttype/libm-math", "rand/getrandom"]
+# libm: "Uncomment if you wish to use `Float` and `Real` without `std`"
+libm = ["nalgebra/libm", "num-traits/libm", "num/libm", "rusttype/libm-math"]
+sgx = ["image/sgx", "sgx_tstd", "rand/getrandom", "libm"]
 std = ["image/std", "rusttype/std", "rand/std", "rand_core/getrandom"]
 
 [dependencies]
 approx = { version = "0.5", default-features = false }
 image = { version = "0.24.1", default-features = false }
 itertools = { version = "0.10.0", default-features = false, features = ["use_alloc"] }
-nalgebra = { version = "0.30", default-features = false, features = ["libm"] }
-# libm: "Uncomment if you wish to use `Float` and `Real` without `std`"
-num-traits = { version = "0.2", default-features = false, features = ["libm"] }
-num = { version = "0.4", default-features = false, features = ["libm", "alloc"] }
+nalgebra = { version = "0.30", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+num = { version = "0.4", default-features = false, features = ["alloc"] }
 rand = { version = "0.8.5", default-features = false }
 rand_core = {  version = "0.6.4", default-features = false }
 rand_chacha = { version = "0.3.1", default-features = false }
