@@ -209,7 +209,8 @@ fn intersection_points(
 mod tests {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     fn assert_points_eq(
         actual: Option<((f32, f32), (f32, f32))>,

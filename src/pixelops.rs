@@ -67,7 +67,8 @@ where
 mod tests {
     use super::*;
     use image::{Luma, Rgb};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_weighted_channel_sum() {

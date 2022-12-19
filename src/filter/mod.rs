@@ -575,7 +575,8 @@ mod tests {
     use image::imageops::blur;
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
     use std::cmp::{max, min};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[bench]
     fn bench_bilateral_filter(b: &mut Bencher) {

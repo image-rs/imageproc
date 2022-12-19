@@ -360,7 +360,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {

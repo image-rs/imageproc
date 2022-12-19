@@ -347,6 +347,8 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, Luma};
+    use std::hint::black_box;
+    use test::Bencher;
 
     // As draw_line_segment is implemented in terms of BresenhamLineIter we
     // haven't bothered wriing any tests specifically for BresenhamLineIter itself.
@@ -570,7 +572,7 @@ mod tests {
     macro_rules! bench_antialiased_lines {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
-            fn $name(b: &mut test::Bencher) {
+            fn $name(b: &mut Bencher) {
                 use super::draw_antialiased_line_segment_mut;
                 use crate::pixelops::interpolate;
 
@@ -578,7 +580,7 @@ mod tests {
                 let color = Luma([50u8]);
                 b.iter(|| {
                     draw_antialiased_line_segment_mut(&mut image, $start, $end, color, interpolate);
-                    test::black_box(&image);
+                    black_box(&image);
                 });
             }
         };

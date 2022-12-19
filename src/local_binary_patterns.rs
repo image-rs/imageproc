@@ -651,7 +651,8 @@ pub static MIN_SHIFT: [u8; 256] = [
 mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_uniform_representative_2() {

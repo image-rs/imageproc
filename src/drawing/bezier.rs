@@ -86,11 +86,13 @@ pub fn draw_cubic_bezier_curve_mut<C>(
 #[cfg(test)]
 mod tests {
     use image::{GrayImage, Luma};
+    use std::hint::black_box;
+    use test::Bencher;
 
     macro_rules! bench_cubic_bezier_curve {
         ($name:ident, $start:expr, $end:expr, $control_a:expr, $control_b:expr) => {
             #[bench]
-            fn $name(b: &mut test::Bencher) {
+            fn $name(b: &mut Bencher) {
                 use super::draw_cubic_bezier_curve_mut;
 
                 let mut image = GrayImage::new(500, 500);
@@ -99,7 +101,7 @@ mod tests {
                     draw_cubic_bezier_curve_mut(
                         &mut image, $start, $end, $control_a, $control_b, color,
                     );
-                    test::black_box(&image);
+                    black_box(&image);
                 });
             }
         };

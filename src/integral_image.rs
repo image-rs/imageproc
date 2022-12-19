@@ -468,7 +468,8 @@ mod tests {
     use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_integral_image_gray() {
@@ -555,20 +556,20 @@ mod tests {
     }
 
     #[bench]
-    fn bench_integral_image_gray(b: &mut test::Bencher) {
+    fn bench_integral_image_gray(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
             let integral = integral_image::<_, u32>(&image);
-            test::black_box(integral);
+            black_box(integral);
         });
     }
 
     #[bench]
-    fn bench_integral_image_rgb(b: &mut test::Bencher) {
+    fn bench_integral_image_rgb(b: &mut Bencher) {
         let image = rgb_bench_image(500, 500);
         b.iter(|| {
             let integral = integral_image::<_, u32>(&image);
-            test::black_box(integral);
+            black_box(integral);
         });
     }
 
@@ -612,7 +613,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_row_running_sum(b: &mut test::Bencher) {
+    fn bench_row_running_sum(b: &mut Bencher) {
         let image = gray_bench_image(1000, 1);
         let mut buffer = [0; 1010];
         b.iter(|| {
@@ -621,7 +622,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_column_running_sum(b: &mut test::Bencher) {
+    fn bench_column_running_sum(b: &mut Bencher) {
         let image = gray_bench_image(100, 1000);
         let mut buffer = [0; 1010];
         b.iter(|| {

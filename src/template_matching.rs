@@ -184,7 +184,8 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::GrayImage;
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     #[should_panic]

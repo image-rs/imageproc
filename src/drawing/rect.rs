@@ -76,7 +76,8 @@ mod tests {
     use crate::drawing::Blend;
     use crate::rect::Rect;
     use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[bench]
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {

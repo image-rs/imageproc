@@ -8,6 +8,7 @@ use crate::filter::gaussian_blur_f32;
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use core::f32;
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+#[allow(unused_imports)]
 use num_traits::float::FloatCore;
 
 /// Runs the canny edge detection algorithm.
@@ -167,7 +168,8 @@ mod tests {
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;
     use image::{GrayImage, Luma};
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
 
     fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
         let mut image = GrayImage::new(width, height);
@@ -182,11 +184,11 @@ mod tests {
     }
 
     #[bench]
-    fn bench_canny(b: &mut test::Bencher) {
+    fn bench_canny(b: &mut Bencher) {
         let image = edge_detect_bench_image(250, 250);
         b.iter(|| {
             let output = canny(&image, 250.0, 300.0);
-            test::black_box(output);
+            black_box(output);
         });
     }
 }

@@ -161,6 +161,7 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, Luma, Rgb, RgbImage};
+    use std::hint::black_box;
     use test::Bencher;
 
     #[test]
@@ -285,7 +286,7 @@ mod tests {
 
         b.iter(|| {
             let error = root_mean_squared_error(&left, &right);
-            test::black_box(error);
+            black_box(error);
         });
     }
 
@@ -304,7 +305,7 @@ mod tests {
 
         b.iter(|| {
             let error = root_mean_squared_error(&left, &right);
-            test::black_box(error);
+            black_box(error);
         });
     }
 }

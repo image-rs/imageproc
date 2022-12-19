@@ -507,7 +507,8 @@ fn data_length(lengths: [usize; 3]) -> usize {
 mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_num_blocks() {
@@ -680,7 +681,7 @@ mod tests {
         };
 
         let desc_signed = hog(&image, opts_signed);
-        test::black_box(desc_signed.unwrap());
+        black_box(desc_signed.unwrap());
 
         let opts_unsigned = HogOptions {
             orientations: 8,
@@ -691,11 +692,11 @@ mod tests {
         };
 
         let desc_unsigned = hog(&image, opts_unsigned);
-        test::black_box(desc_unsigned.unwrap());
+        black_box(desc_unsigned.unwrap());
     }
 
     #[bench]
-    fn bench_hog(b: &mut test::Bencher) {
+    fn bench_hog(b: &mut Bencher) {
         let image = gray_bench_image(88, 88);
         let opts = HogOptions {
             orientations: 8,
@@ -706,7 +707,7 @@ mod tests {
         };
         b.iter(|| {
             let desc = hog(&image, opts);
-            test::black_box(desc.unwrap());
+            black_box(desc.unwrap());
         });
     }
 }

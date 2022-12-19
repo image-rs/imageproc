@@ -253,7 +253,8 @@ mod tests {
     use super::Connectivity::{Eight, Four};
     use crate::definitions::{HasBlack, HasWhite};
     use image::{GrayImage, ImageBuffer, Luma};
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
@@ -307,20 +308,20 @@ mod tests {
     }
 
     #[bench]
-    fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
+    fn bench_connected_components_eight_chessboard(b: &mut Bencher) {
         let image = chessboard(300, 300);
         b.iter(|| {
             let components = connected_components(&image, Eight, Luma::black());
-            test::black_box(components);
+            black_box(components);
         });
     }
 
     #[bench]
-    fn bench_connected_components_four_chessboard(b: &mut test::Bencher) {
+    fn bench_connected_components_four_chessboard(b: &mut Bencher) {
         let image = chessboard(300, 300);
         b.iter(|| {
             let components = connected_components(&image, Four, Luma::black());
-            test::black_box(components);
+            black_box(components);
         });
     }
 }

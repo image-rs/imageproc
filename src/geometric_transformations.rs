@@ -745,7 +745,8 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -1084,7 +1085,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_affine_bicubic(b: &mut test::Bencher) {
+    fn bench_affine_bicubic(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
 
         #[rustfmt::skip]

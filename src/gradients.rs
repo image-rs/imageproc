@@ -253,7 +253,8 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{ImageBuffer, Luma};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[rustfmt::skip::macros(gray_image)]
     #[test]

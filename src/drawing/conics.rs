@@ -311,11 +311,13 @@ where
 #[cfg(test)]
 mod tests {
     use image::{GrayImage, Luma};
+    use std::hint::black_box;
+    use test::Bencher;
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
             #[bench]
-            fn $name(b: &mut test::Bencher) {
+            fn $name(b: &mut Bencher) {
                 use super::draw_hollow_ellipse_mut;
 
                 let mut image = GrayImage::new(500, 500);
@@ -328,7 +330,7 @@ mod tests {
                         $height_radius,
                         color,
                     );
-                    test::black_box(&image);
+                    black_box(&image);
                 });
             }
         };
@@ -341,7 +343,7 @@ mod tests {
     macro_rules! bench_filled_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
             #[bench]
-            fn $name(b: &mut test::Bencher) {
+            fn $name(b: &mut Bencher) {
                 use super::draw_filled_ellipse_mut;
 
                 let mut image = GrayImage::new(500, 500);
@@ -354,7 +356,7 @@ mod tests {
                         $height_radius,
                         color,
                     );
-                    test::black_box(&image);
+                    black_box(&image);
                 });
             }
         };

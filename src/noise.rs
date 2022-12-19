@@ -70,7 +70,8 @@ where
 mod tests {
     use super::*;
     use image::GrayImage;
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[bench]
     fn bench_gaussian_noise_mut(b: &mut Bencher) {

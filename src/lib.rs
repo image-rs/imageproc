@@ -27,6 +27,10 @@
 
 #[cfg(test)]
 extern crate test;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use sgx_tstd as std;
+
 #[cfg(test)]
 #[macro_use]
 extern crate assert_approx_eq;

@@ -339,7 +339,8 @@ mod tests {
     use image::{GrayImage, Luma};
     use quickcheck::{quickcheck, TestResult};
     use std::cmp::{max, min};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     macro_rules! bench_median_filter {
         ($name:ident, side: $s:expr, x_radius: $rx:expr, y_radius: $ry:expr) => {

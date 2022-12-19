@@ -117,7 +117,8 @@ mod tests {
     use super::DisjointSetForest;
     use rand::{rngs::StdRng, SeedableRng};
     use rand_distr::{Distribution, Uniform};
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_trees() {
@@ -186,7 +187,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_disjoint_set_forest(b: &mut test::Bencher) {
+    fn bench_disjoint_set_forest(b: &mut Bencher) {
         let num_nodes = 500;
         let num_edges = 20 * num_nodes;
 
@@ -202,7 +203,7 @@ mod tests {
                 forest.union(u, v);
                 count += 1;
             }
-            test::black_box(forest.num_trees());
+            black_box(forest.num_trees());
         });
     }
 }

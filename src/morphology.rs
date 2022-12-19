@@ -326,7 +326,8 @@ mod tests {
     use super::*;
     use image::{GrayImage, Luma};
     use std::cmp::{max, min};
-    use test::*;
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_dilate_point_l1_1() {

@@ -308,7 +308,8 @@ mod tests {
     use crate::definitions::{HasBlack, HasWhite};
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn adaptive_threshold_constant() {

@@ -416,7 +416,8 @@ mod tests {
     use quickcheck::{quickcheck, TestResult};
     use std::cmp::max;
     use std::f64;
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_distance_transform_saturation() {

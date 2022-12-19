@@ -430,7 +430,8 @@ mod tests {
     use super::*;
     use crate::integral_image::{integral_image, sum_image_pixels};
     use crate::utils::gray_bench_image;
-    use test;
+    use std::hint::black_box;
+    use test::Bencher;
 
     #[test]
     fn test_block_sizes() {
@@ -741,7 +742,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_evaluate_all_features_10x10(b: &mut test::Bencher) {
+    fn bench_evaluate_all_features_10x10(b: &mut Bencher) {
         // 10050 features in total
         let features = enumerate_haar_features(10, 10);
         let image = gray_bench_image(10, 10);
@@ -750,7 +751,7 @@ mod tests {
         b.iter(|| {
             for feature in &features {
                 let x = feature.evaluate(&integral);
-                test::black_box(x);
+                black_box(x);
             }
         });
     }

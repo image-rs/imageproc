@@ -190,7 +190,8 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
 mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test::{black_box, Bencher};
+    use std::hint::black_box;
+    use test::Bencher;
 
     macro_rules! bench_shrink_width {
         ($name:ident, side: $s:expr, shrink_by: $m:expr) => {
