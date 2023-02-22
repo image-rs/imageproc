@@ -126,7 +126,7 @@ where
     let mut event_pump = sdl.event_pump().unwrap();
     event_pump.enable_event(sdl2::event::EventType::Window);
     'running: loop {
-        for event in event_pump.poll_iter() {
+        for event in event_pump.wait_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -137,19 +137,7 @@ where
                     keycode: Some(Keycode::Q),
                     window_id,
                     ..
-                } => {
-                    for (i, canvas) in canvases.iter_mut().enumerate() {
-                        if window_id == canvas.window().id() {
-                            canvas.window_mut().hide();
-                            window_visibility[i] = false;
-                            hidden_count += 1;
-                        }
-                        if hidden_count == images.len() {
-                            break 'running;
-                        }
-                    }
-                }
-                Event::Window {
+                } | Event::Window {
                     win_event: WindowEvent::Close,
                     window_id,
                     ..
