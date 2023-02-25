@@ -242,9 +242,9 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
-        P: Pixel + 'static,
+        P: Pixel,
         <P as Pixel>::Subpixel: ValueInto<K>,
-        Q: Pixel + 'static,
+        Q: Pixel,
         F: FnMut(&mut Q::Subpixel, K),
     {
         let (width, height) = image.dimensions();
@@ -309,7 +309,7 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 #[must_use = "the function does not modify the original image"]
 pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
     assert!(sigma > 0.0, "sigma must be > 0.0");
@@ -322,7 +322,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
     K: Num + Copy,
 {
@@ -335,7 +335,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
     K: Num + Copy,
 {
@@ -348,8 +348,8 @@ where
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: ValueInto<K>,
-    S: Clamp<K> + Primitive + 'static,
-    P: WithChannel<S> + 'static,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
     K: Num + Copy,
 {
     let kernel = Kernel::new(kernel, 3, 3);
@@ -362,7 +362,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
     K: Num + Copy,
 {
@@ -458,7 +458,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
     K: Num + Copy,
 {
@@ -946,7 +946,7 @@ mod tests {
     /// We can also use this to validate correctnes of any implementations we add here.
     fn gaussian_baseline_rgb<I>(image: &I, stdev: f32) -> Image<Rgb<u8>>
     where
-        I: GenericImage<Pixel = Rgb<u8>> + 'static,
+        I: GenericImage<Pixel = Rgb<u8>>,
     {
         blur(image, stdev)
     }

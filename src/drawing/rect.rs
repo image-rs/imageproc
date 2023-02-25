@@ -12,7 +12,6 @@ use std::f32;
 pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -26,7 +25,6 @@ where
 pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: 'static,
 {
     let left = rect.left() as f32;
     let right = rect.right() as f32;
@@ -46,7 +44,6 @@ where
 pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -60,7 +57,6 @@ where
 pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: 'static,
 {
     let canvas_bounds = Rect::at(0, 0).of_size(canvas.width(), canvas.height());
     if let Some(intersection) = canvas_bounds.intersect(rect) {

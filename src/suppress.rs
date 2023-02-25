@@ -10,7 +10,7 @@ use std::cmp;
 pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + Ord + 'static,
+    C: Primitive + Ord,
 {
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<Luma<C>, Vec<C>> = ImageBuffer::new(width, height);
@@ -89,7 +89,7 @@ fn contains_greater_value<I, C>(
 ) -> bool
 where
     I: GenericImage<Pixel = Luma<C>>,
-    C: Primitive + Ord + 'static,
+    C: Primitive + Ord,
 {
     for cy in y_lower..y_upper {
         for cx in x_lower..x_upper {
@@ -340,7 +340,7 @@ mod tests {
     fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
     where
         I: GenericImage<Pixel = Luma<C>>,
-        C: Primitive + Ord + 'static,
+        C: Primitive + Ord,
     {
         let (width, height) = image.dimensions();
         let mut out = ImageBuffer::new(width, height);

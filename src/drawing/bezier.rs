@@ -19,7 +19,6 @@ pub fn draw_cubic_bezier_curve<I>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -39,7 +38,6 @@ pub fn draw_cubic_bezier_curve_mut<C>(
     color: C::Pixel,
 ) where
     C: Canvas,
-    C::Pixel: 'static,
 {
     // Bezier Curve function from: https://pomax.github.io/bezierinfo/#control
     let cubic_bezier_curve = |t: f32| {
