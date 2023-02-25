@@ -25,7 +25,11 @@ pub use self::line::{
 };
 
 mod polygon;
-pub use self::polygon::{draw_polygon, draw_polygon_mut};
+pub use self::polygon::{
+    draw_polygon, draw_polygon_mut,
+    draw_antialiased_polygon, draw_antialiased_polygon_mut,
+    draw_hollow_polygon, draw_hollow_polygon_mut,
+};
 
 mod rect;
 pub use self::rect::{
@@ -40,7 +44,6 @@ pub use self::text::{draw_text, draw_text_mut, text_size};
 fn draw_if_in_bounds<C>(canvas: &mut C, x: i32, y: i32, color: C::Pixel)
 where
     C: Canvas,
-    C::Pixel: 'static,
 {
     if x >= 0 && x < canvas.width() as i32 && y >= 0 && y < canvas.height() as i32 {
         canvas.draw_pixel(x as u32, y as u32, color);

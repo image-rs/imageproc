@@ -11,7 +11,7 @@ use rand_distr::{Distribution, Normal, Uniform};
 /// of an image, with the given mean and standard deviation.
 pub fn gaussian_noise<P>(image: &Image<P>, mean: f64, stddev: f64, seed: u64) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
     P::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
     let mut out = image.clone();
@@ -23,7 +23,7 @@ where
 /// of an image in place, with the given mean and standard deviation.
 pub fn gaussian_noise_mut<P>(image: &mut Image<P>, mean: f64, stddev: f64, seed: u64)
 where
-    P: Pixel + 'static,
+    P: Pixel,
     P::Subpixel: ValueInto<f64> + Clamp<f64>,
 {
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
@@ -41,7 +41,7 @@ where
 /// Black and white occur with equal probability.
 pub fn salt_and_pepper_noise<P>(image: &Image<P>, rate: f64, seed: u64) -> Image<P>
 where
-    P: Pixel + HasBlack + HasWhite + 'static,
+    P: Pixel + HasBlack + HasWhite,
 {
     let mut out = image.clone();
     salt_and_pepper_noise_mut(&mut out, rate, seed);
@@ -52,7 +52,7 @@ where
 /// Black and white occur with equal probability.
 pub fn salt_and_pepper_noise_mut<P>(image: &mut Image<P>, rate: f64, seed: u64)
 where
-    P: Pixel + HasBlack + HasWhite + 'static,
+    P: Pixel + HasBlack + HasWhite,
 {
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
     let uniform = Uniform::new(0.0, 1.0);

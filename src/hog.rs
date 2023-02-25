@@ -379,7 +379,7 @@ pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) ->
             let x_window = x as u32 * star_side;
             let mut window = out.sub_image(x_window, y_window, star_side, star_side);
             let hist = grid.inner_slice(x, y);
-            draw_star_mut(&mut window, hist, signed);
+            draw_star_mut(window.inner_mut(), hist, signed);
         }
     }
 
@@ -392,7 +392,6 @@ pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) ->
 fn draw_ray_mut<I>(image: &mut I, theta: f32, color: I::Pixel)
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     use crate::drawing::draw_line_segment_mut;
     use std::cmp;

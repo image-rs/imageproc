@@ -17,7 +17,7 @@
 #[macro_use]
 extern crate imageproc;
 
-use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
+use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -65,7 +65,7 @@ impl FromDynamic for RgbaImage {
 /// Loads an input image, applies a function to it and checks that the result matches a 'truth' image.
 fn compare_to_truth<P, F>(input_file_name: &str, truth_file_name: &str, op: F)
 where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
     F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
@@ -80,7 +80,7 @@ fn compare_to_truth_with_tolerance<P, F>(
     op: F,
     tol: u8,
 ) where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
     F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
@@ -94,7 +94,7 @@ fn compare_to_truth_with_tolerance<P, F>(
 /// Checks that an image matches a 'truth' image.
 fn compare_to_truth_image<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str)
 where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     compare_to_truth_image_with_tolerance(actual, truth_file_name, 0u8);
@@ -106,7 +106,7 @@ fn compare_to_truth_image_with_tolerance<P>(
     truth_file_name: &str,
     tol: u8,
 ) where
-    P: Pixel<Subpixel = u8> + 'static,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     if should_regenerate() {
@@ -494,6 +494,141 @@ fn test_draw_spiral_polygon() {
     draw_polygon_mut(&mut image, &polygon, Luma::white());
 
     compare_to_truth_image(&image, "spiral_polygon.png");
+}
+
+#[test]
+fn test_draw_antialised_polygon() {
+    use imageproc::drawing::draw_antialiased_polygon_mut;
+    use imageproc::point::Point;
+    use imageproc::pixelops::interpolate;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let star = vec![
+        Point::new(100, 20),
+        Point::new(120, 35),
+        Point::new(140, 30),
+        Point::new(115, 45),
+        Point::new(130, 60),
+        Point::new(100, 50),
+        Point::new(80, 55),
+        Point::new(90, 40),
+        Point::new(60, 25),
+        Point::new(90, 35),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &star, white, interpolate);
+
+    let partially_out_of_bounds_star = vec![
+        Point::new(275, 20),
+        Point::new(295, 35),
+        Point::new(315, 30),
+        Point::new(290, 45),
+        Point::new(305, 60),
+        Point::new(275, 50),
+        Point::new(255, 55),
+        Point::new(265, 40),
+        Point::new(235, 25),
+        Point::new(265, 35),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_star, white, interpolate);
+
+    let triangle = vec![Point::new(35, 80), Point::new(145, 110), Point::new(5, 90)];
+    draw_antialiased_polygon_mut(&mut image, &triangle, white, interpolate);
+
+    let partially_out_of_bounds_triangle = vec![
+        Point::new(250, 80),
+        Point::new(350, 130),
+        Point::new(250, 120),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white, interpolate);
+
+    let quad = vec![
+        Point::new(190, 250),
+        Point::new(240, 210),
+        Point::new(270, 200),
+        Point::new(220, 280),
+    ];
+    draw_antialiased_polygon_mut(&mut image, &quad, white, interpolate);
+
+    let hex: Vec<Point<i32>> = (0..6)
+        .map(|i| i as f32 * f32::consts::PI / 3f32)
+        .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
+        .map(|(x, y)| Point::new(x as i32, y as i32))
+        .collect();
+    draw_antialiased_polygon_mut(&mut image, &hex, white, interpolate);
+
+    compare_to_truth_image(&image, "polygon_antialiased.png");
+}
+
+#[test]
+fn test_draw_hollow_polygon() {
+    use imageproc::drawing::draw_hollow_polygon_mut;
+    use imageproc::point::Point;
+
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let white = Luma::white();
+
+    let star = vec![
+        Point::new(100.0, 20.0),
+        Point::new(120.0, 35.0),
+        Point::new(140.0, 30.0),
+        Point::new(115.0, 45.0),
+        Point::new(130.0, 60.0),
+        Point::new(100.0, 50.0),
+        Point::new(80.0, 55.0),
+        Point::new(90.0, 40.0),
+        Point::new(60.0, 25.0),
+        Point::new(90.0, 35.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &star, white);
+
+    let partially_out_of_bounds_star = vec![
+        Point::new(275.0, 20.0),
+        Point::new(295.0, 35.0),
+        Point::new(315.0, 30.0),
+        Point::new(290.0, 45.0),
+        Point::new(305.0, 60.0),
+        Point::new(275.0, 50.0),
+        Point::new(255.0, 55.0),
+        Point::new(265.0, 40.0),
+        Point::new(235.0, 25.0),
+        Point::new(265.0, 35.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &partially_out_of_bounds_star, white);
+
+    let triangle = vec![
+        Point::new(35.0, 80.0),
+        Point::new(145.0, 110.0),
+        Point::new(5.0, 90.0)
+    ];
+    draw_hollow_polygon_mut(&mut image, &triangle, white);
+
+    let partially_out_of_bounds_triangle = vec![
+        Point::new(250.0, 80.0),
+        Point::new(350.0, 130.0),
+        Point::new(250.0, 120.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white);
+
+    let quad = vec![
+        Point::new(190.0, 250.0),
+        Point::new(240.0, 210.0),
+        Point::new(270.0, 200.0),
+        Point::new(220.0, 280.0),
+    ];
+    draw_hollow_polygon_mut(&mut image, &quad, white);
+
+    let hex: Vec<Point<f32>> = (0..6)
+        .map(|i| i as f32 * f32::consts::PI / 3f32)
+        .map(|theta| (theta.cos() * 50.0 + 75.0, theta.sin() * 50.0 + 225.0))
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+
+    draw_hollow_polygon_mut(&mut image, &hex, white);
+
+    compare_to_truth_image(&image, "polygon_hollow.png");
+
 }
 
 #[test]

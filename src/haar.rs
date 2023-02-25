@@ -384,7 +384,7 @@ fn num_features(image_side: u32, num_blocks: u32) -> u32 {
 pub fn draw_haar_feature<I>(image: &I, feature: HaarFeature) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: HasBlack + HasWhite + 'static,
+    I::Pixel: HasBlack + HasWhite,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();

@@ -49,8 +49,8 @@ use std::ops::AddAssign;
 /// ```
 pub fn integral_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<T>,
+    T: From<u8> + Primitive + AddAssign,
 {
     integral_image_impl(image, false)
 }
@@ -88,8 +88,8 @@ where
 /// ```
 pub fn integral_squared_image<P, T>(image: &Image<P>) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<T>,
+    T: From<u8> + Primitive + AddAssign,
 {
     integral_image_impl(image, true)
 }
@@ -97,8 +97,8 @@ where
 /// Implementation of `integral_image` and `integral_squared_image`.
 fn integral_image_impl<P, T>(image: &Image<P>, square: bool) -> Image<ChannelMap<P, T>>
 where
-    P: Pixel<Subpixel = u8> + WithChannel<T> + 'static,
-    T: From<u8> + Primitive + AddAssign + 'static,
+    P: Pixel<Subpixel = u8> + WithChannel<T>,
+    T: From<u8> + Primitive + AddAssign,
 {
     // TODO: Make faster, add a new IntegralImage type
     // TODO: to make it harder to make off-by-one errors when computing sums of regions.
@@ -163,7 +163,7 @@ pub trait ArrayData {
     fn sub(lhs: Self::DataType, other: Self::DataType) -> Self::DataType;
 }
 
-impl<T: Primitive + 'static> ArrayData for Luma<T> {
+impl<T: Primitive> ArrayData for Luma<T> {
     type DataType = [T; 1];
 
     fn data(&self) -> Self::DataType {
@@ -179,7 +179,11 @@ impl<T: Primitive + 'static> ArrayData for Luma<T> {
     }
 }
 
-impl<T: Primitive + 'static> ArrayData for Rgb<T> {
+impl<T> ArrayData for Rgb<T>
+where
+    Rgb<T>: Pixel<Subpixel = T>,
+    T: Primitive,
+{
     type DataType = [T; 3];
 
     fn data(&self) -> Self::DataType {
@@ -195,7 +199,11 @@ impl<T: Primitive + 'static> ArrayData for Rgb<T> {
     }
 }
 
-impl<T: Primitive + 'static> ArrayData for Rgba<T> {
+impl<T> ArrayData for Rgba<T>
+where
+    Rgba<T>: Pixel<Subpixel = T>,
+    T: Primitive,
+{
     type DataType = [T; 4];
 
     fn data(&self) -> Self::DataType {
@@ -243,7 +251,7 @@ pub fn sum_image_pixels<P>(
     bottom: u32,
 ) -> P::DataType
 where
-    P: Pixel + ArrayData + Copy + 'static,
+    P: Pixel + ArrayData + Copy,
 {
     // TODO: better type-safety. It's too easy to pass the original image in here by mistake.
     // TODO: it's also hard to see what the four u32s mean at the call site - use a Rect instead.

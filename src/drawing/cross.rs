@@ -43,7 +43,6 @@ where
 pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
 where
     I: GenericImage,
-    I::Pixel: 'static,
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();

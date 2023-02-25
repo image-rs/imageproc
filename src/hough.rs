@@ -98,7 +98,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
 /// See ./examples/hough.rs for example usage.
 pub fn draw_polar_lines<P>(image: &Image<P>, lines: &[PolarLine], color: P) -> Image<P>
 where
-    P: Pixel + 'static,
+    P: Pixel,
 {
     let mut out = image.clone();
     draw_polar_lines_mut(&mut out, lines, color);
@@ -110,7 +110,7 @@ where
 /// See ./examples/hough.rs for example usage.
 pub fn draw_polar_lines_mut<P>(image: &mut Image<P>, lines: &[PolarLine], color: P)
 where
-    P: Pixel + 'static,
+    P: Pixel,
 {
     for line in lines {
         draw_polar_line(image, *line, color);
@@ -119,7 +119,7 @@ where
 
 fn draw_polar_line<P>(image: &mut Image<P>, line: PolarLine, color: P)
 where
-    P: Pixel + 'static,
+    P: Pixel,
 {
     if let Some((s, e)) = intersection_points(line, image.width(), image.height()) {
         draw_line_segment_mut(image, s, e, color);
