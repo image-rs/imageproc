@@ -14,19 +14,20 @@
 
 use image::{open, GenericImage, ImageResult, Rgb};
 use imageproc::{
-    binary_descriptors::{brief, match_binary_descriptors},
-    corners::corners_fast9,
+    binary_descriptors::{brief::brief, match_binary_descriptors, BinaryDescriptor},
+    corners::{corners_fast9, Corner},
     definitions::Image,
     drawing::draw_line_segment_mut,
+    point::Point,
 };
 
 use std::{env, path::Path};
 
-fn filter_edge_keypoints(keypoint: (u32, u32), height: u32, width: u32, radius: u32) -> bool {
-    keypoint.0 >= radius
-        && keypoint.0 <= width - radius
-        && keypoint.1 >= radius
-        && keypoint.1 <= height - radius
+fn filter_edge_keypoints(keypoint: &Corner, height: u32, width: u32, radius: u32) -> bool {
+    keypoint.x >= radius
+        && keypoint.x <= width - radius
+        && keypoint.y >= radius
+        && keypoint.y <= height - radius
 }
 
 fn main() -> ImageResult<()> {
@@ -56,16 +57,16 @@ fn main() -> ImageResult<()> {
 
     const CORNER_THRESHOLD: u8 = 70;
     let first_corners = corners_fast9(&first_image, CORNER_THRESHOLD)
-        .iter()
-        .map(|c| (c.x, c.y))
-        .filter(|c| filter_edge_keypoints(*c, first_image_height, first_image_width, 16))
-        .collect::<Vec<(u32, u32)>>();
+        .into_iter()
+        .filter(|c| filter_edge_keypoints(c, first_image_height, first_image_width, 16))
+        .map(|c| c.into())
+        .collect::<Vec<Point<u32>>>();
     println!("Found {} corners in the first image", first_corners.len());
     let second_corners = corners_fast9(&second_image, CORNER_THRESHOLD)
-        .iter()
-        .map(|c| (c.x, c.y))
-        .filter(|c| filter_edge_keypoints(*c, second_image_height, second_image_width, 16))
-        .collect::<Vec<(u32, u32)>>();
+        .into_iter()
+        .filter(|c| filter_edge_keypoints(c, second_image_height, second_image_width, 16))
+        .map(|c| c.into())
+        .collect::<Vec<Point<u32>>>();
     println!("Found {} corners in the second image", second_corners.len());
 
     let (first_descriptors, test_pairs) = brief(&first_image, &first_corners, 256, None).unwrap();
@@ -91,14 +92,14 @@ fn main() -> ImageResult<()> {
         .copy_from(&second_image, first_image.width(), 0)
         .unwrap();
     for keypoint_match in matches.iter() {
-        let start_point = first_corners[keypoint_match.0];
-        let end_point = second_corners[keypoint_match.1];
+        let start_point = keypoint_match.0.get_position();
+        let end_point = keypoint_match.1.get_position();
         draw_line_segment_mut(
             &mut output_image,
-            (start_point.0 as f32, start_point.1 as f32),
+            (start_point.x as f32, start_point.y as f32),
             (
-                (end_point.0 + first_image.width()) as f32,
-                end_point.1 as f32,
+                (end_point.x + first_image.width()) as f32,
+                end_point.y as f32,
             ),
             Rgb([0, 255, 0]),
         )
