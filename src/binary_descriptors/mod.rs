@@ -7,7 +7,6 @@ use crate::point::Point;
 
 pub mod brief;
 mod constants;
-pub mod orb;
 
 /// A feature descriptor whose value is given by a string of bits.
 pub trait BinaryDescriptor {
