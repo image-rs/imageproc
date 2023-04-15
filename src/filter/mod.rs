@@ -574,7 +574,6 @@ where
 pub struct Laplacian<'a> {
     image: &'a GrayImage,
     mask: [i32; 9],
-    _marker: std::marker::PhantomData<&'a ()>,
 }
 
 impl<'a> Laplacian<'a> {
@@ -589,7 +588,6 @@ impl<'a> Laplacian<'a> {
         Self {
             image,
             mask: [1, 1, 1, 1, -8, 1, 1, 1, 1],
-            _marker: std::marker::PhantomData,
         }
     }
 
