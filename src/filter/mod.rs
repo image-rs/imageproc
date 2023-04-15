@@ -564,6 +564,51 @@ where
     }
 }
 
+// Laplacian filter with basic mask and diagonal adjustment mask
+
+/// This implementation of the Laplacian algorithm provides a builder pattern for easy customization.
+/// The default Laplacian mask can be used, or an optional diagonal adjustment mask can be selected.
+/// The chosen mask is convolved with the input image to produce an output image with the edges highlighted.
+
+/// A builder for applying Laplacian filter to a grayscale image.
+pub struct Laplacian<'a> {
+    image: &'a GrayImage,
+    mask: [i32; 9],
+}
+
+impl<'a> Laplacian<'a> {
+    /// Creates a new Laplacian with the default mask.
+    ///
+    /// # Arguments
+    /// * image - A reference to the grayscale image to which the Laplacian filter will be applied.
+    ///
+    /// # Returns
+    /// A new Laplacian instance.
+    pub fn new(image: &'a GrayImage) -> Self {
+        Self {
+            image,
+            mask: [1, 1, 1, 1, -8, 1, 1, 1, 1],
+        }
+    }
+
+    /// Sets the mask to the diagonal adjustment mask.
+    ///
+    /// # Returns
+    /// The modified Laplacian instance.
+    pub fn diagonal_adjustment(mut self) -> Self {
+        self.mask = [0, 1, 0, 1, -4, 1, 0, 1, 0];
+        self
+    }
+
+    /// Applies the Laplacian filter with the selected mask to the image.
+    ///
+    /// # Returns
+    /// An ImageBuffer containing the filtered image.
+    pub fn apply(self) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+        filter3x3(self.image, &self.mask)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
