@@ -356,6 +356,21 @@ where
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
 
+/// Returns 2d correlation of an image with a nxm row-major odd shaped kernel. Intermediate calculations are
+/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+#[must_use = "the function does not modify the original image"]
+pub fn filternxm<P, K, S>(image: &Image<P>, kernel: &[K], rows: u32, columns: u32) -> Image<ChannelMap<P, S>>
+where
+    P::Subpixel: ValueInto<K>,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
+    K: Num + Copy,
+{
+    assert!(rows % 2 != 0 && columns % 2 != 0, "rows and columns should be odd");
+    let kernel = Kernel::new(kernel, columns, rows);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+}
+
 /// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
@@ -404,7 +419,7 @@ where
         // Left margin - need to check lower bound only
         for x in 0..half_k {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = max(0, x_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -420,7 +435,7 @@ where
         // Neither margin - don't need bounds check on either side
         for x in half_k..(width as i32 - half_k) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = x_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -436,7 +451,7 @@ where
         // Right margin - need to check upper bound only
         for x in (width as i32 - half_k)..(width as i32) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = min(x_unchecked, width as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -500,7 +515,7 @@ where
     for y in 0..half_k {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = max(0, y_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -518,7 +533,7 @@ where
     for y in half_k..(height as i32 - half_k) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = y_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -536,7 +551,7 @@ where
     for y in (height as i32 - half_k)..(height as i32) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = min(y_unchecked, height as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -560,7 +575,7 @@ where
     K: Num + Copy,
 {
     for i in 0..(P::CHANNEL_COUNT as usize) {
-        acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
+        acc[i] = acc[i] + cast(pixel.channels()[i]) * weight;
     }
 }
 
@@ -863,6 +878,47 @@ mod tests {
         );
 
         let filtered = filter3x3(&image, &kernel);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_kernel_should_be_odd_shaped() {
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+        ];
+
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let _ = filternxm::<_, _, i16>(&image, &kernel, 2 , 3);
+    }
+
+    #[test]
+    fn test_filternxm_with_results_outside_input_channel_range() {
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            0, -1, 0, 1, 0,
+            0, -2, 0, 2, 0,
+            0, -1, 0, 1, 0,
+        ];
+
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4
+        );
+
+        let filtered = filternxm(&image, &kernel, 3 , 5);
         assert_pixels_eq!(filtered, expected);
     }
 
