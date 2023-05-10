@@ -2,7 +2,7 @@
 name = "imageproc"
 version = "0.23.0"
 authors = ["theotherphil"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "Image processing operations"
 readme = "README.md"
