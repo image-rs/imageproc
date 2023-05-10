@@ -20,7 +20,7 @@ approx = "0.5"
 conv = "0.3.3"
 image = { version = "0.24.6", default-features = false }
 itertools = "0.10"
-nalgebra = { version = "0.30", default-features = false, features = ["std"] }
+nalgebra = { version = "0.32", default-features = false, features = ["std"] }
 num = "0.4"
 rand = "0.8.5"
 rand_distr = "0.4.3"
