@@ -6,7 +6,6 @@
 use crate::definitions::Image;
 use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
 use quickcheck::{Arbitrary, Gen};
-use rand::Rng;
 use rand_distr::{Distribution, Standard};
 use std::fmt;
 
@@ -24,7 +23,7 @@ impl<T: Pixel + ArbitraryPixel + Send + 'static> Arbitrary for TestBuffer<T>
 where
     <T as Pixel>::Subpixel: Send,
 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let (width, height) = small_image_dimensions(g);
         let mut image = ImageBuffer::new(width, height);
         for y in 0..height {
@@ -45,7 +44,7 @@ where
 /// defines in other modules.
 pub trait ArbitraryPixel {
     /// Generate an arbitrary instance of this pixel type.
-    fn arbitrary<G: Gen>(g: &mut G) -> Self;
+    fn arbitrary(g: &mut Gen) -> Self;
 }
 
 fn shrink<I>(image: &I) -> Box<dyn Iterator<Item = Image<I::Pixel>>>
@@ -101,29 +100,29 @@ impl<T: fmt::Debug + Pixel> fmt::Debug for TestBuffer<T> {
     }
 }
 
-fn small_image_dimensions<G: Gen>(g: &mut G) -> (u32, u32) {
+fn small_image_dimensions(g: &mut Gen) -> (u32, u32) {
     let dims: (u8, u8) = Arbitrary::arbitrary(g);
     ((dims.0 % 10) as u32, (dims.1 % 10) as u32)
 }
 
-impl<T: Send + Primitive> ArbitraryPixel for Rgb<T>
+impl<T: Send + Primitive + Arbitrary> ArbitraryPixel for Rgb<T>
 where
     Standard: Distribution<T>,
 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let red: T = g.gen();
-        let green: T = g.gen();
-        let blue: T = g.gen();
+    fn arbitrary(g: &mut Gen) -> Self {
+        let red: T = T::arbitrary(g);
+        let green: T = T::arbitrary(g);
+        let blue: T = T::arbitrary(g);
         Rgb([red, green, blue])
     }
 }
 
-impl<T: Send + Primitive> ArbitraryPixel for Luma<T>
+impl<T: Send + Primitive + Arbitrary> ArbitraryPixel for Luma<T>
 where
     Standard: Distribution<T>,
 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let val: T = g.gen();
+    fn arbitrary(g: &mut Gen) -> Self {
+        let val: T = T::arbitrary(g);
         Luma([val])
     }
 }
