@@ -108,6 +108,93 @@ pub fn match_template(
     result
 }
 
+#[cfg(feature = "rayon")]
+/// Slides a `template` over an `image` and scores the match at each point using
+/// the requested `method`. This version uses rayon to parallelize the computation.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// # Panics
+///
+/// If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+pub fn match_template_parallel(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>> {
+    use image::GenericImageView;
+    use rayon::prelude::*;
+
+    let (image_width, image_height) = image.dimensions();
+    let (template_width, template_height) = template.dimensions();
+
+    assert!(
+        image_width >= template_width,
+        "image width must be greater than or equal to template width"
+    );
+    assert!(
+        image_height >= template_height,
+        "image height must be greater than or equal to template height"
+    );
+
+    let should_normalize = matches! { method,
+    MatchTemplateMethod::SumOfSquaredErrorsNormalized
+    | MatchTemplateMethod::CrossCorrelationNormalized };
+    let image_squared_integral = if should_normalize {
+        Some(integral_squared_image(image))
+    } else {
+        None
+    };
+    let template_squared_sum = if should_normalize {
+        Some(sum_squares(template))
+    } else {
+        None
+    };
+
+    let result_width = image_width - template_width + 1;
+    let result_height = image_height - template_height + 1;
+
+    let rows = (0..result_height).into_par_iter().map(|y| {
+        let mut row = Vec::with_capacity(result_width as usize);
+        for x in 0..result_width {
+            let mut score = 0f32;
+
+            for dy in 0..template_height {
+                for dx in 0..template_width {
+                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+
+                    use MatchTemplateMethod::*;
+
+                    score += match method {
+                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                            (image_value - template_value).powf(2.0)
+                        }
+                        CrossCorrelation | CrossCorrelationNormalized => {
+                            image_value * template_value
+                        }
+                    };
+                }
+            }
+
+            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
+                let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
+                let norm = normalization_term(i, t, region);
+                if norm > 0.0 {
+                    score /= norm;
+                }
+            }
+
+            row.push(Luma([score]));
+        }
+        row
+    }).collect::<Vec<_>>();
+
+    Image::from_fn(result_width, result_height, |x, y| rows[y as usize][x as usize])
+}
+
 fn sum_squares(template: &GrayImage) -> f32 {
     template.iter().map(|p| *p as f32 * *p as f32).sum()
 }
