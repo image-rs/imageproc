@@ -6,6 +6,8 @@ use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::map::map_colors;
 use imageproc::rect::Rect;
 use imageproc::template_matching::{match_template, MatchTemplateMethod};
+#[cfg(feature = "rayon")]
+use imageproc::template_matching::match_template_parallel;
 use std::env;
 use std::f32;
 use std::fs;
@@ -18,19 +20,21 @@ struct TemplateMatchingArgs {
     template_y: u32,
     template_w: u32,
     template_h: u32,
+    parallel: bool,
 }
 
 impl TemplateMatchingArgs {
     fn parse(args: Vec<String>) -> TemplateMatchingArgs {
-        if args.len() != 7 {
+        if args.len() < 7 {
             panic!(
                 r#"
 Usage:
 
-     cargo run --example template_matching input_path output_dir template_x template_y template_w template_h
+     cargo run --example template_matching input_path output_dir template_x template_y template_w template_h [parallel]
 
 Loads the image at input_path and extracts a region with the given location and size to use as the matching
 template. Calls match_template on the input image and this template, and saves the results to output_dir.
+If the optional boolean argument parallel is given, match_template will be called with the parallel. Default is false.
 "#
             );
         }
@@ -41,6 +45,7 @@ template. Calls match_template on the input image and this template, and saves t
         let template_y = args[4].parse().unwrap();
         let template_w = args[5].parse().unwrap();
         let template_h = args[6].parse().unwrap();
+        let parallel = args.get(7).map_or(false, |s| s.parse().unwrap());
 
         TemplateMatchingArgs {
             input_path,
@@ -49,6 +54,7 @@ template. Calls match_template on the input image and this template, and saves t
             template_y,
             template_w,
             template_h,
+            parallel,
         }
     }
 }
@@ -98,7 +104,16 @@ fn run_match_template(
     method: MatchTemplateMethod,
 ) -> RgbImage {
     // Match the template and convert to u8 depth to display
-    let result = match_template(&image, &template, method);
+    let result = if args.parallel {
+        #[cfg(feature = "rayon")] {
+            match_template_parallel(&image, &template, method)
+        }
+        #[cfg(not(feature = "rayon"))]{
+            unimplemented!("parallel template matching requires rayon")
+        }
+    } else {
+        match_template(&image, &template, method)
+    };
     let result_scaled = convert_to_gray_image(&result);
 
     // Pad the result to the same size as the input image, to make them easier to compare
