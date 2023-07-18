@@ -62,12 +62,24 @@ where
 {
     let width = image.width() as usize;
     let height = image.height() as usize;
-    let mut image_values = vec![vec![0i32; height]; width];
+    let mut image_values = vec![0i32; height * width];
+
+    let at = |x, y| x + width * y;
+    let get_position_if_non_zero_pixel = |image: &[i32], curr: Point<i32>| {
+        let (x, y) = (curr.x, curr.y);
+        let in_bounds = x > -1 && x < width as i32 && y > -1 && y < height as i32;
+
+        if in_bounds && image[at(x as usize, y as usize)] != 0 {
+            Some(Point::new(x as usize, y as usize))
+        } else {
+            None
+        }
+    };
 
     for y in 0..height {
         for x in 0..width {
             if image.get_pixel(x as u32, y as u32).0[0] > threshold {
-                image_values[x][y] = 1;
+                image_values[at(x, y)] = 1;
             }
         }
     }
@@ -90,16 +102,16 @@ where
         let mut parent_border_num = 1;
 
         for x in 0..width {
-            if image_values[x][y] == 0 {
+            if image_values[at(x, y)] == 0 {
                 continue;
             }
 
             if let Some((adj, border_type)) =
-                if image_values[x][y] == 1 && x > 0 && image_values[x - 1][y] == 0 {
+                if image_values[at(x, y)] == 1 && x > 0 && image_values[at(x - 1, y)] == 0 {
                     Some((Point::new(x - 1, y), BorderType::Outer))
-                } else if image_values[x][y] > 0 && x + 1 < width && image_values[x + 1][y] == 0 {
-                    if image_values[x][y] > 1 {
-                        parent_border_num = image_values[x][y] as usize;
+                } else if image_values[at(x, y)] > 0 && x + 1 < width && image_values[at(x + 1, y)] == 0 {
+                    if image_values[at(x, y)] > 1 {
+                        parent_border_num = image_values[at(x, y)] as usize;
                     }
                     Some((Point::new(x + 1, y), BorderType::Hole))
                 } else {
@@ -156,9 +168,9 @@ where
                         }
 
                         if pos3.x + 1 == width || is_right_edge {
-                            image_values[pos3.x][pos3.y] = -curr_border_num;
-                        } else if image_values[pos3.x][pos3.y] == 1 {
-                            image_values[pos3.x][pos3.y] = curr_border_num;
+                            image_values[at(pos3.x, pos3.y)] = -curr_border_num;
+                        } else if image_values[at(pos3.x, pos3.y)] == 1 {
+                            image_values[at(pos3.x, pos3.y)] = curr_border_num;
                         }
 
                         if pos4 == curr && pos3 == pos1 {
@@ -170,13 +182,13 @@ where
                     }
                 } else {
                     contour_points.push(Point::new(cast(x).unwrap(), cast(y).unwrap()));
-                    image_values[x][y] = -curr_border_num;
+                    image_values[at(x, y)] = -curr_border_num;
                 }
                 contours.push(Contour::new(contour_points, border_type, parent));
             }
 
-            if image_values[x][y] != 1 {
-                parent_border_num = image_values[x][y].abs() as usize;
+            if image_values[at(x, y)] != 1 {
+                parent_border_num = image_values[at(x, y)].abs() as usize;
             }
         }
     }
@@ -187,17 +199,6 @@ where
 fn rotate_to_value<T: Eq + Copy>(values: &mut VecDeque<T>, value: T) {
     let rotate_pos = values.iter().position(|x| *x == value).unwrap();
     values.rotate_left(rotate_pos);
-}
-
-fn get_position_if_non_zero_pixel(image: &[Vec<i32>], curr: Point<i32>) -> Option<Point<usize>> {
-    let (width, height) = (image.len() as i32, image[0].len() as i32);
-    let in_bounds = curr.x > -1 && curr.x < width && curr.y > -1 && curr.y < height;
-
-    if in_bounds && image[curr.x as usize][curr.y as usize] != 0 {
-        Some(Point::new(curr.x as usize, curr.y as usize))
-    } else {
-        None
-    }
 }
 
 #[cfg(test)]
