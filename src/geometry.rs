@@ -103,20 +103,17 @@ where
     let mut res = vec![Point::new(0.0, 0.0); 4];
     for angle in edge_angles {
         let rotation = Rotation::new(angle);
-        let rotated_points: Vec<Point<f64>> =
-            points.iter().map(|p| p.to_f64().rotate(rotation)).collect();
+        let rotated_points = points.iter().map(|p| p.to_f64().rotate(rotation));
 
         let (min_x, max_x, min_y, max_y) =
-            rotated_points
-                .iter()
-                .fold((f64::MAX, f64::MIN, f64::MAX, f64::MIN), |acc, p| {
-                    (
-                        acc.0.min(p.x),
-                        acc.1.max(p.x),
-                        acc.2.min(p.y),
-                        acc.3.max(p.y),
-                    )
-                });
+            rotated_points.fold((f64::MAX, f64::MIN, f64::MAX, f64::MIN), |acc, p| {
+                (
+                    acc.0.min(p.x),
+                    acc.1.max(p.x),
+                    acc.2.min(p.y),
+                    acc.3.max(p.y),
+                )
+            });
 
         let area = (max_x - min_x) * (max_y - min_y);
         if area < min_area {
