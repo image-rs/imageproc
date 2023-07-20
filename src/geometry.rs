@@ -44,22 +44,19 @@ where
         }
     }
 
-    let mut res = Vec::new();
-
     // If max distance is greater than epsilon, recursively simplify
-    if dmax > epsilon {
+    let mut res = if dmax > epsilon {
         // Recursive call
         let mut partial1 = approximate_polygon_dp(&curve[0..=index], epsilon, false);
-        let mut partial2 = approximate_polygon_dp(&curve[index..=end], epsilon, false);
+        let partial2 = approximate_polygon_dp(&curve[index..=end], epsilon, false);
 
         // Build the result list
         partial1.pop();
-        res.append(&mut partial1);
-        res.append(&mut partial2);
+        partial1.extend(partial2);
+        partial1
     } else {
-        res.push(curve[0]);
-        res.push(curve[end]);
-    }
+        vec![curve[0], curve[end]]
+    };
 
     if closed {
         res.pop();
