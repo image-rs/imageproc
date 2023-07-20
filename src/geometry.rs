@@ -100,7 +100,7 @@ where
     edge_angles.dedup();
 
     let mut min_area = f64::MAX;
-    let mut res = vec![Point::new(0.0, 0.0); 4];
+    let mut res = [Point::new(0.0, 0.0); 4];
     for angle in edge_angles {
         let rotation = Rotation::new(angle);
         let rotated_points = points.iter().map(|p| p.to_f64().rotate(rotation));
