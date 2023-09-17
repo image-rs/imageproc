@@ -3,37 +3,50 @@ use crate::drawing::Canvas;
 use conv::ValueInto;
 use image::{GenericImage, ImageBuffer, Pixel};
 use std::f32;
-use std::i32;
 
 use crate::pixelops::weighted_sum;
-use rusttype::{point, Font, PositionedGlyph, Rect, Scale};
-use std::cmp::max;
+
+use ab_glyph::{point, Font, GlyphId, OutlinedGlyph, PxScale, Rect, ScaleFont};
 
 fn layout_glyphs(
-    scale: Scale,
-    font: &Font,
+    scale: impl Into<PxScale> + Copy,
+    font: &impl Font,
     text: &str,
-    mut f: impl FnMut(PositionedGlyph, Rect<i32>),
-) -> (i32, i32) {
-    let v_metrics = font.v_metrics(scale);
+    mut f: impl FnMut(OutlinedGlyph, Rect),
+) -> (u32, u32) {
+    let (mut w, mut h) = (0f32, 0f32);
 
-    let (mut w, mut h) = (0, 0);
+    let font = font.as_scaled(scale);
+    let mut last: Option<GlyphId> = None;
 
-    for g in font.layout(text, scale, point(0.0, v_metrics.ascent)) {
-        if let Some(bb) = g.pixel_bounding_box() {
-            w = max(w, bb.max.x);
-            h = max(h, bb.max.y);
+    for c in text.chars() {
+        let glyph_id = font.glyph_id(c);
+        let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
+        w += font.h_advance(glyph_id);
+        if let Some(g) = font.outline_glyph(glyph) {
+            if let Some(last) = last {
+                let kern_width = font.kern(glyph_id, last);
+                w += kern_width;
+            }
+            last = Some(glyph_id);
+            let bb = g.px_bounds();
+            let g_height = bb.height();
+
+            if g_height > h {
+                h = g_height;
+            }
+
             f(g, bb);
         }
     }
 
-    (w, h)
+    (w as u32, h as u32)
 }
 
 /// Get the width and height of the given text, rendered with the given font and scale.
 ///
 /// Note that this function *does not* support newlines, you must do this manually.
-pub fn text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
+pub fn text_size(scale: impl Into<PxScale> + Copy, font: &impl Font, text: &str) -> (u32, u32) {
     layout_glyphs(scale, font, text, |_, _| {})
 }
 
@@ -42,33 +55,30 @@ pub fn text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
 /// `scale` is augmented font scaling on both the x and y axis (in pixels).
 ///
 /// Note that this function *does not* support newlines, you must do this manually.
-pub fn draw_text_mut<'a, C>(
-    canvas: &'a mut C,
+pub fn draw_text_mut<C>(
+    canvas: &mut C,
     color: C::Pixel,
-    x: i32,
-    y: i32,
-    scale: Scale,
-    font: &'a Font<'a>,
-    text: &'a str,
+    x: u32,
+    y: u32,
+    scale: impl Into<PxScale> + Copy,
+    font: &impl Font,
+    text: &str,
 ) where
     C: Canvas,
     <C::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let image_width = canvas.width() as i32;
-    let image_height = canvas.height() as i32;
+    let image_width = canvas.width();
+    let image_height = canvas.height();
 
     layout_glyphs(scale, font, text, |g, bb| {
         g.draw(|gx, gy, gv| {
-            let gx = gx as i32 + bb.min.x;
-            let gy = gy as i32 + bb.min.y;
-
-            let image_x = gx + x;
-            let image_y = gy + y;
+            let image_x = gx + x + bb.min.x.round() as u32;
+            let image_y = gy + y + bb.min.y.round() as u32;
 
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
-                let pixel = canvas.get_pixel(image_x as u32, image_y as u32);
+                let pixel = canvas.get_pixel(image_x, image_y);
                 let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
-                canvas.draw_pixel(image_x as u32, image_y as u32, weighted_color);
+                canvas.draw_pixel(image_x, image_y, weighted_color);
             }
         })
     });
@@ -80,14 +90,14 @@ pub fn draw_text_mut<'a, C>(
 ///
 /// Note that this function *does not* support newlines, you must do this manually.
 #[must_use = "the function does not modify the original image"]
-pub fn draw_text<'a, I>(
-    image: &'a I,
+pub fn draw_text<I>(
+    image: &I,
     color: I::Pixel,
-    x: i32,
-    y: i32,
-    scale: Scale,
-    font: &'a Font<'a>,
-    text: &'a str,
+    x: u32,
+    y: u32,
+    scale: impl Into<PxScale> + Copy,
+    font: &impl Font,
+    text: &str,
 ) -> Image<I::Pixel>
 where
     I: GenericImage,

@@ -10,10 +10,6 @@
 //!
 //! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
-#![feature(test)]
-#![feature(unboxed_closures)]
-#![feature(fn_traits)]
-
 #[macro_use]
 extern crate imageproc;
 
@@ -87,7 +83,7 @@ fn compare_to_truth_with_tolerance<P, F>(
     let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
         Path::new(INPUT_DIR).join(input_file_name),
     ));
-    let actual = op.call((&input,));
+    let actual = op(&input);
     compare_to_truth_image_with_tolerance(&actual, truth_file_name, tol);
 }
 
@@ -791,4 +787,23 @@ fn test_bilateral_filter() {
     }
 
     compare_to_truth_with_tolerance("lumaphant.png", "lumaphant_bilateral.png", filter, 1)
+}
+
+#[test]
+fn test_draw_text() {
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
+    let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
+
+    imageproc::drawing::draw_text_mut(
+        &mut image,
+        Luma::white(),
+        50,
+        100,
+        30.0f32,
+        &font,
+        "Hello world!",
+    );
+
+    compare_to_truth_image(&image, "text.png");
 }
