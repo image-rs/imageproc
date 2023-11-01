@@ -1,9 +1,9 @@
-use crate::definitions::{Clamp, Image};
-use crate::drawing::Canvas;
 use conv::ValueInto;
 use image::{GenericImage, ImageBuffer, Pixel};
 use std::f32;
 
+use crate::definitions::{Clamp, Image};
+use crate::drawing::Canvas;
 use crate::pixelops::weighted_sum;
 
 use ab_glyph::{point, Font, GlyphId, OutlinedGlyph, PxScale, Rect, ScaleFont};
@@ -25,17 +25,11 @@ fn layout_glyphs(
         w += font.h_advance(glyph_id);
         if let Some(g) = font.outline_glyph(glyph) {
             if let Some(last) = last {
-                let kern_width = font.kern(glyph_id, last);
-                w += kern_width;
+                w += font.kern(glyph_id, last);
             }
             last = Some(glyph_id);
             let bb = g.px_bounds();
-            let g_height = bb.height();
-
-            if g_height > h {
-                h = g_height;
-            }
-
+            h = h.max(bb.height());
             f(g, bb);
         }
     }
@@ -58,8 +52,8 @@ pub fn text_size(scale: impl Into<PxScale> + Copy, font: &impl Font, text: &str)
 pub fn draw_text_mut<C>(
     canvas: &mut C,
     color: C::Pixel,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     scale: impl Into<PxScale> + Copy,
     font: &impl Font,
     text: &str,
@@ -67,15 +61,17 @@ pub fn draw_text_mut<C>(
     C: Canvas,
     <C::Pixel as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
 {
-    let image_width = canvas.width();
-    let image_height = canvas.height();
+    let image_width = canvas.width() as i32;
+    let image_height = canvas.height() as i32;
 
     layout_glyphs(scale, font, text, |g, bb| {
         g.draw(|gx, gy, gv| {
-            let image_x = gx + x + bb.min.x.round() as u32;
-            let image_y = gy + y + bb.min.y.round() as u32;
+            let image_x = gx as i32 + x + bb.min.x.round() as i32;
+            let image_y = gy as i32 + y + bb.min.y.round() as i32;
 
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
+                let image_x = image_x as u32;
+                let image_y = image_y as u32;
                 let pixel = canvas.get_pixel(image_x, image_y);
                 let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
                 canvas.draw_pixel(image_x, image_y, weighted_color);
@@ -93,8 +89,8 @@ pub fn draw_text_mut<C>(
 pub fn draw_text<I>(
     image: &I,
     color: I::Pixel,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     scale: impl Into<PxScale> + Copy,
     font: &impl Font,
     text: &str,
