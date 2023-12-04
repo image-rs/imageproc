@@ -74,7 +74,7 @@ fn main() -> ImageResult<()> {
         brief(&second_image, &second_corners, 256, Some(&test_pairs)).unwrap();
     println!("Computed descriptors");
 
-    let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 24);
+    let matches = match_binary_descriptors(&first_descriptors, &second_descriptors, 24, Some(0xc0));
     println!("Matched {} descriptor pairs", matches.len());
 
     // now that we've matched descriptors in both images, put them side by side
@@ -92,8 +92,8 @@ fn main() -> ImageResult<()> {
         .copy_from(&second_image, first_image.width(), 0)
         .unwrap();
     for keypoint_match in matches.iter() {
-        let start_point = keypoint_match.0.get_position();
-        let end_point = keypoint_match.1.get_position();
+        let start_point = keypoint_match.0.position();
+        let end_point = keypoint_match.1.position();
         draw_line_segment_mut(
             &mut output_image,
             (start_point.x as f32, start_point.y as f32),

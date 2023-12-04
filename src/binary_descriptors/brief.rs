@@ -29,13 +29,15 @@ impl BinaryDescriptor for BriefDescriptor {
     fn get_size(&self) -> u32 {
         (self.bits.len() * 128) as u32
     }
-    fn compute_hamming_distance(&self, other: &Self) -> u32 {
+
+    fn hamming_distance(&self, other: &Self) -> u32 {
         assert_eq!(self.get_size(), other.get_size());
         self.bits
             .iter()
             .zip(other.bits.iter())
             .fold(0, |acc, x| acc + (x.0 ^ x.1).count_ones())
     }
+
     fn get_bit_subset(&self, bits: &[u32]) -> u128 {
         assert!(
             bits.len() <= 128,
@@ -50,7 +52,8 @@ impl BinaryDescriptor for BriefDescriptor {
         }
         subset
     }
-    fn get_position(&self) -> Point<u32> {
+
+    fn position(&self) -> Point<u32> {
         self.corner.into()
     }
 }
@@ -70,12 +73,15 @@ fn local_pixel_average(
     y: u32,
     radius: u32,
 ) -> u8 {
+    if radius == 0 {
+        return 0;
+    }
     let y_min = if y < radius { 0 } else { y - radius };
     let x_min = if x < radius { 0 } else { x - radius };
-    let y_max = u32::min(y + radius, integral_image.height() - radius);
-    let x_max = u32::min(x + radius, integral_image.width() - radius);
+    let y_max = u32::min(y + radius + 1, integral_image.height() - 1);
+    let x_max = u32::min(x + radius + 1, integral_image.width() - 1);
 
-    let pixel_area = (y_max - y_min + 1) * (x_max - x_min + 1);
+    let pixel_area = (y_max - y_min) * (x_max - x_min);
     if pixel_area == 0 {
         return 0;
     }
@@ -97,10 +103,10 @@ fn local_pixel_average(
     // function.
     let (bottom_right, top_left, top_right, bottom_left) = unsafe {
         (
-            integral_image.unsafe_get_pixel(x_max + 1, y_max + 1)[0],
+            integral_image.unsafe_get_pixel(x_max, y_max)[0],
             integral_image.unsafe_get_pixel(x_min, y_min)[0],
-            integral_image.unsafe_get_pixel(x_max + 1, y_min)[0],
-            integral_image.unsafe_get_pixel(x_min, y_max + 1)[0],
+            integral_image.unsafe_get_pixel(x_max, y_min)[0],
+            integral_image.unsafe_get_pixel(x_min, y_max)[0],
         )
     };
     let total_intensity = bottom_right + top_left - top_right - bottom_left;
@@ -110,7 +116,7 @@ fn local_pixel_average(
 pub(crate) fn brief_impl(
     integral_image: &ImageBuffer<Luma<u32>, Vec<u32>>,
     keypoints: &[Point<u32>],
-    test_pairs: &Vec<TestPair>,
+    test_pairs: &[TestPair],
     length: usize,
 ) -> Result<Vec<BriefDescriptor>, String> {
     if length % 128 != 0 {
@@ -122,7 +128,7 @@ pub(crate) fn brief_impl(
 
     if length != test_pairs.len() {
         return Err(format!(
-            "BRIEF descriptor length must be equal to the number or test pairs ({} != {})",
+            "BRIEF descriptor length must be equal to the number of test pairs ({} != {})",
             length,
             test_pairs.len()
         ));
@@ -288,7 +294,7 @@ mod tests {
             ],
             corner: Corner::new(0, 0, 0.),
         };
-        assert_eq!(d1.compute_hamming_distance(&d2), 134);
+        assert_eq!(d1.hamming_distance(&d2), 134);
     }
 
     #[test]
