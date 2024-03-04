@@ -137,7 +137,8 @@ where
                     keycode: Some(Keycode::Q),
                     window_id,
                     ..
-                } | Event::Window {
+                }
+                | Event::Window {
                     win_event: WindowEvent::Close,
                     window_id,
                     ..

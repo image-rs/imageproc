@@ -10,14 +10,13 @@
 //!
 //! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
-#![feature(test)]
-#![feature(unboxed_closures)]
-#![feature(fn_traits)]
-
 #[macro_use]
 extern crate imageproc;
 
-use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage};
+use image::{
+    DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
+    RgbaImage,
+};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -87,7 +86,7 @@ fn compare_to_truth_with_tolerance<P, F>(
     let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
         Path::new(INPUT_DIR).join(input_file_name),
     ));
-    let actual = op.call((&input,));
+    let actual = op(&input);
     compare_to_truth_image_with_tolerance(&actual, truth_file_name, tol);
 }
 
@@ -499,8 +498,8 @@ fn test_draw_spiral_polygon() {
 #[test]
 fn test_draw_antialised_polygon() {
     use imageproc::drawing::draw_antialiased_polygon_mut;
-    use imageproc::point::Point;
     use imageproc::pixelops::interpolate;
+    use imageproc::point::Point;
 
     let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let white = Luma::white();
@@ -531,7 +530,12 @@ fn test_draw_antialised_polygon() {
         Point::new(235, 25),
         Point::new(265, 35),
     ];
-    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_star, white, interpolate);
+    draw_antialiased_polygon_mut(
+        &mut image,
+        &partially_out_of_bounds_star,
+        white,
+        interpolate,
+    );
 
     let triangle = vec![Point::new(35, 80), Point::new(145, 110), Point::new(5, 90)];
     draw_antialiased_polygon_mut(&mut image, &triangle, white, interpolate);
@@ -541,7 +545,12 @@ fn test_draw_antialised_polygon() {
         Point::new(350, 130),
         Point::new(250, 120),
     ];
-    draw_antialiased_polygon_mut(&mut image, &partially_out_of_bounds_triangle, white, interpolate);
+    draw_antialiased_polygon_mut(
+        &mut image,
+        &partially_out_of_bounds_triangle,
+        white,
+        interpolate,
+    );
 
     let quad = vec![
         Point::new(190, 250),
@@ -600,7 +609,7 @@ fn test_draw_hollow_polygon() {
     let triangle = vec![
         Point::new(35.0, 80.0),
         Point::new(145.0, 110.0),
-        Point::new(5.0, 90.0)
+        Point::new(5.0, 90.0),
     ];
     draw_hollow_polygon_mut(&mut image, &triangle, white);
 
@@ -628,7 +637,6 @@ fn test_draw_hollow_polygon() {
     draw_hollow_polygon_mut(&mut image, &hex, white);
 
     compare_to_truth_image(&image, "polygon_hollow.png");
-
 }
 
 #[test]
@@ -791,4 +799,23 @@ fn test_bilateral_filter() {
     }
 
     compare_to_truth_with_tolerance("lumaphant.png", "lumaphant_bilateral.png", filter, 1)
+}
+
+#[test]
+fn test_draw_text() {
+    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
+    let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
+    let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
+
+    imageproc::drawing::draw_text_mut(
+        &mut image,
+        Luma::white(),
+        50,
+        100,
+        30.0f32,
+        &font,
+        "Hello world!",
+    );
+
+    compare_to_truth_image(&image, "text.png");
 }
