@@ -20,14 +20,14 @@ ab_glyph = "0.2.23"
 approx = "0.5"
 conv = "0.3.3"
 image = { version = "0.24.7", default-features = false }
-itertools = "0.11.0"
+itertools = "0.12"
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }
 num = "0.4"
 rand = "0.8.5"
 rand_distr = "0.4.3"
 rayon = { version = "1.8.0", optional = true }
 quickcheck = { version = "1.0.3", optional = true }
-sdl2 = { version = "0.35", optional = true, default-features = false, features = ["bundled"] }
+sdl2 = { version = "0.36", optional = true, default-features = false, features = ["bundled"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
