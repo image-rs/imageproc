@@ -44,22 +44,19 @@ where
         }
     }
 
-    let mut res = Vec::new();
-
     // If max distance is greater than epsilon, recursively simplify
-    if dmax > epsilon {
+    let mut res = if dmax > epsilon {
         // Recursive call
         let mut partial1 = approximate_polygon_dp(&curve[0..=index], epsilon, false);
-        let mut partial2 = approximate_polygon_dp(&curve[index..=end], epsilon, false);
+        let partial2 = approximate_polygon_dp(&curve[index..=end], epsilon, false);
 
         // Build the result list
         partial1.pop();
-        res.append(&mut partial1);
-        res.append(&mut partial2);
+        partial1.extend(partial2);
+        partial1
     } else {
-        res.push(curve[0]);
-        res.push(curve[end]);
-    }
+        vec![curve[0], curve[end]]
+    };
 
     if closed {
         res.pop();
@@ -133,23 +130,20 @@ where
     edge_angles.dedup();
 
     let mut min_area = f64::MAX;
-    let mut res = vec![Point::new(0.0, 0.0); 4];
+    let mut res = [Point::new(0.0, 0.0); 4];
     for angle in edge_angles {
         let rotation = Rotation::new(angle);
-        let rotated_points: Vec<Point<f64>> =
-            points.iter().map(|p| p.to_f64().rotate(rotation)).collect();
+        let rotated_points = points.iter().map(|p| p.to_f64().rotate(rotation));
 
         let (min_x, max_x, min_y, max_y) =
-            rotated_points
-                .iter()
-                .fold((f64::MAX, f64::MIN, f64::MAX, f64::MIN), |acc, p| {
-                    (
-                        acc.0.min(p.x),
-                        acc.1.max(p.x),
-                        acc.2.min(p.y),
-                        acc.3.max(p.y),
-                    )
-                });
+            rotated_points.fold((f64::MAX, f64::MIN, f64::MAX, f64::MIN), |acc, p| {
+                (
+                    acc.0.min(p.x),
+                    acc.1.max(p.x),
+                    acc.2.min(p.y),
+                    acc.3.max(p.y),
+                )
+            });
 
         let area = (max_x - min_x) * (max_y - min_y);
         if area < min_area {
