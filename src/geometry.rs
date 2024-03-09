@@ -68,6 +68,36 @@ where
     res
 }
 
+/// Calculates the area of the contour using the [shoelace formula].
+/// The returned value is always non-negative.
+///
+/// [shoelace formula]: https://en.wikipedia.org/wiki/Shoelace_formula
+pub fn contour_area<T>(points: &[Point<T>]) -> f64
+where
+    T: NumCast + Copy,
+{
+    oriented_contour_area(points).abs()
+}
+
+/// Calculates the oriented area of the contour using the [shoelace formula].
+/// The returned value may be negative depending on the contour orientation (clockwise or counter-clockwise).
+///
+/// [shoelace formula]: https://en.wikipedia.org/wiki/Shoelace_formula
+pub fn oriented_contour_area<T>(points: &[Point<T>]) -> f64
+where
+    T: NumCast + Copy,
+{
+    if points.len() < 3 {
+        return 0.0;
+    }
+    let mut prev = points.last().unwrap().to_f64();
+    0.5 * points.iter().map(|p| p.to_f64()).fold(0.0, |mut accum, p| {
+        accum += prev.x * p.y - prev.y * p.x;
+        prev = p;
+        accum
+    })
+}
+
 /// Finds the rectangle of least area that includes all input points. This rectangle need not be axis-aligned.
 ///
 /// The returned points are the [top left, top right, bottom right, bottom left] points of this rectangle.
@@ -359,5 +389,37 @@ mod tests {
                 Point::new(57, 53)
             ]
         )
+    }
+
+    #[test]
+    fn test_contour_area() {
+        let points = [
+            Point::new(3, 4),
+            Point::new(5, 11),
+            Point::new(12, 8),
+            Point::new(9, 5),
+            Point::new(5, 6),
+        ];
+        let oriented_area = oriented_contour_area(&points);
+        assert_eq!(oriented_area, -30.0);
+        let area = contour_area(&points);
+        assert_eq!(area, 30.0);
+
+        let rect = vec![
+            Point::new(1, 1),
+            Point::new(1, 2),
+            Point::new(1, 3),
+            Point::new(1, 4),
+            Point::new(2, 4),
+            Point::new(3, 4),
+            Point::new(3, 3),
+            Point::new(3, 2),
+            Point::new(3, 1),
+            Point::new(2, 1),
+        ];
+        let oriented_area = oriented_contour_area(&rect);
+        assert_eq!(oriented_area, -6.0);
+        let area = contour_area(&rect);
+        assert_eq!(area, 6.0);
     }
 }
