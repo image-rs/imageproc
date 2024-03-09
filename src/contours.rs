@@ -17,7 +17,7 @@ pub enum BorderType {
 }
 
 /// A border of an 8-connected foreground region.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Contour<T> {
     /// The points in the border.
     pub points: Vec<Point<T>>,
