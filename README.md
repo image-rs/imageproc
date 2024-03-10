@@ -2,15 +2,19 @@ imageproc
 ====
 
 [![crates.io](https://img.shields.io/crates/v/imageproc.svg)](https://crates.io/crates/imageproc)
-[![Build Status](https://travis-ci.org/image-rs/imageproc.svg?branch=master)](https://travis-ci.org/image-rs/imageproc)
+[![doc-badge]][doc-link]
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/image-rs/imageproc/blob/master/LICENSE)
+[![Dependency status](https://deps.rs/repo/github/image-rs/imageproc/status.svg)](https://deps.rs/repo/github/image-rs/imageproc)
 
 An image processing library, based on the [image](https://github.com/image-rs/image) library. There may initially
-be overlap between the functions in this library and those in image::imageops.
+be overlap between the functions in this library and those in `image::imageops`.
 
 This is very much a work in progress. If you have ideas for things that could be done better, or new features you'd like to see, then please create issues for them. Nothing's set in stone.
 
-[API documentation](https://docs.rs/imageproc)
+[API documentation][doc-link]
+
+[doc-badge]: https://docs.rs/imageproc/badge.svg
+[doc-link]: https://docs.rs/imageproc
 
 # Goals
 
