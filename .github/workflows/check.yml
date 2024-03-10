@@ -110,6 +110,8 @@ jobs:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
         run: cargo check
+        env:
+          RUSTFLAGS: -D warnings
   semver:
     runs-on: ubuntu-latest
     steps:
