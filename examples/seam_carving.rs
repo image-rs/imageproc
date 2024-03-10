@@ -48,7 +48,7 @@ fn main() {
     for i in 0..seams_to_remove {
         println!("Removing seam {}", i);
         let vertical_seam = find_vertical_seam(&shrunk);
-        shrunk = remove_vertical_seam(&mut shrunk, &vertical_seam);
+        shrunk = remove_vertical_seam(&shrunk, &vertical_seam);
         seams.push(vertical_seam);
     }
 

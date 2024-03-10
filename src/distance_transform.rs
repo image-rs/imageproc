@@ -449,7 +449,7 @@ mod tests {
         assert_pixels_eq!(distances, expected);
     }
 
-    impl<'a> Sink for Vec<f64> {
+    impl Sink for Vec<f64> {
         fn put(&mut self, idx: usize, value: f64) {
             self[idx] = value;
         }

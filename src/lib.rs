@@ -20,7 +20,8 @@
     clippy::trivially_copy_pass_by_ref,
     clippy::nonminimal_bool,
     clippy::expect_fun_call,
-    clippy::many_single_char_names
+    clippy::many_single_char_names,
+    clippy::zero_prefixed_literal
 )]
 
 #[cfg(test)]
