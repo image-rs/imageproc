@@ -937,7 +937,7 @@ mod tests {
     }
 
     /// Baseline implementation of Gaussian blur is that provided by image::imageops.
-    /// We can also use this to validate correctnes of any implementations we add here.
+    /// We can also use this to validate correctness of any implementations we add here.
     fn gaussian_baseline_rgb<I>(image: &I, stdev: f32) -> Image<Rgb<u8>>
     where
         I: GenericImage<Pixel = Rgb<u8>>,

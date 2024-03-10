@@ -116,7 +116,7 @@ where
 }
 
 /// Returns the peak signal to noise ratio for a clean image and its noisy
-/// aproximation. All channels are considered equally. If you do not want this
+/// approximation. All channels are considered equally. If you do not want this
 /// (e.g. if using RGBA) then change image formats first.
 /// See also [peak signal-to-noise ratio (wikipedia)](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio).
 pub fn peak_signal_to_noise_ratio<I, J, P>(original: &I, noisy: &J) -> f64
