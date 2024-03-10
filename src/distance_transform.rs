@@ -504,7 +504,7 @@ mod tests {
                     let dist = p as f64 - q as f64;
                     dist * dist + f[p]
                 })
-                .fold(0.0 / 0.0, f64::min);
+                .fold(f64::NAN, f64::min);
         }
         ret
     }
