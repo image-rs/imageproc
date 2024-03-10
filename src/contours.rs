@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 /// Whether a border of a foreground region borders an enclosing background region or a contained background region.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BorderType {
-    /// A border between a foreground region and the backround region enclosing it.
+    /// A border between a foreground region and the background region enclosing it.
     /// All points in the border lie within the foreground region.
     Outer,
     /// A border between a foreground region and a background region contained within it.

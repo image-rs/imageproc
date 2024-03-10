@@ -274,7 +274,7 @@ mod tests {
     }
 
     // One huge component with eight-way connectivity, loads of
-    // isolated components with four-way conectivity.
+    // isolated components with four-way connectivity.
     fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
