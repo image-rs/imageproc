@@ -332,7 +332,7 @@ where
 }
 
 /// Human readable description of some of the pixels that differ
-/// signifcantly (according to provided function) between left
+/// significantly (according to provided function) between left
 /// and right, or None if all pixels match.
 pub fn significant_pixel_diff_summary<I, J, F, P>(
     actual: &I,
