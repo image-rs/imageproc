@@ -44,8 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Get early warning of new lints which are regularly introduced in beta channels.
-        toolchain: [stable, beta]
+        toolchain: [nightly]
     steps:
       - uses: actions/checkout@v4
         with:
