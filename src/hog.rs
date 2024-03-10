@@ -367,7 +367,7 @@ impl Interpolation {
 /// horizontal location of the cell, then vertical location of the cell.
 /// Note that we ignore block-level aggregation or normalisation here.
 /// Each rendered star has side length `star_side`, so the image will have
-/// width grid.lengths[1] * `star_side` and height grid.lengths[2] * `star_side`.
+/// width `grid.lengths[1] * star_side` and height `grid.lengths[2] * star_side`.
 pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) -> Image<Luma<u8>> {
     let width = grid.lengths[1] as u32 * star_side;
     let height = grid.lengths[2] as u32 * star_side;

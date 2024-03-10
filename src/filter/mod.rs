@@ -30,14 +30,14 @@ use std::f32;
 ///     averaging of pixels separated by larger distances.
 ///
 /// This is a denoising filter designed to preserve edges. It averages pixels based on their spatial
-/// closeness and radiometric similarity [1]. Spatial closeness is measured by the Gaussian function
+/// closeness and radiometric similarity \[1\]. Spatial closeness is measured by the Gaussian function
 /// of the Euclidean distance between two pixels with user-specified standard deviation
 /// (`sigma_spatial`). Radiometric similarity is measured by the Gaussian function of the difference
 /// between two grayscale values with user-specified standard deviation (`sigma_color`).
 ///
 /// # References
 ///
-///   [1] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
+///   \[1\] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
 ///        Images." IEEE International Conference on Computer Vision (1998)
 ///        839-846. DOI: 10.1109/ICCV.1998.710815
 ///
