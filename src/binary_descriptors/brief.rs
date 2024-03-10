@@ -1,7 +1,7 @@
 //! Structs and functions for finding and computing BRIEF descriptors as
-//! described in [Calonder, et. al. (2010)][calonder].
+//! described in [Calonder, et. al. (2010)].
 ///
-/// [calonder]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
+/// [Calonder, et. al. (2010)]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use rand_distr::{Distribution, Normal};
 
@@ -12,9 +12,9 @@ use super::{
     BinaryDescriptor,
 };
 
-/// BRIEF descriptor as described in [Calonder, et. al. (2010)][calonder].
+/// BRIEF descriptor as described in [Calonder, et. al. (2010)].
 ///
-/// [calonder]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
+/// [Calonder, et. al. (2010)]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
 #[derive(Clone, PartialEq)]
 pub struct BriefDescriptor {
     /// Results of the pairwise pixel intensity tests that comprise this BRIEF
@@ -213,7 +213,7 @@ pub(crate) fn brief_impl(
 /// If `override_test_pairs` is `None`, then `TestPair`s are generated according
 /// to an isotropic Gaussian.
 ///
-/// Calonder used Gaussian smoothing to decrease the effects of noise in the
+/// [Calonder, et. al. (2010)] used Gaussian smoothing to decrease the effects of noise in the
 /// patches. This is slow, even with a box filter approximation. For maximum
 /// performance, the average intensities of sub-patches of radius 5 around the
 /// test points are computed and used instead of the intensities of the test
@@ -223,9 +223,7 @@ pub(crate) fn brief_impl(
 /// descriptors.
 ///
 /// [rublee]: http://www.gwylab.com/download/ORB_2012.pdf
-///
-/// See [Calonder et. al.
-/// (2010)][https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf]
+/// [Calonder, et. al. (2010)]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
 pub fn brief(
     image: &GrayImage,
     keypoints: &[Point<u32>],
@@ -335,11 +333,10 @@ mod tests {
         let image = gray_bench_image(640, 480);
         let mut rng = rand::thread_rng();
         let keypoints = (0..1000)
-            .into_iter()
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24, image.width() - 24),
-                    rng.gen_range(24, image.height() - 24),
+                    rng.gen_range(24..image.width() - 24),
+                    rng.gen_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();
@@ -354,11 +351,10 @@ mod tests {
         let image = gray_bench_image(640, 480);
         let mut rng = rand::thread_rng();
         let keypoints = (0..1000)
-            .into_iter()
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24, image.width() - 24),
-                    rng.gen_range(24, image.height() - 24),
+                    rng.gen_range(24..image.width() - 24),
+                    rng.gen_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();

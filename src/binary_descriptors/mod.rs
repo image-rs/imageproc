@@ -79,7 +79,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
     for _ in 0..l {
         // choose k random bits (not necessarily unique)
         let bits = (0..k)
-            .map(|_| rng.gen_range(0, queries[0].get_size()))
+            .map(|_| rng.gen_range(0..queries[0].get_size()))
             .collect::<Vec<u32>>();
 
         let mut new_hashmap = HashMap::<u128, Vec<&T>>::with_capacity(database.len());
@@ -145,11 +145,10 @@ mod tests {
         let image = gray_bench_image(640, 480);
         let mut rng = rand::thread_rng();
         let keypoints = (0..1000)
-            .into_iter()
             .map(|_| {
                 Point::new(
-                    rng.gen_range(20, image.width() - 20),
-                    rng.gen_range(20, image.height() - 20),
+                    rng.gen_range(20..image.width() - 20),
+                    rng.gen_range(20..image.height() - 20),
                 )
             })
             .collect::<Vec<Point<u32>>>();
