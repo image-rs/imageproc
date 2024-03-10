@@ -338,8 +338,8 @@ mod tests {
             .into_iter()
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24, image.width() - 24),
-                    rng.gen_range(24, image.height() - 24),
+                    rng.gen_range(24..image.width() - 24),
+                    rng.gen_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();
@@ -357,8 +357,8 @@ mod tests {
             .into_iter()
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24, image.width() - 24),
-                    rng.gen_range(24, image.height() - 24),
+                    rng.gen_range(24..image.width() - 24),
+                    rng.gen_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();
