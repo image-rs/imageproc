@@ -368,7 +368,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-        assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
+        assert!(is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-        assert_eq!(is_corner_fast12(&image, 15, 3, 3), false);
+        assert!(!is_corner_fast12(&image, 15, 3, 3));
     }
 
     #[test]
@@ -396,7 +396,7 @@ mod tests {
             00, 10, 00, 00, 00, 00, 00;
             00, 00, 10, 10, 10, 00, 00);
 
-        assert_eq!(is_corner_fast12(&image, 8, 3, 3), true);
+        assert!(is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-        assert_eq!(is_corner_fast12(&image, 8, 3, 3), false);
+        assert!(!is_corner_fast12(&image, 8, 3, 3));
     }
 
     #[bench]
@@ -438,7 +438,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-        assert_eq!(is_corner_fast12(&image, 8, 1, 1), false);
+        assert!(!is_corner_fast12(&image, 8, 1, 1));
     }
 
     #[test]
@@ -470,7 +470,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 10, 10, 10, 10, 10);
 
-        assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
+        assert!(is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[test]
@@ -484,7 +484,7 @@ mod tests {
             00, 10, 00, 00, 00, 00, 00;
             00, 00, 00, 00, 00, 00, 00);
 
-        assert_eq!(is_corner_fast9(&image, 8, 3, 3), true);
+        assert!(is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[bench]
@@ -512,7 +512,7 @@ mod tests {
             10, 00, 10, 10, 10, 10, 10;
             10, 10, 00, 00, 00, 10, 10);
 
-        assert_eq!(is_corner_fast9(&image, 8, 3, 3), false);
+        assert!(!is_corner_fast9(&image, 8, 3, 3));
     }
 
     #[test]

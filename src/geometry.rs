@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn convex_hull_points_empty_vec() {
-        let points = convex_hull::<i32>(&vec![]);
+        let points = convex_hull::<i32>(&[]);
         assert_eq!(points, []);
     }
 

@@ -521,7 +521,8 @@ mod tests {
     fn bench_equalize_histogram_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            black_box(equalize_histogram_mut(&mut image));
+            equalize_histogram_mut(&mut image);
+            black_box(());
         });
     }
 
@@ -538,7 +539,8 @@ mod tests {
     fn bench_threshold_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            black_box(threshold_mut(&mut image, 125));
+            threshold_mut(&mut image, 125);
+            black_box(());
         });
     }
 
@@ -555,7 +557,8 @@ mod tests {
     fn bench_stretch_contrast_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            black_box(stretch_contrast_mut(&mut image, 20, 80));
+            stretch_contrast_mut(&mut image, 20, 80);
+            black_box(());
         });
     }
 }
