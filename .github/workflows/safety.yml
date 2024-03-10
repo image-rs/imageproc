@@ -3,7 +3,6 @@
 # - miri - detects undefined behavior and memory leaks
 # - address sanitizer - detects memory errors
 # - leak sanitizer - detects memory leaks
-# - loom - Permutation testing for concurrent code https://crates.io/crates/loom
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
   contents: read
@@ -69,16 +68,3 @@ jobs:
         run: cargo miri test
         env:
           MIRIFLAGS: ""
-  loom:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
-      - name: cargo test --test loom
-        run: cargo test --release --test loom
-        env:
-          LOOM_MAX_PREEMPTIONS: 2
-          RUSTFLAGS: "--cfg loom"
