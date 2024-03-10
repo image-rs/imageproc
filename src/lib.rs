@@ -21,7 +21,8 @@
     clippy::nonminimal_bool,
     clippy::expect_fun_call,
     clippy::many_single_char_names,
-    clippy::zero_prefixed_literal
+    clippy::zero_prefixed_literal,
+    unused_imports
 )]
 
 #[cfg(test)]

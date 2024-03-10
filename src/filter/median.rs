@@ -385,7 +385,7 @@ mod tests {
                         let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
                         let py = min(max(0, y as i32 + dy), (height - 1) as i32) as u32;
 
-                        neighbors[idx] = image.get_pixel(px, py)[0] as u8;
+                        neighbors[idx] = image.get_pixel(px, py)[0];
 
                         idx += 1;
                     }
