@@ -67,12 +67,7 @@ pub fn bilateral_filter(
         let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
         let window_range = window_start..window_end;
         let v = window_range.collect::<Vec<i32>>();
-        let cc: Vec<i32> = v
-            .iter()
-            .cycle()
-            .take(v.len() * v.len())
-            .cloned()
-            .collect();
+        let cc: Vec<i32> = v.iter().cycle().take(v.len() * v.len()).cloned().collect();
         let mut rr = Vec::new();
         let window_range = window_start..window_end;
         for i in window_range {

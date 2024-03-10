@@ -132,7 +132,6 @@ fn hysteresis(
                 edges.push((x, y));
                 // Track neighbors until no neighbor is >= low_thresh.
                 while let Some((nx, ny)) = edges.pop() {
-                    
                     let neighbor_indices = [
                         (nx + 1, ny),
                         (nx + 1, ny + 1),

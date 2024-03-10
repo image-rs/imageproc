@@ -751,7 +751,8 @@ fn test_hough_line_detection() {
     let image = GrayImage::new(100, 100);
     let image = draw_polar_lines(
         &image,
-        &[PolarLine {
+        &[
+            PolarLine {
                 r: 50.0,
                 angle_in_degrees: 0,
             },
@@ -770,7 +771,8 @@ fn test_hough_line_detection() {
             PolarLine {
                 r: 0.01,
                 angle_in_degrees: 135,
-            }],
+            },
+        ],
         Luma([255u8]),
     );
     let options = LineDetectionOptions {
