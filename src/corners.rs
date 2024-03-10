@@ -1,7 +1,12 @@
 //! Functions for detecting corners, also known as interest points.
 
-use crate::definitions::{Position, Score};
+use crate::{
+    definitions::{Position, Score},
+    point::Point,
+};
 use image::{GenericImageView, GrayImage};
+use rand::{rngs::StdRng, SeedableRng};
+use rand_distr::Distribution;
 
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
@@ -32,6 +37,12 @@ impl Position for Corner {
     /// y-coordinate of the corner.
     fn y(&self) -> u32 {
         self.y
+    }
+}
+
+impl From<Corner> for Point<u32> {
+    fn from(value: Corner) -> Self {
+        Point::new(value.x, value.y)
     }
 }
 
@@ -88,6 +99,145 @@ pub fn corners_fast9(image: &GrayImage, threshold: u8) -> Vec<Corner> {
     }
 
     corners
+}
+
+/// A FAST corner with associated orientation as described in [Rublee, et. al.
+/// (2012)][rublee].
+///
+/// [rublee]: http://www.gwylab.com/download/ORB_2012.pdf
+#[derive(Clone, Copy, PartialEq)]
+pub struct OrientedFastCorner {
+    /// Location and FAST corner score of this corner in its associated image.
+    pub corner: Corner,
+    /// Orientation of this FAST corner as determined by computing the intensity
+    /// centroid of the local patch around the corner.
+    pub orientation: f32,
+}
+
+fn intensity_centroid(image: &GrayImage, x: u32, y: u32, radius: u32) -> f32 {
+    let mut y_centroid: i32 = 0;
+    let mut x_centroid: i32 = 0;
+
+    let (width, height) = image.dimensions();
+    let x_min = if x < radius { 0 } else { x - radius };
+    let y_min = if y < radius { 0 } else { y - radius };
+    let y_max = u32::min(y + radius + 1, height);
+    let x_max = u32::min(x + radius + 1, width);
+
+    let (mut x_count, mut y_count) = (-(radius as i32), (radius as i32));
+
+    for y in y_min..y_max {
+        for x in x_min..x_max {
+            // UNSAFETY JUSTIFICATION
+            //
+            // Benefit
+            //
+            // Removing all unsafe pixel accesses in this function increases the
+            // average runtime for bench_intensity_centroid by about 90%.
+            //
+            // Correctness
+            //
+            // x will always be greater than or equal to x_min and strictly less
+            // than x_max due to the range in this for loop. x_min will never be
+            // less than zero, and x_max will never be greater than the image
+            // width, both due to the checks earlier in this function. The same
+            // logic applies to y, y_min, and y_max.
+            let pixel = unsafe { image.unsafe_get_pixel(x, y).0[0] };
+            x_centroid += x_count * (pixel as i32);
+            x_count += 1;
+        }
+        x_count = -(radius as i32);
+    }
+
+    for x in x_min..x_max {
+        for y in y_min..y_max {
+            // See UNSAFETY JUSTIFICATION above.
+            let pixel = unsafe { image.unsafe_get_pixel(x, y).0[0] };
+            y_centroid += y_count * (pixel as i32);
+            y_count -= 1;
+        }
+        y_count = radius as i32;
+    }
+
+    // Important note: we flip the sign here because there are two coordinate
+    // systems in play. One is pixel space with the origin in the top left, and
+    // the other is ordinary Cartesian space with the origin in the bottom left.
+    // To make the math in later rotation code match the usual convention, we
+    // hide the coordinate conversion here.
+    -(y_centroid as f32).atan2(x_centroid as f32)
+}
+
+/// Finds oriented FAST-9 corners as presented in [Rublee et. al. (2012)][rublee].
+///
+/// [rublee]: http://www.gwylab.com/download/ORB_2012.pdf
+pub fn oriented_fast(
+    image: &GrayImage,
+    threshold: Option<u8>,
+    target_num_corners: usize,
+    edge_radius: u32,
+    seed: Option<u64>,
+) -> Vec<OrientedFastCorner> {
+    let (width, height) = image.dimensions();
+    let (min_x, max_x) = (edge_radius, width - edge_radius);
+    let (min_y, max_y) = (edge_radius, height - edge_radius);
+    let mut corners = vec![];
+
+    let local_threshold = if let Some(t) = threshold {
+        t
+    } else {
+        // Take a sample of random pixels, compute their FAST scores, and set the
+        // threshold for the full image accordingly.
+        const NUM_SAMPLE_POINTS: usize = 1000;
+        let mut rng = if let Some(s) = seed {
+            StdRng::seed_from_u64(s)
+        } else {
+            StdRng::from_entropy()
+        };
+        let dist_x = rand::distributions::Uniform::new(min_x, max_x);
+        let dist_y = rand::distributions::Uniform::new(min_y, max_y);
+        let sample_size = NUM_SAMPLE_POINTS.min((width * height) as usize);
+        let sample_coords: Vec<Point<u32>> = (0..sample_size)
+            .map(|_| Point::new(dist_x.sample(&mut rng), dist_y.sample(&mut rng)))
+            .collect();
+        let mut fast_scores: Vec<u8> = sample_coords
+            .iter()
+            .map(|c| fast_corner_score(image, 0, c.x, c.y, Fast::Nine))
+            .collect();
+        fast_scores.sort();
+        let target_corner_fraction = (target_num_corners as f32) / ((width * height) as f32);
+        let fraction_idx = (NUM_SAMPLE_POINTS as f32 * (1. - target_corner_fraction)) as usize;
+
+        fast_scores[fraction_idx]
+    };
+
+    // Iterate over every pixel in the image and find potential corners.
+    for y in edge_radius..height - edge_radius {
+        for x in edge_radius..width - edge_radius {
+            if is_corner_fast9(image, local_threshold, x, y) {
+                let score = fast_corner_score(image, local_threshold, x, y, Fast::Nine);
+                corners.push(Corner::new(x, y, score as f32));
+            }
+        }
+    }
+
+    // Sort descending by Harris corner measure.
+    corners.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+    // Keep the top corners and discard the rest.
+    let top_corners = if corners.len() < target_num_corners {
+        &corners
+    } else {
+        &corners[..target_num_corners]
+    };
+
+    // Compute intensity centroids and return oriented FAST corners.
+    top_corners
+        .iter()
+        .map(|c| OrientedFastCorner {
+            corner: *c,
+            orientation: intensity_centroid(image, c.x, c.y, 15),
+        })
+        .collect()
 }
 
 /// The score of a corner detected using the FAST
@@ -485,6 +635,65 @@ mod tests {
             00, 00, 00, 00, 00, 00, 00);
 
         assert!(is_corner_fast9(&image, 8, 3, 3));
+    }
+
+    #[test]
+    fn test_intensity_centroid() {
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 10;
+            10, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 10, 00;
+            00, 00, 00, 10, 10, 00, 00);
+
+        assert_eq!(
+            intensity_centroid(&image, 3, 3, 3),
+            -std::f32::consts::FRAC_PI_4
+        );
+    }
+
+    #[bench]
+    fn bench_intensity_centroid(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 10;
+            10, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 10, 00;
+            00, 00, 00, 10, 10, 00, 00);
+
+        b.iter(|| black_box(intensity_centroid(&image, 3, 3, 3)));
+    }
+
+    #[bench]
+    fn bench_oriented_fast_corner(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 10;
+            10, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 10, 00;
+            00, 00, 00, 10, 10, 00, 00);
+
+        b.iter(|| black_box(oriented_fast(&image, Some(0), 1, 0, Some(0xc0))));
+    }
+
+    #[bench]
+    fn bench_oriented_fast_non_corner(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00);
+
+        b.iter(|| black_box(oriented_fast(&image, Some(255), 0, 0, Some(0xc0))));
     }
 
     #[bench]
