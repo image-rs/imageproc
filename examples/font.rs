@@ -1,8 +1,8 @@
 //! An example of drawing text. Writes to the user-provided target file.
 
+use ab_glyph::{FontRef, PxScale};
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_text_mut, text_size};
-use ab_glyph::{FontRef, PxScale};
 use std::env;
 use std::path::Path;
 
