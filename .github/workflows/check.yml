@@ -57,7 +57,8 @@ jobs:
           components: clippy
       - name: cargo clippy
         run: cargo clippy --all-targets --all-features
-        RUSTFLAGS: -Dwarnings
+        env:
+          RUSTFLAGS: -Dwarnings
   doc:
     # run docs generation on nightly rather than stable. This enables features like
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
