@@ -17,7 +17,7 @@ fn main() {
         }
     };
 
-    let image = image::open(&image_path)
+    let image = image::open(image_path)
         .expect("No image found at provided path")
         .to_rgba8();
 

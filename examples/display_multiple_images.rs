@@ -24,14 +24,14 @@ fn main() {
         }
     };
 
-    let first_image = image::open(&first_image_path)
+    let first_image = image::open(first_image_path)
         .expect("No image found at provided path")
         .to_rgba8();
-    let second_image = image::open(&second_image_path)
+    let second_image = image::open(second_image_path)
         .expect("No image found at provided path")
         .to_rgba8();
 
-    display_multiple_images("", &vec![&first_image, &second_image], 500, 500);
+    display_multiple_images("", &[&first_image, &second_image], 500, 500);
 }
 
 #[cfg(not(feature = "display-window"))]

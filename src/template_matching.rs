@@ -93,7 +93,7 @@ pub fn match_template(
                 }
             }
 
-            if let (&Some(ref i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
+            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
                 let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
                 let norm = normalization_term(i, t, region);
                 if norm > 0.0 {
@@ -156,43 +156,50 @@ pub fn match_template_parallel(
     let result_width = image_width - template_width + 1;
     let result_height = image_height - template_height + 1;
 
-    let rows = (0..result_height).into_par_iter().map(|y| {
-        let mut row = Vec::with_capacity(result_width as usize);
-        for x in 0..result_width {
-            let mut score = 0f32;
+    let rows = (0..result_height)
+        .into_par_iter()
+        .map(|y| {
+            let mut row = Vec::with_capacity(result_width as usize);
+            for x in 0..result_width {
+                let mut score = 0f32;
 
-            for dy in 0..template_height {
-                for dx in 0..template_width {
-                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                for dy in 0..template_height {
+                    for dx in 0..template_width {
+                        let image_value =
+                            unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                        let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
 
-                    use MatchTemplateMethod::*;
+                        use MatchTemplateMethod::*;
 
-                    score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                            (image_value - template_value).powf(2.0)
-                        }
-                        CrossCorrelation | CrossCorrelationNormalized => {
-                            image_value * template_value
-                        }
-                    };
+                        score += match method {
+                            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                                (image_value - template_value).powf(2.0)
+                            }
+                            CrossCorrelation | CrossCorrelationNormalized => {
+                                image_value * template_value
+                            }
+                        };
+                    }
                 }
-            }
 
-            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
-                let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
-                let norm = normalization_term(i, t, region);
-                if norm > 0.0 {
-                    score /= norm;
+                if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
+                    let region =
+                        Rect::at(x as i32, y as i32).of_size(template_width, template_height);
+                    let norm = normalization_term(i, t, region);
+                    if norm > 0.0 {
+                        score /= norm;
+                    }
                 }
+
+                row.push(Luma([score]));
             }
+            row
+        })
+        .collect::<Vec<_>>();
 
-            row.push(Luma([score]));
-        }
-        row
-    }).collect::<Vec<_>>();
-
-    Image::from_fn(result_width, result_height, |x, y| rows[y as usize][x as usize])
+    Image::from_fn(result_width, result_height, |x, y| {
+        rows[y as usize][x as usize]
+    })
 }
 
 fn sum_squares(template: &GrayImage) -> f32 {

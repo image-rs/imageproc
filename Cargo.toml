@@ -2,6 +2,7 @@
 name = "imageproc"
 version = "0.24.0"
 authors = ["theotherphil"]
+rust-version = "1.63.0"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
@@ -28,6 +29,9 @@ rand_distr = "0.4.3"
 rayon = { version = "1.8.0", optional = true }
 quickcheck = { version = "1.0.3", optional = true }
 sdl2 = { version = "0.36", optional = true, default-features = false, features = ["bundled"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"

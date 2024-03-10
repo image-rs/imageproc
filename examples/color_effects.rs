@@ -38,7 +38,7 @@ fn main() {
 
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(path)
-        .expect(&format!("Could not load image at {:?}", path))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", path))
         .to_luma8();
 
     let blue = Rgb([0u8, 0u8, 255u8]);

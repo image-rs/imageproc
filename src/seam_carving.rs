@@ -15,10 +15,10 @@ pub struct VerticalSeam(Vec<u32>);
 /// Reduces the width of an image using seam carving.
 ///
 /// Warning: this is very slow! It implements the algorithm from
-/// https://inst.eecs.berkeley.edu/~cs194-26/fa16/hw/proj4-seamcarving/imret.pdf, with some
+/// <https://inst.eecs.berkeley.edu/~cs194-26/fa16/hw/proj4-seamcarving/imret.pdf>, with some
 /// extra unnecessary allocations thrown in. Rather than attempting to optimise the implementation
 /// of this inherently slow algorithm, the planned next step is to switch to the algorithm from
-/// https://users.cs.cf.ac.uk/Paul.Rosin/resources/papers/seam-carving-ChinaF.pdf.
+/// <https://users.cs.cf.ac.uk/Paul.Rosin/resources/papers/seam-carving-ChinaF.pdf>.
 pub fn shrink_width<P>(image: &Image<P>, target_width: u32) -> Image<P>
 // TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
 where

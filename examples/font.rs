@@ -1,8 +1,8 @@
 //! An example of drawing text. Writes to the user-provided target file.
 
+use ab_glyph::{FontRef, PxScale};
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_text_mut, text_size};
-use ab_glyph::{FontRef, PxScale};
 use std::env;
 use std::path::Path;
 
@@ -30,5 +30,5 @@ fn main() {
     let (w, h) = text_size(scale, &font, text);
     println!("Text size: {}x{}", w, h);
 
-    let _ = image.save(path).unwrap();
+    image.save(path).unwrap();
 }

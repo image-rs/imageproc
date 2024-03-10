@@ -28,10 +28,10 @@ use imageproc::{
 use std::{env, f32, path::Path};
 
 /// The directory containing the input images used in regression tests.
-const INPUT_DIR: &'static str = "./tests/data";
+const INPUT_DIR: &str = "./tests/data";
 
 /// The directory containing the truth images to compare against test outputs.
-const TRUTH_DIR: &'static str = "./tests/data/truth";
+const TRUTH_DIR: &str = "./tests/data/truth";
 
 // If the REGENERATE environment variable is set then running tests will update the truth files
 // to match the output of the current code.
@@ -751,7 +751,7 @@ fn test_hough_line_detection() {
     let image = GrayImage::new(100, 100);
     let image = draw_polar_lines(
         &image,
-        &vec![
+        &[
             PolarLine {
                 r: 50.0,
                 angle_in_degrees: 0,

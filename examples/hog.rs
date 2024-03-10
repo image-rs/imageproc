@@ -8,7 +8,7 @@ use std::path::Path;
 fn create_hog_image(input: &Path, signed: bool) {
     // Load a image::DynamicImage and convert it to a image::GrayImage
     let image = open(input)
-        .expect(&format!("Could not load image at {:?}", input))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", input))
         .to_luma8();
 
     // We're not going to do anything interesting with the block sizes here - they're
@@ -18,7 +18,7 @@ fn create_hog_image(input: &Path, signed: bool) {
     // divisible into blocks.
     let opts = HogOptions {
         orientations: 8,
-        signed: signed,
+        signed,
         cell_side: 5,
         block_side: 2,
         block_stride: 1,

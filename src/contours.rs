@@ -106,18 +106,20 @@ where
                 continue;
             }
 
-            if let Some((adj, border_type)) =
-                if image_values[at(x, y)] == 1 && x > 0 && image_values[at(x - 1, y)] == 0 {
-                    Some((Point::new(x - 1, y), BorderType::Outer))
-                } else if image_values[at(x, y)] > 0 && x + 1 < width && image_values[at(x + 1, y)] == 0 {
-                    if image_values[at(x, y)] > 1 {
-                        parent_border_num = image_values[at(x, y)] as usize;
-                    }
-                    Some((Point::new(x + 1, y), BorderType::Hole))
-                } else {
-                    None
-                }
+            if let Some((adj, border_type)) = if image_values[at(x, y)] == 1
+                && x > 0
+                && image_values[at(x - 1, y)] == 0
             {
+                Some((Point::new(x - 1, y), BorderType::Outer))
+            } else if image_values[at(x, y)] > 0 && x + 1 < width && image_values[at(x + 1, y)] == 0
+            {
+                if image_values[at(x, y)] > 1 {
+                    parent_border_num = image_values[at(x, y)] as usize;
+                }
+                Some((Point::new(x + 1, y), BorderType::Hole))
+            } else {
+                None
+            } {
                 curr_border_num += 1;
 
                 let parent = if parent_border_num > 1 {
@@ -188,7 +190,7 @@ where
             }
 
             if image_values[at(x, y)] != 1 {
-                parent_border_num = image_values[at(x, y)].abs() as usize;
+                parent_border_num = image_values[at(x, y)].unsigned_abs() as usize;
             }
         }
     }

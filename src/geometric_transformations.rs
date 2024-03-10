@@ -356,7 +356,8 @@ where
             }
 
             if w + tx > 0 {
-                let in_base = (y_in as usize * width as usize + (tx.abs() as usize)) * num_channels;
+                let in_base =
+                    (y_in as usize * width as usize + (tx.unsigned_abs() as usize)) * num_channels;
                 let out_base = (y as usize * width as usize) * num_channels;
                 let len = (w + tx) as usize * num_channels;
                 (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);

@@ -16,7 +16,7 @@ fn draw_polygon_with<I, L>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-    L: Fn(&mut Image<I::Pixel>, (f32, f32), (f32, f32), I::Pixel) -> (),
+    L: Fn(&mut Image<I::Pixel>, (f32, f32), (f32, f32), I::Pixel),
 {
     let mut out = ImageBuffer::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
@@ -27,7 +27,7 @@ where
 fn draw_polygon_with_mut<C, L>(canvas: &mut C, poly: &[Point<i32>], color: C::Pixel, plotter: L)
 where
     C: Canvas,
-    L: Fn(&mut C, (f32, f32), (f32, f32), C::Pixel) -> (),
+    L: Fn(&mut C, (f32, f32), (f32, f32), C::Pixel),
 {
     if poly.is_empty() {
         return;

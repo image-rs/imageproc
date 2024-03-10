@@ -278,9 +278,9 @@ mod tests {
     fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
-                return Luma([255u8]);
+                Luma([255u8])
             } else {
-                return Luma([0u8]);
+                Luma([0u8])
             }
         })
     }

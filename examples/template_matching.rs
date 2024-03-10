@@ -5,9 +5,9 @@ use imageproc::definitions::Image;
 use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::map::map_colors;
 use imageproc::rect::Rect;
-use imageproc::template_matching::{match_template, MatchTemplateMethod};
 #[cfg(feature = "rayon")]
 use imageproc::template_matching::match_template_parallel;
+use imageproc::template_matching::{match_template, MatchTemplateMethod};
 use std::env;
 use std::f32;
 use std::fs;
@@ -105,14 +105,16 @@ fn run_match_template(
 ) -> RgbImage {
     // Match the template and convert to u8 depth to display
     let result = if args.parallel {
-        #[cfg(feature = "rayon")] {
-            match_template_parallel(&image, &template, method)
+        #[cfg(feature = "rayon")]
+        {
+            match_template_parallel(image, template, method)
         }
-        #[cfg(not(feature = "rayon"))]{
+        #[cfg(not(feature = "rayon"))]
+        {
             unimplemented!("parallel template matching requires rayon")
         }
     } else {
-        match_template(&image, &template, method)
+        match_template(image, template, method)
     };
     let result_scaled = convert_to_gray_image(&result);
 
@@ -145,7 +147,7 @@ fn main() {
 
     // Load image and convert to grayscale
     let image = open(input_path)
-        .expect(&format!("Could not load image at {:?}", input_path))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", input_path))
         .to_luma8();
 
     // Extract the requested image sub-region to use as the template

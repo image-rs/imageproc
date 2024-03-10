@@ -23,7 +23,7 @@ pub fn display_image<I>(title: &str, image: &I, window_width: u32, window_height
 where
     I: GenericImageView + ConvertBuffer<RgbaImage>,
 {
-    display_multiple_images(title, &vec![image], window_width, window_height);
+    display_multiple_images(title, &[image], window_width, window_height);
 }
 
 /// Displays the provided RGBA images in new windows.
@@ -34,7 +34,7 @@ pub fn display_multiple_images<I>(title: &str, images: &[&I], window_width: u32,
 where
     I: GenericImageView + ConvertBuffer<RgbaImage>,
 {
-    if images.len() == 0 {
+    if images.is_empty() {
         return;
     }
 

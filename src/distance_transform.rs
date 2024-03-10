@@ -449,7 +449,7 @@ mod tests {
         assert_pixels_eq!(distances, expected);
     }
 
-    impl<'a> Sink for Vec<f64> {
+    impl Sink for Vec<f64> {
         fn put(&mut self, idx: usize, value: f64) {
             self[idx] = value;
         }
@@ -504,7 +504,7 @@ mod tests {
                     let dist = p as f64 - q as f64;
                     dist * dist + f[p]
                 })
-                .fold(0.0 / 0.0, f64::min);
+                .fold(f64::NAN, f64::min);
         }
         ret
     }

@@ -141,13 +141,11 @@ mod tests {
         blended.blend(&semi_transparent_red);
 
         #[rustfmt::skip]
-        let expected = vec![
-            white, white,   white, white, white,
+        let expected = [white, white,   white, white, white,
             white,  blue,    blue,  blue, white,
             white,  blue, blended,  blue, white,
             white,  blue,    blue,  blue, white,
-            white, white,   white, white, white
-        ];
+            white, white,   white, white, white];
         let expected = RgbaImage::from_fn(5, 5, |x, y| expected[(y * 5 + x) as usize]);
 
         assert_pixels_eq!(image.0, expected);
