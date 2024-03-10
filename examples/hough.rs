@@ -32,7 +32,7 @@ fn main() {
 
     // Load image and convert to grayscale
     let input_image = open(input_path)
-        .expect(&format!("Could not load image at {:?}", input_path))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", input_path))
         .to_luma8();
 
     // Save grayscale image in output directory

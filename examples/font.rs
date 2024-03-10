@@ -30,5 +30,5 @@ fn main() {
     let (w, h) = text_size(scale, &font, text);
     println!("Text size: {}x{}", w, h);
 
-    let _ = image.save(path).unwrap();
+    image.save(path).unwrap();
 }

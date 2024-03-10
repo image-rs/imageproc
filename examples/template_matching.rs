@@ -107,14 +107,14 @@ fn run_match_template(
     let result = if args.parallel {
         #[cfg(feature = "rayon")]
         {
-            match_template_parallel(&image, &template, method)
+            match_template_parallel(image, template, method)
         }
         #[cfg(not(feature = "rayon"))]
         {
             unimplemented!("parallel template matching requires rayon")
         }
     } else {
-        match_template(&image, &template, method)
+        match_template(image, template, method)
     };
     let result_scaled = convert_to_gray_image(&result);
 
@@ -147,7 +147,7 @@ fn main() {
 
     // Load image and convert to grayscale
     let image = open(input_path)
-        .expect(&format!("Could not load image at {:?}", input_path))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", input_path))
         .to_luma8();
 
     // Extract the requested image sub-region to use as the template

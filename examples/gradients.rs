@@ -24,7 +24,7 @@ fn compute_gradients<F>(
 ) where
     F: Fn(&GrayImage) -> Image<Luma<i16>>,
 {
-    let gradient = gradient_func(&input);
+    let gradient = gradient_func(input);
     let gradient = map_pixels(&gradient, |_, _, p| Luma([(p[0].abs() / scale) as u8]));
     gradient.save(&output_dir.join(file_name)).unwrap();
 }
@@ -50,7 +50,7 @@ fn main() {
 
     // Load image and convert to grayscale
     let input_image = open(input_path)
-        .expect(&format!("Could not load image at {:?}", input_path))
+        .unwrap_or_else(|_| panic!("Could not load image at {:?}", input_path))
         .to_luma8();
 
     // Save grayscale image in output directory
@@ -60,42 +60,42 @@ fn main() {
     compute_gradients(
         &input_image,
         horizontal_scharr,
-        &output_dir,
+        output_dir,
         "horizontal_scharr.png",
         32,
     );
     compute_gradients(
         &input_image,
         vertical_scharr,
-        &output_dir,
+        output_dir,
         "vertical_scharr.png",
         32,
     );
     compute_gradients(
         &input_image,
         horizontal_sobel,
-        &output_dir,
+        output_dir,
         "horizontal_sobel.png",
         8,
     );
     compute_gradients(
         &input_image,
         vertical_sobel,
-        &output_dir,
+        output_dir,
         "vertical_sobel.png",
         8,
     );
     compute_gradients(
         &input_image,
         horizontal_prewitt,
-        &output_dir,
+        output_dir,
         "horizontal_prewitt.png",
         6,
     );
     compute_gradients(
         &input_image,
         vertical_prewitt,
-        &output_dir,
+        output_dir,
         "vertical_prewitt.png",
         6,
     );

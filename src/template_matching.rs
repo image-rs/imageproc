@@ -93,7 +93,7 @@ pub fn match_template(
                 }
             }
 
-            if let (&Some(ref i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
+            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
                 let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
                 let norm = normalization_term(i, t, region);
                 if norm > 0.0 {

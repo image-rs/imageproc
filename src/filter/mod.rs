@@ -71,7 +71,6 @@ pub fn bilateral_filter(
             .iter()
             .cycle()
             .take(v.len() * v.len())
-            .into_iter()
             .cloned()
             .collect();
         let mut rr = Vec::new();
@@ -404,7 +403,7 @@ where
         // Left margin - need to check lower bound only
         for x in 0..half_k {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = max(0, x_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -420,7 +419,7 @@ where
         // Neither margin - don't need bounds check on either side
         for x in half_k..(width as i32 - half_k) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = x_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -436,7 +435,7 @@ where
         // Right margin - need to check upper bound only
         for x in (width as i32 - half_k)..(width as i32) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = min(x_unchecked, width as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
@@ -500,7 +499,7 @@ where
     for y in 0..half_k {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = max(0, y_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -518,7 +517,7 @@ where
     for y in half_k..(height as i32 - half_k) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = y_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -536,7 +535,7 @@ where
     for y in (height as i32 - half_k)..(height as i32) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = min(y_unchecked, height as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
@@ -560,7 +559,7 @@ where
     K: Num + Copy,
 {
     for i in 0..(P::CHANNEL_COUNT as usize) {
-        acc[i as usize] = acc[i as usize] + cast(pixel.channels()[i]) * weight;
+        acc[i] = acc[i] + cast(pixel.channels()[i]) * weight;
     }
 }
 

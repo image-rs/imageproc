@@ -190,7 +190,7 @@ where
             }
 
             if image_values[at(x, y)] != 1 {
-                parent_border_num = image_values[at(x, y)].abs() as usize;
+                parent_border_num = image_values[at(x, y)].unsigned_abs() as usize;
             }
         }
     }
