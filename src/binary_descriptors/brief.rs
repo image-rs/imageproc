@@ -335,7 +335,6 @@ mod tests {
         let image = gray_bench_image(640, 480);
         let mut rng = rand::thread_rng();
         let keypoints = (0..1000)
-            .into_iter()
             .map(|_| {
                 Point::new(
                     rng.gen_range(24..image.width() - 24),
@@ -354,7 +353,6 @@ mod tests {
         let image = gray_bench_image(640, 480);
         let mut rng = rand::thread_rng();
         let keypoints = (0..1000)
-            .into_iter()
             .map(|_| {
                 Point::new(
                     rng.gen_range(24..image.width() - 24),
