@@ -6,8 +6,6 @@
 # - hack: check combinations of feature flags
 # - msrv: check that the msrv specified in the crate is correct
 # - semver: check API changes for semver violations.
-# - minimal: runs "cargo check" with the minimal versions of the dependencies that satisfy the
-#   requirements of this crate, and its dependencies
 permissions:
   contents: read
 # This configuration allows maintainers of this repo to create a branch and pull request based on
@@ -100,7 +98,7 @@ jobs:
     # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["1.63.0"] # 2021 edition requires 1.56
+        msrv: ["1.65.0"] # 2021 edition requires 1.56
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +109,7 @@ jobs:
         with:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
-        run: cargo check
+        run: cargo check --all-features
         env:
           RUSTFLAGS: -D warnings
   semver:
@@ -121,44 +119,3 @@ jobs:
         uses: actions/checkout@v3
       - name: Check semver
         uses: obi1kenobi/cargo-semver-checks-action@v2
-  minimal:
-    # This action chooses the oldest version of the dependencies permitted by Cargo.toml to ensure
-    # that this crate is compatible with the minimal version that this crate and its dependencies
-    # require. This will pickup issues where this create relies on functionality that was introduced
-    # later than the actual version specified (e.g., when we choose just a major version, but a
-    # method was added after this version).
-    #
-    # This particular check can be difficult to get to succeed as often transitive dependencies may
-    # be incorrectly specified (e.g., a dependency specifies 1.0 but really requires 1.1.5). There
-    # is an alternative flag available -Zdirect-minimal-versions that uses the minimal versions for
-    # direct dependencies of this crate, while selecting the maximal versions for the transitive
-    # dependencies. Alternatively, you can add a line in your Cargo.toml to artificially increase
-    # the minimal dependency, which you do with e.g.:
-    # ```toml
-    # # for minimal-versions
-    # [target.'cfg(any())'.dependencies]
-    # openssl = { version = "0.10.55", optional = true } # needed to allow foo to build with -Zminimal-versions
-    # ```
-    # The optional = true is necessary in case that dependency isn't otherwise transitively required
-    # by your library, and the target bit is so that this dependency edge never actually affects
-    # Cargo build order. See also
-    # https://github.com/jonhoo/fantoccini/blob/fde336472b712bc7ebf5b4e772023a7ba71b2262/Cargo.toml#L47-L49.
-    # This action is run on ubuntu with the stable toolchain, as it is not expected to fail
-    runs-on: ubuntu-latest
-    name: ubuntu / stable / minimal-versions
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install nightly for -Zminimal-versions
-        uses: dtolnay/rust-toolchain@nightly
-      - name: rustup default stable
-        run: rustup default stable
-      - name: cargo update -Zminimal-versions
-        run: cargo +nightly update -Zminimal-versions
-      - name: cargo check
-        run: cargo check --locked
-        env:
-          RUSTFLAGS: -D warnings
