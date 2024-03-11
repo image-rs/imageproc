@@ -1,6 +1,8 @@
 # This is the main CI workflow that runs the test suite on all pushes to main and all pull requests.
 # It runs the following jobs:
 # - required: runs the test suite on ubuntu with the specified rust toolchains
+# - direct-minimal: runs the test suite with the minimal versions of the dependencies that satisfy the
+#   requirements of this crate
 # - os-check: runs the test suite on mac and windows
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
@@ -38,6 +40,19 @@ jobs:
       # https://github.com/rust-lang/cargo/issues/6669
       - name: cargo test --doc
         run: cargo test --locked --all-features --doc
+  direct-minimal:
+    runs-on: ubuntu-latest
+    name: ubuntu / nightly / direct-minimal-versions
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: cargo update -Zdirect-minimal-versions
+        run: cargo update -Zdirect-minimal-versions
+      - name: cargo test
+        run: cargo test --locked --all-features --all-targets
   os-check:
     # run cargo test on mac and windows
     runs-on: ${{ matrix.os }}
