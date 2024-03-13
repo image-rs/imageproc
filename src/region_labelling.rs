@@ -1,20 +1,15 @@
 //! Functions for finding and labelling connected components of an image.
 
-use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, ImageBuffer, Luma, Pixel};
 
-use crate::definitions::Image;
-use crate::union_find::DisjointSetForest;
+use crate::{
+    definitions::{Image,Position},
+    union_find::DisjointSetForest,
+    connectivity::{Connectivity,neighbor_indices},
+};
+
+
 use std::cmp;
-
-/// Determines which neighbors of a pixel we consider
-/// to be connected to it.
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum Connectivity {
-    /// A pixel is connected to its N, S, E and W neighbors.
-    Four,
-    /// A pixel is connected to all of its neighbors.
-    Eight,
-}
 
 /// Returns an image of the same size as the input, where each pixel
 /// is labelled by the connected foreground component it belongs to,
@@ -33,7 +28,8 @@ pub enum Connectivity {
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::region_labelling::{connected_components, Connectivity};
+/// use imageproc::region_labelling::{connected_components};
+/// use imageproc::connectivity::Connectivity;
 ///
 /// let background_color = Luma([0u8]);
 ///
@@ -80,7 +76,8 @@ pub enum Connectivity {
 /// // as belonging to the same connected component.
 ///
 /// use image::Luma;
-/// use imageproc::region_labelling::{connected_components, Connectivity};
+/// use imageproc::region_labelling::connected_components;
+/// use imageproc::connectivity::Connectivity;
 ///
 /// let background_color = Luma([0u8]);
 ///
@@ -241,6 +238,102 @@ where
 
     out
 }
+/// Given a seed point to start at and a new color to fill the region with,
+/// fill all connected pixels matching the original color of the seed point with the
+/// new color
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+///
+/// use image::Luma;
+/// use imageproc::region_labelling::floodfill_mut;
+///
+/// let fill_color = Luma([5u8]);
+///
+/// let mut image = gray_image!(
+///     4, 0, 1, 1, 1;
+///     0, 1, 1, 2, 0;
+///     0, 0, 1, 0, 1;
+///     1, 0, 0, 1, 4);
+/// let seed_point = (2, 1);
+/// floodfill_mut(&mut image, &seed_point, fill_color);
+///
+/// let expected_output = gray_image!(
+///     4, 0, 5, 5, 5;
+///     0, 5, 5, 2, 0;
+///     0, 0, 5, 0, 1;
+///     1, 0, 0, 1, 4);
+///
+/// assert_pixels_eq!(image, expected_output);
+///
+/// # }
+///
+/// ```
+pub fn floodfill_mut<P,T>(image: &mut Image<P>, seed_point: &T, fill_color: P)
+where
+    P: Pixel+PartialEq,
+    T: Position
+{
+    let seed_point = (seed_point.x(), seed_point.y());
+    let (width, height) = image.dimensions();
+    let old_color = image[seed_point]; // connected pixels matching this color will be filled in with the fill_color
+    if old_color == fill_color || seed_point.0 >= width || seed_point.1 >= height {
+        return;
+    }
+    else {
+        let mut frontier = Vec::with_capacity(50); // preallocation size chosen arbitrarily as the required size varies
+        frontier.push(seed_point);
+        image[seed_point] = fill_color;
+        let connectivity = Connectivity::Four;
+        while !frontier.is_empty() {
+            let q = frontier.pop().unwrap(); // unwrap will not panic here as we have checked that frontier is not empty
+            let neighbors = neighbor_indices(image, &q, &connectivity);
+            for neighbor in neighbors {
+                if image[neighbor.into()] == old_color {
+                    let neighbor: (u32,u32) = neighbor.into();
+                    frontier.push(neighbor);
+                    image[neighbor] = fill_color;
+                }
+            }
+        }
+
+    }
+}
+
+/// Creates a clone of the input image and performs an in-place floodfill operation on 
+/// the clone using [floodfill_mut]
+///
+pub fn floodfill<P,T>(image: &Image<P>, seed_point: &T, fill_color: P) -> Image<P>
+where
+    P: Pixel+PartialEq,
+    T: Position
+{
+    let mut out = image.clone();
+    floodfill_mut(&mut out, seed_point, fill_color);
+    out
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #[cfg(test)]
 mod tests {

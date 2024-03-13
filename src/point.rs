@@ -1,4 +1,5 @@
 //! A 2d point type.
+use crate::definitions::Position;
 
 use num::{Num, NumCast};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
@@ -16,6 +17,12 @@ impl<T> Point<T> {
     /// Construct a point at (x, y).
     pub fn new(x: T, y: T) -> Point<T> {
         Point::<T> { x, y }
+    }
+}
+
+impl<T: Num> From<Point<T>> for (T, T) {
+    fn from(point: Point<T>) -> Self {
+        (point.x, point.y)
     }
 }
 
@@ -59,6 +66,17 @@ impl<T: NumCast> Point<T> {
     pub(crate) fn to_i32(&self) -> Point<i32> {
         Point::new(self.x.to_i32().unwrap(), self.y.to_i32().unwrap())
     }
+}
+
+
+impl Position for Point<u32> {
+    fn x(&self) -> u32 { self.x }
+    fn y(&self) -> u32 { self.y }
+}
+
+impl Position for Point<usize> {
+    fn x(&self) -> u32 { self.x as u32 }
+    fn y(&self) -> u32 { self.y as u32 }
 }
 
 /// Returns the Euclidean distance between two points.
