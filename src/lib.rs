@@ -67,3 +67,5 @@ pub mod template_matching;
 pub mod union_find;
 #[cfg(feature = "display-window")]
 pub mod window;
+
+pub use image;
