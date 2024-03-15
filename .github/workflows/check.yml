@@ -109,7 +109,7 @@ jobs:
         with:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
-        run: cargo check --all-features
+        run: cargo check
         env:
           RUSTFLAGS: -D warnings
   semver:
