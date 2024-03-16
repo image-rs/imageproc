@@ -10,7 +10,11 @@ description = "Image processing operations"
 readme = "README.md"
 repository = "https://github.com/image-rs/imageproc.git"
 homepage = "https://github.com/image-rs/imageproc"
-exclude = ["examples/*.ttf"]
+exclude = [
+    ".github/*",
+    "examples/*",
+    "tests/*"
+]
 
 [features]
 default = [ "rayon", "image/default" ]
