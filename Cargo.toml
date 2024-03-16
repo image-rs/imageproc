@@ -2,7 +2,8 @@
 name = "imageproc"
 version = "0.24.0"
 authors = ["theotherphil"]
-rust-version = "1.67.1"
+# note: when changed, also update `msrv` in `.github/workflows/check.yml`
+rust-version = "1.70.0"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
@@ -12,7 +13,7 @@ homepage = "https://github.com/image-rs/imageproc"
 exclude = ["examples/*.ttf"]
 
 [features]
-default = [ "rayon" ]
+default = [ "rayon", "image/default" ]
 property-testing = [ "quickcheck" ]
 display-window = ["sdl2"]
 
@@ -35,7 +36,6 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
-image = "0.25.0"
 quickcheck = "1.0.3"
 wasm-bindgen-test = "0.3.38"
 
