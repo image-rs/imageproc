@@ -350,6 +350,21 @@ where
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
 
+/// Returns 2d correlation of an image with a nxm row-major odd shaped kernel. Intermediate calculations are
+/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+#[must_use = "the function does not modify the original image"]
+pub fn filternxm<P, K, S>(image: &Image<P>, kernel: &[K], rows: u32, columns: u32) -> Image<ChannelMap<P, S>>
+where
+    P::Subpixel: ValueInto<K>,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
+    K: Num + Copy,
+{
+    assert!(rows % 2 != 0 && columns % 2 != 0, "rows and columns should be odd");
+    let kernel = Kernel::new(kernel, columns, rows);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+}
+
 /// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
@@ -857,6 +872,47 @@ mod tests {
         );
 
         let filtered = filter3x3(&image, &kernel);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_kernel_should_be_odd_shaped() {
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+        ];
+
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let _ = filternxm::<_, _, i16>(&image, &kernel, 2 , 3);
+    }
+
+    #[test]
+    fn test_filternxm_with_results_outside_input_channel_range() {
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            0, -1, 0, 1, 0,
+            0, -2, 0, 2, 0,
+            0, -1, 0, 1, 0,
+        ];
+
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4
+        );
+
+        let filtered = filternxm(&image, &kernel, 3 , 5);
         assert_pixels_eq!(filtered, expected);
     }
 
