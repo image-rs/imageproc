@@ -326,6 +326,7 @@ mod tests {
             ((cx - x) as f32 / w).powi(2) + ((cy - y) as f32 / h).powi(2)
         }
         fn is_boundary_point(&self, (x, y): (i32, i32), boundary_eps: f32) -> bool {
+            assert!(boundary_eps >= 0.0);
             (self.normalized_distance_from_center((x, y)) - 1.0).abs() < boundary_eps
         }
         fn is_inner_point(&self, (x, y): (i32, i32)) -> bool {
