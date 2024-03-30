@@ -146,42 +146,42 @@ where
     F: FnMut(i32, i32, i32, i32),
 {
     let (x0, y0) = center;
-    let w2 = width_radius * width_radius;
-    let h2 = height_radius * height_radius;
+    let w2 = (width_radius * width_radius) as f32;
+    let h2 = (height_radius * height_radius) as f32;
     let mut x = 0;
     let mut y = height_radius;
-    let mut px = 0;
-    let mut py = 2 * w2 * y;
+    let mut px = 0.0;
+    let mut py = 2.0 * w2 * y as f32;
 
     render_func(x0, y0, x, y);
 
     // Top and bottom regions.
-    let mut p = (h2 - (w2 * height_radius)) as f32 + (0.25 * w2 as f32);
+    let mut p = h2 - (w2 * height_radius as f32) + (0.25 * w2);
     while px < py {
         x += 1;
-        px += 2 * h2;
+        px += 2.0 * h2;
         if p < 0.0 {
-            p += (h2 + px) as f32;
+            p += h2 + px;
         } else {
             y -= 1;
-            py += -2 * w2;
-            p += (h2 + px - py) as f32;
+            py += -2.0 * w2;
+            p += h2 + px - py;
         }
 
         render_func(x0, y0, x, y);
     }
 
     // Left and right regions.
-    p = (h2 as f32) * (x as f32 + 0.5).powi(2) + (w2 * (y - 1).pow(2)) as f32 - (w2 * h2) as f32;
+    p = h2 * (x as f32 + 0.5).powi(2) + (w2 * (y - 1).pow(2) as f32) - w2 * h2;
     while y > 0 {
         y -= 1;
-        py += -2 * w2;
+        py += -2.0 * w2;
         if p > 0.0 {
-            p += (w2 - py) as f32;
+            p += w2 - py;
         } else {
             x += 1;
-            px += 2 * h2;
-            p += (w2 - py + px) as f32;
+            px += 2.0 * h2;
+            p += w2 - py + px;
         }
 
         render_func(x0, y0, x, y);
@@ -310,7 +310,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::draw_filled_ellipse_mut;
     use image::{GrayImage, Luma};
+
+    #[test]
+    fn draw_huge_ellipse() {
+        let mut img = image::RgbImage::new(1920, 1080);
+        draw_filled_ellipse_mut(&mut img, (960, 540), 960, 540, image::Rgb([255, 0, 0]));
+    }
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
