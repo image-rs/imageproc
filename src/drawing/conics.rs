@@ -331,9 +331,6 @@ mod tests {
         fn is_inner_point(&self, (x, y): (i32, i32)) -> bool {
             self.normalized_distance_from_center((x, y)) < 1.0
         }
-        fn is_outer_point(&self, (x, y): (i32, i32)) -> bool {
-            self.normalized_distance_from_center((x, y)) > 1.0
-        }
     }
 
     fn check_filled_ellipse<I: GenericImage>(
@@ -353,7 +350,7 @@ mod tests {
                 let pixel = img.get_pixel(x as u32, y as u32);
                 if ellipse.is_inner_point((x, y)) {
                     assert_eq!(pixel, inner_color);
-                } else if ellipse.is_outer_point((x, y)) {
+                } else {
                     assert_eq!(pixel, outer_color);
                 }
             }
