@@ -23,8 +23,12 @@ jobs:
       - name: Install nightly
         uses: dtolnay/rust-toolchain@nightly
       - run: |
+            sudo apt update
+            sudo apt install libsdl2-2.0-0 -y
+        name: Install sdl2
+      - run: |
             # to get the symbolizer for debug symbol resolution
-            sudo apt install llvm libsdl2-2.0-0
+            sudo apt install llvm
             # to fix buggy leak analyzer:
             # https://github.com/japaric/rust-san#unrealiable-leaksanitizer
             # ensure there's a profile.dev section
