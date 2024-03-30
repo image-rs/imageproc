@@ -311,12 +311,74 @@ where
 #[cfg(test)]
 mod tests {
     use super::draw_filled_ellipse_mut;
-    use image::{GrayImage, Luma};
+    use image::{GenericImage, GrayImage, Luma};
+
+    struct Ellipse {
+        center: (i32, i32),
+        width_radius: i32,
+        height_radius: i32,
+    }
+
+    impl Ellipse {
+        fn normalized_distance_from_center(&self, (x, y): (i32, i32)) -> f32 {
+            let (cx, cy) = self.center;
+            let (w, h) = (self.width_radius as f32, self.height_radius as f32);
+            ((cx - x) as f32 / w).powi(2) + ((cy - y) as f32 / h).powi(2)
+        }
+        fn is_boundary_point(&self, (x, y): (i32, i32), boundary_eps: f32) -> bool {
+            (self.normalized_distance_from_center((x, y)) - 1.0).abs() < boundary_eps
+        }
+        fn is_inner_point(&self, (x, y): (i32, i32)) -> bool {
+            self.normalized_distance_from_center((x, y)) < 1.0
+        }
+        fn is_outer_point(&self, (x, y): (i32, i32)) -> bool {
+            self.normalized_distance_from_center((x, y)) > 1.0
+        }
+    }
+
+    fn check_filled_ellipse<I: GenericImage>(
+        img: &I,
+        ellipse: Ellipse,
+        inner_color: I::Pixel,
+        outer_color: I::Pixel,
+        boundary_eps: f32,
+    ) where
+        I::Pixel: core::fmt::Debug + PartialEq,
+    {
+        for x in 0..img.width() as i32 {
+            for y in 0..img.height() as i32 {
+                if ellipse.is_boundary_point((x, y), boundary_eps) {
+                    continue;
+                }
+                let pixel = img.get_pixel(x as u32, y as u32);
+                if ellipse.is_inner_point((x, y)) {
+                    assert_eq!(pixel, inner_color);
+                } else if ellipse.is_outer_point((x, y)) {
+                    assert_eq!(pixel, outer_color);
+                }
+            }
+        }
+    }
 
     #[test]
-    fn draw_huge_ellipse() {
+    fn test_draw_filled_ellipse() {
+        let ellipse = Ellipse {
+            center: (960, 540),
+            width_radius: 960,
+            height_radius: 540,
+        };
+        let inner_color = image::Rgb([255, 0, 0]);
+        let outer_color = image::Rgb([0, 0, 0]);
         let mut img = image::RgbImage::new(1920, 1080);
-        draw_filled_ellipse_mut(&mut img, (960, 540), 960, 540, image::Rgb([255, 0, 0]));
+        draw_filled_ellipse_mut(
+            &mut img,
+            ellipse.center,
+            ellipse.width_radius,
+            ellipse.height_radius,
+            inner_color,
+        );
+        const EPS: f32 = 0.0019;
+        check_filled_ellipse(&img, ellipse, inner_color, outer_color, EPS);
     }
 
     macro_rules! bench_hollow_ellipse {
