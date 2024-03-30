@@ -24,7 +24,6 @@ display-window = ["sdl2"]
 [dependencies]
 ab_glyph = "0.2.23"
 approx = "0.5"
-conv = "0.3.3"
 image = { version = "0.25.0", default-features = false }
 itertools = "0.12"
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }

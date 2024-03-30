@@ -13,8 +13,6 @@ use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
 use num::{abs, pow, Num};
 
-use crate::math::cast;
-use conv::ValueInto;
 use std::cmp::{max, min};
 use std::f32;
 
@@ -237,7 +235,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
         P: Pixel,
-        <P as Pixel>::Subpixel: ValueInto<K>,
+        <P as Pixel>::Subpixel: Into<K>,
         Q: Pixel,
         F: FnMut(&mut Q::Subpixel, K),
     {
@@ -304,7 +302,7 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<f32> + Clamp<f32>,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
     assert!(sigma > 0.0, "sigma must be > 0.0");
     let kernel = gaussian_kernel_f32(sigma);
@@ -317,7 +315,7 @@ where
 pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
     let h = horizontal_filter(image, h_kernel);
@@ -330,7 +328,7 @@ where
 pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
     separable_filter(image, kernel, kernel)
@@ -341,7 +339,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
-    P::Subpixel: ValueInto<K>,
+    P::Subpixel: Into<K>,
     S: Clamp<K> + Primitive,
     P: WithChannel<S>,
     K: Num + Copy,
@@ -357,7 +355,7 @@ where
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
     // Don't replace this with a call to Kernel::filter without
@@ -453,7 +451,7 @@ where
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K> + Clamp<K>,
+    <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
     // Don't replace this with a call to Kernel::filter without
@@ -550,11 +548,11 @@ where
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: ValueInto<K>,
+    <P as Pixel>::Subpixel: Into<K>,
     K: Num + Copy,
 {
     for i in 0..(P::CHANNEL_COUNT as usize) {
-        acc[i] = acc[i] + cast(pixel.channels()[i]) * weight;
+        acc[i] = acc[i] + pixel.channels()[i].into() * weight;
     }
 }
 

@@ -1,8 +1,6 @@
 //! Statistical properties of images.
 
 use crate::definitions::Image;
-use crate::math::cast;
-use conv::ValueInto;
 use image::{GenericImageView, GrayImage, Pixel, Primitive};
 use num::Bounded;
 
@@ -110,7 +108,7 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64>,
+    P::Subpixel: Into<f64>,
 {
     mean_squared_error(left, right).sqrt()
 }
@@ -124,9 +122,9 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64> + Primitive,
+    P::Subpixel: Into<f64> + Primitive,
 {
-    let max: f64 = cast(<P::Subpixel as Bounded>::max_value());
+    let max: f64 = <P::Subpixel as Bounded>::max_value().into();
     let mse = mean_squared_error(original, noisy);
     20f64 * max.log(10f64) - 10f64 * mse.log(10f64)
 }
@@ -136,14 +134,14 @@ where
     I: GenericImageView<Pixel = P>,
     J: GenericImageView<Pixel = P>,
     P: Pixel,
-    P::Subpixel: ValueInto<f64>,
+    P::Subpixel: Into<f64>,
 {
     assert_dimensions_match!(left, right);
     let mut sum_squared_diffs = 0f64;
     for (p, q) in left.pixels().zip(right.pixels()) {
         for (c, d) in p.2.channels().iter().zip(q.2.channels().iter()) {
-            let fc: f64 = cast(*c);
-            let fd: f64 = cast(*d);
+            let fc: f64 = (*c).into();
+            let fd: f64 = (*d).into();
             let diff = fc - fd;
             sum_squared_diffs += diff * diff;
         }
