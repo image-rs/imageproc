@@ -200,7 +200,7 @@ where
                 }
                 next_label += 1;
             } else {
-                let mut min_label = u32::max_value();
+                let mut min_label = u32::MAX;
                 for n in 0..num_adj {
                     min_label = cmp::min(min_label, adj_labels[n]);
                 }

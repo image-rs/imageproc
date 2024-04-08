@@ -1,8 +1,6 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer, Pixel};
-use std::f32;
-use std::i32;
 use std::mem::{swap, transmute};
 
 /// Iterates over the coordinates in a line segment using
@@ -146,7 +144,7 @@ impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
         // The next two assertions are for https://github.com/image-rs/imageproc/issues/281
         assert!(P::CHANNEL_COUNT > 0);
         assert!(
-            image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
+            image.width() < i32::MAX as u32 && image.height() < i32::MAX as u32,
             "Image dimensions are too large"
         );
         let iter =

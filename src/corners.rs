@@ -297,12 +297,7 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     //      y-coordinate in the range [y - 3, y + 3]. The precondition below
     //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-    if x >= u32::max_value() - 3
-        || y >= u32::max_value() - 3
-        || x < 3
-        || y < 3
-        || width <= x + 3
-        || height <= y + 3
+    if x >= u32::MAX - 3 || y >= u32::MAX - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3
     {
         return false;
     }
@@ -358,12 +353,7 @@ fn is_corner_fast12(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     //      y-coordinate in the range [y - 3, y + 3]. The precondition below
     //      guarantees that these are within image bounds.
     let (width, height) = image.dimensions();
-    if x >= u32::max_value() - 3
-        || y >= u32::max_value() - 3
-        || x < 3
-        || y < 3
-        || width <= x + 3
-        || height <= y + 3
+    if x >= u32::MAX - 3 || y >= u32::MAX - 3 || x < 3 || y < 3 || width <= x + 3 || height <= y + 3
     {
         return false;
     }

@@ -6,7 +6,6 @@ use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
 };
 use image::GrayImage;
-use std::u8;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
