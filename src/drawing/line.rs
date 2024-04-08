@@ -162,7 +162,7 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIterMut<'a, P> {
         self.iter
             .next()
             .map(|p| clamp_point_i32(p, self.image))
-            .map(|p| self.image.get_pixel_mut(p.0 as u32, p.1 as u32))
+            .map(|(x, y)| self.image.get_pixel_mut(x as u32, y as u32))
             .map(|p| unsafe { transmute(p) })
     }
 }
