@@ -76,18 +76,16 @@ impl Iterator for BresenhamLineIter {
     }
 }
 
-fn clamp(x: f32, upper_bound: u32) -> f32 {
-    if x < 0f32 {
-        return 0f32;
-    }
-    if x >= upper_bound as f32 {
-        return (upper_bound - 1) as f32;
-    }
-    x
+fn clamp_point_i32<I: GenericImage>(p: (i32, i32), image: &I) -> (i32, i32) {
+    let x = p.0.clamp(0, (image.width() - 1) as i32);
+    let y = p.1.clamp(0, (image.height() - 1) as i32);
+    (x, y)
 }
 
-fn clamp_point<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
-    (clamp(p.0, image.width()), clamp(p.1, image.height()))
+fn clamp_point_f32<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
+    let x = p.0.clamp(0.0, (image.width() - 1) as f32);
+    let y = p.1.clamp(0.0, (image.height() - 1) as f32);
+    (x, y)
 }
 
 /// Iterates over the image pixels in a line segment using
@@ -109,7 +107,8 @@ impl<'a, P: Pixel> BresenhamLinePixelIter<'a, P> {
             image.width() >= 1 && image.height() >= 1,
             "BresenhamLinePixelIter does not support empty images"
         );
-        let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
+        let iter =
+            BresenhamLineIter::new(clamp_point_f32(start, image), clamp_point_f32(end, image));
         BresenhamLinePixelIter { iter, image }
     }
 }
@@ -120,7 +119,8 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIter<'a, P> {
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
-            .map(|p| self.image.get_pixel(p.0 as u32, p.1 as u32))
+            .map(|p| clamp_point_i32(p, self.image))
+            .map(|(x, y)| self.image.get_pixel(x as u32, y as u32))
     }
 }
 
@@ -149,7 +149,8 @@ impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
             image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
             "Image dimensions are too large"
         );
-        let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
+        let iter =
+            BresenhamLineIter::new(clamp_point_f32(start, image), clamp_point_f32(end, image));
         BresenhamLinePixelIterMut { iter, image }
     }
 }
@@ -160,6 +161,7 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIterMut<'a, P> {
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
+            .map(|p| clamp_point_i32(p, self.image))
             .map(|p| self.image.get_pixel_mut(p.0 as u32, p.1 as u32))
             .map(|p| unsafe { transmute(p) })
     }
