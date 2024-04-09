@@ -67,6 +67,7 @@ pub fn draw_text_mut<C>(
         g.draw(|gx, gy, gv| {
             let image_x = gx as i32 + x + bb.min.x.round() as i32;
             let image_y = gy as i32 + y + bb.min.y.round() as i32;
+            let gv = gv.clamp(0.0, 1.0);
 
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
                 let image_x = image_x as u32;
