@@ -4,8 +4,6 @@ use crate::drawing::Canvas;
 use crate::point::Point;
 use image::{GenericImage, ImageBuffer};
 use std::cmp::{max, min};
-use std::f32;
-use std::i32;
 
 #[must_use = "the function does not modify the original image"]
 fn draw_polygon_with<I, L>(

@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Write;
 use std::path::Path;
-use std::u32;
 
 /// Helper for defining greyscale images.
 ///

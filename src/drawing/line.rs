@@ -1,8 +1,6 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer, Pixel};
-use std::f32;
-use std::i32;
 use std::mem::{swap, transmute};
 
 /// Iterates over the coordinates in a line segment using
@@ -76,18 +74,14 @@ impl Iterator for BresenhamLineIter {
     }
 }
 
-fn clamp(x: f32, upper_bound: u32) -> f32 {
-    if x < 0f32 {
-        return 0f32;
-    }
-    if x >= upper_bound as f32 {
-        return (upper_bound - 1) as f32;
-    }
-    x
+fn in_bounds<I: GenericImage>((x, y): (i32, i32), image: &I) -> bool {
+    x >= 0 && x < image.width() as i32 && y >= 0 && y < image.height() as i32
 }
 
 fn clamp_point<I: GenericImage>(p: (f32, f32), image: &I) -> (f32, f32) {
-    (clamp(p.0, image.width()), clamp(p.1, image.height()))
+    let x = p.0.clamp(0.0, (image.width() - 1) as f32);
+    let y = p.1.clamp(0.0, (image.height() - 1) as f32);
+    (x, y)
 }
 
 /// Iterates over the image pixels in a line segment using
@@ -119,8 +113,8 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIter<'a, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
-            .next()
-            .map(|p| self.image.get_pixel(p.0 as u32, p.1 as u32))
+            .find(|&p| in_bounds(p, self.image))
+            .map(|(x, y)| self.image.get_pixel(x as u32, y as u32))
     }
 }
 
@@ -146,7 +140,7 @@ impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
         // The next two assertions are for https://github.com/image-rs/imageproc/issues/281
         assert!(P::CHANNEL_COUNT > 0);
         assert!(
-            image.width() < i32::max_value() as u32 && image.height() < i32::max_value() as u32,
+            image.width() < i32::MAX as u32 && image.height() < i32::MAX as u32,
             "Image dimensions are too large"
         );
         let iter = BresenhamLineIter::new(clamp_point(start, image), clamp_point(end, image));
@@ -159,8 +153,8 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIterMut<'a, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
-            .next()
-            .map(|p| self.image.get_pixel_mut(p.0 as u32, p.1 as u32))
+            .find(|&p| in_bounds(p, self.image))
+            .map(|(x, y)| self.image.get_pixel_mut(x as u32, y as u32))
             .map(|p| unsafe { transmute(p) })
     }
 }
