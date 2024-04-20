@@ -1,9 +1,6 @@
 //! Functions for performing template matching.
 use crate::definitions::Image;
-use crate::integral_image::{integral_squared_image, sum_image_pixels};
-use crate::rect::Rect;
-use image::Primitive;
-use image::{GrayImage, Luma};
+use image::{GenericImageView, GrayImage, Luma, Primitive};
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -38,74 +35,15 @@ pub fn match_template(
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
-    use image::GenericImageView;
+    use MatchTemplateMethod as M;
 
-    let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
-
-    assert!(
-        image_width >= template_width,
-        "image width must be greater than or equal to template width"
-    );
-    assert!(
-        image_height >= template_height,
-        "image height must be greater than or equal to template height"
-    );
-
-    let should_normalize = matches! { method,
-    MatchTemplateMethod::SumOfSquaredErrorsNormalized
-    | MatchTemplateMethod::CrossCorrelationNormalized };
-    let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
-    } else {
-        None
-    };
-    let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
-    } else {
-        None
-    };
-
-    let mut result = Image::new(
-        image_width - template_width + 1,
-        image_height - template_height + 1,
-    );
-
-    for y in 0..result.height() {
-        for x in 0..result.width() {
-            let mut score = 0f32;
-
-            for dy in 0..template_height {
-                for dx in 0..template_width {
-                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-
-                    use MatchTemplateMethod::*;
-
-                    score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                            (image_value - template_value).powf(2.0)
-                        }
-                        CrossCorrelation | CrossCorrelationNormalized => {
-                            image_value * template_value
-                        }
-                    };
-                }
-            }
-
-            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
-                let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
-                let norm = normalization_term(i, t, region);
-                if norm > 0.0 {
-                    score /= norm;
-                }
-            }
-
-            result.put_pixel(x, y, Luma([score]));
-        }
+    let input = &ImageTemplate::new(image, template);
+    match method {
+        M::SumOfSquaredErrors => methods::Sse::match_template(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalized::match_template(input),
+        M::CrossCorrelation => methods::Ccorr::match_template(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalized::match_template(input),
     }
-
-    result
 }
 
 #[cfg(feature = "rayon")]
@@ -124,103 +62,226 @@ pub fn match_template_parallel(
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
-    use image::GenericImageView;
-    use rayon::prelude::*;
+    use MatchTemplateMethod as M;
 
-    let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
+    let input = &ImageTemplate::new(image, template);
+    match method {
+        M::SumOfSquaredErrors => methods::Sse::match_template_parallel(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalized::match_template_parallel(input),
+        M::CrossCorrelation => methods::Ccorr::match_template_parallel(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalized::match_template_parallel(input),
+    }
+}
 
-    assert!(
-        image_width >= template_width,
-        "image width must be greater than or equal to template width"
-    );
-    assert!(
-        image_height >= template_height,
-        "image height must be greater than or equal to template height"
-    );
+trait MatchTemplate<'a>
+where
+    Self: Sync + Sized,
+{
+    type Input: Sync + OutputDims;
 
-    let should_normalize = matches! { method,
-    MatchTemplateMethod::SumOfSquaredErrorsNormalized
-    | MatchTemplateMethod::CrossCorrelationNormalized };
-    let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
-    } else {
-        None
-    };
-    let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
-    } else {
-        None
-    };
+    fn init(input: &Self::Input) -> Self;
+    fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32;
 
-    let result_width = image_width - template_width + 1;
-    let result_height = image_height - template_height + 1;
+    fn match_template(input: &Self::Input) -> Image<Luma<f32>> {
+        let method = Self::init(input);
+        let (width, height) = input.output_dims();
 
-    let rows = (0..result_height)
-        .into_par_iter()
-        .map(|y| {
-            let mut row = Vec::with_capacity(result_width as usize);
-            for x in 0..result_width {
-                let mut score = 0f32;
-
-                for dy in 0..template_height {
-                    for dx in 0..template_width {
-                        let image_value =
-                            unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                        let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-
-                        use MatchTemplateMethod::*;
-
-                        score += match method {
-                            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                                (image_value - template_value).powf(2.0)
-                            }
-                            CrossCorrelation | CrossCorrelationNormalized => {
-                                image_value * template_value
-                            }
-                        };
-                    }
-                }
-
-                if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
-                    let region =
-                        Rect::at(x as i32, y as i32).of_size(template_width, template_height);
-                    let norm = normalization_term(i, t, region);
-                    if norm > 0.0 {
-                        score /= norm;
-                    }
-                }
-
-                row.push(Luma([score]));
-            }
-            row
+        Image::from_fn(width, height, |x, y| {
+            let score = method.score_at((x, y), input);
+            Luma([score])
         })
-        .collect::<Vec<_>>();
+    }
+    #[cfg(feature = "rayon")]
+    fn match_template_parallel(input: &Self::Input) -> Image<Luma<f32>> {
+        use rayon::prelude::*;
 
-    Image::from_fn(result_width, result_height, |x, y| {
-        rows[y as usize][x as usize]
-    })
+        let method = Self::init(input);
+        let (width, height) = input.output_dims();
+
+        let rows = (0..height)
+            .into_par_iter()
+            .map(|y| {
+                (0..width)
+                    .map(|x| method.score_at((x, y), input))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+        Image::from_fn(width, height, |x, y| {
+            let score = rows[y as usize][x as usize];
+            Luma([score])
+        })
+    }
 }
 
-fn sum_squares(template: &GrayImage) -> f32 {
-    template.iter().map(|p| *p as f32 * *p as f32).sum()
+trait OutputDims {
+    fn output_dims(&self) -> (u32, u32);
 }
 
-/// Returns the square root of the product of the sum of squares of
-/// pixel intensities in template and the provided region of image.
-fn normalization_term(
-    image_squared_integral: &Image<Luma<u64>>,
-    template_squared_sum: f32,
-    region: Rect,
-) -> f32 {
-    let image_sum = sum_image_pixels(
-        image_squared_integral,
-        region.left() as u32,
-        region.top() as u32,
-        region.right() as u32,
-        region.bottom() as u32,
-    )[0] as f32;
-    (image_sum * template_squared_sum).sqrt()
+mod methods {
+    use super::*;
+
+    pub struct Sse;
+    impl<'a> MatchTemplate<'a> for Sse {
+        type Input = ImageTemplate<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let f = |i: f32, t: f32| {
+                score += (i - t).powi(2);
+            };
+            unsafe { input.slide_window_at(at, f) };
+            score
+        }
+    }
+
+    pub struct SseNormalized {
+        template_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for SseNormalized {
+        type Input = ImageTemplate<'a>;
+        fn init(input: &Self::Input) -> Self {
+            Self {
+                template_squared_sum: sum_squares(input.template),
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut ii = 0f32;
+            let f = |i: f32, t: f32| {
+                score += (i - t).powi(2);
+                ii += i * i;
+            };
+            unsafe { input.slide_window_at(at, f) };
+            let norm = (ii * self.template_squared_sum).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    pub struct Ccorr;
+    impl<'a> MatchTemplate<'a> for Ccorr {
+        type Input = ImageTemplate<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let f = |i: f32, t: f32| {
+                score += i * t;
+            };
+            unsafe { input.slide_window_at(at, f) };
+            score
+        }
+    }
+
+    pub struct CcorrNormalized {
+        template_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for CcorrNormalized {
+        type Input = ImageTemplate<'a>;
+        fn init(input: &Self::Input) -> Self {
+            Self {
+                template_squared_sum: sum_squares(input.template),
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut ii = 0f32;
+            let f = |i: f32, t: f32| {
+                score += i * t;
+                ii += i * i;
+            };
+            unsafe { input.slide_window_at(at, f) };
+            let norm = (ii * self.template_squared_sum).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    pub struct SseWithMask;
+
+    fn sum_squares(input: &GrayImage) -> f32 {
+        input.iter().map(|&p| p as f32 * p as f32).sum()
+    }
+}
+
+struct ImageTemplate<'a> {
+    image: &'a GrayImage,
+    template: &'a GrayImage,
+}
+impl<'a> ImageTemplate<'a> {
+    fn new(image: &'a GrayImage, template: &'a GrayImage) -> Self {
+        assert!(
+            image.width() >= template.width(),
+            "image width must be greater than or equal to template width"
+        );
+        assert!(
+            image.height() >= template.height(),
+            "image height must be greater than or equal to template height"
+        );
+        Self { image, template }
+    }
+    unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32)) {
+        let (image, template) = (self.image, self.template);
+
+        for dy in 0..template.height() {
+            for dx in 0..template.width() {
+                let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                for_each(image_value, template_value);
+            }
+        }
+    }
+}
+impl<'a> OutputDims for ImageTemplate<'a> {
+    fn output_dims(&self) -> (u32, u32) {
+        let width = self.image.width() - self.template.width() + 1;
+        let height = self.image.height() - self.template.height() + 1;
+        (width, height)
+    }
+}
+
+struct ImageTemplateMask<'a> {
+    inner: ImageTemplate<'a>,
+    mask: &'a GrayImage,
+}
+impl<'a> ImageTemplateMask<'a> {
+    fn new(image: &'a GrayImage, template: &'a GrayImage, mask: &'a GrayImage) -> Self {
+        assert_eq!(
+            template.dimensions(),
+            mask.dimensions(),
+            "the template and mask must be the same size"
+        );
+        let inner = ImageTemplate::new(image, template);
+        Self { inner, mask }
+    }
+    unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32, f32)) {
+        let Self { mask, inner } = self;
+        let (image, template) = (inner.image, inner.template);
+
+        for dy in 0..template.height() {
+            for dx in 0..template.width() {
+                let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                let mask_value = unsafe { mask.unsafe_get_pixel(dx, dy)[0] as f32 };
+                for_each(image_value, template_value, mask_value);
+            }
+        }
+    }
+}
+impl<'a> OutputDims for ImageTemplateMask<'a> {
+    fn output_dims(&self) -> (u32, u32) {
+        self.inner.output_dims()
+    }
 }
 
 /// The largest and smallest values in an image,
