@@ -129,10 +129,11 @@ mod methods {
         }
         fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
             let mut score = 0f32;
-            let f = |i: f32, t: f32| {
-                score += (i - t).powi(2);
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += (i - t).powi(2);
+                })
             };
-            unsafe { input.slide_window_at(at, f) };
             score
         }
     }
@@ -144,17 +145,18 @@ mod methods {
         type Input = ImageTemplate<'a>;
         fn init(input: &Self::Input) -> Self {
             Self {
-                template_squared_sum: sum_squares(input.template),
+                template_squared_sum: square_sum(input.template),
             }
         }
         fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
             let mut score = 0f32;
             let mut ii = 0f32;
-            let f = |i: f32, t: f32| {
-                score += (i - t).powi(2);
-                ii += i * i;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += (i - t).powi(2);
+                    ii += i * i;
+                })
             };
-            unsafe { input.slide_window_at(at, f) };
             let norm = (ii * self.template_squared_sum).sqrt();
             if norm > 0.0 {
                 score / norm
@@ -172,10 +174,11 @@ mod methods {
         }
         fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
             let mut score = 0f32;
-            let f = |i: f32, t: f32| {
-                score += i * t;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += i * t;
+                })
             };
-            unsafe { input.slide_window_at(at, f) };
             score
         }
     }
@@ -187,17 +190,18 @@ mod methods {
         type Input = ImageTemplate<'a>;
         fn init(input: &Self::Input) -> Self {
             Self {
-                template_squared_sum: sum_squares(input.template),
+                template_squared_sum: square_sum(input.template),
             }
         }
         fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
             let mut score = 0f32;
             let mut ii = 0f32;
-            let f = |i: f32, t: f32| {
-                score += i * t;
-                ii += i * i;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += i * t;
+                    ii += i * i;
+                })
             };
-            unsafe { input.slide_window_at(at, f) };
             let norm = (ii * self.template_squared_sum).sqrt();
             if norm > 0.0 {
                 score / norm
@@ -208,9 +212,59 @@ mod methods {
     }
 
     pub struct SseWithMask;
+    impl<'a> MatchTemplate<'a> for SseWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += ((i - t) * m).powi(2);
+                })
+            };
+            score
+        }
+    }
 
-    fn sum_squares(input: &GrayImage) -> f32 {
-        input.iter().map(|&p| p as f32 * p as f32).sum()
+    pub struct SseNormalizedWithMask {
+        template_mask_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for SseNormalizedWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(input: &Self::Input) -> Self {
+            let template_mask_squared_sum = mult_square_sum(input.inner.template, input.mask);
+            Self {
+                template_mask_squared_sum,
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut im_im = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += ((i - t) * m).powi(2);
+                    im_im += (i * m).powi(2);
+                })
+            };
+            let norm = (self.template_mask_squared_sum * im_im).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    fn square_sum(input: &GrayImage) -> f32 {
+        input.iter().map(|&x| (x as f32 * x as f32)).sum()
+    }
+    fn mult_square_sum(a: &GrayImage, b: &GrayImage) -> f32 {
+        a.iter()
+            .zip(b.iter())
+            .map(|(&x, &y)| (x as f32 * y as f32).powi(2))
+            .sum()
     }
 }
 
