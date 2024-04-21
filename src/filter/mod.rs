@@ -11,7 +11,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::{abs, pow, Num};
+use num::Num;
 
 use std::cmp::{max, min};
 use std::f32;
