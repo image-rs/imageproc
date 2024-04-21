@@ -1,5 +1,5 @@
 //! Functions for performing template matching.
-use crate::definitions::Image;
+use crate::{definitions::Image, drawing::Canvas};
 use image::{GenericImageView, GrayImage, Luma, Primitive};
 
 /// Method used to compute the matching score between a template and an image region.
@@ -392,6 +392,8 @@ impl<'a> ImageTemplate<'a> {
     }
     unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32)) {
         let (image, template) = (self.image, self.template);
+        debug_assert!(x + template.width() - 1 < image.width());
+        debug_assert!(y + template.height() - 1 < image.height());
 
         for dy in 0..template.height() {
             for dx in 0..template.width() {
@@ -427,6 +429,8 @@ impl<'a> ImageTemplateMask<'a> {
     unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32, f32)) {
         let Self { mask, inner } = self;
         let (image, template) = (inner.image, inner.template);
+        debug_assert!(x + template.width() - 1 < image.width());
+        debug_assert!(y + template.height() - 1 < image.height());
 
         for dy in 0..template.height() {
             for dx in 0..template.width() {
