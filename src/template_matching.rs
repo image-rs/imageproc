@@ -73,6 +73,67 @@ pub fn match_template_parallel(
     }
 }
 
+/// Slides a `template` and a `mask` over an `image` and scores the match at each point using
+/// the requested `method`.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// # Panics
+///
+/// 1. If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+/// 2. If `template.dimensions() != mask.dimensions()`
+pub fn match_template_with_mask(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+    mask: &GrayImage,
+) -> Image<Luma<f32>> {
+    use MatchTemplateMethod as M;
+
+    let input = &ImageTemplateMask::new(image, template, mask);
+    match method {
+        M::SumOfSquaredErrors => methods::SseWithMask::match_template(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalizedWithMask::match_template(input),
+        M::CrossCorrelation => methods::CcorrWithMask::match_template(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalizedWithMask::match_template(input),
+    }
+}
+
+#[cfg(feature = "rayon")]
+/// Slides a `template` and a `mask` over an `image` and scores the match at each point using
+/// the requested `method`. This version uses rayon to parallelize the computation.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// # Panics
+///
+/// 1. If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+/// 2. If `template.dimensions() != mask.dimensions()`
+pub fn match_template_with_mask_parallel(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+    mask: &GrayImage,
+) -> Image<Luma<f32>> {
+    use MatchTemplateMethod as M;
+
+    let input = &ImageTemplateMask::new(image, template, mask);
+    match method {
+        M::SumOfSquaredErrors => methods::SseWithMask::match_template_parallel(input),
+        M::SumOfSquaredErrorsNormalized => {
+            methods::SseNormalizedWithMask::match_template_parallel(input)
+        }
+        M::CrossCorrelation => methods::CcorrWithMask::match_template_parallel(input),
+        M::CrossCorrelationNormalized => {
+            methods::CcorrNormalizedWithMask::match_template_parallel(input)
+        }
+    }
+}
+
 trait MatchTemplate<'a>
 where
     Self: Sync + Sized,
@@ -131,7 +192,7 @@ mod methods {
             let mut score = 0f32;
             unsafe {
                 input.slide_window_at(at, |i, t| {
-                    score += (i - t).powi(2);
+                    score += (t - i).powi(2);
                 })
             };
             score
@@ -153,7 +214,7 @@ mod methods {
             let mut ii = 0f32;
             unsafe {
                 input.slide_window_at(at, |i, t| {
-                    score += (i - t).powi(2);
+                    score += (t - i).powi(2);
                     ii += i * i;
                 })
             };
@@ -221,7 +282,7 @@ mod methods {
             let mut score = 0f32;
             unsafe {
                 input.slide_window_at(at, |i, t, m| {
-                    score += ((i - t) * m).powi(2);
+                    score += ((t - i) * m).powi(2);
                 })
             };
             score
@@ -244,7 +305,52 @@ mod methods {
             let mut im_im = 0f32;
             unsafe {
                 input.slide_window_at(at, |i, t, m| {
-                    score += ((i - t) * m).powi(2);
+                    score += ((t - i) * m).powi(2);
+                    im_im += (i * m).powi(2);
+                })
+            };
+            let norm = (self.template_mask_squared_sum * im_im).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+    pub struct CcorrWithMask;
+    impl<'a> MatchTemplate<'a> for CcorrWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += t * i * m * m;
+                })
+            };
+            score
+        }
+    }
+
+    pub struct CcorrNormalizedWithMask {
+        template_mask_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for CcorrNormalizedWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(input: &Self::Input) -> Self {
+            let template_mask_squared_sum = mult_square_sum(input.inner.template, input.mask);
+            Self {
+                template_mask_squared_sum,
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut im_im = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += t * i * m * m;
                     im_im += (i * m).powi(2);
                 })
             };
@@ -391,9 +497,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::gray_bench_image;
     use image::GrayImage;
-    use test::{black_box, Bencher};
 
     #[test]
     #[should_panic]
@@ -533,6 +637,142 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[test]
+    fn match_template_sum_of_squared_errors_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrors,
+            &mask,
+        );
+        let expected = gray_image!(type: f32,
+            89., 25.;
+            10., 1.
+        );
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_sum_of_squared_errors_normalized_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+            &mask,
+        );
+        let expected = gray_image!(type: f32,
+            1.0246822 , 0.19536021;
+            0.067865655, 0.005362412
+        );
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_cross_correlation_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelation,
+            &mask,
+        );
+        let expected = gray_image!(type: f32,
+            68., 124.;
+            146., 186.
+        );
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn match_template_cross_correlation_normalized_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+            &mask,
+        );
+        let expected = gray_image!(type: f32,
+            0.78290325, 0.96898663;
+            0.9908386, 0.9974086
+        );
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_find_extremes() {
+        let image = gray_image!(
+            10,  7,  8,  1;
+             9, 15,  4,  2
+        );
+
+        let expected = Extremes {
+            max_value: 15,
+            min_value: 1,
+            max_value_location: (1, 1),
+            min_value_location: (3, 0),
+        };
+
+        assert_eq!(find_extremes(&image), expected);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
+
     macro_rules! bench_match_template {
         ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
             #[bench]
@@ -584,20 +824,59 @@ mod tests {
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
 
-    #[test]
-    fn test_find_extremes() {
-        let image = gray_image!(
-            10,  7,  8,  1;
-             9, 15,  4,  2
-        );
-
-        let expected = Extremes {
-            max_value: 15,
-            min_value: 1,
-            max_value_location: (1, 1),
-            min_value_location: (3, 0),
+    macro_rules! bench_match_template_with_mask {
+        ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image = gray_bench_image($s, $s);
+                let template = gray_bench_image($t, $t);
+                let mask = gray_bench_image($t, $t);
+                b.iter(|| {
+                    let result = match_template_with_mask(
+                        &image,
+                        &template,
+                        MatchTemplateMethod::SumOfSquaredErrors,
+                        &mask,
+                    );
+                    black_box(result);
+                })
+            }
         };
-
-        assert_eq!(find_extremes(&image), expected);
     }
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t1_sse,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t4_sse,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t16_sse,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t1_sse_norm,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t4_sse_norm,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t16_sse_norm,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
 }
