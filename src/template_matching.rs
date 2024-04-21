@@ -497,7 +497,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::GrayImage;
 
     #[test]
     #[should_panic]
