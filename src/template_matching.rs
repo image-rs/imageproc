@@ -1,5 +1,5 @@
 //! Functions for performing template matching.
-use crate::{definitions::Image, drawing::Canvas};
+use crate::definitions::Image;
 use image::{GenericImageView, GrayImage, Luma, Primitive};
 
 /// Method used to compute the matching score between a template and an image region.
