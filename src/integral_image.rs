@@ -112,8 +112,11 @@ where
         return out;
     }
 
+    let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
     for y in 0..in_height {
-        let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
+        sum.iter_mut().for_each(|x| {
+            *x = T::zero();
+        });
         for x in 0..in_width {
             // JUSTIFICATION
             //  Benefit
