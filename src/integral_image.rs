@@ -106,16 +106,17 @@ where
     let out_width = in_width + 1;
     let out_height = in_height + 1;
 
-    let mut out = Image::<ChannelMap<P, T>>::new(out_width, out_height);
+    let mut out = Image::new(out_width, out_height);
 
     if in_width == 0 || in_height == 0 {
         return out;
     }
 
-    let mut sum = vec![T::zero(); P::CHANNEL_COUNT as usize];
+    let zero = T::zero();
+    let mut sum = vec![zero; P::CHANNEL_COUNT as usize];
     for y in 0..in_height {
         sum.iter_mut().for_each(|x| {
-            *x = T::zero();
+            *x = zero;
         });
         for x in 0..in_width {
             // JUSTIFICATION
@@ -125,8 +126,8 @@ where
             //  Correctness
             //      x and y are within bounds by definition of in_width and in_height
             let input = unsafe { image.unsafe_get_pixel(x, y) };
-            for (s, c) in sum.iter_mut().zip(input.channels()) {
-                let pix: T = (*c).into();
+            for (s, &c) in sum.iter_mut().zip(input.channels()) {
+                let pix: T = c.into();
                 *s += if square { pix * pix } else { pix };
             }
 
@@ -141,8 +142,8 @@ where
             // pixel here we need to use the method with bounds checking
             let current = out.get_pixel_mut(x + 1, y + 1);
             // Using zip here makes this slower.
-            for c in 0..P::CHANNEL_COUNT {
-                current.channels_mut()[c as usize] = above.channels()[c as usize] + sum[c as usize];
+            for c in 0..P::CHANNEL_COUNT as usize {
+                current.channels_mut()[c] = above.channels()[c] + sum[c];
             }
         }
     }
