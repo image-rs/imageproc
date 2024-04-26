@@ -116,6 +116,107 @@ macro_rules! gray_image {
     }
 }
 
+/// Helper for defining greyscale images with an alpha channel.
+///
+/// Pixels are delineated by square brackets, columns are
+/// separated by commas and rows are separated by semi-colons.
+/// By default a subpixel type of `u8` is used but this can be
+/// overridden, as shown in the examples.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::{ImageBuffer, LumaA, GrayAlphaImage};
+///
+/// // An empty image with pixel type Rgb<u8>
+/// let empty = gray_alpha_image!();
+///
+/// assert_pixels_eq!(
+///     empty,
+///     GrayAlphaImage::from_raw(0, 0, vec![]).unwrap()
+/// );
+///
+/// // A single pixel image with pixel type LumaA<u8>
+/// let single_pixel = gray_alpha_image!([1, 2]);
+///
+/// assert_pixels_eq!(
+///     single_pixel,
+///     GrayAlphaImage::from_raw(1, 1, vec![1, 2]).unwrap()
+/// );
+///
+/// // A single row image with pixel type LumaA<u8>
+/// let single_row = gray_alpha_image!([1, 2], [3, 4]);
+///
+/// assert_pixels_eq!(
+///     single_row,
+///     GrayAlphaImage::from_raw(2, 1, vec![1, 2, 3, 4]).unwrap()
+/// );
+///
+/// // An image with 2 rows and 2 columns
+/// let image = gray_alpha_image!(
+///     [1, 2], [3, 4];
+///     [5, 6], [7, 8]);
+///
+/// let equivalent = GrayAlphaImage::from_raw(2, 2, vec![
+///     1, 2, 3, 4,
+///     5, 6, 7, 8,
+/// ]).unwrap();
+///
+/// assert_pixels_eq!(image, equivalent);
+///
+/// // An empty image with pixel type LumaA<i16>.
+/// let empty_i16 = gray_alpha_image!(type: i16);
+///
+/// // An image with 2 rows, 3 columns and pixel type LumaA<i16>
+/// let image_i16 = gray_alpha_image!(type: i16,
+///     [1, 2], [3, 4];
+///     [5, 6], [7, 8]);
+///
+/// let expected_i16 = ImageBuffer::<LumaA<i16>, Vec<i16>>::from_raw(2, 2, vec![
+///     1, 2, 3, 4,
+///     5, 6, 7, 8]
+///     ).unwrap();
+/// # }
+/// ```
+#[macro_export]
+macro_rules! gray_alpha_image {
+    // Empty image with default channel type u8
+    () => {
+        gray_alpha_image!(type: u8)
+    };
+    // Empty image with the given channel type
+    (type: $channel_type:ty) => {
+        {
+            use image::{ImageBuffer, LumaA};
+            ImageBuffer::<LumaA<$channel_type>, Vec<$channel_type>>::new(0, 0)
+        }
+    };
+    // Non-empty image of default channel type u8
+    ($( $( [$l: expr, $a: expr]),*);*) => {
+        gray_alpha_image!(type: u8, $( $( [$l, $a]),*);*)
+    };
+    // Non-empty image of given channel type
+    (type: $channel_type:ty, $( $( [$l: expr, $a: expr]),*);*) => {
+        {
+            use image::{ImageBuffer, LumaA};
+            let nested_array = [$( [ $([$l, $a]),*]),*];
+            let height = nested_array.len() as u32;
+            let width = nested_array[0].len() as u32;
+
+            let flat_array: Vec<_> = nested_array.iter()
+                .flat_map(|row| row.into_iter().flat_map(|p| p.into_iter()))
+                .cloned()
+                .collect();
+
+            ImageBuffer::<LumaA<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+                .unwrap()
+        }
+    }
+}
+
 /// Helper for defining RGB images.
 ///
 /// Pixels are delineated by square brackets, columns are
