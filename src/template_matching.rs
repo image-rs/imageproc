@@ -26,6 +26,7 @@ pub enum MatchTemplateMethod {
 }
 
 struct TemplateGrayImage<'a>(&'a GrayImage);
+struct TemplateGrayAlphaImage<'a>(&'a GrayAlphaImage);
 
 trait TemplateImage {
     type InnerBuffer;
@@ -66,6 +67,38 @@ impl<'a> TemplateImage for TemplateGrayImage<'a> {
     }
 }
 
+impl<'a> TemplateImage for TemplateGrayAlphaImage<'a> {
+    type InnerBuffer = GrayAlphaImage;
+
+    fn inner(&self) -> &'a GrayAlphaImage {
+        &self.0
+    }
+
+    fn score_pixel(&self, x: u32, y: u32, image_value: f32, method: MatchTemplateMethod) -> f32 {
+        let template_pixel = unsafe { self.0.unsafe_get_pixel(x, y) };
+        let template_value = template_pixel[0] as f32;
+        let template_alpha = template_pixel[1] as f32 / 255.0;
+
+        use MatchTemplateMethod::*;
+
+        match method {
+            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                (image_value - template_value).powf(2.0) * template_alpha
+            }
+            CrossCorrelation | CrossCorrelationNormalized => {
+                image_value * template_value * template_alpha
+            }
+        }
+    }
+
+    fn sum_squares(&self) -> f32 {
+        self.0
+            .pixels()
+            .map(|p| p.0[0] as f32 * p.0[0] as f32 * (p.0[1] / 255) as f32)
+            .sum()
+    }
+}
+
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
@@ -82,6 +115,29 @@ pub fn match_template(
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
     match_template_inner(image, TemplateGrayImage(template), method)
+}
+
+/// Slides a `template` over an `image` and scores the match at each point using
+/// the requested `method`.
+///
+/// The alpha channel is used to weigh the distance computation.
+/// This effectively means that transparent pixels are ignored, and opaque pixels are
+/// "twice as important" than half-opaque ones.<br/>
+/// This makes it possible to use a "non-rectangular" template, by giving it a shape using the alpha channel.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// # Panics
+///
+/// If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+pub fn match_template_with_alpha(
+    image: &GrayImage,
+    template: &GrayAlphaImage,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>> {
+    match_template_inner(image, TemplateGrayAlphaImage(template), method)
 }
 
 fn match_template_inner<I>(
@@ -169,6 +225,31 @@ pub fn match_template_parallel(
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
     match_template_parallel_inner(image, TemplateGrayImage(template), method)
+}
+
+#[cfg(feature = "rayon")]
+/// Slides a `template` over an `image` and scores the match at each point using
+/// the requested `method`. This version uses rayon to parallelize the computation.
+///
+/// The alpha channel is used to weigh the distance computation.
+/// This effectively means that transparent pixels are ignored, and opaque pixels are
+/// "twice as important" than half-opaque ones.<br/>
+/// This makes it possible to use a "non-rectangular" template, by giving it a shape using
+/// the alpha channel.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// # Panics
+///
+/// If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+pub fn match_template_parallel_with_alpha(
+    image: &GrayImage,
+    template: &GrayAlphaImage,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>> {
+    match_template_parallel_inner(image, TemplateGrayAlphaImage(template), method)
 }
 
 #[cfg(feature = "rayon")]
@@ -478,6 +559,34 @@ mod tests {
             &image,
             &template,
             MatchTemplateMethod::CrossCorrelationNormalized,
+        );
+        assert_pixels_eq!(actual_parallel, expected);
+    }
+
+    #[test]
+    fn match_template_with_alpha_sum_of_squared_errors() {
+        let image = gray_image!(10, 10, 10, 10, 10, 10, 20, 99, 99, 99, 99, 20, 0);
+        let template = gray_alpha_image!([20, 255], [10, 0], [10, 0], [10, 0], [10, 0], [20, 255]);
+
+        let expected = gray_image!(type: f32,
+            10.0 * 10.0 + 10.0 * 10.0,
+            10.0 * 10.0,
+            10.0 * 10.0 + 79.0 * 79.0,
+            10.0 * 10.0 + 79.0 * 79.0,
+            10.0 * 10.0 + 79.0 * 79.0,
+            10.0 * 10.0 + 79.0 * 79.0,
+            0.0,
+            79.0 * 79.0 + 20.0 * 20.0
+        );
+
+        let actual =
+            match_template_with_alpha(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
+        assert_pixels_eq!(actual, expected);
+
+        let actual_parallel = match_template_parallel_with_alpha(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrors,
         );
         assert_pixels_eq!(actual_parallel, expected);
     }
