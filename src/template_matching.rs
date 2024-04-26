@@ -1,8 +1,10 @@
 //! Functions for performing template matching.
+use std::ops::Deref;
+
 use crate::definitions::Image;
 use crate::integral_image::{integral_squared_image, sum_image_pixels};
 use crate::rect::Rect;
-use image::Primitive;
+use image::{GenericImageView, GrayAlphaImage, ImageBuffer, Pixel, Primitive};
 use image::{GrayImage, Luma};
 
 /// Method used to compute the matching score between a template and an image region.
@@ -23,6 +25,47 @@ pub enum MatchTemplateMethod {
     CrossCorrelationNormalized,
 }
 
+struct TemplateGrayImage<'a>(&'a GrayImage);
+
+trait TemplateImage {
+    type InnerBuffer;
+
+    /// Get a reference to the wrapped ImageBuffer
+    fn inner(&self) -> &Self::InnerBuffer
+    where
+        <Self as TemplateImage>::InnerBuffer: GenericImageView + Deref<Target = [u8]>;
+
+    /// Get the score for a given pixel
+    fn score_pixel(&self, x: u32, y: u32, image_value: f32, method: MatchTemplateMethod) -> f32;
+
+    fn sum_squares(&self) -> f32;
+}
+
+impl<'a> TemplateImage for TemplateGrayImage<'a> {
+    type InnerBuffer = GrayImage;
+
+    fn inner(&self) -> &'a GrayImage {
+        &self.0
+    }
+
+    fn score_pixel(&self, x: u32, y: u32, image_value: f32, method: MatchTemplateMethod) -> f32 {
+        let template_value = unsafe { self.0.unsafe_get_pixel(x, y)[0] as f32 };
+
+        use MatchTemplateMethod::*;
+
+        match method {
+            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
+                (image_value - template_value).powf(2.0)
+            }
+            CrossCorrelation | CrossCorrelationNormalized => image_value * template_value,
+        }
+    }
+
+    fn sum_squares(&self) -> f32 {
+        self.0.pixels().map(|p| p.0[0] as f32 * p.0[0] as f32).sum()
+    }
+}
+
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
@@ -38,10 +81,22 @@ pub fn match_template(
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
+    match_template_inner(image, TemplateGrayImage(template), method)
+}
+
+fn match_template_inner<I>(
+    image: &GrayImage,
+    template: I,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>>
+where
+    I: TemplateImage,
+    <I as TemplateImage>::InnerBuffer: GenericImageView + Deref<Target = [u8]>,
+{
     use image::GenericImageView;
 
     let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
+    let (template_width, template_height) = template.inner().dimensions();
 
     assert!(
         image_width >= template_width,
@@ -61,7 +116,7 @@ pub fn match_template(
         None
     };
     let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
+        Some(template.sum_squares())
     } else {
         None
     };
@@ -78,18 +133,7 @@ pub fn match_template(
             for dy in 0..template_height {
                 for dx in 0..template_width {
                     let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-
-                    use MatchTemplateMethod::*;
-
-                    score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                            (image_value - template_value).powf(2.0)
-                        }
-                        CrossCorrelation | CrossCorrelationNormalized => {
-                            image_value * template_value
-                        }
-                    };
+                    score += template.score_pixel(dx, dy, image_value, method);
                 }
             }
 
@@ -124,11 +168,24 @@ pub fn match_template_parallel(
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
+    match_template_parallel_inner(image, TemplateGrayImage(template), method)
+}
+
+#[cfg(feature = "rayon")]
+fn match_template_parallel_inner<I>(
+    image: &GrayImage,
+    template: I,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>>
+where
+    I: TemplateImage + Sync,
+    <I as TemplateImage>::InnerBuffer: GenericImageView + Deref<Target = [u8]>,
+{
     use image::GenericImageView;
     use rayon::prelude::*;
 
     let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
+    let (template_width, template_height) = template.inner().dimensions();
 
     assert!(
         image_width >= template_width,
@@ -148,7 +205,7 @@ pub fn match_template_parallel(
         None
     };
     let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
+        Some(template.sum_squares())
     } else {
         None
     };
@@ -167,18 +224,7 @@ pub fn match_template_parallel(
                     for dx in 0..template_width {
                         let image_value =
                             unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                        let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-
-                        use MatchTemplateMethod::*;
-
-                        score += match method {
-                            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                                (image_value - template_value).powf(2.0)
-                            }
-                            CrossCorrelation | CrossCorrelationNormalized => {
-                                image_value * template_value
-                            }
-                        };
+                        score += template.score_pixel(dx, dy, image_value, method);
                     }
                 }
 
@@ -200,10 +246,6 @@ pub fn match_template_parallel(
     Image::from_fn(result_width, result_height, |x, y| {
         rows[y as usize][x as usize]
     })
-}
-
-fn sum_squares(template: &GrayImage) -> f32 {
-    template.iter().map(|p| *p as f32 * *p as f32).sum()
 }
 
 /// Returns the square root of the product of the sum of squares of
