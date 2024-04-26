@@ -336,13 +336,17 @@ mod tests {
             3, 4
         );
 
-        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
         let expected = gray_image!(type: f32,
             14.0, 14.0;
             3.0, 1.0
         );
 
+        let actual = match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
         assert_pixels_eq!(actual, expected);
+
+        let actual_parallel =
+            match_template_parallel(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
+        assert_pixels_eq!(actual_parallel, expected);
     }
 
     #[test]
@@ -357,18 +361,25 @@ mod tests {
             3, 4
         );
 
-        let actual = match_template(
-            &image,
-            &template,
-            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
-        );
         let tss = 30f32;
         let expected = gray_image!(type: f32,
             14.0 / (22.0 * tss).sqrt(), 14.0 / (30.0 * tss).sqrt();
             3.0 / (23.0 * tss).sqrt(), 1.0 / (35.0 * tss).sqrt()
         );
 
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+        );
         assert_pixels_eq!(actual, expected);
+
+        let actual_parallel = match_template_parallel(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+        );
+        assert_pixels_eq!(actual_parallel, expected);
     }
 
     #[test]
@@ -383,13 +394,17 @@ mod tests {
             3, 4
         );
 
-        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelation);
         let expected = gray_image!(type: f32,
             19.0, 23.0;
             25.0, 32.0
         );
 
+        let actual = match_template(&image, &template, MatchTemplateMethod::CrossCorrelation);
         assert_pixels_eq!(actual, expected);
+
+        let actual_parallel =
+            match_template_parallel(&image, &template, MatchTemplateMethod::CrossCorrelation);
+        assert_pixels_eq!(actual_parallel, expected);
     }
 
     #[test]
@@ -404,18 +419,25 @@ mod tests {
             3, 4
         );
 
-        let actual = match_template(
-            &image,
-            &template,
-            MatchTemplateMethod::CrossCorrelationNormalized,
-        );
         let tss = 30f32;
         let expected = gray_image!(type: f32,
             19.0 / (22.0 * tss).sqrt(), 23.0 / (30.0 * tss).sqrt();
             25.0 / (23.0 * tss).sqrt(), 32.0 / (35.0 * tss).sqrt()
         );
 
+        let actual = match_template(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+        );
         assert_pixels_eq!(actual, expected);
+
+        let actual_parallel = match_template_parallel(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+        );
+        assert_pixels_eq!(actual_parallel, expected);
     }
 
     macro_rules! bench_match_template {
