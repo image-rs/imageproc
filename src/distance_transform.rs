@@ -24,7 +24,7 @@ pub enum Norm {
     L1,
     /// Defines d((x1, y1), (x2, y2)) to be sqrt((x1 - x2)^2 + (y1 - y2)^2).
     /// Also known as the euclidian norm.
-    /// when working in integer distances, we take the smallest 
+    /// when working with integer distances, we take the smallest
     /// greater integer value, also know as 'ceiling'
     /// example : d((0,0),(1,2)) = ceil(sqrt(1+2^2)) = ceil(2.236...) = 3
     L2,
@@ -65,7 +65,7 @@ pub enum Norm {
 /// );
 ///
 /// assert_pixels_eq!(distance_transform(&image, Norm::L1), l1_distances);
-/// 
+///
 /// // L2 norm
 /// let l2_distances = gray_image!(
 ///     3,   3,   2,   3,   3;
@@ -87,7 +87,7 @@ pub enum Norm {
 /// );
 ///
 /// assert_pixels_eq!(distance_transform(&image, Norm::LInf), linf_distances);
-/// 
+///
 /// # }
 /// ```
 pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
@@ -119,37 +119,45 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
         Norm::L2 => {
             match from {
                 DistanceFrom::Foreground => (),
-                DistanceFrom::Background => image.iter_mut().for_each(|p| *p = if *p == 0 {1} else {0})
+                DistanceFrom::Background => image
+                    .iter_mut()
+                    .for_each(|p| *p = if *p == 0 { 1 } else { 0 }),
             }
-            let float_dist: ImageBuffer<Luma<f64>, Vec<f64>> = euclidean_squared_distance_transform(image);
-            image.iter_mut().zip(float_dist.iter())
-                .for_each(|(u,v)| { *u = v.sqrt().clamp(0.0, 255.0).ceil() as u8 });
+            let float_dist: ImageBuffer<Luma<f64>, Vec<f64>> =
+                euclidean_squared_distance_transform(image);
+            image
+                .iter_mut()
+                .zip(float_dist.iter())
+                .for_each(|(u, v)| *u = v.sqrt().clamp(0.0, 255.0).ceil() as u8);
         }
     }
 }
 
 #[inline(always)]
 fn distance_transform_impl_linf(image: &mut GrayImage, from: DistanceFrom) {
-    // the boolean generic parameter "IS_LINF" allows 
-    // for there to be one compiled fuction per norm, 
+    // the boolean generic parameter "IS_LINF" allows
+    // for there to be one compiled fuction per norm,
     // reducing the number of if statements evaluated at runtime
     distance_transform_impl_linf_or_l1::<true>(image, from)
 }
 #[inline(always)]
 fn distance_transform_impl_l1(image: &mut GrayImage, from: DistanceFrom) {
-    // the boolean generic parameter "IS_LINF" allows 
-    // for there to be one compiled fuction per norm, 
+    // the boolean generic parameter "IS_LINF" allows
+    // for there to be one compiled fuction per norm,
     // reducing the number of if statements evaluated at runtime
     distance_transform_impl_linf_or_l1::<false>(image, from)
 }
 
-fn distance_transform_impl_linf_or_l1<const IS_LINF : bool>(image: &mut GrayImage, from: DistanceFrom) {
+fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
+    image: &mut GrayImage,
+    from: DistanceFrom,
+) {
     let max_distance = Luma([min(image.width() + image.height(), 255u32) as u8]);
 
     // We use an unsafe code block for optimisation purposes here
-    // We use the 'unsafe_get_pixel' and 'check' unsafe functions, 
+    // We use the 'unsafe_get_pixel' and 'check' unsafe functions,
     // which are faster than safe functions,
-    // and we garantee that they are used safely 
+    // and we garantee that they are used safely
     // by making sure we are always within the bounds of the image
 
     unsafe {
@@ -175,7 +183,8 @@ fn distance_transform_impl_linf_or_l1<const IS_LINF : bool>(image: &mut GrayImag
                 if y > 0 {
                     check(image, x, y, x, y - 1);
 
-                    if IS_LINF { // this 'if' statement will be compiled away because IS_LINF is a const
+                    if IS_LINF {
+                        // this 'if' statement will be compiled away because IS_LINF is a const
                         if x > 0 {
                             check(image, x, y, x - 1, y - 1);
                         }
@@ -197,7 +206,8 @@ fn distance_transform_impl_linf_or_l1<const IS_LINF : bool>(image: &mut GrayImag
                 if y < image.height() - 1 {
                     check(image, x, y, x, y + 1);
 
-                    if IS_LINF { // this 'if' statement will be compiled away because IS_LINF is a const
+                    if IS_LINF {
+                        // this 'if' statement will be compiled away because IS_LINF is a const
                         if x < image.width() - 1 {
                             check(image, x, y, x + 1, y + 1);
                         }
