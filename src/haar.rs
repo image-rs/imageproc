@@ -734,6 +734,13 @@ mod tests {
 
         assert_pixels_eq!(actual, expected);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{integral_image::integral_image, utils::gray_bench_image};
+    use test::Bencher;
 
     #[bench]
     fn bench_evaluate_all_features_10x10(b: &mut test::Bencher) {
