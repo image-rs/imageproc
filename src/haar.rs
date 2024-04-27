@@ -262,7 +262,7 @@ fn feature_size(feature_type: HaarFeatureType, block_size: Size<Pixels>) -> Size
 pub fn enumerate_haar_features(frame_width: u8, frame_height: u8) -> Vec<HaarFeature> {
     let frame_size = Size::new(frame_width, frame_height);
 
-    let feature_types = vec![
+    let feature_types = [
         HaarFeatureType::TwoRegionHorizontal,
         HaarFeatureType::ThreeRegionHorizontal,
         HaarFeatureType::TwoRegionVertical,
