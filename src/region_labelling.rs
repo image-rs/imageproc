@@ -275,7 +275,7 @@ mod tests {
 
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way connectivity.
-    fn chessboard(width: u32, height: u32) -> GrayImage {
+    pub(in super::benches) fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
                 Luma([255u8])
@@ -302,6 +302,16 @@ mod tests {
         let max_component = components.pixels().map(|p| p[0]).max();
         assert_eq!(max_component, Some(450u32));
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::connected_components;
+    use super::tests::chessboard;
+    use super::Connectivity::{Eight, Four};
+    use crate::definitions::{HasBlack, HasWhite};
+    use ::test;
+    use image::{GrayImage, ImageBuffer, Luma};
 
     #[bench]
     fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
