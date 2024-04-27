@@ -131,14 +131,14 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
 #[inline(always)]
 fn distance_transform_impl_linf(image: &mut GrayImage, from: DistanceFrom) {
     // the boolean generic parameter "IS_LINF" allows 
-    // for there two be one compiled fuction per norm, 
+    // for there to be one compiled fuction per norm, 
     // reducing the number of if statements evaluated at runtime
     distance_transform_impl_linf_or_l1::<true>(image, from)
 }
 #[inline(always)]
 fn distance_transform_impl_l1(image: &mut GrayImage, from: DistanceFrom) {
     // the boolean generic parameter "IS_LINF" allows 
-    // for there two be one compiled fuction per norm, 
+    // for there to be one compiled fuction per norm, 
     // reducing the number of if statements evaluated at runtime
     distance_transform_impl_linf_or_l1::<false>(image, from)
 }
