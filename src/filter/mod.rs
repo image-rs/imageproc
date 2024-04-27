@@ -103,7 +103,7 @@ pub fn bilateral_filter(
         let mut total_weight = 0f32;
         debug_assert!(col < width);
         debug_assert!(row < height);
-        // Safety: Image::from_fn yeilds col in [0, width) and row in [0, height).
+        // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
         let window_center_val = unsafe { image.unsafe_get_pixel(col, row)[0] } as i32;
 
         for window_row in -window_extent..window_extent + 1 {
@@ -115,7 +115,7 @@ pub fn bilateral_filter(
                     (col as i32 + window_col).clamp(0, width.saturating_sub(1) as i32) as u32;
                 debug_assert!(window_col_abs < width);
                 debug_assert!(window_row_abs < height);
-                // Safety: we clamped window_row_abs and window_col_abs to be in bounds.
+                // Safety: we clamped `window_row_abs` and `window_col_abs` to be in bounds.
                 let val = unsafe { image.unsafe_get_pixel(window_col_abs, window_row_abs)[0] };
 
                 let kc = window_col + window_extent;
