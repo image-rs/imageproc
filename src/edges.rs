@@ -156,6 +156,7 @@ fn hysteresis(
     out
 }
 
+#[cfg_attr(miri, ignore)]
 #[cfg(test)]
 mod benches {
     use super::canny;

@@ -236,6 +236,7 @@ mod tests {
         assert_eq!(max, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_local_maxima_dense(b: &mut Bencher) {
         let mut ts = vec![];
@@ -248,6 +249,7 @@ mod tests {
         b.iter(|| local_maxima(&ts, 15));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_local_maxima_sparse(b: &mut Bencher) {
         let mut ts = vec![];
@@ -296,6 +298,7 @@ mod tests {
         assert!(s.width() == 3);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_suppress_non_maximum_increasing_gradient(b: &mut Bencher) {
         // Increasing gradient in both directions. This can be a worst-case for
@@ -304,6 +307,7 @@ mod tests {
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
         let width = 40u32;
@@ -314,6 +318,7 @@ mod tests {
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_suppress_non_maximum_noise_7(b: &mut Bencher) {
         let mut img: GrayImage = ImageBuffer::new(40, 20);
@@ -321,6 +326,7 @@ mod tests {
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_suppress_non_maximum_noise_3(b: &mut Bencher) {
         let mut img: GrayImage = ImageBuffer::new(40, 20);
@@ -328,6 +334,7 @@ mod tests {
         b.iter(|| suppress_non_maximum(&img, 3));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_suppress_non_maximum_noise_1(b: &mut Bencher) {
         let mut img: GrayImage = ImageBuffer::new(40, 20);

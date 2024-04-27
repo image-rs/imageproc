@@ -795,6 +795,7 @@ mod tests {
         assert_pixels_eq!(rotated, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_rotate_nearest(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -806,6 +807,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_rotate_bilinear(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -817,6 +819,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_rotate_bicubic(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -893,6 +896,7 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_translate(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -966,6 +970,7 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_translate_projection(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -977,6 +982,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_translate_with(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -1048,6 +1054,7 @@ mod tests {
         assert_pixels_eq!(translated_bicubic, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_affine_nearest(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -1065,6 +1072,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_affine_bilinear(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -1082,6 +1090,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_affine_bicubic(b: &mut test::Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -1218,6 +1227,7 @@ mod tests {
         p.unwrap();
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_from_control_points(b: &mut Bencher) {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];

@@ -560,6 +560,7 @@ mod tests {
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_bilateral_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -609,6 +610,7 @@ mod tests {
         assert_pixels_eq!(box_filter(&image, 1, 1), expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_box_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -655,6 +657,7 @@ mod tests {
         assert_pixels_eq!(filtered, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_separable_filter(b: &mut Bencher) {
         let image = gray_bench_image(300, 300);
@@ -793,6 +796,7 @@ mod tests {
         black_box(horizontal_filter(&image, &kernel));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_horizontal_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -832,6 +836,7 @@ mod tests {
         black_box(vertical_filter(&image, &kernel));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_vertical_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -925,6 +930,7 @@ mod tests {
         assert_pixels_eq!(filtered, expected);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -951,6 +957,7 @@ mod tests {
         blur(image, stdev)
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_1(b: &mut Bencher) {
@@ -961,6 +968,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_3(b: &mut Bencher) {
@@ -971,6 +979,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_10(b: &mut Bencher) {
@@ -981,6 +990,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_gaussian_f32_stdev_1(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
@@ -990,6 +1000,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_gaussian_f32_stdev_3(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
@@ -999,6 +1010,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_gaussian_f32_stdev_10(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);

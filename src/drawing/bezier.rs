@@ -81,6 +81,7 @@ pub fn draw_cubic_bezier_curve_mut<C>(
     }
 }
 
+#[cfg_attr(miri, ignore)]
 #[cfg(test)]
 mod benches {
     use image::{GrayImage, Luma};

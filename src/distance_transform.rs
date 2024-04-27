@@ -582,6 +582,7 @@ mod tests {
     }
 }
 
+#[cfg_attr(miri, ignore)]
 #[cfg(test)]
 mod benches {
     use super::*;

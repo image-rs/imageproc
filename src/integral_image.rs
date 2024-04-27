@@ -555,6 +555,7 @@ mod tests {
         assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), [10, 11, 12]);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_integral_image_gray(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
@@ -564,6 +565,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_integral_image_rgb(b: &mut test::Bencher) {
         let image = rgb_bench_image(500, 500);
@@ -612,6 +614,7 @@ mod tests {
         quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_row_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(1000, 1);
@@ -621,6 +624,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_column_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(100, 1000);

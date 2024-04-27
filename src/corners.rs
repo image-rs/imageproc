@@ -645,6 +645,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_intensity_centroid(b: &mut Bencher) {
         let image = gray_image!(
@@ -659,6 +660,7 @@ mod tests {
         b.iter(|| black_box(intensity_centroid(&image, 3, 3, 3)));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_oriented_fast_corner(b: &mut Bencher) {
         let image = gray_image!(
@@ -673,6 +675,7 @@ mod tests {
         b.iter(|| black_box(oriented_fast(&image, Some(0), 1, 0, Some(0xc0))));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_oriented_fast_non_corner(b: &mut Bencher) {
         let image = gray_image!(
@@ -687,6 +690,7 @@ mod tests {
         b.iter(|| black_box(oriented_fast(&image, Some(255), 0, 0, Some(0xc0))));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
         let image = black_box(gray_image!(

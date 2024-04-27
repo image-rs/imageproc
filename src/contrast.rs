@@ -364,6 +364,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_adaptive_threshold(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
@@ -374,6 +375,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_match_histogram(b: &mut Bencher) {
         let target = GrayImage::from_pixel(200, 200, Luma([150]));
@@ -384,6 +386,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_match_histogram_mut(b: &mut Bencher) {
         let target = GrayImage::from_pixel(200, 200, Luma([150]));
@@ -465,6 +468,7 @@ mod tests {
         assert_eq!(level, 120);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_otsu_level(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
@@ -508,6 +512,7 @@ mod tests {
         assert_pixels_eq!(expected, actual);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_equalize_histogram(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -517,6 +522,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_equalize_histogram_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
@@ -526,6 +532,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_threshold(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -535,6 +542,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_threshold_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
@@ -544,6 +552,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_stretch_contrast(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -553,6 +562,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_stretch_contrast_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);

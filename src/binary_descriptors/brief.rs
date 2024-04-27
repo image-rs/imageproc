@@ -327,6 +327,7 @@ mod tests {
         assert_eq!(local_pixel_average(&integral_image, 3, 3, 2), 117);
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore]
     fn bench_brief_random_test_pairs_1000_keypoints(b: &mut Bencher) {
@@ -345,6 +346,7 @@ mod tests {
         })
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore]
     fn bench_brief_fixed_test_pairs_1000_keypoints(b: &mut Bencher) {

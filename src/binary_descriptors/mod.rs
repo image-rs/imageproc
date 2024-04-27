@@ -133,6 +133,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
     matches
 }
 
+#[cfg_attr(miri, ignore)]
 #[cfg(test)]
 mod benches {
     use super::*;
