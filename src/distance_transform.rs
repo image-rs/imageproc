@@ -670,6 +670,9 @@ mod tests {
     bench_distance_transform!(bench_distance_transform_l1_10, Norm::L1, side: 10);
     bench_distance_transform!(bench_distance_transform_l1_100, Norm::L1, side: 100);
     bench_distance_transform!(bench_distance_transform_l1_200, Norm::L1, side: 200);
+    bench_distance_transform!(bench_distance_transform_l2_10, Norm::L2, side: 10);
+    bench_distance_transform!(bench_distance_transform_l2_100, Norm::L2, side: 100);
+    bench_distance_transform!(bench_distance_transform_l2_200, Norm::L2, side: 200);
     bench_distance_transform!(bench_distance_transform_linf_10, Norm::LInf, side: 10);
     bench_distance_transform!(bench_distance_transform_linf_100, Norm::LInf, side: 100);
     bench_distance_transform!(bench_distance_transform_linf_200, Norm::LInf, side: 200);
