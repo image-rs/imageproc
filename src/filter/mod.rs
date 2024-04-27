@@ -39,6 +39,10 @@ use std::f32;
 ///        Images." IEEE International Conference on Computer Vision (1998)
 ///        839-846. DOI: 10.1109/ICCV.1998.710815
 ///
+/// # Panics
+///
+/// Panics if `image.width() > i32::MAX as u32` or `image.height() > i32::MAX as u32`.
+///
 /// # Examples
 ///
 /// ```
