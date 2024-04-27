@@ -59,32 +59,45 @@ pub fn bilateral_filter(
         (-0.5 * x.powi(2) / sigma_squared).exp()
     }
 
-    /// Create look-up table of Gaussian weights for color dimension.
-    fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-        let step_size = max_value / bins as f32;
-        let vals = (0..bins).map(|x| x as f32 * step_size);
-        let sigma_squared = sigma.powi(2);
-        vals.map(|x| gaussian_weight(x, sigma_squared)).collect()
-    }
-
-    /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
-    fn compute_spatial_lut(window_size: u32, sigma: f32) -> Vec<f32> {
+    /// Effectively a meshgrid command with flattened outputs.
+    fn window_coords(window_size: u32) -> (Vec<i32>, Vec<i32>) {
         let window_start = (-(window_size as f32) / 2.0).floor() as i32;
         let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
         let window_range = window_start..window_end;
 
-        let cc = window_range.clone().cycle().take(window_range.len().pow(2));
-
+        let cc: Vec<i32> = window_range
+            .clone()
+            .cycle()
+            .take(window_range.len().pow(2))
+            .collect();
         let n = window_size as usize + 1;
-        let rr = window_range.flat_map(|i| std::iter::repeat(i).take(n));
+        let mut rr = Vec::with_capacity(n * window_range.len());
+        for i in window_range {
+            rr.extend(vec![i; n]);
+        }
+        (rr, cc)
+    }
 
+    /// Create look-up table of Gaussian weights for color dimension.
+    fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
+        let step_size = max_value / bins as f32;
         let sigma_squared = sigma.powi(2);
-        rr.zip(cc)
-            .map(|(r, c)| {
-                let dist = ((r as f32).powi(2) + (c as f32).powi(2)).sqrt();
-                gaussian_weight(dist, sigma_squared)
-            })
+        (0..bins)
+            .map(|x| x as f32 * step_size)
+            .map(|x| gaussian_weight(x, sigma_squared))
             .collect()
+    }
+
+    /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
+    fn compute_spatial_lut(window_size: u32, sigma: f32) -> Vec<f32> {
+        let (rr, cc) = window_coords(window_size);
+        let sigma_squared = sigma.powi(2);
+        let it = rr.into_iter().zip(cc);
+        it.map(|(r, c)| {
+            let dist = ((r as f32).powi(2) + (c as f32).powi(2)).sqrt();
+            gaussian_weight(dist, sigma_squared)
+        })
+        .collect()
     }
 
     let max_value = *image.iter().max().unwrap() as f32;
@@ -97,7 +110,7 @@ pub fn bilateral_filter(
     let window_extent = (window_size - 1) / 2;
 
     let (width, height) = image.dimensions();
-    Image::from_fn(width, height, |col, row| {
+    ImageBuffer::from_fn(width, height, |col, row| {
         let mut total_val = 0f32;
         let mut total_weight = 0f32;
         let window_center_val = image.get_pixel(col, row)[0] as i32;
@@ -550,6 +563,20 @@ mod tests {
             let filtered = bilateral_filter(&image, 10, 10., 3.);
             black_box(filtered);
         });
+    }
+
+    #[test]
+    fn test_bilateral_filter() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
+        let expect = gray_image!(
+            2, 3, 4;
+            5, 5, 6;
+            6, 7, 8);
+        let actual = bilateral_filter(&image, 3, 10., 3.);
+        assert_pixels_eq!(expect, actual);
     }
 
     #[test]
