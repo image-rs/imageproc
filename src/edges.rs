@@ -157,7 +157,7 @@ fn hysteresis(
 }
 
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;
