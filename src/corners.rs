@@ -553,6 +553,7 @@ mod tests {
         assert!(!is_corner_fast12(&image, 8, 3, 3));
     }
 
+    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
         let image = black_box(gray_image!(
