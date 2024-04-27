@@ -154,7 +154,6 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, Luma, Rgb, RgbImage};
-    use test::Bencher;
 
     #[test]
     fn test_cumulative_histogram() {
@@ -262,6 +261,13 @@ mod tests {
         let right = gray_image!(8; 4);
         let _ = root_mean_squared_error(&left, &right);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{GrayImage, Luma, Rgb, RgbImage};
+    use test::Bencher;
 
     fn left_image_rgb(width: u32, height: u32) -> RgbImage {
         RgbImage::from_fn(width, height, |x, y| Rgb([x as u8, y as u8, (x + y) as u8]))
