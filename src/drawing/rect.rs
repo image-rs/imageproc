@@ -79,6 +79,7 @@ mod tests {
     use test::{black_box, Bencher};
 
     #[bench]
+    #[cfg_attr(miri, ignore)]
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
         let mut image = RgbImage::new(200, 200);
         let color = Rgb([120u8, 60u8, 47u8]);

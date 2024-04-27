@@ -561,6 +561,43 @@ mod tests {
         assert_pixels_eq!(oct3, expected);
     }
 
+    #[test]
+    fn test_draw_line_segment_horizontal_using_bresenham_line_pixel_iter_mut() {
+        let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
+
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            4, 4, 4, 4, 4;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
+
+        let mut right = image.clone();
+        {
+            let right_iter =
+                BresenhamLinePixelIterMut::new(&mut right, (-3f32, 1f32), (6f32, 1f32));
+            for p in right_iter {
+                *p = Luma([4u8]);
+            }
+        }
+        assert_pixels_eq!(right, expected);
+
+        let mut left = image.clone();
+        {
+            let left_iter = BresenhamLinePixelIterMut::new(&mut left, (6f32, 1f32), (-3f32, 1f32));
+            for p in left_iter {
+                *p = Luma([4u8]);
+            }
+        }
+        assert_pixels_eq!(left, expected);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{GrayImage, Luma};
+
     macro_rules! bench_antialiased_lines {
         ($name:ident, $start:expr, $end:expr) => {
             #[bench]
@@ -601,35 +638,4 @@ mod tests {
         (10, 10),
         (450, 80)
     );
-
-    #[test]
-    fn test_draw_line_segment_horizontal_using_bresenham_line_pixel_iter_mut() {
-        let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
-
-        let expected = gray_image!(
-            1, 1, 1, 1, 1;
-            4, 4, 4, 4, 4;
-            1, 1, 1, 1, 1;
-            1, 1, 1, 1, 1;
-            1, 1, 1, 1, 1);
-
-        let mut right = image.clone();
-        {
-            let right_iter =
-                BresenhamLinePixelIterMut::new(&mut right, (-3f32, 1f32), (6f32, 1f32));
-            for p in right_iter {
-                *p = Luma([4u8]);
-            }
-        }
-        assert_pixels_eq!(right, expected);
-
-        let mut left = image.clone();
-        {
-            let left_iter = BresenhamLinePixelIterMut::new(&mut left, (6f32, 1f32), (-3f32, 1f32));
-            for p in left_iter {
-                *p = Luma([4u8]);
-            }
-        }
-        assert_pixels_eq!(left, expected);
-    }
 }
