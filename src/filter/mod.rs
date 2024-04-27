@@ -117,6 +117,7 @@ pub fn bilateral_filter(
                 debug_assert!(window_row_abs < height);
                 // Safety: we clamped window_row_abs and window_col_abs to be in bounds.
                 let val = unsafe { image.unsafe_get_pixel(window_col_abs, window_row_abs)[0] };
+
                 let kc = window_col + window_extent;
                 let range_bin = (kr * window_size + kc) as usize;
                 let color_dist = (window_center_val - val as i32).abs() as f32;
