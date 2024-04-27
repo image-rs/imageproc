@@ -23,7 +23,7 @@ pub enum Norm {
     /// Also known as the Manhattan or city block norm.
     L1,
     /// Defines d((x1, y1), (x2, y2)) to be sqrt((x1 - x2)^2 + (y1 - y2)^2).
-    /// Also known as the euclidian norm.
+    /// Also known as the Euclidean norm.
     /// when working with integer distances, we take the smallest
     /// greater integer value, also know as 'ceiling'
     /// example : d((0,0),(1,2)) = ceil(sqrt(1+2^2)) = ceil(2.236...) = 3
