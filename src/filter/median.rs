@@ -326,14 +326,9 @@ impl HistSet {
 }
 
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::*;
-    use crate::property_testing::GrayTestImage;
     use crate::utils::gray_bench_image;
-    use crate::utils::pixel_diff_summary;
-    use image::{GrayImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
-    use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
     macro_rules! bench_median_filter {
@@ -358,6 +353,16 @@ mod tests {
     bench_median_filter!(bench_median_filter_s100_rx1_ry8, side: 100, x_radius: 1,y_radius: 8);
     bench_median_filter!(bench_median_filter_s100_rx4_ry8, side: 100, x_radius: 4,y_radius: 1);
     bench_median_filter!(bench_median_filter_s100_rx8_ry1, side: 100, x_radius: 8,y_radius: 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::property_testing::GrayTestImage;
+    use crate::utils::pixel_diff_summary;
+    use image::{GrayImage, Luma};
+    use quickcheck::{quickcheck, TestResult};
+    use std::cmp::{max, min};
 
     // Reference implementation of median filter - written to be as simple as possible,
     // to validate faster versions against.
