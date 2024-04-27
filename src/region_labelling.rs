@@ -275,7 +275,7 @@ mod tests {
 
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way connectivity.
-    pub(in super::benches) fn chessboard(width: u32, height: u32) -> GrayImage {
+    pub(super) fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
                 Luma([255u8])
@@ -304,7 +304,7 @@ mod tests {
     }
 }
 
-#[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
     use super::connected_components;

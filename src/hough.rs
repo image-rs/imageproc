@@ -539,7 +539,7 @@ mod tests {
     test_detect_line!(detect_line_neg10_120, -10.0, 120);
 }
 
-#[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
     use super::*;

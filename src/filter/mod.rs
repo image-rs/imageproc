@@ -957,7 +957,6 @@ mod tests {
         blur(image, stdev)
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_1(b: &mut Bencher) {
@@ -968,7 +967,6 @@ mod tests {
         });
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_3(b: &mut Bencher) {
@@ -979,7 +977,6 @@ mod tests {
         });
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore] // Gives a baseline performance using code from another library
     fn bench_baseline_gaussian_stdev_10(b: &mut Bencher) {

@@ -356,6 +356,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "slow [>1480s]")]
     #[test]
     fn test_draw_filled_ellipse() {
         let ellipse = Ellipse {
@@ -378,7 +379,7 @@ mod tests {
     }
 }
 
-#[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
     use super::*;

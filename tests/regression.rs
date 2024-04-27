@@ -10,6 +10,8 @@
 //!
 //! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
+#![cfg(not(miri))]
+
 #[macro_use]
 extern crate imageproc;
 

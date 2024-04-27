@@ -253,7 +253,6 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{ImageBuffer, Luma};
-    use test::{black_box, Bencher};
 
     #[rustfmt::skip::macros(gray_image)]
     #[test]
@@ -365,7 +364,7 @@ mod tests {
     }
 }
 
-#[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
     use super::*;

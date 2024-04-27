@@ -269,12 +269,10 @@ pub fn brief(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::utils::gray_bench_image;
     use rand::Rng;
     use test::{black_box, Bencher};
-
-    use crate::utils::gray_bench_image;
-
-    use super::*;
 
     #[test]
     fn test_compute_hamming_distance() {
@@ -326,8 +324,16 @@ mod tests {
         let integral_image: ImageBuffer<Luma<u32>, Vec<u32>> = integral_image(&image);
         assert_eq!(local_pixel_average(&integral_image, 3, 3, 2), 117);
     }
+}
 
-    #[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use rand::Rng;
+    use test::{black_box, Bencher};
+
     #[bench]
     #[ignore]
     fn bench_brief_random_test_pairs_1000_keypoints(b: &mut Bencher) {
@@ -346,7 +352,6 @@ mod tests {
         })
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     #[ignore]
     fn bench_brief_fixed_test_pairs_1000_keypoints(b: &mut Bencher) {

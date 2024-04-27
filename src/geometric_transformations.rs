@@ -1108,6 +1108,7 @@ mod tests {
         });
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_translate() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
@@ -1122,6 +1123,7 @@ mod tests {
         assert_approx_eq!(out.1, 5.0, 1e-10);
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in dependencies")]
     #[test]
     fn test_from_control_points() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
@@ -1136,6 +1138,7 @@ mod tests {
         assert_approx_eq!(out.1, 20.0, 1e-10);
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_2() {
         let from = [
@@ -1150,6 +1153,7 @@ mod tests {
         assert!(p.is_some());
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     /// Test case from https://github.com/image-rs/imageproc/issues/412
     fn test_from_control_points_nofreeze() {
@@ -1164,6 +1168,7 @@ mod tests {
         Projection::from_control_points(from, to);
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_known_transform() {
         let t = Projection::translate(10f32, 10f32);
@@ -1185,6 +1190,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_colinear() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
@@ -1195,6 +1201,7 @@ mod tests {
         assert!(p.is_none());
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_translation() {
         let p = Projection::translate(10f32, 15f32);
@@ -1213,6 +1220,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points_underdetermined() {
         let from = [
