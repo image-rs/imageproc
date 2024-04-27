@@ -134,7 +134,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
 }
 
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::*;
     use crate::{binary_descriptors::brief::brief, utils::gray_bench_image};
     use test::{black_box, Bencher};
