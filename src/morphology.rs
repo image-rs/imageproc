@@ -414,12 +414,11 @@ impl Mask {
         );
         Self {
             elements: (0..image.width() as i16)
-                .map(|x| {
+                .flat_map(|x| {
                     (0..(image.height() as i16))
                         .filter(move |&y| image.get_pixel(x as u32, y as u32).0[0] != 0)
                         .map(move |y| (x - center_x as i16, y - center_y as i16))
                 })
-                .flatten()
                 .collect(),
         }
     }
