@@ -40,6 +40,20 @@ use image::GrayImage;
 ///
 /// assert_pixels_eq!(dilate(&image, Norm::L1, 1), l1_dilated);
 ///
+/// // L2 norm
+/// //
+/// // When computing distances using the L2 norm we take the ceiling of the true values.
+/// // This means that using the L2 norm gives the same results as the L1 norm for `k <= 2`.
+/// let l2_dilated = gray_image!(
+///    0,   0,   0,   0,   0;
+///    0,   0, 255,   0,   0;
+///    0, 255, 255, 255,   0;
+///    0,   0, 255,   0,   0;
+///    0,   0,   0,   0,   0
+/// );
+///
+/// assert_pixels_eq!(dilate(&image, Norm::L2, 1), l2_dilated);
+///
 /// // LInf norm
 /// let linf_dilated = gray_image!(
 ///    0,   0,   0,   0,   0;
@@ -112,6 +126,24 @@ pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// );
 ///
 /// assert_pixels_eq!(erode(&image, Norm::L1, 1), l1_eroded);
+///
+/// // L2 norm
+/// //
+/// // When computing distances using the L2 norm we take the ceiling of the true values.
+/// // This means that using the L2 norm gives the same results as the L1 norm for `k <= 2`.
+/// let l2_eroded = gray_image!(
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0, 255, 255,   0, 255, 255,   0,  0;
+///     0,   0, 255,   0,   0,   0, 255,   0,  0;
+///     0,   0, 255, 255,   0, 255, 255,   0,  0;
+///     0,   0, 255, 255, 255, 255, 255,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0;
+///     0,   0,   0,   0,   0,   0,   0,   0,  0
+/// );
+///
+/// assert_pixels_eq!(erode(&image, Norm::L2, 1), l2_eroded);
 ///
 /// // LInf norm - all pixels eroded using the L1 norm are eroded,
 /// // as well as the pixels diagonally adjacent to the centre pixel.
@@ -327,6 +359,19 @@ mod tests {
     use std::cmp::{max, min};
 
     #[test]
+    fn test_dilate_point_l1_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L1, 0);
+        assert_pixels_eq!(dilated, image);
+    }
+
+    #[test]
     fn test_dilate_point_l1_1() {
         let image = gray_image!(
               0,   0,   0,   0,   0;
@@ -344,7 +389,6 @@ mod tests {
               0,   0, 255,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -366,8 +410,134 @@ mod tests {
               0, 255, 255, 255,   0;
               0,   0, 255,   0,   0
         );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_l1_4() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0, 255,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L1, 4);
+
+        let expected = gray_image!(
+              0,   0,   0,   0, 255,   0,   0,   0,   0;
+              0,   0,   0, 255, 255, 255,   0,   0,   0;
+              0,   0, 255, 255, 255, 255, 255,   0,   0;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+              0,   0, 255, 255, 255, 255, 255,   0,   0;
+              0,   0,   0, 255, 255, 255,   0,   0,   0;
+              0,   0,   0,   0, 255,   0,   0,   0,   0
+        );
 
         assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_l2_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L2, 0);
+        assert_pixels_eq!(dilated, image);
+    }
+
+    #[test]
+    fn test_dilate_point_l2_1() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L2, 1);
+
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0, 255, 255, 255,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_l2_2() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L2, 2);
+
+        let expected = gray_image!(
+              0,   0, 255,   0,   0;
+              0, 255, 255, 255,   0;
+            255, 255, 255, 255, 255;
+              0, 255, 255, 255,   0;
+              0,   0, 255,   0,   0
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_l2_4() {
+        let image = gray_image!(
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0, 255,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::L2, 4);
+
+        let expected = gray_image!(
+              0,   0,   0,   0, 255,   0,   0,   0,   0;
+              0,   0, 255, 255, 255, 255, 255,   0,   0;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+              0, 255, 255, 255, 255, 255, 255, 255,   0;
+              0,   0, 255, 255, 255, 255, 255,   0,   0;
+              0,   0,   0,   0, 255,   0,   0,   0,   0
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_linf_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::LInf, 0);
+        assert_pixels_eq!(dilated, image);
     }
 
     #[test]
@@ -388,7 +558,6 @@ mod tests {
               0, 255, 255, 255,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -410,8 +579,49 @@ mod tests {
             255, 255, 255, 255, 255;
             255, 255, 255, 255, 255
         );
-
         assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_dilate_point_linf_4() {
+        let image = gray_image!(
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0, 255,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0;
+            0,   0,   0,   0,   0,   0,   0,   0,   0
+        );
+        let dilated = dilate(&image, Norm::LInf, 4);
+
+        let expected = gray_image!(
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255;
+            255, 255, 255, 255, 255, 255, 255, 255, 255
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_erode_point_l1_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::L1, 0);
+        assert_pixels_eq!(eroded, image);
     }
 
     #[test]
@@ -432,8 +642,112 @@ mod tests {
               0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(eroded, expected);
+    }
+
+    #[test]
+    fn test_erode_dented_wall_l1_4() {
+        let image = gray_image!(
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255,   0,   0,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0
+        );
+        let dilated = erode(&image, Norm::L1, 4);
+
+        let expected = gray_image!(
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_erode_point_l2_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::L2, 0);
+        assert_pixels_eq!(eroded, image);
+    }
+
+    #[test]
+    fn test_erode_point_l2_1() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::L2, 1);
+
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        assert_pixels_eq!(eroded, expected);
+    }
+
+    #[test]
+    fn test_erode_dented_wall_l2_4() {
+        let image = gray_image!(
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255,   0,   0,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0
+        );
+        let dilated = erode(&image, Norm::L2, 4);
+
+        let expected = gray_image!(
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255, 255,   0,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0;
+            255, 255, 255, 255,   0,   0,   0,   0,   0
+        );
+        assert_pixels_eq!(dilated, expected);
+    }
+
+    #[test]
+    fn test_erode_point_linf_0() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let eroded = erode(&image, Norm::LInf, 0);
+        assert_pixels_eq!(eroded, image);
     }
 
     #[test]
@@ -454,7 +768,6 @@ mod tests {
               0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(eroded, expected);
     }
 }
@@ -466,6 +779,36 @@ mod benches {
     use ::test::*;
     use image::{GrayImage, Luma};
     use std::cmp::{max, min};
+
+    #[test]
+    fn test_erode_dented_wall_linf_4() {
+        let image = gray_image!(
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255,   0,   0,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0;
+            255, 255, 255, 255, 255, 255, 255, 255,   0
+        );
+        let dilated = erode(&image, Norm::LInf, 4);
+
+        let expected = gray_image!(
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0;
+            255, 255,   0,   0,   0,   0,   0,   0,   0
+        );
+
+        assert_pixels_eq!(dilated, expected);
+    }
 
     fn square() -> GrayImage {
         GrayImage::from_fn(500, 500, |x, y| {
@@ -482,6 +825,15 @@ mod benches {
         let image = square();
         b.iter(|| {
             let dilated = dilate(&image, Norm::L1, 5);
+            black_box(dilated);
+        })
+    }
+
+    #[bench]
+    fn bench_dilate_l2_5(b: &mut Bencher) {
+        let image = square();
+        b.iter(|| {
+            let dilated = dilate(&image, Norm::L2, 5);
             black_box(dilated);
         })
     }
