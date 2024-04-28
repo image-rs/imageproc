@@ -281,6 +281,8 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
         kernel_data[kernel_radius + i] = value;
         kernel_data[kernel_radius - i] = value;
     }
+    let sum: f32 = kernel_data.iter().sum();
+    kernel_data.iter_mut().for_each(|x| *x /= sum);
     kernel_data
 }
 
