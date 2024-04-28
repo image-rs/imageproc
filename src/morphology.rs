@@ -366,8 +366,7 @@ impl Mask {
     pub fn square(radius: u8) -> Self {
         Self {
             elements: (-(radius as i16)..=(radius as i16))
-                .map(|x| (-(radius as i16)..=(radius as i16)).map(move |y| (x, y)))
-                .flatten()
+                .flat_map(|x| (-(radius as i16)..=(radius as i16)).map(move |y| (x, y)))
                 .collect(),
         }
     }
@@ -376,10 +375,9 @@ impl Mask {
     pub fn diamond(radius: u8) -> Self {
         Self {
             elements: (-(radius as i16)..=(radius as i16))
-                .map(|x| {
+                .flat_map(|x| {
                     ((x.abs() - radius as i16)..=(radius as i16 - x.abs())).map(move |y| (x, y))
                 })
-                .flatten()
                 .collect(),
         }
     }
@@ -393,12 +391,11 @@ impl Mask {
         let im_ref = &image;
         Self {
             elements: (-(radius as i16)..=(radius as i16))
-                .map(|x| {
+                .flat_map(|x| {
                     (-(radius as i16)..=(radius as i16))
-                        .filter(move |&y| im_ref.get_pixel(x.clone() as u32, y as u32).0[0] != 0)
+                        .filter(move |&y| im_ref.get_pixel(x as u32, y as u32).0[0] != 0)
                         .map(move |y| (x, y))
                 })
-                .flatten()
                 .collect(),
         }
     }
@@ -419,7 +416,7 @@ impl Mask {
             elements: (0..image.width() as i16)
                 .map(|x| {
                     (0..(image.height() as i16))
-                        .filter(move |&y| image.get_pixel(x.clone() as u32, y as u32).0[0] != 0)
+                        .filter(move |&y| image.get_pixel(x as u32, y as u32).0[0] != 0)
                         .map(move |y| (x - center_x as i16, y - center_y as i16))
                 })
                 .flatten()
