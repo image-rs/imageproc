@@ -26,6 +26,7 @@ use imageproc::{
     utils::load_image_or_panic,
 };
 use std::{env, f32, path::Path};
+use imageproc::contrast::ThresholdType;
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &str = "./tests/data";
@@ -63,10 +64,10 @@ impl FromDynamic for RgbaImage {
 
 /// Loads an input image, applies a function to it and checks that the result matches a 'truth' image.
 fn compare_to_truth<P, F>(input_file_name: &str, truth_file_name: &str, op: F)
-where
-    P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
-    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
+    where
+        P: Pixel<Subpixel=u8> + PixelWithColorType,
+        ImageBuffer<P, Vec<u8>>: FromDynamic,
+        F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
     compare_to_truth_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
@@ -79,7 +80,7 @@ fn compare_to_truth_with_tolerance<P, F>(
     op: F,
     tol: u8,
 ) where
-    P: Pixel<Subpixel = u8> + PixelWithColorType,
+    P: Pixel<Subpixel=u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
     F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
@@ -92,9 +93,9 @@ fn compare_to_truth_with_tolerance<P, F>(
 
 /// Checks that an image matches a 'truth' image.
 fn compare_to_truth_image<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str)
-where
-    P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    where
+        P: Pixel<Subpixel=u8> + PixelWithColorType,
+        ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     compare_to_truth_image_with_tolerance(actual, truth_file_name, 0u8);
 }
@@ -105,7 +106,7 @@ fn compare_to_truth_image_with_tolerance<P>(
     truth_file_name: &str,
     tol: u8,
 ) where
-    P: Pixel<Subpixel = u8> + PixelWithColorType,
+    P: Pixel<Subpixel=u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     if should_regenerate() {
@@ -237,12 +238,12 @@ fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-                     0.0,           0.0,   1.0,
+            let hom = Projection::from_matrix([
+            root_two_inv, -root_two_inv, 50.0,
+            root_two_inv, root_two_inv, -70.0,
+            0.0, 0.0, 1.0,
         ])
-        .unwrap();
+            .unwrap();
         warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth(
@@ -257,12 +258,12 @@ fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-                     0.0,           0.0,   1.0,
+            let hom = Projection::from_matrix([
+            root_two_inv, -root_two_inv, 50.0,
+            root_two_inv, root_two_inv, -70.0,
+            0.0, 0.0, 1.0,
         ])
-        .unwrap();
+            .unwrap();
 
         warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
@@ -279,10 +280,10 @@ fn test_affine_bicubic_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-            0.0         , 0.0          , 1.0,
+            let hom = Projection::from_matrix([
+            root_two_inv, -root_two_inv, 50.0,
+            root_two_inv, root_two_inv, -70.0,
+            0.0, 0.0, 1.0,
         ]).unwrap();
 
         warp(image, &hom, Interpolation::Bicubic, Rgb::black())
@@ -366,7 +367,7 @@ fn test_otsu_threshold() {
     use imageproc::contrast::{otsu_level, threshold};
     fn otsu_threshold(image: &GrayImage) -> GrayImage {
         let level = otsu_level(image);
-        threshold(image, level)
+        threshold(image, level, ThresholdType::ThreshBinary)
     }
     compare_to_truth("zebra.png", "zebra_otsu.png", otsu_threshold);
 }

@@ -102,10 +102,10 @@ pub enum Connectivity {
 ///
 /// // If this behaviour is not what you want then you can first
 /// // threshold the input image.
-/// use imageproc::contrast::threshold;
+/// use imageproc::contrast::{threshold, ThresholdType};
 ///
 /// // Pixels equal to the threshold are treated as background.
-/// let thresholded = threshold(&image, 0);
+/// let thresholded = threshold(&image, 0,ThresholdType::ThreshBinary);
 ///
 /// let thresholded_components_four = gray_image!(type: u32,
 ///     1, 0, 2, 2;

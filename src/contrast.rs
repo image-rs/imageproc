@@ -99,6 +99,21 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     best_threshold
 }
 
+/// type of the threshold operation, corresponding to opencv threshold type
+/// https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html#gaa9e58d2860d4afa658ef70a9b1115576
+pub enum ThresholdType {
+    /// `dst(x,y) = maxval if src(x,y) > thresh else 0`
+    ThreshBinary,
+    /// `dst(x,y) = 0 if src(x,y) > thresh else maxval`
+    ThreshBinaryInv,
+    /// `dst(x,y) = thresh if src(x,y) > thresh else src(x,y)`
+    ThreshTrunc,
+    /// `dst(x,y) = src(x,y) if src(x,y) > thresh else 0`
+    ThreshToZero,
+    /// `dst(x,y) = 0 if src(x,y) > thresh else src(x,y)`
+    ThreshToZeroInv,
+}
+
 /// Returns a binarized image from an input 8bpp grayscale image
 /// obtained by applying the given threshold. Pixels with intensity
 /// equal to the threshold are assigned to the background.
@@ -110,21 +125,42 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::contrast::threshold;
+/// use imageproc::contrast::ThresholdType;
 ///
 /// let image = gray_image!(
 ///     10, 80, 20;
 ///     50, 90, 70);
-///
-/// let thresholded = gray_image!(
+/// let binary_threshold = gray_image!(
 ///     0, 255,   0;
 ///     0, 255, 255);
+/// let binary_threshold_inv = gray_image!(
+///     255,   0, 255;
+///     255,   0,   0);
+/// let trunc_threshold = gray_image!(
+///     10, 50, 20;
+///     50, 50, 50);
+/// let to_zero_threshold = gray_image!(
+///     10,  0, 20;
+///     50,  0,  0);
+/// let to_zero_inv_threshold = gray_image!(
+///     0, 80,  0;
+///     0, 90, 70);
 ///
-/// assert_pixels_eq!(threshold(&image, 50), thresholded);
+/// let binary_thresholded = threshold(&image, 50, ThresholdType::ThreshBinary);
+/// let binary_thresholded_inv = threshold(&image, 50, ThresholdType::ThreshBinaryInv);
+/// let trunc_thresholded = threshold(&image, 50, ThresholdType::ThreshTrunc);
+/// let to_zero_thresholded = threshold(&image, 50, ThresholdType::ThreshToZero);
+/// let to_zero_inv_thresholded = threshold(&image, 50, ThresholdType::ThreshToZeroInv);
+/// assert_pixels_eq!(binary_threshold, binary_thresholded);
+/// assert_pixels_eq!(binary_threshold_inv, binary_thresholded_inv);
+/// assert_pixels_eq!(trunc_threshold, trunc_thresholded);
+/// assert_pixels_eq!(to_zero_threshold, to_zero_thresholded);
+/// assert_pixels_eq!(to_zero_inv_threshold, to_zero_inv_thresholded);
 /// # }
 /// ```
-pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
+pub fn threshold(image: &GrayImage, thresh: u8, threshold_type: ThresholdType) -> GrayImage {
     let mut out = image.clone();
-    threshold_mut(&mut out, thresh);
+    threshold_mut(&mut out, thresh, threshold_type);
     out
 }
 
@@ -139,23 +175,75 @@ pub fn threshold(image: &GrayImage, thresh: u8) -> GrayImage {
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::contrast::threshold_mut;
+/// use imageproc::contrast::ThresholdType;
 ///
 /// let mut image = gray_image!(
 ///     10, 80, 20;
 ///     50, 90, 70);
 ///
-/// let thresholded = gray_image!(
+/// let binary_threshold = gray_image!(
 ///     0, 255,   0;
 ///     0, 255, 255);
+/// let binary_threshold_inv = gray_image!(
+///     255,   0, 255;
+///     255,   0,   0);
+/// let trunc_threshold = gray_image!(
+///     10, 50, 20;
+///     50, 50, 50);
+/// let to_zero_threshold = gray_image!(
+///     10,  0, 20;
+///     50,  0,  0);
+/// let to_zero_inv_threshold = gray_image!(
+///     0, 80,  0;
+///     0, 90, 70);
 ///
-/// threshold_mut(&mut image, 50);
+/// let mut binary_thresholded=image.clone();
+/// let mut binary_thresholded_inv=image.clone();
+/// let mut trunc_thresholded=image.clone();
+/// let mut to_zero_thresholded=image.clone();
+/// let mut to_zero_inv_thresholded=image.clone();
+/// threshold_mut(&mut binary_thresholded, 50, ThresholdType::ThreshBinary);
+/// threshold_mut(&mut binary_thresholded_inv, 50, ThresholdType::ThreshBinaryInv);
+/// threshold_mut(&mut trunc_thresholded, 50, ThresholdType::ThreshTrunc);
+/// threshold_mut(&mut to_zero_thresholded, 50, ThresholdType::ThreshToZero);
+/// threshold_mut(&mut to_zero_inv_thresholded, 50, ThresholdType::ThreshToZeroInv);
 ///
-/// assert_pixels_eq!(image, thresholded);
+///
+///
+/// assert_pixels_eq!(binary_threshold, binary_thresholded);
+/// assert_pixels_eq!(binary_threshold_inv, binary_thresholded_inv);
+/// assert_pixels_eq!(trunc_threshold, trunc_thresholded);
+/// assert_pixels_eq!(to_zero_threshold, to_zero_thresholded);
+/// assert_pixels_eq!(to_zero_inv_threshold, to_zero_inv_thresholded);
 /// # }
 /// ```
-pub fn threshold_mut(image: &mut GrayImage, thresh: u8) {
-    for p in image.iter_mut() {
-        *p = if *p <= thresh { 0 } else { 255 };
+pub fn threshold_mut(image: &mut GrayImage, thresh: u8, threshold_type: ThresholdType) {
+    match threshold_type {
+        ThresholdType::ThreshBinary => {
+            for p in image.iter_mut() {
+                *p = if *p > thresh { 255 } else { 0 };
+            }
+        }
+        ThresholdType::ThreshBinaryInv => {
+            for p in image.iter_mut() {
+                *p = if *p > thresh { 0 } else { 255 };
+            }
+        }
+        ThresholdType::ThreshTrunc => {
+            for p in image.iter_mut() {
+                *p = if *p > thresh { thresh } else { *p };
+            }
+        }
+        ThresholdType::ThreshToZero => {
+            for p in image.iter_mut() {
+                *p = if *p > thresh { 0 } else { *p };
+            }
+        }
+        ThresholdType::ThreshToZeroInv => {
+            for p in image.iter_mut() {
+                *p = if *p > thresh { *p } else { 0 };
+            }
+        }
     }
 }
 
@@ -166,9 +254,9 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let total = hist[255] as f32;
 
     #[cfg(feature = "rayon")]
-    let iter = image.par_iter_mut();
+        let iter = image.par_iter_mut();
     #[cfg(not(feature = "rayon"))]
-    let iter = image.iter_mut();
+        let iter = image.iter_mut();
 
     iter.for_each(|p| {
         // JUSTIFICATION
@@ -477,21 +565,21 @@ mod tests {
     #[test]
     fn test_threshold_0_image_0() {
         let expected = 0u8;
-        let actual = threshold(&constant_image(10, 10, 0), 0);
+        let actual = threshold(&constant_image(10, 10, 0), 0, ThresholdType::ThreshBinary);
         assert_pixels_eq!(actual, constant_image(10, 10, expected));
     }
 
     #[test]
     fn test_threshold_0_image_1() {
         let expected = 255u8;
-        let actual = threshold(&constant_image(10, 10, 1), 0);
+        let actual = threshold(&constant_image(10, 10, 1), 0, ThresholdType::ThreshBinary);
         assert_pixels_eq!(actual, constant_image(10, 10, expected));
     }
 
     #[test]
     fn test_threshold_threshold_255_image_255() {
         let expected = 0u8;
-        let actual = threshold(&constant_image(10, 10, 255), 255);
+        let actual = threshold(&constant_image(10, 10, 255), 255, ThresholdType::ThreshBinary);
         assert_pixels_eq!(actual, constant_image(10, 10, expected));
     }
 
@@ -504,7 +592,7 @@ mod tests {
 
         let expected = GrayImage::from_raw(26, 1, expected_contents).unwrap();
 
-        let actual = threshold(&original, 125u8);
+        let actual = threshold(&original, 125u8, ThresholdType::ThreshBinary);
         assert_pixels_eq!(expected, actual);
     }
 
@@ -530,7 +618,7 @@ mod tests {
     fn bench_threshold(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let thresholded = threshold(&image, 125);
+            let thresholded = threshold(&image, 125, ThresholdType::ThreshBinary);
             black_box(thresholded);
         });
     }
@@ -539,7 +627,7 @@ mod tests {
     fn bench_threshold_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(500, 500);
         b.iter(|| {
-            threshold_mut(&mut image, 125);
+            threshold_mut(&mut image, 125, ThresholdType::ThreshBinary);
             black_box(());
         });
     }
