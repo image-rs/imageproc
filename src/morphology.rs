@@ -5,7 +5,7 @@
 use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
 };
-use image::GrayImage;
+use image::{GenericImageView, GrayImage, Luma};
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -347,6 +347,188 @@ pub fn close(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
 pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     dilate_mut(image, norm, k);
     erode_mut(image, norm, k);
+}
+
+/// A struct representing a mask used in morphological operations
+///
+/// the mask is represented by a list of the positions of its pixels
+/// relative to its center, with a maximum distance of 255
+/// along each axis.
+/// This means that in the most extreme case, the mask could have
+/// a size of 513 by 513 pixels.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Mask {
+    elements: Vec<(i16, i16)>,
+}
+
+impl Mask {
+    /// todo!()
+    pub fn square(radius: u8) -> Self {
+        Self {
+            elements: (-(radius as i16)..=(radius as i16))
+                .map(|x| (-(radius as i16)..=(radius as i16)).map(move |y| (x, y)))
+                .flatten()
+                .collect(),
+        }
+    }
+
+    /// todo!()
+    pub fn diamond(radius: u8) -> Self {
+        Self {
+            elements: (-(radius as i16)..=(radius as i16))
+                .map(|x| {
+                    ((x.abs() - radius as i16)..=(radius as i16 - x.abs())).map(move |y| (x, y))
+                })
+                .flatten()
+                .collect(),
+        }
+    }
+
+    /// todo!()
+    pub fn disk(radius: u8) -> Self {
+        let mut image = GrayImage::new(2 * radius as u32 + 1, 2 * radius as u32 + 1);
+        image.iter_mut().for_each(|p| *p = 0); // might not unnecessary
+        image.put_pixel(radius as u32, radius as u32, Luma::from([u8::MAX]));
+        dilate_mut(&mut image, Norm::L2, radius);
+        let im_ref = &image;
+        Self {
+            elements: (-(radius as i16)..=(radius as i16))
+                .map(|x| {
+                    (-(radius as i16)..=(radius as i16))
+                        .filter(move |&y| im_ref.get_pixel(x.clone() as u32, y as u32).0[0] != 0)
+                        .map(move |y| (x, y))
+                })
+                .flatten()
+                .collect(),
+        }
+    }
+
+    /// todo!()
+    pub fn from_image(image: &GrayImage, center_x: u8, center_y: u8) -> Self {
+        assert!(
+            (image.width() - center_x as u32) < (u8::MAX as u32),
+            "all pixels of the mask must be at most {} pixels from the center",
+            u8::MAX
+        );
+        assert!(
+            (image.height() - center_y as u32) < (u8::MAX as u32),
+            "all pixels of the mask must be at most {} pixels from the center",
+            u8::MAX
+        );
+        Self {
+            elements: (0..image.width() as i16)
+                .map(|x| {
+                    (0..(image.height() as i16))
+                        .filter(move |&y| image.get_pixel(x.clone() as u32, y as u32).0[0] != 0)
+                        .map(move |y| (x - center_x as i16, y - center_y as i16))
+                })
+                .flatten()
+                .collect(),
+        }
+    }
+
+    fn apply<'a, 'b: 'a, 'c: 'a>(
+        &'c self,
+        image: &'b GrayImage,
+        x: u32,
+        y: u32,
+    ) -> impl Iterator<Item = &'a Luma<u8>> {
+        self.elements
+            .iter()
+            .map(move |(i, j)| (x as i64 + *i as i64, y as i64 + *j as i64))
+            .filter(move |(i, j)| {
+                0 < *i && *i < image.width() as i64 && 0 < *j && *j < image.height() as i64
+            })
+            .map(move |(i, j)| image.get_pixel(i as u32, j as u32))
+    }
+}
+
+/// todo!()
+pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
+    #[cfg(feature = "rayon")]
+    let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .max()
+            .unwrap_or(u8::MAX)])
+    });
+    #[cfg(not(feature = "rayon"))]
+    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .max()
+            .unwrap_or(u8::MAX)])
+    });
+    result
+}
+
+/// todo!()
+pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
+    let dilated = grayscale_dilate(image, mask);
+    image
+        .iter_mut()
+        .zip(dilated.iter())
+        .for_each(|(dst, src)| *dst = *src);
+}
+
+/// todo!()
+pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
+    #[cfg(feature = "rayon")]
+    let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .min()
+            .unwrap_or(u8::MAX)])
+    });
+    #[cfg(not(feature = "rayon"))]
+    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .min()
+            .unwrap_or(u8::MAX)])
+    });
+    result
+}
+
+/// todo!()
+pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
+    let dilated = grayscale_dilate(image, mask);
+    image
+        .iter_mut()
+        .zip(dilated.iter())
+        .for_each(|(dst, src)| *dst = *src);
+}
+
+/// todo!()
+pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
+    grayscale_dilate(&grayscale_erode(image, mask), mask)
+}
+
+/// todo!()
+pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
+    let opened = grayscale_open(image, mask);
+    image
+        .iter_mut()
+        .zip(opened.iter())
+        .for_each(|(dst, src)| *dst = *src);
+}
+
+/// todo!()
+pub fn grayscale_close(image: &GrayImage, mask: &Mask) -> GrayImage {
+    grayscale_erode(&grayscale_dilate(image, mask), mask)
+}
+
+/// todo!()
+pub fn grayscale_close_mut(image: &mut GrayImage, mask: &Mask) {
+    let closed = grayscale_erode(&grayscale_dilate(image, mask), mask);
+    image
+        .iter_mut()
+        .zip(closed.iter())
+        .for_each(|(dst, src)| *dst = *src);
 }
 
 #[cfg(test)]
