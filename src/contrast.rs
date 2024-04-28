@@ -115,7 +115,7 @@ pub enum ThresholdType {
     ToZeroInverted,
 }
 
-/// Applies a threshold to each pixel in a grayscale image. The action taken depends on the provided `threshold_type` - see [`ThresholdType`].
+/// Applies a threshold to each pixel in a grayscale image. The action taken depends on `threshold_type` - see [`ThresholdType`].
 ///
 /// # Examples
 /// ```
@@ -181,7 +181,7 @@ pub fn threshold(image: &GrayImage, threshold: u8, threshold_type: ThresholdType
     out
 }
 
-/// Applies a threshold to each pixel in a grayscale image. The action taken depends on the provided `threshold_type` - see [`ThresholdType`].
+/// Applies a threshold to each pixel in a grayscale image. The action taken depends on `threshold_type` - see [`ThresholdType`].
 ///
 /// See [`threshold`] for a list of examples covering each `ThresholdType`.
 /// # Examples
