@@ -336,7 +336,7 @@ impl HistSet {
         }
     }
 
-    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT < self.data.len()
+    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT <= self.data.len()
     unsafe fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
         P: Pixel<Subpixel = u8>,
@@ -350,7 +350,7 @@ impl HistSet {
         }
     }
 
-    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT < self.data.len()
+    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT <= self.data.len()
     unsafe fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
         P: Pixel<Subpixel = u8>,
