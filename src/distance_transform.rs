@@ -6,29 +6,24 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::cmp::min;
 
 /// How to measure distance between coordinates.
-/// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
-///
-/// Note that this enum doesn't currently include the `L2` norm. As `Norm`
-/// is used by the [`morphology`](../morphology/index.html) functions, this means that we
-/// don't support using the `L2` norm for any of those functions.
-///
-/// This module does support calculating the `L2` distance function, via the
-/// [`euclidean_squared_distance_transform`](fn.euclidean_squared_distance_transform.html)
-/// function, but the signature of this function is not currently compatible with those for
-/// computing `L1` and `LInf` distance transforms. It would be nice to unify these functions
-/// in future.
+/// See [`distance_transform`] for examples.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Norm {
-    /// Defines d((x1, y1), (x2, y2)) to be abs(x1 - x2) + abs(y1 - y2).
+    /// `d((x1, y1), (x2, y2)) = abs(x1 - x2) + abs(y1 - y2)`
+    ///
     /// Also known as the Manhattan or city block norm.
     L1,
-    /// Defines d((x1, y1), (x2, y2)) to be sqrt((x1 - x2)^2 + (y1 - y2)^2).
+    /// `d((x1, y1), (x2, y2)) = sqrt((x1 - x2)^2 + (y1 - y2)^2)`
+    ///
     /// Also known as the Euclidean norm.
-    /// when working with integer distances, we take the smallest
-    /// greater integer value, also know as 'ceiling'
-    /// example : d((0,0),(1,2)) = ceil(sqrt(1+2^2)) = ceil(2.236...) = 3
+    ///
+    /// Note that both [`distance_transform`] and the functions in the [`morphology`](crate::morphology)
+    /// module represent distances as integer values, so cannot accurately represent `L2` norms. Instead,
+    /// these functions approximate the `L2` norm by taking the ceiling of the true value. If you want accurate
+    /// distances then use [`euclidean_squared_distance_transform`] instead, which returns floating point values.
     L2,
-    /// Defines d((x1, y1), (x2, y2)) to be max(abs(x1 - x2), abs(y1 - y2)).
+    /// `d((x1, y1), (x2, y2)) = max(abs(x1 - x2), abs(y1 - y2))`
+    ///
     /// Also known as the chessboard norm.
     LInf,
 }
@@ -37,6 +32,9 @@ pub enum Norm {
 ///
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image
 /// has a bit-depth of 8, distances saturate at 255.
+///
+/// When using `Norm::L2` this function returns the ceiling of the true distances.
+/// Use [`euclidean_squared_distance_transform`] if you need floating point distances.
 ///
 /// # Examples
 /// ```
@@ -101,7 +99,10 @@ pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image has a bit-depth of 8,
 /// distances saturate at 255.
 ///
-/// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
+/// When using `Norm::L2` this function returns the ceiling of the true distances.
+/// Use [`euclidean_squared_distance_transform`] if you need floating point distances.
+///
+/// See [`distance_transform`] for examples.
 pub fn distance_transform_mut(image: &mut GrayImage, norm: Norm) {
     distance_transform_impl(image, norm, DistanceFrom::Foreground);
 }
