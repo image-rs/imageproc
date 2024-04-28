@@ -41,7 +41,9 @@ use image::GrayImage;
 /// assert_pixels_eq!(dilate(&image, Norm::L1, 1), l1_dilated);
 ///
 /// // L2 norm
-/// // (note that L2 behaves identically to L1 for distances of 2 or less)
+/// //
+/// // When computing distances using the L2 norm we take the ceiling of the true values.
+/// // This means that using the L2 norm gives the same results as the L1 norm for `k <= 2`.
 /// let l2_dilated = gray_image!(
 ///    0,   0,   0,   0,   0;
 ///    0,   0, 255,   0,   0;
@@ -125,9 +127,10 @@ pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 ///
 /// assert_pixels_eq!(erode(&image, Norm::L1, 1), l1_eroded);
 ///
-/// // L2 norm - all foreground pixels within a distance of n or less
-/// // of a background pixel are eroded.
-/// // (note that L2 behaves identically to L1 for distances of 2 or less)
+/// // L2 norm
+/// //
+/// // When computing distances using the L2 norm we take the ceiling of the true values.
+/// // This means that using the L2 norm gives the same results as the L1 norm for `k <= 2`.
 /// let l2_eroded = gray_image!(
 ///     0,   0,   0,   0,   0,   0,   0,   0,  0;
 ///     0,   0,   0,   0,   0,   0,   0,   0,  0;
@@ -366,10 +369,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let dilated = dilate(&image, Norm::L1, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(dilated, expected);
+        assert_pixels_eq!(dilated, image);
     }
 
     #[test]
@@ -390,7 +390,6 @@ mod tests {
               0,   0, 255,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -412,7 +411,6 @@ mod tests {
               0, 255, 255, 255,   0;
               0,   0, 255,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -456,10 +454,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let dilated = dilate(&image, Norm::L2, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(dilated, expected);
+        assert_pixels_eq!(dilated, image);
     }
 
     #[test]
@@ -480,7 +475,6 @@ mod tests {
               0,   0, 255,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -502,7 +496,6 @@ mod tests {
               0, 255, 255, 255,   0;
               0,   0, 255,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -532,7 +525,6 @@ mod tests {
               0,   0, 255, 255, 255, 255, 255,   0,   0;
               0,   0,   0,   0, 255,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -546,10 +538,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let dilated = dilate(&image, Norm::LInf, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(dilated, expected);
+        assert_pixels_eq!(dilated, image);
     }
 
     #[test]
@@ -570,7 +559,6 @@ mod tests {
               0, 255, 255, 255,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -592,7 +580,6 @@ mod tests {
             255, 255, 255, 255, 255;
             255, 255, 255, 255, 255
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -622,7 +609,6 @@ mod tests {
             255, 255, 255, 255, 255, 255, 255, 255, 255;
             255, 255, 255, 255, 255, 255, 255, 255, 255
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -636,10 +622,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let eroded = erode(&image, Norm::L1, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(eroded, expected);
+        assert_pixels_eq!(eroded, image);
     }
 
     #[test]
@@ -660,7 +643,6 @@ mod tests {
               0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(eroded, expected);
     }
 
@@ -690,7 +672,6 @@ mod tests {
             255, 255, 255, 255,   0,   0,   0,   0,   0;
             255, 255, 255, 255,   0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -704,10 +685,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let eroded = erode(&image, Norm::L2, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(eroded, expected);
+        assert_pixels_eq!(eroded, image);
     }
 
     #[test]
@@ -728,7 +706,6 @@ mod tests {
               0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(eroded, expected);
     }
 
@@ -758,7 +735,6 @@ mod tests {
             255, 255, 255, 255,   0,   0,   0,   0,   0;
             255, 255, 255, 255,   0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(dilated, expected);
     }
 
@@ -772,10 +748,7 @@ mod tests {
               0,   0,   0,   0,   0
         );
         let eroded = erode(&image, Norm::LInf, 0);
-
-        let expected = image;
-
-        assert_pixels_eq!(eroded, expected);
+        assert_pixels_eq!(eroded, image);
     }
 
     #[test]
@@ -796,7 +769,6 @@ mod tests {
               0,   0,   0,   0,   0;
               0,   0,   0,   0,   0
         );
-
         assert_pixels_eq!(eroded, expected);
     }
 
