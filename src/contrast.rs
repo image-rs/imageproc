@@ -100,7 +100,8 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
 }
 
 /// type of the threshold operation, corresponding to opencv threshold type
-/// https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html#gaa9e58d2860d4afa658ef70a9b1115576
+///
+/// `<https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html#gaa9e58d2860d4afa658ef70a9b1115576>`
 pub enum ThresholdType {
     /// `dst(x,y) = maxval if src(x,y) > thresh else 0`
     ThreshBinary,
@@ -254,9 +255,9 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let total = hist[255] as f32;
 
     #[cfg(feature = "rayon")]
-        let iter = image.par_iter_mut();
+    let iter = image.par_iter_mut();
     #[cfg(not(feature = "rayon"))]
-        let iter = image.iter_mut();
+    let iter = image.iter_mut();
 
     iter.for_each(|p| {
         // JUSTIFICATION
@@ -579,7 +580,11 @@ mod tests {
     #[test]
     fn test_threshold_threshold_255_image_255() {
         let expected = 0u8;
-        let actual = threshold(&constant_image(10, 10, 255), 255, ThresholdType::ThreshBinary);
+        let actual = threshold(
+            &constant_image(10, 10, 255),
+            255,
+            ThresholdType::ThreshBinary,
+        );
         assert_pixels_eq!(actual, constant_image(10, 10, expected));
     }
 

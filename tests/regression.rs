@@ -17,6 +17,7 @@ use image::{
     DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
     RgbaImage,
 };
+use imageproc::contrast::ThresholdType;
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -26,7 +27,6 @@ use imageproc::{
     utils::load_image_or_panic,
 };
 use std::{env, f32, path::Path};
-use imageproc::contrast::ThresholdType;
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &str = "./tests/data";
@@ -64,10 +64,10 @@ impl FromDynamic for RgbaImage {
 
 /// Loads an input image, applies a function to it and checks that the result matches a 'truth' image.
 fn compare_to_truth<P, F>(input_file_name: &str, truth_file_name: &str, op: F)
-    where
-        P: Pixel<Subpixel=u8> + PixelWithColorType,
-        ImageBuffer<P, Vec<u8>>: FromDynamic,
-        F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
+where
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
     compare_to_truth_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
@@ -80,7 +80,7 @@ fn compare_to_truth_with_tolerance<P, F>(
     op: F,
     tol: u8,
 ) where
-    P: Pixel<Subpixel=u8> + PixelWithColorType,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
     F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
 {
@@ -93,9 +93,9 @@ fn compare_to_truth_with_tolerance<P, F>(
 
 /// Checks that an image matches a 'truth' image.
 fn compare_to_truth_image<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str)
-    where
-        P: Pixel<Subpixel=u8> + PixelWithColorType,
-        ImageBuffer<P, Vec<u8>>: FromDynamic,
+where
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
+    ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     compare_to_truth_image_with_tolerance(actual, truth_file_name, 0u8);
 }
@@ -106,7 +106,7 @@ fn compare_to_truth_image_with_tolerance<P>(
     truth_file_name: &str,
     tol: u8,
 ) where
-    P: Pixel<Subpixel=u8> + PixelWithColorType,
+    P: Pixel<Subpixel = u8> + PixelWithColorType,
     ImageBuffer<P, Vec<u8>>: FromDynamic,
 {
     if should_regenerate() {
