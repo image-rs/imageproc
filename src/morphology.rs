@@ -6,6 +6,7 @@ use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
 };
 use image::{GenericImageView, GrayImage, Luma};
+use itertools::Itertools;
 use num::pow::Pow;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
@@ -363,16 +364,155 @@ pub struct Mask {
 }
 
 impl Mask {
-    /// todo!()
-    pub fn square(radius: u8) -> Self {
+    /// creates a mask from a grayscale image
+    ///
+    /// a pixel is part of the mask if and only if it is non-zero
+    ///
+    /// `center_x` and `center_y` define the coordinates of the center of the mask.
+    /// They may take any value, including outside of the bounds of the input image,
+    /// but all pixels of the mask must be at most 255 pixels away from the center.
+    ///
+    /// For example, if `center_x` was 10 and center `center_y` was 40,
+    /// the width of the image would have to be at most 266, and its height at most 296
+    ///
+    /// # Panics
+    /// if there is a pixel which is 256 pixels or more away from the center along either direction
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate image;
+    /// # #[macro_use]
+    /// # extern crate imageproc;
+    /// # fn main() {
+    /// use imageproc::morphology::Mask;
+    ///
+    ///
+    /// let ring_mask_base = gray_image!(
+    ///     100,  75, 255, 222;
+    ///      84,   0,   0,   1;
+    ///      99,   0,   0,  22;
+    ///     255,   7, 255,  20
+    /// );
+    ///
+    /// let ring_mask_inside = Mask::from_image(&ring_mask_base, 1, 1);
+    ///
+    /// // two different images with identical zeroes will create the same mask
+    /// let other_ring_mask_base = gray_image!(
+    ///      10, 172,  13,   5;
+    ///      45,   0,   0, 101;
+    ///     222,   0,   0,  93;
+    ///       1,   7, 212,  35
+    /// );
+    ///
+    /// assert_eq!(ring_mask_inside, Mask::from_image(&other_ring_mask_base, 1, 1));
+    ///
+    /// // using two identical images with different centers will usually make different masks
+    /// assert_ne!(Mask::from_image(&ring_mask_base, 1, 1), Mask::from_image(&ring_mask_base, 2, 2));
+    ///
+    /// // the center may be out of the image bound
+    /// let ring_mask_outside = Mask::from_image(&ring_mask_base, 8, 8);
+    ///
+    /// // but all pixels must be at most 255 pixels away from the center
+    /// // the code below will panic :
+    /// // let some_mask = Mask::from_image(&GrayImage::new(300, 300), 2, 2);
+    /// // this one won't :
+    /// // let some_mask = Mask::from_image(&GrayImage::new(300, 300), 200, 200);
+    /// # }
+    /// ```
+    pub fn from_image(image: &GrayImage, center_x: u8, center_y: u8) -> Self {
+        assert!(
+            (image.width() as i64 - center_x as i64) < (u8::MAX as i64),
+            "all pixels of the mask must be at most 255 pixels from the center"
+        );
+        assert!(
+            (image.height() as i64 - center_y as i64) < (u8::MAX as i64),
+            "all pixels of the mask must be at most 255 pixels from the center"
+        );
         Self {
-            elements: (-(radius as i16)..=(radius as i16))
-                .flat_map(|x| (-(radius as i16)..=(radius as i16)).map(move |y| (x, y)))
+            elements: (0..image.width() as i16)
+                .cartesian_product(0..(image.height() as i16))
+                .filter_map(|(x, y)| {
+                    (image.get_pixel(x as u32, y as u32).0[0] != 0)
+                        .then(|| (x - center_x as i16, y - center_y as i16))
+                })
                 .collect(),
         }
     }
 
-    /// todo!()
+    /// creates a square-shaped mask
+    ///
+    /// the mask contains exactly all the pixels `radius` pixels or less
+    /// away from the center according to the `Linf` norm.
+    ///
+    /// therefore, `square(0)` will make a 1x1 square, `square(1)` a 3x3 square, etc...
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate image;
+    /// # #[macro_use]
+    /// # extern crate imageproc;
+    /// # fn main() {
+    /// use imageproc::morphology::Mask;
+    ///
+    /// let single_pixel = gray_image!(100);
+    ///
+    /// assert_eq!(Mask::square(0), Mask::from_image(&single_pixel, 0, 0));
+    ///
+    /// let three_by_three_mask_base = gray_image!(
+    ///     100, 154, 222;
+    ///     184, 184, 211;
+    ///     255, 127, 255
+    /// );
+    ///
+    /// assert_eq!(Mask::square(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
+    /// # }
+    /// ```
+    pub fn square(radius: u8) -> Self {
+        let range = -(radius as i16)..=(radius as i16);
+        Self {
+            elements: range.clone().cartesian_product(range).collect(),
+        }
+    }
+
+    /// creates a diamond-shaped mask
+    ///
+    /// the mask contains exactly all the pixels `radius` pixels or less
+    /// away from the center according to the `L1` norm.
+    ///
+    /// therefore, `diamond(0)` will make a 1x1 square, `diamond(1)` a 3x3 cross,
+    /// `diamond(2)` a 5x5 diamond, `diamond(3)` a 7x7 diamond, etc...
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate image;
+    /// # #[macro_use]
+    /// # extern crate imageproc;
+    /// # fn main() {
+    /// use imageproc::morphology::Mask;
+    ///
+    /// let single_pixel = gray_image!(100);
+    ///
+    /// assert_eq!(Mask::diamond(0), Mask::from_image(&single_pixel, 0, 0));
+    ///
+    /// let three_by_three_mask_base = gray_image!(
+    ///       0, 255,   0;
+    ///      84, 204, 101;
+    ///       0, 217,   0
+    /// );
+    ///
+    /// assert_eq!(Mask::diamond(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
+    ///
+    /// let five_by_five_mask_base = gray_image!(
+    ///       0,   0, 255,   0,   0;
+    ///       0, 231, 204, 101,   0;
+    ///     149, 193, 188, 137, 199;
+    ///       0, 222, 182, 114,   0;
+    ///       0,   0, 217,   0,   0
+    /// );
+    ///
+    /// assert_eq!(Mask::diamond(2), Mask::from_image(&five_by_five_mask_base, 2, 2));
+    /// # }
+    /// ```
     pub fn diamond(radius: u8) -> Self {
         Self {
             elements: (-(radius as i16)..=(radius as i16))
@@ -383,40 +523,70 @@ impl Mask {
         }
     }
 
-    /// todo!()
+    /// creates a disk-shaped mask
+    ///
+    /// the mask contains exactly all the pixels `radius` pixels or less
+    /// away from the center according to the `L2` norm.
+    ///
+    /// When computing distances using the L2 norm we take the ceiling of the true values.
+    /// This means that using the L2 norm gives the same results as the L1 norm for `radius <= 2`.
+    ///
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate image;
+    /// # #[macro_use]
+    /// # extern crate imageproc;
+    /// # fn main() {
+    /// use imageproc::morphology::Mask;
+    ///
+    /// let single_pixel = gray_image!(100);
+    ///
+    /// assert_eq!(Mask::disk(0), Mask::from_image(&single_pixel, 0, 0));
+    ///
+    /// let three_by_three_mask_base = gray_image!(
+    ///       0, 255,   0;
+    ///      84, 204, 101;
+    ///       0, 217,   0
+    /// );
+    ///
+    /// assert_eq!(Mask::disk(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
+    ///
+    /// let five_by_five_mask_base = gray_image!(
+    ///       0,   0, 255,   0,   0;
+    ///       0, 231, 204, 101,   0;
+    ///     149, 193, 188, 137, 199;
+    ///       0, 222, 182, 114,   0;
+    ///       0,   0, 217,   0,   0
+    /// );
+    ///
+    /// assert_eq!(Mask::disk(2), Mask::from_image(&five_by_five_mask_base, 2, 2));
+    ///
+    /// // disk() finally separates from diamond() at a radius of 3
+    ///
+    /// let seven_by_seven_mask_base = gray_image!(
+    ///       0,   0,   0, 255,   0,   0,   0;
+    ///       0, 217, 188, 101, 222, 137,   0;
+    ///       0, 231, 204, 255, 182, 193,   0;
+    ///     149, 193, 101, 188, 217, 149, 114;
+    ///       0, 217, 188, 231, 222, 137,   0;
+    ///       0, 101, 204, 222, 255, 193,   0;
+    ///       0,   0,   0, 182,   0,   0,   0
+    /// );
+    ///
+    /// assert_eq!(Mask::disk(3), Mask::from_image(&seven_by_seven_mask_base, 3, 3));
+    ///
+    /// # }
+    /// ```
     pub fn disk(radius: u8) -> Self {
+        let range = -(radius as i16)..=(radius as i16);
         Self {
-            elements: (-(radius as i16)..=(radius as i16))
-                .flat_map(|x| {
-                    (-(radius as i16)..=(radius as i16))
-                        .filter(move |&y| {
-                            (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
-                                <= (radius as u32).pow(2)
-                        })
-                        .map(move |y| (x, y))
-                })
-                .collect(),
-        }
-    }
-
-    /// todo!()
-    pub fn from_image(image: &GrayImage, center_x: u8, center_y: u8) -> Self {
-        assert!(
-            (image.width() - center_x as u32) < (u8::MAX as u32),
-            "all pixels of the mask must be at most {} pixels from the center",
-            u8::MAX
-        );
-        assert!(
-            (image.height() - center_y as u32) < (u8::MAX as u32),
-            "all pixels of the mask must be at most {} pixels from the center",
-            u8::MAX
-        );
-        Self {
-            elements: (0..image.width() as i16)
-                .flat_map(|x| {
-                    (0..(image.height() as i16))
-                        .filter(move |&y| image.get_pixel(x as u32, y as u32).0[0] != 0)
-                        .map(move |y| (x - center_x as i16, y - center_y as i16))
+            elements: range
+                .clone()
+                .cartesian_product(range)
+                .filter(|(x, y)| {
+                    (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
+                        <= (radius as u32).pow(2)
                 })
                 .collect(),
         }
