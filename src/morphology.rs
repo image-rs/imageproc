@@ -431,10 +431,8 @@ impl Mask {
         Self {
             elements: (0..image.width() as i16)
                 .cartesian_product(0..(image.height() as i16))
-                .filter_map(|(x, y)| {
-                    (image.get_pixel(x as u32, y as u32).0[0] != 0)
-                        .then(|| (x - center_x as i16, y - center_y as i16))
-                })
+                .filter(|(x, y)| image.get_pixel(*x as u32, *y as u32).0[0] != 0)
+                .map(|(x, y)| (x - center_x as i16, y - center_y as i16))
                 .collect(),
         }
     }
