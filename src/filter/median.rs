@@ -118,8 +118,8 @@ where
     }
 
     // Safety note: we perform unchecked indexing in several places after checking at type i32 that a coordinate is in bounds
-    if width > i32::MAX as u32 || height > i32::MAX as u32 {
-        panic!("Image width and height must both be <= i32::MAX");
+    if (width + x_radius) > i32::MAX as u32 || (height + y_radius) > i32::MAX as u32 {
+        panic!("(width + x_radius) and (height + y_radius) must both be <= i32::MAX");
     }
 
     let mut out = Image::<P>::new(width, height);
@@ -187,9 +187,9 @@ where
     let rx = rx as i32;
     let ry = ry as i32;
 
-    // Safety note: 0 <= prev_x <= width - rx - 1 < width
+    // Safety note: 0 <= prev_x < width - rx - 1 < width
     let prev_x = max(0, x as i32 - rx - 1) as u32;
-    // Safety note: 0 <= x <= next_x <= width - 1
+    // Safety note: 0 <= x + rx <= next_x <= width - 1
     let next_x = min(x as i32 + rx, width as i32 - 1) as u32;
 
     for dy in -ry..(ry + 1) {
