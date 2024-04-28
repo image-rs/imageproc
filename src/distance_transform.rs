@@ -114,8 +114,8 @@ pub(crate) enum DistanceFrom {
 
 pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom) {
     match norm {
-        Norm::LInf => distance_transform_impl_linf(image, from),
-        Norm::L1 => distance_transform_impl_l1(image, from),
+        Norm::LInf => distance_transform_impl_linf_or_l1::<true>(image, from),
+        Norm::L1 => distance_transform_impl_linf_or_l1::<false>(image, from),
         Norm::L2 => {
             match from {
                 DistanceFrom::Foreground => (),
@@ -131,21 +131,6 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                 .for_each(|(u, v)| *u = v.sqrt().clamp(0.0, 255.0).ceil() as u8);
         }
     }
-}
-
-#[inline(always)]
-fn distance_transform_impl_linf(image: &mut GrayImage, from: DistanceFrom) {
-    // the boolean generic parameter "IS_LINF" allows
-    // for there to be one compiled fuction per norm,
-    // reducing the number of if statements evaluated at runtime
-    distance_transform_impl_linf_or_l1::<true>(image, from)
-}
-#[inline(always)]
-fn distance_transform_impl_l1(image: &mut GrayImage, from: DistanceFrom) {
-    // the boolean generic parameter "IS_LINF" allows
-    // for there to be one compiled fuction per norm,
-    // reducing the number of if statements evaluated at runtime
-    distance_transform_impl_linf_or_l1::<false>(image, from)
 }
 
 fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
@@ -184,7 +169,6 @@ fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
                     check(image, x, y, x, y - 1);
 
                     if IS_LINF {
-                        // this 'if' statement will be compiled away because IS_LINF is a const
                         if x > 0 {
                             check(image, x, y, x - 1, y - 1);
                         }
@@ -207,7 +191,6 @@ fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
                     check(image, x, y, x, y + 1);
 
                     if IS_LINF {
-                        // this 'if' statement will be compiled away because IS_LINF is a const
                         if x < image.width() - 1 {
                             check(image, x, y, x + 1, y + 1);
                         }
