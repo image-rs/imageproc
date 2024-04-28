@@ -6,6 +6,7 @@ use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
 };
 use image::{GenericImageView, GrayImage, Luma};
+use num::pow::Pow;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -384,16 +385,11 @@ impl Mask {
 
     /// todo!()
     pub fn disk(radius: u8) -> Self {
-        let mut image = GrayImage::new(2 * radius as u32 + 1, 2 * radius as u32 + 1);
-        image.iter_mut().for_each(|p| *p = 0); // might not unnecessary
-        image.put_pixel(radius as u32, radius as u32, Luma::from([u8::MAX]));
-        dilate_mut(&mut image, Norm::L2, radius);
-        let im_ref = &image;
         Self {
             elements: (-(radius as i16)..=(radius as i16))
                 .flat_map(|x| {
                     (-(radius as i16)..=(radius as i16))
-                        .filter(move |&y| im_ref.get_pixel(x as u32, y as u32).0[0] != 0)
+                        .filter(move |&y| (x.abs() as u32).pow(2) + (y.abs() as u32).pow(2) <= (radius as u32).pow(2) )
                         .map(move |y| (x, y))
                 })
                 .collect(),
