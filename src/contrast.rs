@@ -142,7 +142,7 @@ pub enum ThresholdType {
 /// let threshold_binary_inverted = gray_image!(
 ///     255,   0, 255;
 ///     255,   0,   0);
-/// 
+///
 /// assert_pixels_eq!(
 ///     threshold(&image, 50, ThresholdType::BinaryInverted),
 ///     threshold_binary_inverted);
