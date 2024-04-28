@@ -13,10 +13,13 @@
 #[macro_use]
 extern crate imageproc;
 
+use std::{env, f32, path::Path};
+
 use image::{
     DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
     RgbaImage,
 };
+
 use imageproc::contrast::ThresholdType;
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
@@ -26,7 +29,6 @@ use imageproc::{
     gradients,
     utils::load_image_or_panic,
 };
-use std::{env, f32, path::Path};
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &str = "./tests/data";
@@ -239,11 +241,10 @@ fn test_affine_nearest_rgb() {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
             let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv, 50.0,
-            root_two_inv, root_two_inv, -70.0,
-            0.0, 0.0, 1.0,
-        ])
-            .unwrap();
+            root_two_inv, -root_two_inv,  50.0,
+            root_two_inv,  root_two_inv, -70.0,
+                     0.0,           0.0,   1.0,
+        ]).unwrap();
         warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth(
@@ -367,7 +368,7 @@ fn test_otsu_threshold() {
     use imageproc::contrast::{otsu_level, threshold};
     fn otsu_threshold(image: &GrayImage) -> GrayImage {
         let level = otsu_level(image);
-        threshold(image, level, ThresholdType::ThreshBinary)
+        threshold(image, level, ThresholdType::Binary)
     }
     compare_to_truth("zebra.png", "zebra_otsu.png", otsu_threshold);
 }
