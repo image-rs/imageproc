@@ -2,7 +2,7 @@
 
 use crate::contrast;
 use crate::definitions::{HasBlack, HasWhite};
-use crate::filter::{gaussian_blur_f32, Laplacian};
+use crate::filter::{gaussian_blur_f32, laplacian_filter};
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::f32;
@@ -158,78 +158,29 @@ fn hysteresis(
     out
 }
 
-/// A builder for the Laplacian edge detection algorithm.
-/// This LaplacianEdgeDetector builder provides a flexible and convenient way to perform edge detection
-/// on grayscale images using the Laplacian filter. It supports optional parameters such as custom
-/// Gaussian blur sigma, diagonal adjustment for the Laplacian kernel, and a custom threshold for edge
-/// detection. The builder pattern makes it easy to configure and apply the edge detection algorithm
-/// with a fluent and readable syntax.
-pub struct LaplacianEdgeDetector<'a> {
-    image: &'a GrayImage,
-    sigma: Option<f32>,
-    diagonal_adjustment: bool,
-    threshold: Option<u8>,
-}
+/// Detects edges in a grayscale image using a Laplacian edge detector with Gaussian smoothing and Otsu thresholding.
+///
+/// # Arguments
+///
+/// * `image` - The grayscale image to be processed.
+///
+/// # Return value
+///
+/// A binary grayscale image where pixels belonging to edges are white and pixels not belonging to edges are black.
+///
+/// # Details
+///
+/// The Laplacian edge detector is applied to the image smoothed with a Gaussian filter with standard deviation `sigma`. The threshold for binarization is calculated using Otsu's method, which maximizes the variance between pixel intensity classes.
+pub fn laplacian_edge_detector(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+    let signma = 1.4;
 
-impl<'a> LaplacianEdgeDetector<'a> {
-    /// Creates a new LaplacianEdgeDetector with the specified grayscale image.
-    ///
-    /// # Arguments
-    /// * image - A reference to the grayscale image on which edge detection will be performed.
-    pub fn new(image: &'a GrayImage) -> Self {
-        Self {
-            image,
-            sigma: None,
-            diagonal_adjustment: false,
-            threshold: None,
-        }
-    }
+    let blurred_img = gaussian_blur_f32(image, signma);
 
-    /// Sets the standard deviation (sigma) of the Gaussian blur applied before edge detection.
-    ///
-    /// # Arguments
-    /// * sigma - The standard deviation of the Gaussian blur.
-    pub fn sigma(mut self, sigma: f32) -> Self {
-        self.sigma = Some(sigma);
-        self
-    }
+    let laplacian_img = laplacian_filter(&blurred_img);
 
-    /// Enables diagonal adjustment for the Laplacian kernel.
-    pub fn diagonal_adjustment(mut self) -> Self {
-        self.diagonal_adjustment = true;
-        self
-    }
+    let otsu_threshold = contrast::otsu_level(&laplacian_img);
 
-    /// Sets a custom threshold for edge detection.
-    ///
-    /// # Arguments
-    /// * threshold - The custom threshold value.
-    pub fn threshold(mut self, threshold: u8) -> Self {
-        self.threshold = Some(threshold);
-        self
-    }
-
-    /// Applies the Laplacian edge detection algorithm and returns the resulting image.
-    ///
-    /// # Returns
-    /// * An ImageBuffer containing the result of the edge detection.
-    pub fn apply(self) -> ImageBuffer<Luma<u8>, Vec<u8>> {
-        let sigma = self.sigma.unwrap_or(1.4);
-        let blurred_img = gaussian_blur_f32(self.image, sigma);
-
-        let laplacian_img = if self.diagonal_adjustment {
-            Laplacian::new(&blurred_img).diagonal_adjustment().apply()
-        } else {
-            Laplacian::new(&blurred_img).apply()
-        };
-
-        if let Some(threshold) = self.threshold {
-            contrast::threshold(&laplacian_img, threshold)
-        } else {
-            let otsu_threshold = contrast::otsu_level(&laplacian_img);
-            contrast::threshold(&laplacian_img, otsu_threshold)
-        }
-    }
+    contrast::threshold(&laplacian_img, otsu_threshold)
 }
 
 #[cfg(test)]
