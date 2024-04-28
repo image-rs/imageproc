@@ -1123,7 +1123,7 @@ mod tests {
         assert_approx_eq!(out.1, 5.0, 1e-10);
     }
 
-    #[cfg_attr(miri, ignore = "Miri detected UB in dependencies")]
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
     #[test]
     fn test_from_control_points() {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
