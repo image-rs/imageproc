@@ -389,7 +389,10 @@ impl Mask {
             elements: (-(radius as i16)..=(radius as i16))
                 .flat_map(|x| {
                     (-(radius as i16)..=(radius as i16))
-                        .filter(move |&y| (x.abs() as u32).pow(2) + (y.abs() as u32).pow(2) <= (radius as u32).pow(2) )
+                        .filter(move |&y| {
+                            (x.abs() as u32).pow(2) + (y.abs() as u32).pow(2)
+                                <= (radius as u32).pow(2)
+                        })
                         .map(move |y| (x, y))
                 })
                 .collect(),
