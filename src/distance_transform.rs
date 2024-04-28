@@ -19,7 +19,7 @@ pub enum Norm {
     ///
     /// Note that both [`distance_transform`] and the functions in the [`morphology`](crate::morphology)
     /// module represent distances as integer values, so cannot accurately represent `L2` norms. Instead,
-    /// these functions approx the `L2` norm by taking the ceiling of the true value. If you want accurate
+    /// these functions approximate the `L2` norm by taking the ceiling of the true value. If you want accurate
     /// distances then use [`euclidean_squared_distance_transform`] instead, which returns floating point values.
     L2,
     /// `d((x1, y1), (x2, y2)) = max(abs(x1 - x2), abs(y1 - y2))`
