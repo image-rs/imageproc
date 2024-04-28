@@ -282,7 +282,7 @@ fn slide_up_column<P>(
     unsafe {
         hist.set_to_median(out, x, height - 1);
     }
-    
+
     for y in (0..(height - 1)).rev() {
         // Safety note: 0 < ry + 1 <= prev_y <= height - 1
         let prev_y = min(y as i32 + ry + 1, height as i32 - 1) as u32;
