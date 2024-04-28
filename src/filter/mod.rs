@@ -564,7 +564,9 @@ where
     }
 }
 
-fn laplacian_filter(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+/// Apply a Laplacian filter to an image.
+#[must_use = "the function does not modify the original image"]
+pub fn laplacian_filter(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
     filter3x3(image, &[1, 1, 1, 1, -8, 1, 1, 1, 1])
 }
 
