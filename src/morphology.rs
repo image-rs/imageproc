@@ -836,12 +836,69 @@ pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
         .for_each(|(dst, src)| *dst = *src);
 }
 
-/// todo!()
+/// Grayscale erosion followed by grayscale dilation.
+///
+/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// and [`grayscale_erode`](fn.grayscale_erode.html)
+/// documentation for definitions of dilation and erosion.
+/// 
+////// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+/// use imageproc::morphology::{Mask, grayscale_open};
+///
+/// // Isolated regions of foreground pixels are removed,
+/// // while isolated zones of background pixels are maintaned
+/// let image = gray_image!(
+///   100,  99,  99,  99, 222,  99;
+///    99,  99,  99, 222, 222, 222;
+///    99,   7,  99,  99, 222,  99;
+///     7,   7,   7,  99,  99,  99;
+///    99,   7,  99,  99,  99,  99
+/// );
+///
+/// // Isolated regions of foreground pixels are removed,
+/// // while isolated zones of background are maintaned
+/// let image_opened = gray_image!(
+///    99,  99,  99,  99,  99,  99;
+///    99,  99,  99,  99,  99,  99;
+///     7,   7,  99,  99,  99,  99;
+///     7,   7,   7,  99,  99,  99;
+///     7,   7,   7,  99,  99,  99
+/// );
+///
+/// assert_pixels_eq!(grayscale_open(&image, &Mask::square(1)), image_opened);
+/// 
+/// // because it is a morhological operator, applying the same 
+/// // opening a second time doesn't do anything
+/// assert_pixels_eq!(grayscale_open(&image_opened, &Mask::square(1)), image_opened);
+///
+/// // which regions are removed depends on the mask used
+/// let image_opened_diamond = gray_image!(
+///    99,  99,  99,  99, 222,  99;
+///    99,  99,  99, 222, 222, 222;
+///    99,   7,  99,  99, 222,  99;
+///     7,   7,   7,  99,  99,  99;
+///     7,   7,  99,  99,  99,  99
+/// );
+/// 
+/// assert_pixels_eq!(grayscale_open(&image, &Mask::diamond(1)), image_opened_diamond);
+/// # }
+/// ```
 pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
     grayscale_dilate(&grayscale_erode(image, mask), mask)
 }
 
-/// todo!()
+/// Grayscale erosion followed by grayscale dilation.
+///
+/// See the [`grayscale_open`](fn.grayscale_open.html) documentation for examples,
+/// and the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// and [`grayscale_erode`](fn.grayscale_erode.html)
+/// documentation for definitions of dilation and erosion.
 pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
     let opened = grayscale_open(image, mask);
     image
@@ -850,12 +907,67 @@ pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
         .for_each(|(dst, src)| *dst = *src);
 }
 
-/// todo!()
+/// Grayscale dilation followed by grayscale erosion.
+///
+/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// and [`grayscale_erode`](fn.grayscale_erode.html)
+/// documentation for definitions of dilation and erosion.
+/// 
+////// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+/// use imageproc::morphology::{Mask, grayscale_close};
+///
+/// let image = gray_image!(
+///    50,  99,  99,  99, 222,  99;
+///    99,  99,  99, 222, 222, 222;
+///    99,   7,  99,  99, 222,  99;
+///     7,   7,   7,  99,  99,  99;
+///    99,   7,  99,  99,  99,  99
+/// );
+///
+/// // Isolated regions of background pixels are removed,
+/// // while isolated zones of foreground pixels are maintaned
+/// let image_closed = gray_image!(
+///    99,  99,  99, 222, 222, 222;
+///    99,  99,  99, 222, 222, 222;
+///    99,  99,  99,  99, 222, 222;
+///    99,  99,  99,  99,  99,  99;
+///    99,  99,  99,  99,  99,  99
+/// );
+///
+/// assert_pixels_eq!(grayscale_close(&image, &Mask::square(1)), image_closed);
+/// 
+/// // because it is a morphological operator, applying the same 
+/// // closing a second time doesn't do anything
+/// assert_pixels_eq!(grayscale_close(&image_closed, &Mask::square(1)), image_closed);
+///
+/// // which regions are removed depends on the mask used
+/// let image_closed_diamond = gray_image!(
+///    99,  99,  99,  99, 222, 222;
+///    99,  99,  99, 222, 222, 222;
+///    99,   7,  99,  99, 222,  99;
+///     7,   7,   7,  99,  99,  99;
+///    99,   7,  99,  99,  99,  99
+/// );
+/// 
+/// assert_pixels_eq!(grayscale_close(&image, &Mask::diamond(1)), image_closed_diamond);
+/// # }
+/// ```
 pub fn grayscale_close(image: &GrayImage, mask: &Mask) -> GrayImage {
     grayscale_erode(&grayscale_dilate(image, mask), mask)
 }
 
-/// todo!()
+/// Grayscale dilation followed by grayscale erosion.
+///
+/// See the [`grayscale_close`](fn.grayscale_close.html) documentation for examples,
+/// and the [`grayscale_erode`](fn.grayscale_erode.html) 
+/// and [`grayscale_dilate`](fn.grayscale_dilate.html)
+/// documentation for definitions of dilation and erosion.
 pub fn grayscale_close_mut(image: &mut GrayImage, mask: &Mask) {
     let closed = grayscale_erode(&grayscale_dilate(image, mask), mask);
     image
