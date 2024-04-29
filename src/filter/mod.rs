@@ -552,10 +552,18 @@ where
     }
 }
 
-/// Apply a Laplacian filter to an image.
+/// Calculates the Laplacian of an image.
+///
+/// The Laplacian is computed by filtering the image using the following 3x3 kernel:
+/// ```
+/// 0, 1, 0,
+/// 1, -4, 1,
+/// 0, 1, 0
+/// ```
 #[must_use = "the function does not modify the original image"]
-pub fn laplacian_filter(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
-    filter3x3(image, &[1, 1, 1, 1, -8, 1, 1, 1, 1])
+pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
+    let kernel: [i16; 9] = [0, 1, 0, 1, -4, 1, 0, 1, 0];
+    filter3x3(image, &kernel)
 }
 
 #[cfg(test)]
