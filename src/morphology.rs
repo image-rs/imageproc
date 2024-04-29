@@ -803,19 +803,11 @@ pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     #[cfg(feature = "rayon")]
     let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .min()
-            .unwrap_or(u8::MAX)])
+        Luma([mask.apply(image, x, y).map(|l| l.0[0]).min().unwrap_or(0)])
     });
     #[cfg(not(feature = "rayon"))]
     let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .min()
-            .unwrap_or(u8::MAX)])
+        Luma([mask.apply(image, x, y).map(|l| l.0[0]).min().unwrap_or(0)])
     });
     result
 }
