@@ -815,7 +815,7 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
             .apply(image, x, y)
             .map(|l| l.0[0])
             .min()
-            .unwrap_or(u8::MAX)]) // default is u8::MIN because it's the neutral element of max
+            .unwrap_or(u8::MAX)]) // default is u8::MAX because it's the neutral element of min
     });
     result
 }
