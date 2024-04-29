@@ -744,7 +744,6 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -793,42 +792,6 @@ mod tests {
 
         let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_rotate_nearest(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([98u8]));
-            black_box(rotated);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_rotate_bilinear(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
-            black_box(rotated);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_rotate_bicubic(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
-            black_box(rotated);
-        });
     }
 
     #[test]
@@ -896,16 +859,6 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_translate(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let translated = translate(&image, (30, 30));
-            black_box(translated);
-        });
-    }
-
     #[test]
     fn test_translate_positive_x_positive_y_projection() {
         let image = gray_image!(
@@ -970,37 +923,6 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_translate_projection(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let t = Projection::translate(-30.0, -30.0);
-
-        b.iter(|| {
-            let translated = warp(&image, &t, Interpolation::Nearest, Luma([0u8]));
-            black_box(translated);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_translate_with(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-
-        b.iter(|| {
-            let (width, height) = image.dimensions();
-            let mut out = ImageBuffer::new(width, height);
-            warp_into_with(
-                &image,
-                |x, y| (x - 30.0, y - 30.0),
-                Interpolation::Nearest,
-                Luma([0u8]),
-                &mut out,
-            );
-            black_box(out);
-        });
-    }
-
     #[test]
     fn test_affine() {
         let image = gray_image!(
@@ -1052,60 +974,6 @@ mod tests {
 
         let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
         assert_pixels_eq!(translated_bicubic, expected);
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_affine_nearest(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-
-        #[rustfmt::skip]
-        let aff = Projection::from_matrix([
-            1.0, 0.0, -1.0,
-            0.0, 1.0, -1.0,
-            0.0, 0.0,  1.0
-        ]).unwrap();
-
-        b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
-            black_box(transformed);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_affine_bilinear(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-
-        #[rustfmt::skip]
-        let aff = Projection::from_matrix([
-            1.8,      -0.2, 5.0,
-            0.2,       1.9, 6.0,
-            0.0002, 0.0003, 1.0
-        ]).unwrap();
-
-        b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
-            black_box(transformed);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_affine_bicubic(b: &mut test::Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-
-        #[rustfmt::skip]
-        let aff = Projection::from_matrix([
-            1.8,      -0.2, 5.0,
-            0.2,       1.9, 6.0,
-            0.0002, 0.0003, 1.0
-        ]).unwrap();
-
-        b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
-            black_box(transformed);
-        });
     }
 
     #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
@@ -1234,8 +1102,138 @@ mod tests {
         let p = Projection::from_control_points(from, to);
         p.unwrap();
     }
+}
 
-    #[cfg_attr(miri, ignore)]
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use image::{GrayImage, Luma};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_rotate_nearest(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_rotate_bilinear(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_rotate_bicubic(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let translated = translate(&image, (30, 30));
+            black_box(translated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate_projection(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let t = Projection::translate(-30.0, -30.0);
+
+        b.iter(|| {
+            let translated = warp(&image, &t, Interpolation::Nearest, Luma([0u8]));
+            black_box(translated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate_with(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+
+        b.iter(|| {
+            let (width, height) = image.dimensions();
+            let mut out = ImageBuffer::new(width, height);
+            warp_into_with(
+                &image,
+                |x, y| (x - 30.0, y - 30.0),
+                Interpolation::Nearest,
+                Luma([0u8]),
+                &mut out,
+            );
+            black_box(out);
+        });
+    }
+
+    #[bench]
+    fn bench_affine_nearest(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+
+        #[rustfmt::skip]
+        let aff = Projection::from_matrix([
+            1.0, 0.0, -1.0,
+            0.0, 1.0, -1.0,
+            0.0, 0.0,  1.0
+        ]).unwrap();
+
+        b.iter(|| {
+            let transformed = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+            black_box(transformed);
+        });
+    }
+
+    #[bench]
+    fn bench_affine_bilinear(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+
+        #[rustfmt::skip]
+        let aff = Projection::from_matrix([
+            1.8,      -0.2, 5.0,
+            0.2,       1.9, 6.0,
+            0.0002, 0.0003, 1.0
+        ]).unwrap();
+
+        b.iter(|| {
+            let transformed = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+            black_box(transformed);
+        });
+    }
+
+    #[bench]
+    fn bench_affine_bicubic(b: &mut test::Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+
+        #[rustfmt::skip]
+        let aff = Projection::from_matrix([
+            1.8,      -0.2, 5.0,
+            0.2,       1.9, 6.0,
+            0.0002, 0.0003, 1.0
+        ]).unwrap();
+
+        b.iter(|| {
+            let transformed = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
+            black_box(transformed);
+        });
+    }
+
     #[bench]
     fn bench_from_control_points(b: &mut Bencher) {
         let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
