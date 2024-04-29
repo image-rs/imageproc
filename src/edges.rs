@@ -1,7 +1,8 @@
 //! Functions for detecting edges in images.
 
+use crate::contrast;
 use crate::definitions::{HasBlack, HasWhite};
-use crate::filter::gaussian_blur_f32;
+use crate::filter::{gaussian_blur_f32, laplacian_filter};
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::f32;
@@ -154,6 +155,35 @@ fn hysteresis(
         }
     }
     out
+}
+
+/// Detects edges in a grayscale image using a Laplacian edge detector with Gaussian smoothing and Otsu thresholding.
+///
+/// # Arguments
+///
+/// * `image` - The grayscale image to be processed.
+///
+/// # Return value
+///
+/// A binary grayscale image where pixels belonging to edges are white and pixels not belonging to edges are black.
+///
+/// # Details
+///
+/// The Laplacian edge detector is applied to the image smoothed with a Gaussian filter with standard deviation `sigma`. The threshold for binarization is calculated using Otsu's method, which maximizes the variance between pixel intensity classes.
+pub fn laplacian_edge_detector(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+    let signma = 1.4;
+
+    let blurred_img = gaussian_blur_f32(image, signma);
+
+    let laplacian_img = laplacian_filter(&blurred_img);
+
+    let otsu_threshold = contrast::otsu_level(&laplacian_img);
+
+    contrast::threshold(
+        &laplacian_img,
+        otsu_threshold,
+        contrast::ThresholdType::Binary,
+    )
 }
 
 #[cfg(not(miri))]
