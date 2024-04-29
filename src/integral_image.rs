@@ -467,7 +467,6 @@ mod tests {
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
     use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
-    use ::test;
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
 
@@ -555,26 +554,6 @@ mod tests {
         assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), [10, 11, 12]);
     }
 
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_integral_image_gray(b: &mut test::Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let integral = integral_image::<_, u32>(&image);
-            test::black_box(integral);
-        });
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_integral_image_rgb(b: &mut test::Bencher) {
-        let image = rgb_bench_image(500, 500);
-        b.iter(|| {
-            let integral = integral_image::<_, u32>(&image);
-            test::black_box(integral);
-        });
-    }
-
     /// Simple implementation of integral_image to validate faster versions against.
     fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
     where
@@ -613,7 +592,34 @@ mod tests {
         }
         quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
+}
 
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
+    use ::test;
+
+    #[cfg_attr(miri, ignore)]
+    #[bench]
+    fn bench_integral_image_gray(b: &mut test::Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let integral = integral_image::<_, u32>(&image);
+            test::black_box(integral);
+        });
+    }
+
+    #[cfg_attr(miri, ignore)]
+    #[bench]
+    fn bench_integral_image_rgb(b: &mut test::Bencher) {
+        let image = rgb_bench_image(500, 500);
+        b.iter(|| {
+            let integral = integral_image::<_, u32>(&image);
+            test::black_box(integral);
+        });
+    }
     #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_row_running_sum(b: &mut test::Bencher) {
