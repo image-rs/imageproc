@@ -1,6 +1,6 @@
 //! Functions for performing template matching.
 use crate::definitions::Image;
-use image::{GenericImageView, GrayImage, Luma, Primitive};
+use image::{GenericImageView, GrayAlphaImage, GrayImage, Luma, Pixel, Primitive};
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -99,6 +99,25 @@ pub fn match_template_with_mask(
         M::CrossCorrelation => methods::CcorrWithMask::match_template(input),
         M::CrossCorrelationNormalized => methods::CcorrNormalizedWithMask::match_template(input),
     }
+}
+
+/// Convenience function that extracts the alpha channel before calling [`match_template_with_mask`]
+pub fn match_template_with_alpha(
+    image: &GrayImage,
+    template: &GrayAlphaImage,
+    method: MatchTemplateMethod,
+) -> Image<Luma<f32>> {
+    let template_pixels = template.pixels().map(|p| p.channels()[0]).collect();
+    let template_opaque = GrayImage::from_vec(template.width(), template.height(), template_pixels)
+        // cannot panic, we've just built a vec with the right dimensions
+        .unwrap();
+
+    let template_alpha = template.pixels().map(|p| p.channels()[1]).collect();
+    let mask = GrayImage::from_vec(template.width(), template.height(), template_alpha)
+        // cannot panic, we've just built a vec with the right dimensions
+        .unwrap();
+
+    match_template_with_mask(image, &template_opaque, method, &mask)
 }
 
 #[cfg(feature = "rayon")]
