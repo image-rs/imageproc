@@ -838,10 +838,10 @@ pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
 
 /// Grayscale erosion followed by grayscale dilation.
 ///
-/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
 /// and [`grayscale_erode`](fn.grayscale_erode.html)
 /// documentation for definitions of dilation and erosion.
-/// 
+///
 ////// # Examples
 /// ```
 /// # extern crate image;
@@ -872,8 +872,8 @@ pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
 /// );
 ///
 /// assert_pixels_eq!(grayscale_open(&image, &Mask::square(1)), image_opened);
-/// 
-/// // because it is a morhological operator, applying the same 
+///
+/// // because it is a morhological operator, applying the same
 /// // opening a second time doesn't do anything
 /// assert_pixels_eq!(grayscale_open(&image_opened, &Mask::square(1)), image_opened);
 ///
@@ -885,7 +885,7 @@ pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
 ///     7,   7,   7,  99,  99,  99;
 ///     7,   7,  99,  99,  99,  99
 /// );
-/// 
+///
 /// assert_pixels_eq!(grayscale_open(&image, &Mask::diamond(1)), image_opened_diamond);
 /// # }
 /// ```
@@ -896,7 +896,7 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// Grayscale erosion followed by grayscale dilation.
 ///
 /// See the [`grayscale_open`](fn.grayscale_open.html) documentation for examples,
-/// and the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// and the [`grayscale_dilate`](fn.grayscale_dilate.html)
 /// and [`grayscale_erode`](fn.grayscale_erode.html)
 /// documentation for definitions of dilation and erosion.
 pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
@@ -909,10 +909,10 @@ pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
 
 /// Grayscale dilation followed by grayscale erosion.
 ///
-/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) 
+/// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
 /// and [`grayscale_erode`](fn.grayscale_erode.html)
 /// documentation for definitions of dilation and erosion.
-/// 
+///
 ////// # Examples
 /// ```
 /// # extern crate image;
@@ -941,8 +941,8 @@ pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
 /// );
 ///
 /// assert_pixels_eq!(grayscale_close(&image, &Mask::square(1)), image_closed);
-/// 
-/// // because it is a morphological operator, applying the same 
+///
+/// // because it is a morphological operator, applying the same
 /// // closing a second time doesn't do anything
 /// assert_pixels_eq!(grayscale_close(&image_closed, &Mask::square(1)), image_closed);
 ///
@@ -954,7 +954,7 @@ pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
 ///     7,   7,   7,  99,  99,  99;
 ///    99,   7,  99,  99,  99,  99
 /// );
-/// 
+///
 /// assert_pixels_eq!(grayscale_close(&image, &Mask::diamond(1)), image_closed_diamond);
 /// # }
 /// ```
@@ -965,7 +965,7 @@ pub fn grayscale_close(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// Grayscale dilation followed by grayscale erosion.
 ///
 /// See the [`grayscale_close`](fn.grayscale_close.html) documentation for examples,
-/// and the [`grayscale_erode`](fn.grayscale_erode.html) 
+/// and the [`grayscale_erode`](fn.grayscale_erode.html)
 /// and [`grayscale_dilate`](fn.grayscale_dilate.html)
 /// documentation for definitions of dilation and erosion.
 pub fn grayscale_close_mut(image: &mut GrayImage, mask: &Mask) {
