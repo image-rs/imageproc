@@ -705,22 +705,6 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     result
 }
 
-/// applies a morphologic dilation on the image with the given mask
-///
-/// set each pixel to the maximum of all pixels included in the mask at its position.
-///
-/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) documentation for examples.
-///
-/// note that unlike `dilate_mut`, this performs as many allocations as it's non-mut counterpart
-/// and is thus neither more efficient nor faster
-pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
-    let dilated = grayscale_dilate(image, mask);
-    image
-        .iter_mut()
-        .zip(dilated.iter())
-        .for_each(|(dst, src)| *dst = *src);
-}
-
 /// computes the morphologic erosion of the input image with the given mask
 ///
 /// for each input pixel, the output pixel will be the minimum of all pixels included
@@ -820,22 +804,6 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     result
 }
 
-/// applies a morphologic erosion on the image with the given mask
-///
-/// set each pixel to the minimum of all pixels included in the mask at its position.
-///
-/// See the [`grayscale_erode`](fn.grayscale_erode.html) documentation for examples.
-///
-/// note that unlike `erode_mut`, this performs as many allocations as it's non-mut counterpart
-/// and is thus neither more efficient nor faster
-pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
-    let dilated = grayscale_dilate(image, mask);
-    image
-        .iter_mut()
-        .zip(dilated.iter())
-        .for_each(|(dst, src)| *dst = *src);
-}
-
 /// Grayscale erosion followed by grayscale dilation.
 ///
 /// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
@@ -893,20 +861,6 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
     grayscale_dilate(&grayscale_erode(image, mask), mask)
 }
 
-/// Grayscale erosion followed by grayscale dilation.
-///
-/// See the [`grayscale_open`](fn.grayscale_open.html) documentation for examples,
-/// and the [`grayscale_dilate`](fn.grayscale_dilate.html)
-/// and [`grayscale_erode`](fn.grayscale_erode.html)
-/// documentation for definitions of dilation and erosion.
-pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
-    let opened = grayscale_open(image, mask);
-    image
-        .iter_mut()
-        .zip(opened.iter())
-        .for_each(|(dst, src)| *dst = *src);
-}
-
 /// Grayscale dilation followed by grayscale erosion.
 ///
 /// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
@@ -960,20 +914,6 @@ pub fn grayscale_open_mut(image: &mut GrayImage, mask: &Mask) {
 /// ```
 pub fn grayscale_close(image: &GrayImage, mask: &Mask) -> GrayImage {
     grayscale_erode(&grayscale_dilate(image, mask), mask)
-}
-
-/// Grayscale dilation followed by grayscale erosion.
-///
-/// See the [`grayscale_close`](fn.grayscale_close.html) documentation for examples,
-/// and the [`grayscale_erode`](fn.grayscale_erode.html)
-/// and [`grayscale_dilate`](fn.grayscale_dilate.html)
-/// documentation for definitions of dilation and erosion.
-pub fn grayscale_close_mut(image: &mut GrayImage, mask: &Mask) {
-    let closed = grayscale_erode(&grayscale_dilate(image, mask), mask);
-    image
-        .iter_mut()
-        .zip(closed.iter())
-        .for_each(|(dst, src)| *dst = *src);
 }
 
 #[cfg(test)]
