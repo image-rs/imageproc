@@ -180,17 +180,16 @@ mod tests {
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
     use quickcheck::{quickcheck, TestResult};
     use std::cmp;
-    use test::Bencher;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
-    struct T {
+    pub(super) struct T {
         x: u32,
         y: u32,
         score: f32,
     }
 
     impl T {
-        fn new(x: u32, y: u32, score: f32) -> T {
+        pub(super) fn new(x: u32, y: u32, score: f32) -> T {
             T { x, y, score }
         }
     }
@@ -236,31 +235,6 @@ mod tests {
         assert_eq!(max, expected);
     }
 
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_local_maxima_dense(b: &mut Bencher) {
-        let mut ts = vec![];
-        for x in 0..20 {
-            for y in 0..20 {
-                let score = (x * y) % 15;
-                ts.push(T::new(x, y, score as f32));
-            }
-        }
-        b.iter(|| local_maxima(&ts, 15));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_local_maxima_sparse(b: &mut Bencher) {
-        let mut ts = vec![];
-        for x in 0..20 {
-            for y in 0..20 {
-                ts.push(T::new(50 * x, 50 * y, 50f32));
-            }
-        }
-        b.iter(|| local_maxima(&ts, 15));
-    }
-
     #[test]
     fn test_suppress_non_maximum() {
         let mut image = GrayImage::new(25, 25);
@@ -296,50 +270,6 @@ mod tests {
         // Use r and s to silence warnings about unused variables.
         assert!(r.width() == 7);
         assert!(s.width() == 3);
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_suppress_non_maximum_increasing_gradient(b: &mut Bencher) {
-        // Increasing gradient in both directions. This can be a worst-case for
-        // early-abort strategies.
-        let img = ImageBuffer::from_fn(40, 20, |x, y| Luma([(x + y) as u8]));
-        b.iter(|| suppress_non_maximum(&img, 7));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
-        let width = 40u32;
-        let height = 20u32;
-        let img = ImageBuffer::from_fn(width, height, |x, y| {
-            Luma([((width - x) + (height - y)) as u8])
-        });
-        b.iter(|| suppress_non_maximum(&img, 7));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_suppress_non_maximum_noise_7(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
-        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
-        b.iter(|| suppress_non_maximum(&img, 7));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_suppress_non_maximum_noise_3(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
-        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
-        b.iter(|| suppress_non_maximum(&img, 3));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_suppress_non_maximum_noise_1(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
-        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
-        b.iter(|| suppress_non_maximum(&img, 1));
     }
 
     /// Reference implementation of suppress_non_maximum. Used to validate
@@ -408,5 +338,76 @@ mod tests {
         assert_eq!((0u32..5).step_by(4).collect::<Vec<u32>>(), vec![0, 4]);
         assert_eq!((0u32..4).step_by(4).collect::<Vec<u32>>(), vec![0]);
         assert_eq!((4u32..4).step_by(4).collect::<Vec<u32>>(), vec![]);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::{local_maxima, suppress_non_maximum, tests::T};
+    use crate::noise::gaussian_noise_mut;
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
+    use test::Bencher;
+
+    #[bench]
+    fn bench_local_maxima_dense(b: &mut Bencher) {
+        let mut ts = vec![];
+        for x in 0..20 {
+            for y in 0..20 {
+                let score = (x * y) % 15;
+                ts.push(T::new(x, y, score as f32));
+            }
+        }
+        b.iter(|| local_maxima(&ts, 15));
+    }
+
+    #[bench]
+    fn bench_local_maxima_sparse(b: &mut Bencher) {
+        let mut ts = vec![];
+        for x in 0..20 {
+            for y in 0..20 {
+                ts.push(T::new(50 * x, 50 * y, 50f32));
+            }
+        }
+        b.iter(|| local_maxima(&ts, 15));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_increasing_gradient(b: &mut Bencher) {
+        // Increasing gradient in both directions. This can be a worst-case for
+        // early-abort strategies.
+        let img = ImageBuffer::from_fn(40, 20, |x, y| Luma([(x + y) as u8]));
+        b.iter(|| suppress_non_maximum(&img, 7));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
+        let width = 40u32;
+        let height = 20u32;
+        let img = ImageBuffer::from_fn(width, height, |x, y| {
+            Luma([((width - x) + (height - y)) as u8])
+        });
+        b.iter(|| suppress_non_maximum(&img, 7));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_noise_7(b: &mut Bencher) {
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
+        b.iter(|| suppress_non_maximum(&img, 7));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_noise_3(b: &mut Bencher) {
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
+        b.iter(|| suppress_non_maximum(&img, 3));
+    }
+
+    #[bench]
+    fn bench_suppress_non_maximum_noise_1(b: &mut Bencher) {
+        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
+        b.iter(|| suppress_non_maximum(&img, 1));
     }
 }
