@@ -1449,6 +1449,182 @@ mod tests {
         assert_pixels_eq!(dilated, expected);
     }
 
+    #[test]
+    fn test_mask_from_image_equality() {
+        let ring_mask_base = gray_image!(
+             100,  75, 255, 222;
+              84,   0,   0,   1;
+              99,   0,   0,  22;
+             255,   7, 255,  20
+        );
+
+        let other_ring_mask_base = gray_image!(
+             18, 172,  13,   5;
+             45,   0,   0, 101;
+            222,   0,   0,  93;
+              1,   9, 212,  35
+        );
+
+        assert_eq!(
+            Mask::from_image(&ring_mask_base, 1, 1),
+            Mask::from_image(&other_ring_mask_base, 1, 1)
+        );
+    }
+
+    #[test]
+    fn test_mask_from_image_displacement_inequality() {
+        let mask_base = gray_image!(
+             100,  75, 255, 222;
+              84,   0,   0,   1;
+              99,   0,   0,  22;
+             255,   7, 255,  20
+        );
+
+        assert_ne!(
+            Mask::from_image(&mask_base, 1, 1),
+            Mask::from_image(&mask_base, 2, 2)
+        );
+    }
+
+    #[test]
+    fn test_mask_from_image_empty() {
+        let mask_base = gray_image!(0);
+        assert!(Mask::from_image(&mask_base, 1, 1).elements.is_empty())
+    }
+
+    #[test]
+    fn test_mask_from_image_outside() {
+        let _mask_base = gray_image!(
+             100,  75, 255, 222;
+              84,   0,   0,   1;
+              99,   0,   0,  22;
+             255,   7, 255,  20
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_mask_from_image_out_of_bounds() {
+        let mask_base = GrayImage::new(300, 300);
+        Mask::from_image(&mask_base, 5, 5);
+    }
+
+    #[test]
+    fn test_masks_0() {
+        let mask_base = gray_image!(72);
+        assert_eq!(Mask::from_image(&mask_base, 0, 0), Mask::square(0));
+        assert_eq!(Mask::from_image(&mask_base, 0, 0), Mask::diamond(0));
+        assert_eq!(Mask::from_image(&mask_base, 0, 0), Mask::disk(0))
+    }
+
+    #[test]
+    fn test_mask_square_1() {
+        let mask_base = gray_image!(
+            72,  31, 148;
+             2, 219, 173;
+            48,   7, 200
+        );
+        assert_eq!(Mask::from_image(&mask_base, 1, 1), Mask::square(1));
+    }
+
+    #[test]
+    fn test_mask_square_2() {
+        let mask_base = gray_image!(
+            217, 188, 101, 222, 137;
+            231, 204, 255, 182, 193;
+            193, 101, 188, 217, 149;
+            217, 188, 231, 222, 137;
+            101, 204, 222, 255, 193
+        );
+        assert_eq!(Mask::from_image(&mask_base, 2, 2), Mask::square(2));
+    }
+
+    #[test]
+    fn test_mask_square_3() {
+        let mask_base = gray_image!(
+            217, 188, 101, 222, 137, 101, 222;
+            231, 204, 255, 222, 137, 222, 255;
+            193, 101, 188, 217, 217, 222, 188;
+            217, 188, 231, 222, 137, 217, 149;
+            193, 255, 193, 188, 231, 222, 188;
+            217, 188, 231, 149, 101, 188, 149;
+            101, 204, 222, 255, 193, 255, 182
+        );
+        assert_eq!(Mask::from_image(&mask_base, 3, 3), Mask::square(3));
+    }
+
+    #[test]
+    fn test_mask_diamond_1() {
+        let mask_base = gray_image!(
+             0,  31,   0;
+             2, 219, 173;
+             0,   7,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 1, 1), Mask::diamond(1));
+    }
+
+    #[test]
+    fn test_mask_diamond_2() {
+        let mask_base = gray_image!(
+              0,   0, 255,   0,   0;
+              0, 231, 204, 101,   0;
+            149, 193, 188, 137, 199;
+              0, 222, 182, 114,   0;
+              0,   0, 217,   0,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 2, 2), Mask::diamond(2));
+    }
+
+    #[test]
+    fn test_mask_diamond_3() {
+        let mask_base = gray_image!(
+              0,   0,   0, 222,   0,   0,   0;
+              0,   0, 255, 222, 137,   0,   0;
+              0, 101, 188, 217, 217, 222,   0;
+            217, 188, 231, 222, 137, 217, 149;
+              0, 255, 193, 188, 231, 222,   0;
+              0,   0, 231, 149, 101,   0,   0;
+              0,   0,   0, 255,   0,   0,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 3, 3), Mask::diamond(3));
+    }
+
+    #[test]
+    fn test_mask_disk_1() {
+        let mask_base = gray_image!(
+             0,  31,   0;
+             2, 219, 173;
+             0,   7,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 1, 1), Mask::disk(1));
+    }
+
+    #[test]
+    fn test_mask_disk_2() {
+        let mask_base = gray_image!(
+              0,   0, 255,   0,   0;
+              0, 231, 204, 101,   0;
+            149, 193, 188, 137, 199;
+              0, 222, 182, 114,   0;
+              0,   0, 217,   0,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 2, 2), Mask::disk(2));
+    }
+
+    #[test]
+    fn test_mask_disk_3() {
+        let mask_base = gray_image!(
+              0,   0,   0, 222,   0,   0,   0;
+              0, 149, 255, 222, 137, 101,   0;
+              0, 101, 188, 217, 217, 222,   0;
+            217, 188, 231, 222, 137, 217, 149;
+              0, 255, 193, 188, 231, 222,   0;
+              0, 137, 231, 149, 101, 188,   0;
+              0,   0,   0, 255,   0,   0,   0
+        );
+        assert_eq!(Mask::from_image(&mask_base, 3, 3), Mask::disk(3));
+    }
+
     fn square() -> GrayImage {
         GrayImage::from_fn(500, 500, |x, y| {
             if min(x, y) > 100 && max(x, y) < 300 {
