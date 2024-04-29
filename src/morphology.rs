@@ -1492,14 +1492,16 @@ mod tests {
         assert!(Mask::from_image(&mask_base, 1, 1).elements.is_empty())
     }
 
+    /// this tests that it doesn't panic
     #[test]
     fn test_mask_from_image_outside() {
-        let _mask_base = gray_image!(
+        let mask_base = gray_image!(
              100,  75, 255, 222;
               84,   0,   0,   1;
               99,   0,   0,  22;
              255,   7, 255,  20
         );
+        let _ = Mask::from_image(&mask_base, 20, 20);
     }
 
     #[test]
