@@ -655,17 +655,28 @@ mod tests {
             0, 1;
             2, 3
         );
+        let expected = gray_image!(type: f32,
+            89., 25.;
+            10., 1.
+        );
         let actual = match_template_with_mask(
             &image,
             &template,
             MatchTemplateMethod::SumOfSquaredErrors,
             &mask,
         );
-        let expected = gray_image!(type: f32,
-            89., 25.;
-            10., 1.
-        );
         assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::SumOfSquaredErrors,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
     }
 
     #[test]
@@ -683,17 +694,28 @@ mod tests {
             0, 1;
             2, 3
         );
+        let expected = gray_image!(type: f32,
+            1.0246822 , 0.19536021;
+            0.067865655, 0.005362412
+        );
         let actual = match_template_with_mask(
             &image,
             &template,
             MatchTemplateMethod::SumOfSquaredErrorsNormalized,
             &mask,
         );
-        let expected = gray_image!(type: f32,
-            1.0246822 , 0.19536021;
-            0.067865655, 0.005362412
-        );
         assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
     }
 
     #[test]
@@ -711,17 +733,28 @@ mod tests {
             0, 1;
             2, 3
         );
+        let expected = gray_image!(type: f32,
+            68., 124.;
+            146., 186.
+        );
         let actual = match_template_with_mask(
             &image,
             &template,
             MatchTemplateMethod::CrossCorrelation,
             &mask,
         );
-        let expected = gray_image!(type: f32,
-            68., 124.;
-            146., 186.
-        );
         assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::CrossCorrelation,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
     }
 
     #[test]
@@ -739,17 +772,28 @@ mod tests {
             0, 1;
             2, 3
         );
+        let expected = gray_image!(type: f32,
+            0.78290325, 0.96898663;
+            0.9908386, 0.9974086
+        );
         let actual = match_template_with_mask(
             &image,
             &template,
             MatchTemplateMethod::CrossCorrelationNormalized,
             &mask,
         );
-        let expected = gray_image!(type: f32,
-            0.78290325, 0.96898663;
-            0.9908386, 0.9974086
-        );
         assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::CrossCorrelationNormalized,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
     }
 
     #[test]
