@@ -353,13 +353,10 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 
 /// A struct representing a mask used in morphological operations
 ///
-/// the mask is represented by a list of the positions of its pixels
-/// relative to its center, with a maximum distance of 255
-/// along each axis.
-/// This means that in the most extreme case, the mask could have
-/// a size of 513 by 513 pixels.
+/// The mask can have any size between 0 by 0 to 511 by 511 pixels
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
+    /// for any optimisation/arithmetic purposes, it is garanteed that all the integer values will be strictly between -512 and 512
     elements: Vec<(i16, i16)>,
 }
 
@@ -370,13 +367,10 @@ impl Mask {
     ///
     /// `center_x` and `center_y` define the coordinates of the center of the mask.
     /// They may take any value, including outside of the bounds of the input image,
-    /// but all pixels of the mask must be at most 255 pixels away from the center.
-    ///
-    /// For example, if `center_x` was 10 and center `center_y` was 40,
-    /// the width of the image would have to be at most 266, and its height at most 296
+    /// but the image itself must be at most 511 pixel wide and 511 pixel high.
     ///
     /// # Panics
-    /// if there is a pixel which is 256 pixels or more away from the center along either direction
+    /// if the input image is 512 or more pixels wide or 512 or more pixel high
     ///
     /// # Example
     /// ```
@@ -409,24 +403,22 @@ impl Mask {
     /// // using two identical images with different centers will usually make different masks
     /// assert_ne!(Mask::from_image(&ring_mask_base, 1, 1), Mask::from_image(&ring_mask_base, 2, 2));
     ///
-    /// // the center may be out of the image bound
+    /// // the center may be out of the image bounds
     /// let ring_mask_outside = Mask::from_image(&ring_mask_base, 8, 8);
     ///
-    /// // but all pixels must be at most 255 pixels away from the center
-    /// // the code below will panic :
-    /// // let some_mask = Mask::from_image(&GrayImage::new(300, 300), 2, 2);
-    /// // this one won't :
-    /// // let some_mask = Mask::from_image(&GrayImage::new(300, 300), 200, 200);
+    /// // but the input image itself must be at most 511 pixel wide and 511 pixel wide.
+    /// // the code below would panic :
+    /// // let some_mask = Mask::from_image(&GrayImage::new(600, 600), 2, 2);
     /// # }
     /// ```
     pub fn from_image(image: &GrayImage, center_x: u8, center_y: u8) -> Self {
         assert!(
-            (image.width() as i64 - center_x as i64) < (u8::MAX as i64),
-            "all pixels of the mask must be at most 255 pixels from the center"
+            image.width() < 512,
+            "the input image must be at most 511 pixels wide"
         );
         assert!(
-            (image.height() as i64 - center_y as i64) < (u8::MAX as i64),
-            "all pixels of the mask must be at most 255 pixels from the center"
+            image.height() < 512,
+            "the input image must be at most 511 pixels high"
         );
         Self {
             elements: (0..image.width() as i16)
@@ -1455,7 +1447,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_mask_from_image_out_of_bounds() {
-        let mask_base = GrayImage::new(300, 300);
+        let mask_base = GrayImage::new(600, 5);
         Mask::from_image(&mask_base, 5, 5);
     }
 
