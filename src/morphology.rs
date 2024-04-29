@@ -692,7 +692,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
             .apply(image, x, y)
             .map(|l| l.0[0])
             .max()
-            .unwrap_or(u8::MAX)])
+            .unwrap_or(u8::MIN)]) // default is u8::MIN because it's the neutral element of max
     });
     #[cfg(not(feature = "rayon"))]
     let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
@@ -700,7 +700,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
             .apply(image, x, y)
             .map(|l| l.0[0])
             .max()
-            .unwrap_or(u8::MAX)])
+            .unwrap_or(u8::MIN)]) // default is u8::MIN because it's the neutral element of max
     });
     result
 }
@@ -803,11 +803,19 @@ pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     #[cfg(feature = "rayon")]
     let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
-        Luma([mask.apply(image, x, y).map(|l| l.0[0]).min().unwrap_or(0)])
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .min()
+            .unwrap_or(u8::MAX)]) // default is u8::MIN because it's the neutral element of max
     });
     #[cfg(not(feature = "rayon"))]
     let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask.apply(image, x, y).map(|l| l.0[0]).min().unwrap_or(0)])
+        Luma([mask
+            .apply(image, x, y)
+            .map(|l| l.0[0])
+            .min()
+            .unwrap_or(u8::MAX)]) // default is u8::MIN because it's the neutral element of max
     });
     result
 }
@@ -1813,6 +1821,30 @@ mod tests {
     }
 
     #[test]
+    fn test_grayscale_dilate_default_value() {
+        let mask = Mask::from_image(&gray_image!(), 0, 0);
+        let image = gray_image!(
+             80,  80,  80,  80,  80,  80,  80;
+             80,  80,  80,  80,  80, 212,  80;
+             80,  80,  80,  80, 212, 212,  80;
+              0,  80,  80,  80,  80,  80,  80;
+              0,   0,  80,  80,  80,  80,  80;
+              0,   0,   0,  80,  80,  80,  80;
+              0,   0,   0,  80,  80,  80,  80
+        );
+        let dilated = gray_image!(
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN;
+            u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN, u8::MIN
+        );
+        assert_eq!(grayscale_dilate(&image, &mask), dilated);
+    }
+
+    #[test]
     fn test_grayscale_erode_0() {
         let image = gray_image!(
             217, 188, 101, 222, 137, 101, 222;
@@ -1995,6 +2027,30 @@ mod tests {
              0,   0,   0,   0,  80,  80,  80
         );
         assert_eq!(grayscale_erode(&image, &mask), eroded);
+    }
+
+    #[test]
+    fn test_grayscale_erode_default_value() {
+        let mask = Mask::from_image(&gray_image!(), 0, 0);
+        let image = gray_image!(
+             80,  80,  80,  80,  80,  80,  80;
+             80,  80,  80,  80,  80, 212,  80;
+             80,  80,  80,  80, 212, 212,  80;
+              0,  80,  80,  80,  80,  80,  80;
+              0,   0,  80,  80,  80,  80,  80;
+              0,   0,   0,  80,  80,  80,  80;
+              0,   0,   0,  80,  80,  80,  80
+        );
+        let dilated = gray_image!(
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX;
+            u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX
+        );
+        assert_eq!(grayscale_erode(&image, &mask), dilated);
     }
 
     fn square() -> GrayImage {
