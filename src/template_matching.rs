@@ -446,7 +446,6 @@ mod benches {
     macro_rules! bench_match_template {
         ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
             #[bench]
-            #[cfg_attr(miri, ignore)]
             fn $name(b: &mut Bencher) {
                 let image = gray_bench_image($s, $s);
                 let template = gray_bench_image($t, $t);
