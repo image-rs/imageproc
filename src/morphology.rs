@@ -600,13 +600,91 @@ impl Mask {
             .iter()
             .map(move |(i, j)| (x as i64 + *i as i64, y as i64 + *j as i64))
             .filter(move |(i, j)| {
-                0 < *i && *i < image.width() as i64 && 0 < *j && *j < image.height() as i64
+                0 <= *i && *i < image.width() as i64 && 0 <= *j && *j < image.height() as i64
             })
             .map(move |(i, j)| image.get_pixel(i as u32, j as u32))
     }
 }
 
-/// todo!()
+/// computes the morphologic dilation of the input image with the given mask
+///
+/// for each input pixel, the output pixel will be the maximum of all pixels included
+/// in the mask at that position.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+/// use imageproc::morphology::{Mask, grayscale_dilate};
+///
+/// let image = gray_image!(
+///     7,   0,   0,   0,   0,   0;
+///     0,   0,   0,   0,   0,   0;
+///     0,   0,  99,   0,   0,   0;
+///     0,   0,   0,   0,   0,   0;
+///     0,   0,   0,   0,   0, 222
+/// );
+///
+/// // using a diamond mask
+/// let diamond_dilated = gray_image!(
+///     7,   7,   0,   0,   0,   0;
+///     7,   0,  99,   0,   0,   0;
+///     0,  99,  99,  99,   0,   0;
+///     0,   0,  99,   0,   0, 222;
+///     0,   0,   0,   0, 222, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_dilate(&image, &Mask::diamond(1)), diamond_dilated);
+///
+/// // using a disk mask
+/// let disk_dilated = gray_image!(
+///    99,  99,  99,  99,  99,   0;
+///    99,  99,  99,  99,  99, 222;
+///    99,  99,  99, 222, 222, 222;
+///    99,  99,  99, 222, 222, 222;
+///    99,  99, 222, 222, 222, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_dilate(&image, &Mask::disk(3)), disk_dilated);
+///
+/// // using a square mask
+/// let square_dilated = gray_image!(
+///     7,   7,   0,   0,   0,   0;
+///     7,  99,  99,  99,   0,   0;
+///     0,  99,  99,  99,   0,   0;
+///     0,  99,  99,  99, 222, 222;
+///     0,   0,   0,   0, 222, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_dilate(&image, &Mask::square(1)), square_dilated);
+///
+///
+/// // using an arbitrary mask
+/// // the center of the mask is the '4' here, cause it's coordinates are (0,1)
+/// let column_mask = Mask::from_image(
+///     &gray_image!(
+///         8;
+///         1;
+///         9;
+///         2
+///     ),  
+///     0,  1
+/// );
+///
+/// let column_dilated = gray_image!(
+///     7,   0,  99,   0,   0,   0;
+///     7,   0,  99,   0,   0,   0;
+///     0,   0,  99,   0,   0, 222;
+///     0,   0,  99,   0,   0, 222;
+///     0,   0,   0,   0,   0, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_dilate(&image, &column_mask), column_dilated);
+/// # }
+/// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     #[cfg(feature = "rayon")]
     let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
@@ -627,7 +705,14 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     result
 }
 
-/// todo!()
+/// applies a morphologic dilation on the image with the given mask
+///
+/// set each pixel to the maximum of all pixels included in the mask at its position.
+///
+/// See the [`grayscale_dilate`](fn.grayscale_dilate.html) documentation for examples.
+///
+/// note that unlike `dilate_mut`, this performs as many allocations as it's non-mut counterpart
+/// and is thus neither more efficient nor faster
 pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
     let dilated = grayscale_dilate(image, mask);
     image
@@ -636,7 +721,85 @@ pub fn grayscale_dilate_mut(image: &mut GrayImage, mask: &Mask) {
         .for_each(|(dst, src)| *dst = *src);
 }
 
-/// todo!()
+/// computes the morphologic erosion of the input image with the given mask
+///
+/// for each input pixel, the output pixel will be the minimum of all pixels included
+/// in the mask at that position.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::GrayImage;
+/// use imageproc::morphology::{Mask, grayscale_erode};
+///
+/// let image = gray_image!(
+///     7,  99,  99,  99,  99, 222;
+///    99,  99,  99,  99,  99, 222;
+///    99,  99,  99,  99, 222, 222;
+///     7,  99,  99,  99, 222, 222;
+///    99,  99,  99, 222, 222, 222
+/// );
+///
+/// // using a diamond mask
+/// let diamond_eroded = gray_image!(
+///     7,   7,  99,  99,  99,  99;
+///     7,  99,  99,  99,  99,  99;
+///     7,  99,  99,  99,  99, 222;
+///     7,   7,  99,  99,  99, 222;
+///     7,  99,  99,  99, 222, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_erode(&image, &Mask::diamond(1)), diamond_eroded);
+///
+/// // using a disk mask
+/// let disk_eroded = gray_image!(
+///     7,   7,   7,   7,  99,  99;
+///     7,   7,   7,  99,  99,  99;
+///     7,   7,   7,  99,  99,  99;
+///     7,   7,   7,   7,  99,  99;
+///     7,   7,   7,  99,  99,  99
+/// );
+///
+/// assert_pixels_eq!(grayscale_erode(&image, &Mask::disk(3)), disk_eroded);
+///
+/// // using a square mask
+/// let square_eroded = gray_image!(
+///     7,   7,  99,  99,  99,  99;
+///     7,   7,  99,  99,  99,  99;
+///     7,   7,  99,  99,  99,  99;
+///     7,   7,  99,  99,  99, 222;
+///     7,   7,  99,  99,  99, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_erode(&image, &Mask::square(1)), square_eroded);
+///
+///
+/// // using an arbitrary mask
+/// // the center of the mask is the '4' here, cause it's coordinates are (0,1)
+/// let column_mask = Mask::from_image(
+///     &gray_image!(
+///         8;
+///         4;
+///         9;
+///         2
+///     ),  
+///     0,  1
+/// );
+///
+/// let column_eroded = gray_image!(
+///     7,  99,  99,  99,  99, 222;
+///     7,  99,  99,  99,  99, 222;
+///     7,  99,  99,  99,  99, 222;
+///     7,  99,  99,  99, 222, 222;
+///     7,  99,  99,  99, 222, 222
+/// );
+///
+/// assert_pixels_eq!(grayscale_erode(&image, &column_mask), column_eroded);
+/// # }
+/// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     #[cfg(feature = "rayon")]
     let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
@@ -657,7 +820,14 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     result
 }
 
-/// todo!()
+/// applies a morphologic erosion on the image with the given mask
+///
+/// set each pixel to the minimum of all pixels included in the mask at its position.
+///
+/// See the [`grayscale_erode`](fn.grayscale_erode.html) documentation for examples.
+///
+/// note that unlike `erode_mut`, this performs as many allocations as it's non-mut counterpart
+/// and is thus neither more efficient nor faster
 pub fn grayscale_erode_mut(image: &mut GrayImage, mask: &Mask) {
     let dilated = grayscale_dilate(image, mask);
     image
