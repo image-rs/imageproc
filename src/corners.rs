@@ -495,7 +495,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
@@ -551,21 +550,6 @@ mod tests {
             10, 10, 00, 00, 00, 10, 10);
 
         assert!(!is_corner_fast12(&image, 8, 3, 3));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
-        let image = black_box(gray_image!(
-            10, 10, 00, 00, 00, 10, 10;
-            10, 00, 10, 10, 10, 00, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            10, 10, 10, 10, 10, 10, 00;
-            10, 00, 10, 10, 10, 10, 10;
-            10, 10, 00, 00, 00, 10, 10));
-
-        b.iter(|| black_box(is_corner_fast12(&image, 8, 3, 3)));
     }
 
     #[test]
@@ -645,66 +629,6 @@ mod tests {
         );
     }
 
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_intensity_centroid(b: &mut Bencher) {
-        let image = gray_image!(
-            00, 00, 10, 10, 10, 00, 00;
-            00, 10, 00, 00, 00, 10, 00;
-            10, 00, 00, 00, 00, 00, 10;
-            10, 00, 00, 00, 00, 00, 10;
-            00, 00, 00, 00, 00, 00, 10;
-            00, 00, 00, 00, 00, 10, 00;
-            00, 00, 00, 10, 10, 00, 00);
-
-        b.iter(|| black_box(intensity_centroid(&image, 3, 3, 3)));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_oriented_fast_corner(b: &mut Bencher) {
-        let image = gray_image!(
-            00, 00, 10, 10, 10, 00, 00;
-            00, 10, 00, 00, 00, 10, 00;
-            10, 00, 00, 00, 00, 00, 10;
-            10, 00, 00, 00, 00, 00, 10;
-            00, 00, 00, 00, 00, 00, 10;
-            00, 00, 00, 00, 00, 10, 00;
-            00, 00, 00, 10, 10, 00, 00);
-
-        b.iter(|| black_box(oriented_fast(&image, Some(0), 1, 0, Some(0xc0))));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_oriented_fast_non_corner(b: &mut Bencher) {
-        let image = gray_image!(
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00);
-
-        b.iter(|| black_box(oriented_fast(&image, Some(255), 0, 0, Some(0xc0))));
-    }
-
-    #[cfg_attr(miri, ignore)]
-    #[bench]
-    fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
-        let image = black_box(gray_image!(
-            00, 00, 10, 10, 10, 00, 00;
-            00, 10, 00, 00, 00, 10, 00;
-            10, 00, 00, 00, 00, 00, 00;
-            10, 00, 00, 00, 00, 00, 00;
-            10, 00, 00, 00, 00, 00, 00;
-            00, 10, 00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00, 00, 00));
-
-        b.iter(|| black_box(is_corner_fast9(&image, 8, 3, 3)));
-    }
-
     #[test]
     fn test_is_corner_fast9_12_noncontiguous() {
         let image = gray_image!(
@@ -736,5 +660,82 @@ mod tests {
 
         let score = fast_corner_score(&image, 9, 3, 3, Fast::Nine);
         assert_eq!(score, 9);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
+        let image = black_box(gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10));
+
+        b.iter(|| black_box(is_corner_fast12(&image, 8, 3, 3)));
+    }
+
+    #[bench]
+    fn bench_intensity_centroid(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 10;
+            10, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 10, 00;
+            00, 00, 00, 10, 10, 00, 00);
+
+        b.iter(|| black_box(intensity_centroid(&image, 3, 3, 3)));
+    }
+
+    #[bench]
+    fn bench_oriented_fast_corner(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 10;
+            10, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 00, 10;
+            00, 00, 00, 00, 00, 10, 00;
+            00, 00, 00, 10, 10, 00, 00);
+
+        b.iter(|| black_box(oriented_fast(&image, Some(0), 1, 0, Some(0xc0))));
+    }
+
+    #[bench]
+    fn bench_oriented_fast_non_corner(b: &mut Bencher) {
+        let image = gray_image!(
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00);
+
+        b.iter(|| black_box(oriented_fast(&image, Some(255), 0, 0, Some(0xc0))));
+    }
+
+    #[bench]
+    fn bench_is_corner_fast9_9_contiguous_lighter_pixels(b: &mut Bencher) {
+        let image = black_box(gray_image!(
+            00, 00, 10, 10, 10, 00, 00;
+            00, 10, 00, 00, 00, 10, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            10, 00, 00, 00, 00, 00, 00;
+            00, 10, 00, 00, 00, 00, 00;
+            00, 00, 00, 00, 00, 00, 00));
+
+        b.iter(|| black_box(is_corner_fast9(&image, 8, 3, 3)));
     }
 }

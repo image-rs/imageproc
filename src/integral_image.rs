@@ -601,7 +601,6 @@ mod benches {
     use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
     use ::test;
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_integral_image_gray(b: &mut test::Bencher) {
         let image = gray_bench_image(500, 500);
@@ -611,7 +610,6 @@ mod benches {
         });
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_integral_image_rgb(b: &mut test::Bencher) {
         let image = rgb_bench_image(500, 500);
@@ -620,7 +618,6 @@ mod benches {
             test::black_box(integral);
         });
     }
-    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_row_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(1000, 1);
@@ -630,7 +627,6 @@ mod benches {
         });
     }
 
-    #[cfg_attr(miri, ignore)]
     #[bench]
     fn bench_column_running_sum(b: &mut test::Bencher) {
         let image = gray_bench_image(100, 1000);
