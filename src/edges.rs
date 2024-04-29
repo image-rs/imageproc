@@ -179,7 +179,11 @@ pub fn laplacian_edge_detector(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u
 
     let otsu_threshold = contrast::otsu_level(&laplacian_img);
 
-    contrast::threshold(&laplacian_img, otsu_threshold)
+    contrast::threshold(
+        &laplacian_img,
+        otsu_threshold,
+        contrast::ThresholdType::Binary,
+    )
 }
 
 #[cfg(test)]
