@@ -501,6 +501,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::gray_bench_image;
+    use image::GrayImage;
 
     #[test]
     #[should_panic]
@@ -814,10 +816,12 @@ mod tests {
     }
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
+    use image::GrayImage;
     use test::{black_box, Bencher};
 
     macro_rules! bench_match_template {

@@ -1,10 +1,11 @@
 //! Functions for finding and labelling connected components of an image.
 
+use std::cmp;
+
 use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
 
 use crate::definitions::Image;
 use crate::union_find::DisjointSetForest;
-use std::cmp;
 
 /// Determines which neighbors of a pixel we consider
 /// to be connected to it.
@@ -102,10 +103,10 @@ pub enum Connectivity {
 ///
 /// // If this behaviour is not what you want then you can first
 /// // threshold the input image.
-/// use imageproc::contrast::threshold;
+/// use imageproc::contrast::{threshold, ThresholdType};
 ///
 /// // Pixels equal to the threshold are treated as background.
-/// let thresholded = threshold(&image, 0);
+/// let thresholded = threshold(&image, 0,ThresholdType::Binary);
 ///
 /// let thresholded_components_four = gray_image!(type: u32,
 ///     1, 0, 2, 2;
@@ -246,13 +247,16 @@ where
 mod tests {
     extern crate wasm_bindgen_test;
 
-    use super::connected_components;
-    use super::Connectivity::{Eight, Four};
-    use crate::definitions::{HasBlack, HasWhite};
     use ::test;
+
     use image::{GrayImage, ImageBuffer, Luma};
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
+
+    use crate::definitions::{HasBlack, HasWhite};
+
+    use super::connected_components;
+    use super::Connectivity::{Eight, Four};
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
@@ -275,7 +279,7 @@ mod tests {
 
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way connectivity.
-    fn chessboard(width: u32, height: u32) -> GrayImage {
+    pub(super) fn chessboard(width: u32, height: u32) -> GrayImage {
         ImageBuffer::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
                 Luma([255u8])
@@ -302,6 +306,17 @@ mod tests {
         let max_component = components.pixels().map(|p| p[0]).max();
         assert_eq!(max_component, Some(450u32));
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::connected_components;
+    use super::tests::chessboard;
+    use super::Connectivity::{Eight, Four};
+    use crate::definitions::{HasBlack, HasWhite};
+    use ::test;
+    use image::{GrayImage, ImageBuffer, Luma};
 
     #[bench]
     fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {

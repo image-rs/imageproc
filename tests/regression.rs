@@ -10,13 +10,19 @@
 //!
 //! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
+#![cfg(not(miri))]
+
 #[macro_use]
 extern crate imageproc;
+
+use std::{env, f32, path::Path};
 
 use image::{
     DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
     RgbaImage,
 };
+
+use imageproc::contrast::ThresholdType;
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -25,7 +31,6 @@ use imageproc::{
     gradients,
     utils::load_image_or_panic,
 };
-use std::{env, f32, path::Path};
 
 /// The directory containing the input images used in regression tests.
 const INPUT_DIR: &str = "./tests/data";
@@ -237,12 +242,11 @@ fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
+            let hom = Projection::from_matrix([
             root_two_inv, -root_two_inv,  50.0,
             root_two_inv,  root_two_inv, -70.0,
                      0.0,           0.0,   1.0,
-        ])
-        .unwrap();
+        ]).unwrap();
         warp(image, &hom, Interpolation::Nearest, Rgb::black())
     }
     compare_to_truth(
@@ -257,12 +261,12 @@ fn test_affine_bilinear_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-                     0.0,           0.0,   1.0,
+            let hom = Projection::from_matrix([
+            root_two_inv, -root_two_inv, 50.0,
+            root_two_inv, root_two_inv, -70.0,
+            0.0, 0.0, 1.0,
         ])
-        .unwrap();
+            .unwrap();
 
         warp(image, &hom, Interpolation::Bilinear, Rgb::black())
     }
@@ -279,10 +283,10 @@ fn test_affine_bicubic_rgb() {
     fn affine_bilinear(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
         #[rustfmt::skip]
-        let hom = Projection::from_matrix([
-            root_two_inv, -root_two_inv,  50.0,
-            root_two_inv,  root_two_inv, -70.0,
-            0.0         , 0.0          , 1.0,
+            let hom = Projection::from_matrix([
+            root_two_inv, -root_two_inv, 50.0,
+            root_two_inv, root_two_inv, -70.0,
+            0.0, 0.0, 1.0,
         ]).unwrap();
 
         warp(image, &hom, Interpolation::Bicubic, Rgb::black())
@@ -366,7 +370,7 @@ fn test_otsu_threshold() {
     use imageproc::contrast::{otsu_level, threshold};
     fn otsu_threshold(image: &GrayImage) -> GrayImage {
         let level = otsu_level(image);
-        threshold(image, level)
+        threshold(image, level, ThresholdType::Binary)
     }
     compare_to_truth("zebra.png", "zebra_otsu.png", otsu_threshold);
 }

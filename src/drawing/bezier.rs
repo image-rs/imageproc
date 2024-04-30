@@ -81,8 +81,9 @@ pub fn draw_cubic_bezier_curve_mut<C>(
     }
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
-mod tests {
+mod benches {
     use image::{GrayImage, Luma};
 
     macro_rules! bench_cubic_bezier_curve {

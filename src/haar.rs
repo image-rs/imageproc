@@ -262,7 +262,7 @@ fn feature_size(feature_type: HaarFeatureType, block_size: Size<Pixels>) -> Size
 pub fn enumerate_haar_features(frame_width: u8, frame_height: u8) -> Vec<HaarFeature> {
     let frame_size = Size::new(frame_width, frame_height);
 
-    let feature_types = vec![
+    let feature_types = [
         HaarFeatureType::TwoRegionHorizontal,
         HaarFeatureType::ThreeRegionHorizontal,
         HaarFeatureType::TwoRegionVertical,
@@ -734,6 +734,14 @@ mod tests {
 
         assert_pixels_eq!(actual, expected);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{integral_image::integral_image, utils::gray_bench_image};
+    use test::Bencher;
 
     #[bench]
     fn bench_evaluate_all_features_10x10(b: &mut test::Bencher) {

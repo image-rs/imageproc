@@ -744,7 +744,6 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -793,39 +792,6 @@ mod tests {
 
         let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
-    }
-
-    #[bench]
-    fn bench_rotate_nearest(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([98u8]));
-            black_box(rotated);
-        });
-    }
-
-    #[bench]
-    fn bench_rotate_bilinear(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
-            black_box(rotated);
-        });
-    }
-
-    #[bench]
-    fn bench_rotate_bicubic(b: &mut Bencher) {
-        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
-        let c = Projection::translate(3.0, 3.0);
-        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
-        b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
-            black_box(rotated);
-        });
     }
 
     #[test]
@@ -893,15 +859,6 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
-    #[bench]
-    fn bench_translate(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let translated = translate(&image, (30, 30));
-            black_box(translated);
-        });
-    }
-
     #[test]
     fn test_translate_positive_x_positive_y_projection() {
         let image = gray_image!(
@@ -966,35 +923,6 @@ mod tests {
         assert_pixels_eq!(translated, expected);
     }
 
-    #[bench]
-    fn bench_translate_projection(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let t = Projection::translate(-30.0, -30.0);
-
-        b.iter(|| {
-            let translated = warp(&image, &t, Interpolation::Nearest, Luma([0u8]));
-            black_box(translated);
-        });
-    }
-
-    #[bench]
-    fn bench_translate_with(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-
-        b.iter(|| {
-            let (width, height) = image.dimensions();
-            let mut out = ImageBuffer::new(width, height);
-            warp_into_with(
-                &image,
-                |x, y| (x - 30.0, y - 30.0),
-                Interpolation::Nearest,
-                Luma([0u8]),
-                &mut out,
-            );
-            black_box(out);
-        });
-    }
-
     #[test]
     fn test_affine() {
         let image = gray_image!(
@@ -1048,6 +976,213 @@ mod tests {
         assert_pixels_eq!(translated_bicubic, expected);
     }
 
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_translate() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
+
+        let p = Projection::from_control_points(from, to);
+        assert!(p.is_some());
+
+        let out = p.unwrap() * (0f32, 0f32);
+
+        assert_approx_eq!(out.0, 10.0, 1e-10);
+        assert_approx_eq!(out.1, 5.0, 1e-10);
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(16f32, 20.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+
+        let p = Projection::from_control_points(from, to);
+        assert!(p.is_some());
+
+        let out = p.unwrap() * (0f32, 0f32);
+
+        assert_approx_eq!(out.0, 16.0, 1e-10);
+        assert_approx_eq!(out.1, 20.0, 1e-10);
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_2() {
+        let from = [
+            (67.24537, 427.96024),
+            (65.51512, 67.96736),
+            (569.6426, 62.33165),
+            (584.4605, 425.33667),
+        ];
+        let to = [(0.0, 0.0), (640.0, 0.0), (640.0, 480.0), (0.0, 480.0)];
+
+        let p = Projection::from_control_points(from, to);
+        assert!(p.is_some());
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    /// Test case from https://github.com/image-rs/imageproc/issues/412
+    fn test_from_control_points_nofreeze() {
+        let from = [
+            (0.0, 0.0),
+            (250.0, 17.481735),
+            (7.257017, 82.94814),
+            (250.0, 104.18543),
+        ];
+        let to = [(0.0, 0.0), (249.0, 0.0), (0.0, 105.0), (249.0, 105.0)];
+
+        Projection::from_control_points(from, to);
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_known_transform() {
+        let t = Projection::translate(10f32, 10f32);
+        let p = t * Projection::rotate(90f32.to_radians()) * t.invert();
+
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [p * from[0], p * from[1], p * from[2], p * from[3]];
+
+        let p_est = Projection::from_control_points(from, to);
+        assert!(p_est.is_some());
+        let p_est = p_est.unwrap();
+
+        for i in 0..50 {
+            for j in 0..50 {
+                let pt = (i as f32, j as f32);
+                assert_approx_eq!((p * pt).0, (p_est * pt).0, 1e-3);
+                assert_approx_eq!((p * pt).1, (p_est * pt).1, 1e-3);
+            }
+        }
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_colinear() {
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(0f32, 5.0), (0.0, 55.0), (0.0, 5.0), (10.0, 55.0)];
+
+        let p = Projection::from_control_points(from, to);
+        // Should fail if 3 points are colinear
+        assert!(p.is_none());
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_translation() {
+        let p = Projection::translate(10f32, 15f32);
+
+        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
+        let to = [(10f32, 15.0), (60.0, 65.0), (60.0, 15.0), (10.0, 65.0)];
+
+        let p_est = Projection::from_control_points(from, to).unwrap();
+
+        for i in 0..50 {
+            for j in 0..50 {
+                let pt = (i as f32, j as f32);
+                assert_approx_eq!((p * pt).0, (p_est * pt).0, 1e-3);
+                assert_approx_eq!((p * pt).1, (p_est * pt).1, 1e-3);
+            }
+        }
+    }
+
+    #[cfg_attr(miri, ignore = "Miri detected UB in nalgebra")]
+    #[test]
+    fn test_from_control_points_underdetermined() {
+        let from = [
+            (307.12073f32, 3.2),
+            (330.89783, 3.2),
+            (21.333334, 248.17337),
+            (21.333334, 230.34056),
+        ];
+        let to = [(0.0f32, 0.0), (3.0, 0.0), (3.0, 3.0), (0.0, 3.0)];
+
+        let p = Projection::from_control_points(from, to);
+        p.unwrap();
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use image::{GrayImage, Luma};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_rotate_nearest(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_rotate_bilinear(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_rotate_bicubic(b: &mut Bencher) {
+        let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
+        let c = Projection::translate(3.0, 3.0);
+        let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
+        b.iter(|| {
+            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
+            black_box(rotated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let translated = translate(&image, (30, 30));
+            black_box(translated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate_projection(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let t = Projection::translate(-30.0, -30.0);
+
+        b.iter(|| {
+            let translated = warp(&image, &t, Interpolation::Nearest, Luma([0u8]));
+            black_box(translated);
+        });
+    }
+
+    #[bench]
+    fn bench_translate_with(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+
+        b.iter(|| {
+            let (width, height) = image.dimensions();
+            let mut out = ImageBuffer::new(width, height);
+            warp_into_with(
+                &image,
+                |x, y| (x - 30.0, y - 30.0),
+                Interpolation::Nearest,
+                Luma([0u8]),
+                &mut out,
+            );
+            black_box(out);
+        });
+    }
+
     #[bench]
     fn bench_affine_nearest(b: &mut Bencher) {
         let image = GrayImage::from_pixel(200, 200, Luma([15u8]));
@@ -1097,125 +1232,6 @@ mod tests {
             let transformed = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
             black_box(transformed);
         });
-    }
-
-    #[test]
-    fn test_from_control_points_translate() {
-        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-        let to = [(10f32, 5.0), (60.0, 55.0), (60.0, 5.0), (10.0, 55.0)];
-
-        let p = Projection::from_control_points(from, to);
-        assert!(p.is_some());
-
-        let out = p.unwrap() * (0f32, 0f32);
-
-        assert_approx_eq!(out.0, 10.0, 1e-10);
-        assert_approx_eq!(out.1, 5.0, 1e-10);
-    }
-
-    #[test]
-    fn test_from_control_points() {
-        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-        let to = [(16f32, 20.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-
-        let p = Projection::from_control_points(from, to);
-        assert!(p.is_some());
-
-        let out = p.unwrap() * (0f32, 0f32);
-
-        assert_approx_eq!(out.0, 16.0, 1e-10);
-        assert_approx_eq!(out.1, 20.0, 1e-10);
-    }
-
-    #[test]
-    fn test_from_control_points_2() {
-        let from = [
-            (67.24537, 427.96024),
-            (65.51512, 67.96736),
-            (569.6426, 62.33165),
-            (584.4605, 425.33667),
-        ];
-        let to = [(0.0, 0.0), (640.0, 0.0), (640.0, 480.0), (0.0, 480.0)];
-
-        let p = Projection::from_control_points(from, to);
-        assert!(p.is_some());
-    }
-
-    #[test]
-    /// Test case from https://github.com/image-rs/imageproc/issues/412
-    fn test_from_control_points_nofreeze() {
-        let from = [
-            (0.0, 0.0),
-            (250.0, 17.481735),
-            (7.257017, 82.94814),
-            (250.0, 104.18543),
-        ];
-        let to = [(0.0, 0.0), (249.0, 0.0), (0.0, 105.0), (249.0, 105.0)];
-
-        Projection::from_control_points(from, to);
-    }
-
-    #[test]
-    fn test_from_control_points_known_transform() {
-        let t = Projection::translate(10f32, 10f32);
-        let p = t * Projection::rotate(90f32.to_radians()) * t.invert();
-
-        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-        let to = [p * from[0], p * from[1], p * from[2], p * from[3]];
-
-        let p_est = Projection::from_control_points(from, to);
-        assert!(p_est.is_some());
-        let p_est = p_est.unwrap();
-
-        for i in 0..50 {
-            for j in 0..50 {
-                let pt = (i as f32, j as f32);
-                assert_approx_eq!((p * pt).0, (p_est * pt).0, 1e-3);
-                assert_approx_eq!((p * pt).1, (p_est * pt).1, 1e-3);
-            }
-        }
-    }
-
-    #[test]
-    fn test_from_control_points_colinear() {
-        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-        let to = [(0f32, 5.0), (0.0, 55.0), (0.0, 5.0), (10.0, 55.0)];
-
-        let p = Projection::from_control_points(from, to);
-        // Should fail if 3 points are colinear
-        assert!(p.is_none());
-    }
-
-    #[test]
-    fn test_from_control_points_translation() {
-        let p = Projection::translate(10f32, 15f32);
-
-        let from = [(0f32, 0.0), (50.0, 50.0), (50.0, 0.0), (0.0, 50.0)];
-        let to = [(10f32, 15.0), (60.0, 65.0), (60.0, 15.0), (10.0, 65.0)];
-
-        let p_est = Projection::from_control_points(from, to).unwrap();
-
-        for i in 0..50 {
-            for j in 0..50 {
-                let pt = (i as f32, j as f32);
-                assert_approx_eq!((p * pt).0, (p_est * pt).0, 1e-3);
-                assert_approx_eq!((p * pt).1, (p_est * pt).1, 1e-3);
-            }
-        }
-    }
-
-    #[test]
-    fn test_from_control_points_underdetermined() {
-        let from = [
-            (307.12073f32, 3.2),
-            (330.89783, 3.2),
-            (21.333334, 248.17337),
-            (21.333334, 230.34056),
-        ];
-        let to = [(0.0f32, 0.0), (3.0, 0.0), (3.0, 3.0), (0.0, 3.0)];
-
-        let p = Projection::from_control_points(from, to);
-        p.unwrap();
     }
 
     #[bench]

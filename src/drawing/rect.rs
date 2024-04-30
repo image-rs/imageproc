@@ -76,18 +76,6 @@ mod tests {
     use crate::drawing::Blend;
     use crate::rect::Rect;
     use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
-    use test::{black_box, Bencher};
-
-    #[bench]
-    fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
-        let mut image = RgbImage::new(200, 200);
-        let color = Rgb([120u8, 60u8, 47u8]);
-        let rect = Rect::at(50, 50).of_size(80, 90);
-        b.iter(|| {
-            draw_filled_rect_mut(&mut image, rect, color);
-            black_box(&image);
-        });
-    }
 
     #[test]
     fn test_draw_hollow_rect() {
@@ -154,5 +142,26 @@ mod tests {
         // we're blending in the correct direction only.
         draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), blue);
         assert_eq!(*image.0.get_pixel(2, 2), blue);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::drawing::Blend;
+    use crate::rect::Rect;
+    use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
+        let mut image = RgbImage::new(200, 200);
+        let color = Rgb([120u8, 60u8, 47u8]);
+        let rect = Rect::at(50, 50).of_size(80, 90);
+        b.iter(|| {
+            draw_filled_rect_mut(&mut image, rect, color);
+            black_box(&image);
+        });
     }
 }

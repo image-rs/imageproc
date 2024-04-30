@@ -185,14 +185,14 @@ where
 /// Finds the convex hull of a set of points, using the [Graham scan algorithm].
 ///
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
-pub fn convex_hull<T>(points_slice: &[Point<T>]) -> Vec<Point<T>>
+pub fn convex_hull<T>(points: impl Into<Vec<Point<T>>>) -> Vec<Point<T>>
 where
     T: NumCast + Copy + Ord,
 {
-    if points_slice.is_empty() {
-        return Vec::new();
+    let mut points = points.into();
+    if points.is_empty() {
+        return vec![];
     }
-    let mut points: Vec<Point<T>> = points_slice.to_vec();
     let mut start_point_pos = 0;
     let mut start_point = points[0];
     for (i, &point) in points.iter().enumerate().skip(1) {
@@ -320,7 +320,7 @@ mod tests {
             Point::new(140, 30),
             Point::new(120, 35),
         ];
-        let points = convex_hull(&star);
+        let points = convex_hull(star);
         assert_eq!(
             points,
             [
@@ -353,7 +353,7 @@ mod tests {
             Point::new(140, -10),
             Point::new(120, -5),
         ];
-        let points = convex_hull(&star);
+        let points = convex_hull(star);
         assert_eq!(
             points,
             [

@@ -11,7 +11,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
 use crate::map::{ChannelMap, WithChannel};
-use num::{abs, pow, Num};
+use num::Num;
 
 use std::cmp::{max, min};
 use std::f32;
@@ -39,6 +39,10 @@ use std::f32;
 ///        Images." IEEE International Conference on Computer Vision (1998)
 ///        839-846. DOI: 10.1109/ICCV.1998.710815
 ///
+/// # Panics
+///
+/// Panics if `image.width() > i32::MAX as u32` or `image.height() > i32::MAX as u32`.
+///
 /// # Examples
 ///
 /// ```
@@ -59,90 +63,80 @@ pub fn bilateral_filter(
         (-0.5 * x.powi(2) / sigma_squared).exp()
     }
 
-    /// Effectively a meshgrid command with flattened outputs.
-    fn window_coords(window_size: u32) -> (Vec<i32>, Vec<i32>) {
-        let window_start = (-(window_size as f32) / 2.0).floor() as i32;
-        let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
-        let window_range = window_start..window_end;
-        let v = window_range.collect::<Vec<i32>>();
-        let cc: Vec<i32> = v.iter().cycle().take(v.len() * v.len()).cloned().collect();
-        let mut rr = Vec::new();
-        let window_range = window_start..window_end;
-        for i in window_range {
-            rr.append(&mut vec![i; (window_size + 1) as usize]);
-        }
-        (rr, cc)
-    }
-
     /// Create look-up table of Gaussian weights for color dimension.
     fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-        let v = (0..bins as i32).collect::<Vec<i32>>();
         let step_size = max_value / bins as f32;
-        let vals = v.iter().map(|&x| x as f32 * step_size).collect::<Vec<_>>();
         let sigma_squared = sigma.powi(2);
-        let gauss_weights = vals
-            .iter()
-            .map(|&x| gaussian_weight(x, sigma_squared))
-            .collect::<Vec<_>>();
-        gauss_weights
+        (0..bins)
+            .map(|x| x as f32 * step_size)
+            .map(|x| gaussian_weight(x, sigma_squared))
+            .collect()
     }
 
     /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
     fn compute_spatial_lut(window_size: u32, sigma: f32) -> Vec<f32> {
-        let (rr, cc) = window_coords(window_size);
-        let mut gauss_weights = Vec::new();
-        let it = rr.iter().zip(cc.iter());
+        let window_start = (-(window_size as f32) / 2.0).floor() as i32;
+        let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
+        let window_range = window_start..window_end;
+
+        let cc = window_range.clone().cycle().take(window_range.len().pow(2));
+        let n = window_size as usize + 1;
+        let rr = window_range.flat_map(|i| std::iter::repeat(i).take(n));
+
         let sigma_squared = sigma.powi(2);
-        for (r, c) in it {
-            let dist = f32::sqrt(pow(*r as f32, 2) + pow(*c as f32, 2));
-            gauss_weights.push(gaussian_weight(dist, sigma_squared));
-        }
-        gauss_weights
+        rr.zip(cc)
+            .map(|(r, c)| {
+                let dist = ((r as f32).powi(2) + (c as f32).powi(2)).sqrt();
+                gaussian_weight(dist, sigma_squared)
+            })
+            .collect()
     }
 
-    let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
     let max_value = *image.iter().max().unwrap() as f32;
-    let n_bins: u32 = 255; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
+    let n_bins = 255u32; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
     let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
     let color_dist_scale = n_bins as f32 / max_value;
     let max_color_bin = (n_bins - 1) as usize;
     let range_lut = compute_spatial_lut(window_size, sigma_spatial);
     let window_size = window_size as i32;
     let window_extent = (window_size - 1) / 2;
-    let height = height as i32;
-    let width = width as i32;
-    for row in 0..height {
-        for col in 0..width {
-            let mut total_val: f32 = 0.;
-            let mut total_weight: f32 = 0.;
-            let window_center_val = image.get_pixel(col as u32, row as u32)[0] as i32;
-            for window_row in -window_extent..window_extent + 1 {
-                let window_row_abs: i32 = row + window_row;
-                let window_row_abs: i32 = min(height - 1, max(0, window_row_abs)); // Wrap to edge.
-                let kr: i32 = window_row + window_extent;
-                for window_col in -window_extent..window_extent + 1 {
-                    let window_col_abs: i32 = col + window_col;
-                    let window_col_abs: i32 = min(width - 1, max(0, window_col_abs)); // Wrap to edge.
-                    let kc: i32 = window_col + window_extent;
-                    let range_bin = (kr * window_size + kc) as usize;
-                    let range_weight: f32 = range_lut[range_bin];
-                    let val: i32 =
-                        image.get_pixel(window_col_abs as u32, window_row_abs as u32)[0] as i32;
-                    let color_dist: i32 = abs(window_center_val - val);
-                    let color_bin = (color_dist as f32 * color_dist_scale) as usize;
-                    let color_bin: usize = min(color_bin, max_color_bin);
-                    let color_weight: f32 = color_lut[color_bin];
-                    let weight: f32 = range_weight * color_weight;
-                    total_val += val as f32 * weight;
-                    total_weight += weight;
-                }
+
+    let (width, height) = image.dimensions();
+    assert!(width <= i32::MAX as u32);
+    assert!(height <= i32::MAX as u32);
+
+    Image::from_fn(width, height, |col, row| {
+        let mut total_val = 0f32;
+        let mut total_weight = 0f32;
+        debug_assert!(col < width);
+        debug_assert!(row < height);
+        // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
+        let window_center_val = unsafe { image.unsafe_get_pixel(col, row)[0] } as i32;
+
+        for window_row in -window_extent..window_extent + 1 {
+            let window_row_abs =
+                (row as i32 + window_row).clamp(0, height.saturating_sub(1) as i32) as u32;
+            let kr = window_row + window_extent;
+            for window_col in -window_extent..window_extent + 1 {
+                let window_col_abs =
+                    (col as i32 + window_col).clamp(0, width.saturating_sub(1) as i32) as u32;
+                debug_assert!(window_col_abs < width);
+                debug_assert!(window_row_abs < height);
+                // Safety: we clamped `window_row_abs` and `window_col_abs` to be in bounds.
+                let val = unsafe { image.unsafe_get_pixel(window_col_abs, window_row_abs)[0] };
+
+                let kc = window_col + window_extent;
+                let range_bin = (kr * window_size + kc) as usize;
+                let color_dist = (window_center_val - val as i32).abs() as f32;
+                let color_bin = ((color_dist * color_dist_scale) as usize).min(max_color_bin);
+                let weight = range_lut[range_bin] * color_lut[color_bin];
+                total_val += val as f32 * weight;
+                total_weight += weight;
             }
-            let new_val = (total_val / total_weight).round() as u8;
-            out.put_pixel(col as u32, row as u32, Luma([new_val]));
         }
-    }
-    out
+        let new_val = (total_val / total_weight).round() as u8;
+        Luma([new_val])
+    })
 }
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
@@ -287,6 +281,8 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
         kernel_data[kernel_radius + i] = value;
         kernel_data[kernel_radius - i] = value;
     }
+    let sum: f32 = kernel_data.iter().sum();
+    kernel_data.iter_mut().for_each(|x| *x /= sum);
     kernel_data
 }
 
@@ -556,6 +552,12 @@ where
     }
 }
 
+/// Apply a Laplacian filter to an image.
+#[must_use = "the function does not modify the original image"]
+pub fn laplacian_filter(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+    filter3x3(image, &[1, 1, 1, 1, -8, 1, 1, 1, 1])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -566,13 +568,18 @@ mod tests {
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
-    #[bench]
-    fn bench_bilateral_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let filtered = bilateral_filter(&image, 10, 10., 3.);
-            black_box(filtered);
-        });
+    #[test]
+    fn test_bilateral_filter() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
+        let expect = gray_image!(
+            2, 3, 4;
+            5, 5, 6;
+            6, 7, 8);
+        let actual = bilateral_filter(&image, 3, 10., 3.);
+        assert_pixels_eq!(expect, actual);
     }
 
     #[test]
@@ -600,16 +607,6 @@ mod tests {
 
         assert_pixels_eq!(box_filter(&image, 1, 1), expected);
     }
-
-    #[bench]
-    fn bench_box_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let filtered = box_filter(&image, 7, 7);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_separable_filter() {
         let image = gray_image!(
@@ -645,17 +642,6 @@ mod tests {
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
-    }
-
-    #[bench]
-    fn bench_separable_filter(b: &mut Bencher) {
-        let image = gray_bench_image(300, 300);
-        let h_kernel = vec![1f32 / 5f32; 5];
-        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
-        b.iter(|| {
-            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
-            black_box(filtered);
-        });
     }
 
     /// Reference implementation of horizontal_filter. Used to validate
@@ -784,17 +770,6 @@ mod tests {
         let kernel = vec![1f32 / 10f32; 10];
         black_box(horizontal_filter(&image, &kernel));
     }
-
-    #[bench]
-    fn bench_horizontal_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
-        b.iter(|| {
-            let filtered = horizontal_filter(&image, &kernel);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_vertical_filter() {
         let image = gray_image!(
@@ -823,17 +798,6 @@ mod tests {
         let kernel = vec![1f32 / 10f32; 10];
         black_box(vertical_filter(&image, &kernel));
     }
-
-    #[bench]
-    fn bench_vertical_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
-        b.iter(|| {
-            let filtered = vertical_filter(&image, &kernel);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_filter3x3_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
@@ -915,6 +879,102 @@ mod tests {
             10,  5);
 
         assert_pixels_eq!(filtered, expected);
+    }
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_zero_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, 0.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_negative_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, -0.5);
+    }
+
+    #[test]
+    fn test_gaussian_on_u8_white_idempotent() {
+        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(64, 64, Luma([255]));
+        let image2 = gaussian_blur_f32(&image, 10f32);
+        assert_pixels_eq_within!(image2, image, 0);
+    }
+
+    #[test]
+    fn test_gaussian_on_f32_white_idempotent() {
+        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(64, 64, Luma([1.0]));
+        let image2 = gaussian_blur_f32(&image, 10f32);
+        assert_pixels_eq_within!(image2, image, 1e-6);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::definitions::{Clamp, Image};
+    use crate::utils::{gray_bench_image, rgb_bench_image};
+    use image::imageops::blur;
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
+    use std::cmp::{max, min};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_bilateral_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = bilateral_filter(&image, 10, 10., 3.);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_box_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = box_filter(&image, 7, 7);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_separable_filter(b: &mut Bencher) {
+        let image = gray_bench_image(300, 300);
+        let h_kernel = vec![1f32 / 5f32; 5];
+        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
+        b.iter(|| {
+            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_horizontal_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32 / 5f32; 5];
+        b.iter(|| {
+            let filtered = horizontal_filter(&image, &kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_vertical_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32 / 5f32; 5];
+        b.iter(|| {
+            let filtered = vertical_filter(&image, &kernel);
+            black_box(filtered);
+        });
     }
 
     #[bench]
@@ -998,27 +1058,5 @@ mod tests {
             let blurred = gaussian_blur_f32(&image, 10f32);
             black_box(blurred);
         });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_gaussian_blur_f32_rejects_zero_sigma() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6;
-            7, 8, 9
-        );
-        let _ = gaussian_blur_f32(&image, 0.0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_gaussian_blur_f32_rejects_negative_sigma() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6;
-            7, 8, 9
-        );
-        let _ = gaussian_blur_f32(&image, -0.5);
     }
 }

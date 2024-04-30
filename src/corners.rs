@@ -495,7 +495,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_is_corner_fast12_12_contiguous_darker_pixels() {
@@ -551,20 +550,6 @@ mod tests {
             10, 10, 00, 00, 00, 10, 10);
 
         assert!(!is_corner_fast12(&image, 8, 3, 3));
-    }
-
-    #[bench]
-    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
-        let image = black_box(gray_image!(
-            10, 10, 00, 00, 00, 10, 10;
-            10, 00, 10, 10, 10, 00, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            10, 10, 10, 10, 10, 10, 00;
-            10, 00, 10, 10, 10, 10, 10;
-            10, 10, 00, 00, 00, 10, 10));
-
-        b.iter(|| black_box(is_corner_fast12(&image, 8, 3, 3)));
     }
 
     #[test]
@@ -644,6 +629,60 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_is_corner_fast9_12_noncontiguous() {
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
+
+        assert!(!is_corner_fast9(&image, 8, 3, 3));
+    }
+
+    #[test]
+    fn test_corner_score_fast9() {
+        // 8 pixels with an intensity diff of 20, then 1 with a diff of 10
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 20, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10);
+
+        let score = fast_corner_score(&image, 5, 3, 3, Fast::Nine);
+        assert_eq!(score, 9);
+
+        let score = fast_corner_score(&image, 9, 3, 3, Fast::Nine);
+        assert_eq!(score, 9);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {
+        let image = black_box(gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 00;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10));
+
+        b.iter(|| black_box(is_corner_fast12(&image, 8, 3, 3)));
+    }
+
     #[bench]
     fn bench_intensity_centroid(b: &mut Bencher) {
         let image = gray_image!(
@@ -698,38 +737,5 @@ mod tests {
             00, 00, 00, 00, 00, 00, 00));
 
         b.iter(|| black_box(is_corner_fast9(&image, 8, 3, 3)));
-    }
-
-    #[test]
-    fn test_is_corner_fast9_12_noncontiguous() {
-        let image = gray_image!(
-            10, 10, 00, 00, 00, 10, 10;
-            10, 00, 10, 10, 10, 00, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            10, 10, 10, 10, 10, 10, 00;
-            10, 00, 10, 10, 10, 10, 10;
-            10, 10, 00, 00, 00, 10, 10);
-
-        assert!(!is_corner_fast9(&image, 8, 3, 3));
-    }
-
-    #[test]
-    fn test_corner_score_fast9() {
-        // 8 pixels with an intensity diff of 20, then 1 with a diff of 10
-        let image = gray_image!(
-            10, 10, 00, 00, 00, 10, 10;
-            10, 00, 10, 10, 10, 00, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            00, 10, 10, 20, 10, 10, 10;
-            00, 10, 10, 10, 10, 10, 10;
-            10, 10, 10, 10, 10, 10, 10;
-            10, 10, 10, 10, 10, 10, 10);
-
-        let score = fast_corner_score(&image, 5, 3, 3, Fast::Nine);
-        assert_eq!(score, 9);
-
-        let score = fast_corner_score(&image, 9, 3, 3, Fast::Nine);
-        assert_eq!(score, 9);
     }
 }

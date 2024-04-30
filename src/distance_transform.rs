@@ -6,23 +6,24 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::cmp::min;
 
 /// How to measure distance between coordinates.
-/// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
-///
-/// Note that this enum doesn't currently include the `L2` norm. As `Norm`
-/// is used by the [`morphology`](../morphology/index.html) functions, this means that we
-/// don't support using the `L2` norm for any of those functions.
-///
-/// This module does support calculating the `L2` distance function, via the
-/// [`euclidean_squared_distance_transform`](fn.euclidean_squared_distance_transform.html)
-/// function, but the signature of this function is not currently compatible with those for
-/// computing `L1` and `LInf` distance transforms. It would be nice to unify these functions
-/// in future.
+/// See [`distance_transform`] for examples.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Norm {
-    /// Defines d((x1, y1), (x2, y2)) to be abs(x1 - x2) + abs(y1 - y2).
+    /// `d((x1, y1), (x2, y2)) = abs(x1 - x2) + abs(y1 - y2)`
+    ///
     /// Also known as the Manhattan or city block norm.
     L1,
-    /// Defines d((x1, y1), (x2, y2)) to be max(abs(x1 - x2), abs(y1 - y2)).
+    /// `d((x1, y1), (x2, y2)) = sqrt((x1 - x2)^2 + (y1 - y2)^2)`
+    ///
+    /// Also known as the Euclidean norm.
+    ///
+    /// Note that both [`distance_transform`] and the functions in the [`morphology`](crate::morphology)
+    /// module represent distances as integer values, so cannot accurately represent `L2` norms. Instead,
+    /// these functions approximate the `L2` norm by taking the ceiling of the true value. If you want accurate
+    /// distances then use [`euclidean_squared_distance_transform`] instead, which returns floating point values.
+    L2,
+    /// `d((x1, y1), (x2, y2)) = max(abs(x1 - x2), abs(y1 - y2))`
+    ///
     /// Also known as the chessboard norm.
     LInf,
 }
@@ -31,6 +32,9 @@ pub enum Norm {
 ///
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image
 /// has a bit-depth of 8, distances saturate at 255.
+///
+/// When using `Norm::L2` this function returns the ceiling of the true distances.
+/// Use [`euclidean_squared_distance_transform`] if you need floating point distances.
 ///
 /// # Examples
 /// ```
@@ -60,6 +64,17 @@ pub enum Norm {
 ///
 /// assert_pixels_eq!(distance_transform(&image, Norm::L1), l1_distances);
 ///
+/// // L2 norm
+/// let l2_distances = gray_image!(
+///     3,   3,   2,   3,   3;
+///     3,   2,   1,   2,   3;
+///     2,   1,   0,   1,   2;
+///     3,   2,   1,   2,   3;
+///     3,   3,   2,   3,   3
+/// );
+///
+/// assert_pixels_eq!(distance_transform(&image, Norm::L2), l2_distances);
+///
 /// // LInf norm
 /// let linf_distances = gray_image!(
 ///     2,   2,   2,   2,   2;
@@ -70,6 +85,7 @@ pub enum Norm {
 /// );
 ///
 /// assert_pixels_eq!(distance_transform(&image, Norm::LInf), linf_distances);
+///
 /// # }
 /// ```
 pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
@@ -83,7 +99,10 @@ pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
 /// A pixel belongs to the foreground if it has non-zero intensity. As the image has a bit-depth of 8,
 /// distances saturate at 255.
 ///
-/// See the [`distance_transform`](fn.distance_transform.html) documentation for examples.
+/// When using `Norm::L2` this function returns the ceiling of the true distances.
+/// Use [`euclidean_squared_distance_transform`] if you need floating point distances.
+///
+/// See [`distance_transform`] for examples.
 pub fn distance_transform_mut(image: &mut GrayImage, norm: Norm) {
     distance_transform_impl(image, norm, DistanceFrom::Foreground);
 }
@@ -95,7 +114,37 @@ pub(crate) enum DistanceFrom {
 }
 
 pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: DistanceFrom) {
+    match norm {
+        Norm::LInf => distance_transform_impl_linf_or_l1::<true>(image, from),
+        Norm::L1 => distance_transform_impl_linf_or_l1::<false>(image, from),
+        Norm::L2 => {
+            match from {
+                DistanceFrom::Foreground => (),
+                DistanceFrom::Background => image
+                    .iter_mut()
+                    .for_each(|p| *p = if *p == 0 { 1 } else { 0 }),
+            }
+            let float_dist: ImageBuffer<Luma<f64>, Vec<f64>> =
+                euclidean_squared_distance_transform(image);
+            image
+                .iter_mut()
+                .zip(float_dist.iter())
+                .for_each(|(u, v)| *u = v.sqrt().clamp(0.0, 255.0).ceil() as u8);
+        }
+    }
+}
+
+fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
+    image: &mut GrayImage,
+    from: DistanceFrom,
+) {
     let max_distance = Luma([min(image.width() + image.height(), 255u32) as u8]);
+
+    // We use an unsafe code block for optimisation purposes here
+    // We use the 'unsafe_get_pixel' and 'check' unsafe functions,
+    // which are faster than safe functions,
+    // and we garantee that they are used safely
+    // by making sure we are always within the bounds of the image
 
     unsafe {
         // Top-left to bottom-right
@@ -120,7 +169,7 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                 if y > 0 {
                     check(image, x, y, x, y - 1);
 
-                    if norm == Norm::LInf {
+                    if IS_LINF {
                         if x > 0 {
                             check(image, x, y, x - 1, y - 1);
                         }
@@ -142,7 +191,7 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                 if y < image.height() - 1 {
                     check(image, x, y, x, y + 1);
 
-                    if norm == Norm::LInf {
+                    if IS_LINF {
                         if x < image.width() - 1 {
                             check(image, x, y, x + 1, y + 1);
                         }
@@ -405,12 +454,11 @@ mod tests {
     use super::*;
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
-    use crate::utils::{gray_bench_image, pixel_diff_summary};
+    use crate::utils::pixel_diff_summary;
     use image::{GrayImage, Luma};
     use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::cmp::max;
     use std::f64;
-    use test::{black_box, Bencher};
 
     /// Avoid generating garbage floats during certain calculations below.
     #[derive(Debug, Clone)]
@@ -581,6 +629,14 @@ mod tests {
         let dist = euclidean_squared_distance_transform(&image);
         assert_pixels_eq_within!(dist, expected, 1e-6);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
 
     macro_rules! bench_euclidean_squared_distance_transform {
         ($name:ident, side: $s:expr) => {
@@ -615,6 +671,9 @@ mod tests {
     bench_distance_transform!(bench_distance_transform_l1_10, Norm::L1, side: 10);
     bench_distance_transform!(bench_distance_transform_l1_100, Norm::L1, side: 100);
     bench_distance_transform!(bench_distance_transform_l1_200, Norm::L1, side: 200);
+    bench_distance_transform!(bench_distance_transform_l2_10, Norm::L2, side: 10);
+    bench_distance_transform!(bench_distance_transform_l2_100, Norm::L2, side: 100);
+    bench_distance_transform!(bench_distance_transform_l2_200, Norm::L2, side: 200);
     bench_distance_transform!(bench_distance_transform_linf_10, Norm::LInf, side: 10);
     bench_distance_transform!(bench_distance_transform_linf_100, Norm::LInf, side: 100);
     bench_distance_transform!(bench_distance_transform_linf_200, Norm::LInf, side: 200);

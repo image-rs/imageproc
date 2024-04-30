@@ -684,6 +684,14 @@ mod tests {
         let desc_unsigned = hog(&image, opts_unsigned);
         test::black_box(desc_unsigned.unwrap());
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use ::test;
 
     #[bench]
     fn bench_hog(b: &mut test::Bencher) {

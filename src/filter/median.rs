@@ -112,24 +112,27 @@ where
 {
     let (width, height) = image.dimensions();
 
+    // Safety note: we rely on image dimensions being non-zero for uncheched indexing to be in bounds
     if width == 0 || height == 0 {
         return image.clone();
     }
 
-    let mut out = Image::<P>::new(width, height);
-    let rx = x_radius as i32;
-    let ry = y_radius as i32;
+    // Safety note: we perform unchecked indexing in several places after checking at type i32 that a coordinate is in bounds
+    if (width + x_radius) > i32::MAX as u32 || (height + y_radius) > i32::MAX as u32 {
+        panic!("(width + x_radius) and (height + y_radius) must both be <= i32::MAX");
+    }
 
+    let mut out = Image::<P>::new(width, height);
     let mut hist = initialise_histogram_for_top_left_pixel(image, x_radius, y_radius);
-    slide_down_column(&mut hist, image, &mut out, 0, rx, ry);
+    slide_down_column(&mut hist, image, &mut out, 0, x_radius, y_radius);
 
     for x in 1..width {
         if x % 2 == 0 {
-            slide_right(&mut hist, image, x, 0, rx, ry);
-            slide_down_column(&mut hist, image, &mut out, x, rx, ry);
+            slide_right(&mut hist, image, x, 0, x_radius, y_radius);
+            slide_down_column(&mut hist, image, &mut out, x, x_radius, y_radius);
         } else {
-            slide_right(&mut hist, image, x, height - 1, rx, ry);
-            slide_up_column(&mut hist, image, &mut out, x, rx, ry);
+            slide_right(&mut hist, image, x, height - 1, x_radius, y_radius);
+            slide_up_column(&mut hist, image, &mut out, x, x_radius, y_radius);
         }
     }
     out
@@ -144,6 +147,7 @@ where
     P: Pixel<Subpixel = u8>,
 {
     let (width, height) = image.dimensions();
+
     let kernel_size = (2 * x_radius + 1) * (2 * y_radius + 1);
     let num_channels = P::CHANNEL_COUNT;
 
@@ -152,32 +156,54 @@ where
     let ry = y_radius as i32;
 
     for dy in -ry..(ry + 1) {
+        // Safety note: 0 <= py <= height - 1
         let py = min(max(0, dy), height as i32 - 1) as u32;
 
         for dx in -rx..(rx + 1) {
+            // Safety note: 0 <= px <= width - 1
             let px = min(max(0, dx), width as i32 - 1) as u32;
 
-            hist.incr(image, px, py);
+            // Safety: px and py are in bounds as explained in the 'Safety note' comments above
+            unsafe {
+                hist.incr(image, px, py);
+            }
         }
     }
 
     hist
 }
 
-fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, rx: i32, ry: i32)
+fn slide_right<P>(hist: &mut HistSet, image: &Image<P>, x: u32, y: u32, rx: u32, ry: u32)
 where
     P: Pixel<Subpixel = u8>,
 {
     let (width, height) = image.dimensions();
 
+    // Safety note: unchecked indexing below relies on x and y being in bounds
+    assert!(x < width);
+    assert!(y < height);
+
+    // Safety note: rx and ry are both >= 0 by construction
+    let rx = rx as i32;
+    let ry = ry as i32;
+
+    // Safety note: 0 <= prev_x < width - rx - 1 < width
     let prev_x = max(0, x as i32 - rx - 1) as u32;
+    // Safety note: 0 <= x + rx <= next_x <= width - 1
     let next_x = min(x as i32 + rx, width as i32 - 1) as u32;
 
     for dy in -ry..(ry + 1) {
+        // Safety note: 0 <= py <= height - 1
         let py = min(max(0, y as i32 + dy), (height - 1) as i32) as u32;
 
-        hist.decr(image, prev_x, py);
-        hist.incr(image, next_x, py);
+        // Safety: prev_x and py are in bounds based on the 'Safety note' comments above
+        unsafe {
+            hist.decr(image, prev_x, py);
+        }
+        // Safety: next_x and py are in bounds based on the 'Safety note' comments above
+        unsafe {
+            hist.incr(image, next_x, py);
+        }
     }
 }
 
@@ -186,26 +212,50 @@ fn slide_down_column<P>(
     image: &Image<P>,
     out: &mut Image<P>,
     x: u32,
-    rx: i32,
-    ry: i32,
+    rx: u32,
+    ry: u32,
 ) where
     P: Pixel<Subpixel = u8>,
 {
     let (width, height) = image.dimensions();
-    hist.set_to_median(out, x, 0);
+
+    // Safety note: unchecked indexing below relies on x being in bounds
+    assert!(x < width);
+
+    // Safety note: rx and ry are both >= 0 by construction
+    let rx = rx as i32;
+    let ry = ry as i32;
+
+    // Safety: hist.data.len() == P::CHANNEL_COUNT by construction
+    unsafe {
+        hist.set_to_median(out, x, 0);
+    }
 
     for y in 1..height {
+        // Safety note: 0 <= prev_y < height - ry - 1 < height
         let prev_y = max(0, y as i32 - ry - 1) as u32;
+        // Safety note: 0 < 1 + ry <= next_y < height
         let next_y = min(y as i32 + ry, height as i32 - 1) as u32;
 
         for dx in -rx..(rx + 1) {
+            // Safety note: 0 <= px < width
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
-            hist.decr(image, px, prev_y);
-            hist.incr(image, px, next_y);
+            // Safety: px and prev_y are in bounds based on the 'Safety note' comments above
+            unsafe {
+                hist.decr(image, px, prev_y);
+            }
+
+            // Safety: px and next_y are in bounds based on the 'Safety note' comments above
+            unsafe {
+                hist.incr(image, px, next_y);
+            }
         }
 
-        hist.set_to_median(out, x, y);
+        // Safety: hist.data.len() == P::CHANNEL_COUNT by construction
+        unsafe {
+            hist.set_to_median(out, x, y);
+        }
     }
 }
 
@@ -214,26 +264,49 @@ fn slide_up_column<P>(
     image: &Image<P>,
     out: &mut Image<P>,
     x: u32,
-    rx: i32,
-    ry: i32,
+    rx: u32,
+    ry: u32,
 ) where
     P: Pixel<Subpixel = u8>,
 {
     let (width, height) = image.dimensions();
-    hist.set_to_median(out, x, height - 1);
+
+    // Safety note: unchecked indexing below relies on x being in bounds
+    assert!(x < width);
+
+    // Safety note: rx and ry are both >= 0 by construction
+    let rx = rx as i32;
+    let ry = ry as i32;
+
+    // Safety: hist.data.len() == P::CHANNEL_COUNT by construction
+    unsafe {
+        hist.set_to_median(out, x, height - 1);
+    }
 
     for y in (0..(height - 1)).rev() {
+        // Safety note: 0 < ry + 1 <= prev_y <= height - 1
         let prev_y = min(y as i32 + ry + 1, height as i32 - 1) as u32;
+        // Safety note: 0 <= next_y < height - 1 - ry < height
         let next_y = max(0, y as i32 - ry) as u32;
 
         for dx in -rx..(rx + 1) {
+            // Safety note: 0 <= px <= width - 1
             let px = min(max(0, x as i32 + dx), (width - 1) as i32) as u32;
 
-            hist.decr(image, px, prev_y);
-            hist.incr(image, px, next_y);
+            // Safety: px and prev_y are in bounds based on the 'Safety note' comments above
+            unsafe {
+                hist.decr(image, px, prev_y);
+            }
+            // Safety: px and next_y are in bounds based on the 'Safety note' comments above
+            unsafe {
+                hist.incr(image, px, next_y);
+            }
         }
 
-        hist.set_to_median(out, x, y);
+        // Safety: hist.data.len() == P::CHANNEL_COUNT by construction
+        unsafe {
+            hist.set_to_median(out, x, y);
+        }
     }
 }
 
@@ -252,7 +325,7 @@ impl HistSet {
     fn new(num_channels: u8, expected_count: u32) -> HistSet {
         // Can't use vec![[0u32; 256], num_channels as usize]
         // because arrays of length > 32 aren't cloneable.
-        let mut data = vec![];
+        let mut data = Vec::with_capacity(num_channels as usize);
         for _ in 0..num_channels {
             data.push([0u32; 256]);
         }
@@ -263,77 +336,65 @@ impl HistSet {
         }
     }
 
-    fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
+    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT <= self.data.len()
+    unsafe fn incr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
         P: Pixel<Subpixel = u8>,
     {
-        unsafe {
-            let pixel = image.unsafe_get_pixel(x, y);
-            let channels = pixel.channels();
-            for c in 0..channels.len() {
-                let p = *channels.get_unchecked(c) as usize;
-                let hist = self.data.get_unchecked_mut(c);
-                *hist.get_unchecked_mut(p) += 1;
-            }
+        let pixel = image.unsafe_get_pixel(x, y);
+        let channels = pixel.channels();
+        for c in 0..channels.len() {
+            let p = *channels.get_unchecked(c) as usize;
+            let hist = self.data.get_unchecked_mut(c);
+            *hist.get_unchecked_mut(p) += 1;
         }
     }
 
-    fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
+    /// Safety: requires x and y to be within image bounds and P::CHANNEL_COUNT <= self.data.len()
+    unsafe fn decr<P>(&mut self, image: &Image<P>, x: u32, y: u32)
     where
         P: Pixel<Subpixel = u8>,
     {
-        unsafe {
-            let pixel = image.unsafe_get_pixel(x, y);
-            let channels = pixel.channels();
-            for c in 0..channels.len() {
-                let p = *channels.get_unchecked(c) as usize;
-                let hist = self.data.get_unchecked_mut(c);
-                *hist.get_unchecked_mut(p) -= 1;
-            }
+        let pixel = image.unsafe_get_pixel(x, y);
+        let channels = pixel.channels();
+        for c in 0..channels.len() {
+            let p = *channels.get_unchecked(c) as usize;
+            let hist = self.data.get_unchecked_mut(c);
+            *hist.get_unchecked_mut(p) -= 1;
         }
     }
 
-    fn set_to_median<P>(&self, image: &mut Image<P>, x: u32, y: u32)
+    /// Safety: requires P::CHANNEL_COUNT <= self.data.len()
+    unsafe fn set_to_median<P>(&self, image: &mut Image<P>, x: u32, y: u32)
     where
         P: Pixel<Subpixel = u8>,
     {
-        unsafe {
-            let target = image.get_pixel_mut(x, y);
-            let channels = target.channels_mut();
-            for c in 0..channels.len() {
-                *channels.get_unchecked_mut(c) = self.channel_median(c as u8);
-            }
+        let target = image.get_pixel_mut(x, y);
+        let channels = target.channels_mut();
+        for c in 0..channels.len() {
+            *channels.get_unchecked_mut(c) = self.channel_median(c as u8);
         }
     }
 
-    fn channel_median(&self, c: u8) -> u8 {
-        let hist = unsafe { self.data.get_unchecked(c as usize) };
-
+    /// Safety: requires c < self.data.len()
+    unsafe fn channel_median(&self, c: u8) -> u8 {
+        let hist = self.data.get_unchecked(c as usize);
         let mut count = 0;
-
         for i in 0..256 {
-            unsafe {
-                count += *hist.get_unchecked(i);
-            }
-
+            count += *hist.get_unchecked(i);
             if 2 * count >= self.expected_count {
                 return i as u8;
             }
         }
-
         255
     }
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::*;
-    use crate::property_testing::GrayTestImage;
     use crate::utils::gray_bench_image;
-    use crate::utils::pixel_diff_summary;
-    use image::{GrayImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
-    use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
     macro_rules! bench_median_filter {
@@ -358,6 +419,16 @@ mod tests {
     bench_median_filter!(bench_median_filter_s100_rx1_ry8, side: 100, x_radius: 1,y_radius: 8);
     bench_median_filter!(bench_median_filter_s100_rx4_ry8, side: 100, x_radius: 4,y_radius: 1);
     bench_median_filter!(bench_median_filter_s100_rx8_ry1, side: 100, x_radius: 8,y_radius: 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::property_testing::GrayTestImage;
+    use crate::utils::pixel_diff_summary;
+    use image::{GrayImage, Luma};
+    use quickcheck::{quickcheck, TestResult};
+    use std::cmp::{max, min};
 
     // Reference implementation of median filter - written to be as simple as possible,
     // to validate faster versions against.

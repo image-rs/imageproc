@@ -64,8 +64,9 @@ where
     }
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::*;
     use image::GrayImage;
     use test::{black_box, Bencher};
