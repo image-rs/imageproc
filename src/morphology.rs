@@ -685,15 +685,6 @@ impl Mask {
 /// # }
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
-    #[cfg(feature = "rayon")]
-    let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .max()
-            .unwrap_or(u8::MIN)]) // default is u8::MIN because it's the neutral element of max
-    });
-    #[cfg(not(feature = "rayon"))]
     let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
         Luma([mask
             .apply(image, x, y)
@@ -787,15 +778,6 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// # }
 /// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
-    #[cfg(feature = "rayon")]
-    let result = GrayImage::from_par_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .min()
-            .unwrap_or(u8::MAX)]) // default is u8::MAX because it's the neutral element of min
-    });
-    #[cfg(not(feature = "rayon"))]
     let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
         Luma([mask
             .apply(image, x, y)
