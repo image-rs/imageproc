@@ -186,8 +186,9 @@ pub fn laplacian_edge_detector(image: &GrayImage) -> ImageBuffer<Luma<u8>, Vec<u
     )
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
-mod tests {
+mod benches {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
     use crate::rect::Rect;

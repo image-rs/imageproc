@@ -253,7 +253,6 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{ImageBuffer, Luma};
-    use test::{black_box, Bencher};
 
     #[rustfmt::skip::macros(gray_image)]
     #[test]
@@ -363,6 +362,14 @@ mod tests {
         let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_sobel_gradients(b: &mut Bencher) {

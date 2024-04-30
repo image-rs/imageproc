@@ -380,14 +380,10 @@ pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
 
 #[cfg(test)]
 mod tests {
-    use test::{black_box, Bencher};
-
-    use image::{GrayImage, Luma};
-
+    use super::*;
     use crate::definitions::{HasBlack, HasWhite};
     use crate::utils::gray_bench_image;
-
-    use super::*;
+    use image::{GrayImage, Luma};
 
     #[test]
     fn adaptive_threshold_constant() {
@@ -441,35 +437,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[bench]
-    fn bench_adaptive_threshold(b: &mut Bencher) {
-        let image = gray_bench_image(200, 200);
-        let block_radius = 10;
-        b.iter(|| {
-            let thresholded = adaptive_threshold(&image, block_radius);
-            black_box(thresholded);
-        });
-    }
-
-    #[bench]
-    fn bench_match_histogram(b: &mut Bencher) {
-        let target = GrayImage::from_pixel(200, 200, Luma([150]));
-        let image = gray_bench_image(200, 200);
-        b.iter(|| {
-            let matched = match_histogram(&image, &target);
-            black_box(matched);
-        });
-    }
-
-    #[bench]
-    fn bench_match_histogram_mut(b: &mut Bencher) {
-        let target = GrayImage::from_pixel(200, 200, Luma([150]));
-        let mut image = gray_bench_image(200, 200);
-        b.iter(|| {
-            match_histogram_mut(&mut image, &target);
-        });
     }
 
     #[test]
@@ -544,15 +511,6 @@ mod tests {
         assert_eq!(level, 120);
     }
 
-    #[bench]
-    fn bench_otsu_level(b: &mut Bencher) {
-        let image = gray_bench_image(200, 200);
-        b.iter(|| {
-            let level = otsu_level(&image);
-            black_box(level);
-        });
-    }
-
     #[test]
     fn test_threshold_0_image_0() {
         let expected = 0u8;
@@ -585,6 +543,45 @@ mod tests {
 
         let actual = threshold(&original, 125u8, ThresholdType::Binary);
         assert_pixels_eq!(expected, actual);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::definitions::{HasBlack, HasWhite};
+    use crate::utils::gray_bench_image;
+    use image::{GrayImage, Luma};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_adaptive_threshold(b: &mut Bencher) {
+        let image = gray_bench_image(200, 200);
+        let block_radius = 10;
+        b.iter(|| {
+            let thresholded = adaptive_threshold(&image, block_radius);
+            black_box(thresholded);
+        });
+    }
+
+    #[bench]
+    fn bench_match_histogram(b: &mut Bencher) {
+        let target = GrayImage::from_pixel(200, 200, Luma([150]));
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let matched = match_histogram(&image, &target);
+            black_box(matched);
+        });
+    }
+
+    #[bench]
+    fn bench_match_histogram_mut(b: &mut Bencher) {
+        let target = GrayImage::from_pixel(200, 200, Luma([150]));
+        let mut image = gray_bench_image(200, 200);
+        b.iter(|| {
+            match_histogram_mut(&mut image, &target);
+        });
     }
 
     #[bench]
@@ -638,6 +635,15 @@ mod tests {
         b.iter(|| {
             stretch_contrast_mut(&mut image, 20, 80);
             black_box(());
+        });
+    }
+
+    #[bench]
+    fn bench_otsu_level(b: &mut Bencher) {
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let level = otsu_level(&image);
+            black_box(level);
         });
     }
 }

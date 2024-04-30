@@ -356,6 +356,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "slow [>1480s]")]
     #[test]
     fn test_draw_filled_ellipse() {
         let ellipse = Ellipse {
@@ -376,6 +377,13 @@ mod tests {
         const EPS: f32 = 0.0019;
         check_filled_ellipse(&img, ellipse, inner_color, outer_color, EPS);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{GrayImage, Luma};
 
     macro_rules! bench_hollow_ellipse {
         ($name:ident, $center:expr, $width_radius:expr, $height_radius:expr) => {
