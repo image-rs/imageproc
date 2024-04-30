@@ -278,7 +278,6 @@ mod tests {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::GrayImage;
-    use test::{black_box, Bencher};
 
     #[test]
     #[should_panic]
@@ -418,6 +417,32 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[test]
+    fn test_find_extremes() {
+        let image = gray_image!(
+            10,  7,  8,  1;
+             9, 15,  4,  2
+        );
+
+        let expected = Extremes {
+            max_value: 15,
+            min_value: 1,
+            max_value_location: (1, 1),
+            min_value_location: (3, 0),
+        };
+
+        assert_eq!(find_extremes(&image), expected);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use image::GrayImage;
+    use test::{black_box, Bencher};
+
     macro_rules! bench_match_template {
         ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
             #[bench]
@@ -468,21 +493,4 @@ mod tests {
         image_size: 100,
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
-
-    #[test]
-    fn test_find_extremes() {
-        let image = gray_image!(
-            10,  7,  8,  1;
-             9, 15,  4,  2
-        );
-
-        let expected = Extremes {
-            max_value: 15,
-            min_value: 1,
-            max_value_location: (1, 1),
-            min_value_location: (3, 0),
-        };
-
-        assert_eq!(find_extremes(&image), expected);
-    }
 }

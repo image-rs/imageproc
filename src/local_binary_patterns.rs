@@ -651,7 +651,6 @@ pub static MIN_SHIFT: [u8; 256] = [
 mod tests {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_uniform_representative_2() {
@@ -662,6 +661,14 @@ mod tests {
         let c = 0b10011001;
         assert_eq!(UNIFORM_REPRESENTATIVE_2[c], 0b10101010);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{GrayImage, Luma};
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_local_binary_pattern(b: &mut Bencher) {

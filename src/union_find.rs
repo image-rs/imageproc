@@ -177,6 +177,15 @@ mod tests {
         assert_eq!(forest.parent, vec![1, 1, 1, 1, 0, 5]);
         assert_eq!(forest.num_trees(), 2);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use rand::{rngs::StdRng, SeedableRng};
+    use rand_distr::{Distribution, Uniform};
+    use test::Bencher;
 
     #[bench]
     fn bench_disjoint_set_forest(b: &mut test::Bencher) {

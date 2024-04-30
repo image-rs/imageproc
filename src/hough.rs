@@ -206,7 +206,6 @@ fn intersection_points(
 mod tests {
     use super::*;
     use image::{GrayImage, ImageBuffer, Luma};
-    use test::{black_box, Bencher};
 
     fn assert_points_eq(
         actual: Option<((f32, f32), (f32, f32))>,
@@ -538,6 +537,14 @@ mod tests {
     test_detect_line!(detect_line_eps_135, 0.001, 135);
     // https://github.com/image-rs/imageproc/issues/280
     test_detect_line!(detect_line_neg10_120, -10.0, 120);
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{GrayImage, ImageBuffer, Luma};
+    use test::{black_box, Bencher};
 
     macro_rules! bench_detect_lines {
         ($name:ident, $r:expr, $angle:expr) => {

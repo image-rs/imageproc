@@ -64,8 +64,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{Luma, Rgb};
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_weighted_channel_sum() {
@@ -76,6 +74,14 @@ mod tests {
         // Clamped
         assert_eq!(weighted_channel_sum(150u8, 150u8, 1.8, 0.8), 255u8);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use image::{Luma, Rgb};
+    use test::{black_box, Bencher};
 
     #[bench]
     fn bench_weighted_sum_rgb(b: &mut Bencher) {

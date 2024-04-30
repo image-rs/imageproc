@@ -576,15 +576,6 @@ mod tests {
     use std::cmp::{max, min};
     use test::{black_box, Bencher};
 
-    #[bench]
-    fn bench_bilateral_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let filtered = bilateral_filter(&image, 10, 10., 3.);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_bilateral_filter() {
         let image = gray_image!(
@@ -624,16 +615,6 @@ mod tests {
 
         assert_pixels_eq!(box_filter(&image, 1, 1), expected);
     }
-
-    #[bench]
-    fn bench_box_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let filtered = box_filter(&image, 7, 7);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_separable_filter() {
         let image = gray_image!(
@@ -669,17 +650,6 @@ mod tests {
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
-    }
-
-    #[bench]
-    fn bench_separable_filter(b: &mut Bencher) {
-        let image = gray_bench_image(300, 300);
-        let h_kernel = vec![1f32 / 5f32; 5];
-        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
-        b.iter(|| {
-            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
-            black_box(filtered);
-        });
     }
 
     /// Reference implementation of horizontal_filter. Used to validate
@@ -808,17 +778,6 @@ mod tests {
         let kernel = vec![1f32 / 10f32; 10];
         black_box(horizontal_filter(&image, &kernel));
     }
-
-    #[bench]
-    fn bench_horizontal_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
-        b.iter(|| {
-            let filtered = horizontal_filter(&image, &kernel);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_vertical_filter() {
         let image = gray_image!(
@@ -847,17 +806,6 @@ mod tests {
         let kernel = vec![1f32 / 10f32; 10];
         black_box(vertical_filter(&image, &kernel));
     }
-
-    #[bench]
-    fn bench_vertical_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
-        b.iter(|| {
-            let filtered = vertical_filter(&image, &kernel);
-            black_box(filtered);
-        });
-    }
-
     #[test]
     fn test_filter3x3_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
@@ -939,6 +887,102 @@ mod tests {
             10,  5);
 
         assert_pixels_eq!(filtered, expected);
+    }
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_zero_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, 0.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_gaussian_blur_f32_rejects_negative_sigma() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let _ = gaussian_blur_f32(&image, -0.5);
+    }
+
+    #[test]
+    fn test_gaussian_on_u8_white_idempotent() {
+        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(64, 64, Luma([255]));
+        let image2 = gaussian_blur_f32(&image, 10f32);
+        assert_pixels_eq_within!(image2, image, 0);
+    }
+
+    #[test]
+    fn test_gaussian_on_f32_white_idempotent() {
+        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(64, 64, Luma([1.0]));
+        let image2 = gaussian_blur_f32(&image, 10f32);
+        assert_pixels_eq_within!(image2, image, 1e-6);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::definitions::{Clamp, Image};
+    use crate::utils::{gray_bench_image, rgb_bench_image};
+    use image::imageops::blur;
+    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
+    use std::cmp::{max, min};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_bilateral_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = bilateral_filter(&image, 10, 10., 3.);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_box_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        b.iter(|| {
+            let filtered = box_filter(&image, 7, 7);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_separable_filter(b: &mut Bencher) {
+        let image = gray_bench_image(300, 300);
+        let h_kernel = vec![1f32 / 5f32; 5];
+        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
+        b.iter(|| {
+            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_horizontal_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32 / 5f32; 5];
+        b.iter(|| {
+            let filtered = horizontal_filter(&image, &kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_vertical_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        let kernel = vec![1f32 / 5f32; 5];
+        b.iter(|| {
+            let filtered = vertical_filter(&image, &kernel);
+            black_box(filtered);
+        });
     }
 
     #[bench]
@@ -1022,41 +1066,5 @@ mod tests {
             let blurred = gaussian_blur_f32(&image, 10f32);
             black_box(blurred);
         });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_gaussian_blur_f32_rejects_zero_sigma() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6;
-            7, 8, 9
-        );
-        let _ = gaussian_blur_f32(&image, 0.0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_gaussian_blur_f32_rejects_negative_sigma() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6;
-            7, 8, 9
-        );
-        let _ = gaussian_blur_f32(&image, -0.5);
-    }
-
-    #[test]
-    fn test_gaussian_on_u8_white_idempotent() {
-        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(64, 64, Luma([255]));
-        let image2 = gaussian_blur_f32(&image, 10f32);
-        assert_pixels_eq_within!(image2, image, 0);
-    }
-
-    #[test]
-    fn test_gaussian_on_f32_white_idempotent() {
-        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(64, 64, Luma([1.0]));
-        let image2 = gaussian_blur_f32(&image, 10f32);
-        assert_pixels_eq_within!(image2, image, 1e-6);
     }
 }

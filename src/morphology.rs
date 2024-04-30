@@ -355,7 +355,6 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::test::*;
     use image::{GrayImage, Luma};
     use std::cmp::{max, min};
 
@@ -771,6 +770,15 @@ mod tests {
         );
         assert_pixels_eq!(eroded, expected);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use ::test::*;
+    use image::{GrayImage, Luma};
+    use std::cmp::{max, min};
 
     #[test]
     fn test_erode_dented_wall_linf_4() {

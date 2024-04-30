@@ -454,12 +454,11 @@ mod tests {
     use super::*;
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
-    use crate::utils::{gray_bench_image, pixel_diff_summary};
+    use crate::utils::pixel_diff_summary;
     use image::{GrayImage, Luma};
     use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
     use std::cmp::max;
     use std::f64;
-    use test::{black_box, Bencher};
 
     /// Avoid generating garbage floats during certain calculations below.
     #[derive(Debug, Clone)]
@@ -630,6 +629,14 @@ mod tests {
         let dist = euclidean_squared_distance_transform(&image);
         assert_pixels_eq_within!(dist, expected, 1e-6);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::utils::gray_bench_image;
+    use test::{black_box, Bencher};
 
     macro_rules! bench_euclidean_squared_distance_transform {
         ($name:ident, side: $s:expr) => {
