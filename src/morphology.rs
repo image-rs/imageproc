@@ -7,7 +7,6 @@ use crate::distance_transform::{
 };
 use image::{GenericImageView, GrayImage, Luma};
 use itertools::Itertools;
-use num::pow::Pow;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -370,7 +369,8 @@ impl Mask {
     /// a pixel is part of the mask if and only if it is non-zero
     ///
     /// `center_x` and `center_y` define the coordinates of the center of the mask.
-    /// They may take any value, including outside of the bounds of the input image,
+    /// They may take any value between 0 and 255,
+    /// including outside of the bounds of the input image,
     /// but the image itself must be at most 511 pixel wide and 511 pixel high.
     ///
     /// # Panics
