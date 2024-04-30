@@ -356,7 +356,11 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// The mask can have any size between 0 by 0 to 511 by 511 pixels
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
-    /// for any optimisation/arithmetic purposes, it is garanteed that all the integer values will be strictly between -512 and 512
+    /// for any optimisation/arithmetic purposes, it is garanteed that :
+    /// 
+    /// - all the integer values will be strictly between -512 and 512
+    /// - all tuples will be sorted in lexicographic order
+    /// - no tuple shall appear twice
     elements: Vec<(i16, i16)>,
 }
 
