@@ -607,6 +607,9 @@ impl Mask {
 /// for each input pixel, the output pixel will be the maximum of all pixels included
 /// in the mask at that position.
 ///
+/// if the mask doesn't intersect any input pixel at some point,
+/// it will default to a value of [`u8::MIN`].
+///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -705,6 +708,9 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///
 /// for each input pixel, the output pixel will be the minimum of all pixels included
 /// in the mask at that position.
+///
+/// if the mask doesn't intersect any input pixel at some point,
+/// it will default to a value of [`u8::MAX`].
 ///
 /// # Examples
 /// ```
