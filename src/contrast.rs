@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::definitions::{HasBlack, HasWhite};
 use crate::integral_image::{integral_image, sum_image_pixels};
 use crate::map::map_pixels_mut;
-use crate::stats::{cumulative_histogram, histogram};
+use crate::stats::{cumulative_histogram, histogram, minmax};
 
 /// Applies an adaptive threshold to an image.
 ///
@@ -268,85 +268,80 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
     out
 }
 
-/// Normalizes contrast of a Grayscale image image in place such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
-/// See also  [Normalizes Equalization (wikipedia)] https://en.wikipedia.org/wiki/Normalization_(image_processing)
-pub fn normalize_linear(image: &GrayImage, new_min: u8, new_max: u8) -> GrayImage {
-    let mut out = image.clone();
-    normalize_linear_mut(&mut out, new_min, new_max);
-    out
-}
-
-/// Normalizes contrast of a Grayscale image such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
-/// See also  [Normalizes Equalization (wikipedia)] https://en.wikipedia.org/wiki/Normalization_(image_processing)
-pub fn normalize_linear_mut(image: &mut GrayImage, new_min: u8, new_max: u8) {
-    assert!(
-        new_max > new_min,
-        "new_max must be strictly greater than new_min"
-    );
-
-    if image.is_empty() {
-        return;
-    }
-
-    let histogram = histogram(image).channels[0];
-    let min = histogram
-        .iter()
-        .enumerate()
-        .find_map(|(i, x)| if *x != 0 { Some(i as u8) } else { None })
-        .unwrap();
-    let max = histogram
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(i, x)| if *x != 0 { Some(i as u8) } else { None })
-        .unwrap();
-
-    //equation from https://en.wikipedia.org/wiki/Normalization_(image_processing)
-    let fraction = (new_max - new_min) as f64 / (max - min) as f64;
-    let f = |_, _, pixel: Luma<u8>| {
-        Luma([(((pixel.0[0] - min) as f64 * fraction) + new_min as f64) as u8])
-    };
-
-    map_pixels_mut(image, f);
-}
-
-/// Normalizes contrast of grayscale image such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
-/// Where alpha (α) defines the width of the input intensity range, and beta (β) defines the intensity around which the range is centered
-/// See also  [Normalizes Equalization (wikipedia)] https://en.wikipedia.org/wiki/Normalization_(image_processing)
-pub fn normalize_non_linear(
+/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
+/// pair to the output_min and output_max pair.
+///
+/// # Example
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the `u8` range.
+/// 200 -> 255 since it also saturates outside the `u8` range.
+/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
+/// All values between 50 and 100 are then linearly interpolated into the output range.
+/// Such as 75 -> 128
+///
+///
+/// # Panic
+/// This function panics if `input_min` > `input_max` or `output_min` > `output_max`.
+pub fn scale_linear(
     image: &GrayImage,
-    new_min: u8,
-    new_max: u8,
-    alpha: f64,
-    beta: f64,
+    input_min: u8,
+    input_max: u8,
+    output_min: u8,
+    output_max: u8,
 ) -> GrayImage {
     let mut out = image.clone();
-    normalize_non_linear_mut(&mut out, new_min, new_max, alpha, beta);
+    scale_linear_mut(&mut out, input_min, input_max, output_min, output_max);
     out
 }
 
-/// Normalizes contrast of grayscale image in place such that pixel brightness (Min,Max) maps to (new_Min,new_Max)
-/// Where alpha (α) defines the width of the input intensity range, and beta (β) defines the intensity around which the range is centered
-/// See also  [Normalizes Equalization (wikipedia)] https://en.wikipedia.org/wiki/Normalization_(image_processing)
-pub fn normalize_non_linear_mut(
+/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
+/// pair to the output_min and output_max pair.
+///
+/// # Example
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the `u8` range.
+/// 200 -> 255 since it also saturates outside the `u8` range.
+/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
+/// All values between 50 and 100 are then linearly interpolated into the output range.
+/// Such as 75 -> 128
+///
+///
+/// # Panic
+/// This function panics if `input_min` > `input_max` or `output_min` > `output_max`.
+pub fn scale_linear_mut(
     image: &mut GrayImage,
-    new_min: u8,
-    new_max: u8,
-    alpha: f64,
-    beta: f64,
+    input_min: u8,
+    input_max: u8,
+    output_min: u8,
+    output_max: u8,
 ) {
     assert!(
-        new_max > new_min,
-        "new_max must be strictly greater than new_min"
+        input_min <= input_max,
+        "input_min must be smaller or equal to input_max"
+    );
+    assert!(
+        output_min <= output_max,
+        "output_min must be smaller or equal to output_max"
     );
 
-    //equation from https://en.wikipedia.org/wiki/Normalization_(image_processing)
+    let input_min: u16 = input_min.into();
+    let input_max: u16 = input_max.into();
+    let output_min: u16 = output_min.into();
+    let output_max: u16 = output_max.into();
+
+    let input_width = input_max - input_min;
+    let output_width = output_max - output_min;
+
     let f = |_, _, pixel: Luma<u8>| {
-        let px = pixel.0[0] as f64;
-        let exp = -(px - beta) / alpha;
-        let denom = 1f64 + E.powf(exp);
-        let i_x = (new_max - new_min) as f64 * (1f64 / denom) + new_min as f64;
-        Luma([i_x as u8])
+        let p: u16 = pixel.0[0].into();
+
+        let output = if p <= input_min {
+            output_min
+        } else if p >= input_max {
+            output_max
+        } else {
+            (((p - input_min) * output_width) / input_width) + output_min
+        };
+
+        Luma([output as u8])
     };
 
     map_pixels_mut(image, f);
@@ -406,62 +401,6 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
     }
 
     lut
-}
-
-/// Linearly stretches the contrast in an image, sending `lower` to `0u8` and `upper` to `2558u8`.
-///
-/// Is it common to choose `upper` and `lower` values using image percentiles - see [`percentile`](../stats/fn.percentile.html).
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::contrast::stretch_contrast;
-///
-/// let image = gray_image!(
-///      0,   20,  50;
-///     80,  100, 255);
-///
-/// let lower = 20;
-/// let upper = 100;
-///
-/// // Pixel intensities between 20 and 100 are linearly
-/// // scaled so that 20 is mapped to 0 and 100 is mapped to 255.
-/// // Pixel intensities less than 20 are sent to 0 and pixel
-/// // intensities greater than 100 are sent to 255.
-/// let stretched = stretch_contrast(&image, lower, upper);
-///
-/// let expected = gray_image!(
-///       0,   0,  95;
-///     191, 255, 255);
-///
-/// assert_pixels_eq!(stretched, expected);
-/// # }
-/// ```
-pub fn stretch_contrast(image: &GrayImage, lower: u8, upper: u8) -> GrayImage {
-    let mut out = image.clone();
-    stretch_contrast_mut(&mut out, lower, upper);
-    out
-}
-
-/// Linearly stretches the contrast in an image in place, sending `lower` to `0u8` and `upper` to `2558u8`.
-///
-/// See the [`stretch_contrast`](fn.stretch_contrast.html) documentation for more.
-pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
-    assert!(upper > lower, "upper must be strictly greater than lower");
-    let len = (upper - lower) as u16;
-    for p in image.iter_mut() {
-        if *p >= upper {
-            *p = 255;
-        } else if *p <= lower {
-            *p = 0;
-        } else {
-            let scaled = (255 * (*p as u16 - lower as u16)) / len;
-            *p = scaled as u8;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -634,21 +573,12 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize() {
+    fn test_scale_linear() {
         let input = gray_image!(1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 255);
 
         let expected = gray_image!(10u8, 10, 10, 11, 11, 12, 12, 13, 13, 13, 52, 120);
 
-        assert_eq!(normalize_linear(&input, 10, 120), expected);
-    }
-
-    #[test]
-    fn test_normalize_non_linear() {
-        let input = gray_image!(1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 255);
-
-        let expected = gray_image!(15u8, 23, 39, 65, 90, 106, 114, 118, 119, 119, 120, 120);
-
-        assert_eq!(normalize_non_linear(&input, 10, 120, 1.0, 4.0), expected);
+        assert_eq!(scale_linear(&input, 1, 255, 10, 120), expected);
     }
 }
 
@@ -727,24 +657,6 @@ mod benches {
     }
 
     #[bench]
-    fn bench_stretch_contrast(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let stretched = stretch_contrast(&image, 20, 80);
-            black_box(stretched);
-        });
-    }
-
-    #[bench]
-    fn bench_stretch_contrast_mut(b: &mut Bencher) {
-        let mut image = gray_bench_image(500, 500);
-        b.iter(|| {
-            stretch_contrast_mut(&mut image, 20, 80);
-            black_box(());
-        });
-    }
-
-    #[bench]
     fn bench_otsu_level(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
@@ -754,37 +666,19 @@ mod benches {
     }
 
     #[bench]
-    fn bench_normalize_linear(b: &mut Bencher) {
+    fn bench_scale_linear(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
-            let normalized = normalize_linear(&image, 0, 255);
-            black_box(normalized);
+            let scaled = scale_linear(&image, 0, 255, 0, 255);
+            black_box(scaled);
         });
     }
 
     #[bench]
-    fn bench_normalize_linear_mut(b: &mut Bencher) {
+    fn bench_scale_linear_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(200, 200);
         b.iter(|| {
-            normalize_linear_mut(&mut image, 0, 255);
-            black_box(());
-        });
-    }
-
-    #[bench]
-    fn bench_normalize_nonlinear(b: &mut Bencher) {
-        let image = gray_bench_image(200, 200);
-        b.iter(|| {
-            let normalized = normalize_non_linear(&image, 0, 255, 1.0, 10.0);
-            black_box(normalized);
-        });
-    }
-
-    #[bench]
-    fn bench_normalize_nonlinear_mut(b: &mut Bencher) {
-        let mut image = gray_bench_image(200, 200);
-        b.iter(|| {
-            normalize_non_linear_mut(&mut image, 0, 255, 1.0, 10.0);
+            scale_linear_mut(&mut image, 0, 255, 0, 255);
             black_box(());
         });
     }

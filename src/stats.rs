@@ -5,15 +5,17 @@ use image::{GenericImageView, GrayImage, Pixel, Primitive};
 use itertools::Itertools;
 use num::Bounded;
 
-/// A range returned by [`range()`]
+/// A minimum and maximum value returned by [`minmax()`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Range<T> {
-    min: T,
-    max: T,
+pub struct MinMax<T> {
+    /// The minimum value
+    pub min: T,
+    /// The maximum value
+    pub max: T,
 }
 
-/// Returns the maxixum and minimum values per channel in an image.
-pub fn range<P, T>(image: &Image<P>) -> Vec<Range<T>>
+/// Returns the minimum and maximum values per channel in an image.
+pub fn minmax<P, T>(image: &Image<P>) -> Vec<MinMax<T>>
 where
     P: Pixel<Subpixel = T>,
     T: Ord + Copy,
@@ -39,7 +41,7 @@ where
 
     ranges
         .into_iter()
-        .map(|(min, max)| Range {
+        .map(|(min, max)| MinMax {
             min: *min.unwrap(),
             max: *max.unwrap(),
         })
@@ -208,11 +210,11 @@ mod tests {
         );
 
         assert_eq!(
-            range(&image),
+            minmax(&image),
             vec![
-                Range { min: 1, max: 3 },
-                Range { min: 10, max: 30 },
-                Range { min: 0, max: 255 }
+                MinMax { min: 1, max: 3 },
+                MinMax { min: 10, max: 30 },
+                MinMax { min: 0, max: 255 }
             ]
         )
     }
