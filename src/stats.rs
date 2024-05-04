@@ -2,7 +2,49 @@
 
 use crate::definitions::Image;
 use image::{GenericImageView, GrayImage, Pixel, Primitive};
+use itertools::Itertools;
 use num::Bounded;
+
+/// A range returned by [`range()`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Range<T> {
+    min: T,
+    max: T,
+}
+
+/// Returns the maxixum and minimum values per channel in an image.
+pub fn range<P, T>(image: &Image<P>) -> Vec<Range<T>>
+where
+    P: Pixel<Subpixel = T>,
+    T: Ord + Copy,
+{
+    if image.is_empty() {
+        panic!("cannot find the range of an empty image");
+    }
+
+    let mut ranges = vec![(None, None); P::CHANNEL_COUNT as usize];
+
+    for pix in image.pixels() {
+        for (i, c) in pix.channels().iter().enumerate() {
+            let (current_min, current_max) = &mut ranges[i];
+
+            if current_min.map_or(true, |x| c < x) {
+                *current_min = Some(c);
+            }
+            if current_max.map_or(true, |x| c > x) {
+                *current_max = Some(c);
+            }
+        }
+    }
+
+    ranges
+        .into_iter()
+        .map(|(min, max)| Range {
+            min: *min.unwrap(),
+            max: *max.unwrap(),
+        })
+        .collect()
+}
 
 /// A set of per-channel histograms from an image with 8 bits per channel.
 pub struct ChannelHistogram {
@@ -154,6 +196,26 @@ where
 mod tests {
     use super::*;
     use image::{GrayImage, Luma, Rgb, RgbImage};
+
+    #[test]
+    fn test_range() {
+        let image = rgb_image!(
+            [1u8, 10u8, 0u8],
+            [2u8, 20u8, 3u8],
+            [3u8, 30u8, 255u8],
+            [2u8, 20u8, 7u8],
+            [1u8, 10u8, 8u8]
+        );
+
+        assert_eq!(
+            range(&image),
+            vec![
+                Range { min: 1, max: 3 },
+                Range { min: 10, max: 30 },
+                Range { min: 0, max: 255 }
+            ]
+        )
+    }
 
     #[test]
     fn test_cumulative_histogram() {
