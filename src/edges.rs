@@ -2,8 +2,10 @@
 
 use crate::contrast;
 use crate::definitions::{HasBlack, HasWhite};
-use crate::filter::{gaussian_blur_f32, laplacian_filter};
-use crate::gradients::{horizontal_sobel, vertical_sobel};
+use crate::filter::{
+    filter3x3, gaussian_blur_f32, horizontal_filter, laplacian_filter, vertical_filter,
+};
+use crate::gradients::GradientKernel;
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::f32;
 
@@ -36,8 +38,9 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
     let blurred = gaussian_blur_f32(image, SIGMA);
 
     // 2. Intensity of gradients.
-    let gx = horizontal_sobel(&blurred);
-    let gy = vertical_sobel(&blurred);
+    let gradient_kernel = GradientKernel::Sobel;
+    let gx = filter3x3(&blurred, &gradient_kernel.as_horizontal_kernel::<i16>());
+    let gy = filter3x3(&blurred, &gradient_kernel.as_vertical_kernel::<i16>());
     let g: Vec<f32> = gx
         .iter()
         .zip(gy.iter())

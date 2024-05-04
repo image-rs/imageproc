@@ -1,4 +1,4 @@
-use super::{filter3x3, gaussian_blur_f32};
+use super::{filter3x3, gaussian_blur_f32, Kernel};
 use crate::{
     definitions::{Clamp, Image},
     map::{map_colors2, map_subpixels},
@@ -8,7 +8,7 @@ use image::{GrayImage, Luma};
 /// Sharpens a grayscale image by applying a 3x3 approximation to the Laplacian.
 #[must_use = "the function does not modify the original image"]
 pub fn sharpen3x3(image: &GrayImage) -> GrayImage {
-    let identity_minus_laplacian = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+    let identity_minus_laplacian = Kernel::new(vec![0, -1, 0, -1, 5, -1, 0, -1, 0], 3, 3);
     filter3x3(image, &identity_minus_laplacian)
 }
 

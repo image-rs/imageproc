@@ -23,6 +23,7 @@ use image::{
 };
 
 use imageproc::contrast::ThresholdType;
+use imageproc::gradients::GradientKernel;
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -303,7 +304,12 @@ fn test_affine_bicubic_rgb() {
 fn test_sobel_gradients() {
     fn sobel_gradients(image: &GrayImage) -> GrayImage {
         imageproc::map::map_subpixels(
-            &gradients::sobel_gradients(image),
+            &gradients::gradients(
+                image,
+                &GradientKernel::Sobel.as_horizontal_kernel(),
+                &GradientKernel::Sobel.as_vertical_kernel(),
+                |p| p,
+            ),
             <u8 as Clamp<u16>>::clamp,
         )
     }
