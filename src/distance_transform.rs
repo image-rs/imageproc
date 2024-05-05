@@ -556,6 +556,7 @@ mod tests {
         ret
     }
 
+    #[cfg(not(miri))]
     #[test]
     fn test_distance_transform_1d_matches_reference_implementation() {
         fn prop(f: Vec<BoundedFloat>) -> bool {
@@ -595,6 +596,7 @@ mod tests {
         dists
     }
 
+    #[cfg(not(miri))]
     #[test]
     fn test_euclidean_squared_distance_transform_matches_reference_implementation() {
         fn prop(image: GrayTestImage) -> TestResult {

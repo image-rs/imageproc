@@ -223,6 +223,7 @@ mod tests {
         assert_eq!(contour.parent, expected_parent);
     }
 
+    #[cfg(not(miri))]
     #[test]
     fn test_contours_structured() {
         use crate::drawing::draw_polygon_mut;
@@ -447,6 +448,7 @@ mod tests {
         assert_eq!(contours[3].parent, None);
     }
 
+    #[cfg(not(miri))]
     #[test]
     fn get_contours_approx_points() {
         use crate::drawing::draw_polygon_mut;

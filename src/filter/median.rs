@@ -477,6 +477,7 @@ mod tests {
         sorted[mid]
     }
 
+    #[cfg(not(miri))]
     #[test]
     fn test_median_filter_matches_reference_implementation() {
         fn prop(image: GrayTestImage, x_radius: u32, y_radius: u32) -> TestResult {
