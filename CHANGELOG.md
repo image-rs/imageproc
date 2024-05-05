@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+Changes:
+- `contrast::stretch_contrast{_mut}` had been extended and renamed to `contrast::scale_linear{_mut}`
+
 ## [0.24.0] - 2024-03-16
 
 New features:
