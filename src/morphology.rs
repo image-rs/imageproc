@@ -1319,15 +1319,6 @@ mod tests {
         );
         assert_pixels_eq!(eroded, expected);
     }
-}
-
-#[cfg(not(miri))]
-#[cfg(test)]
-mod benches {
-    use super::*;
-    use ::test::*;
-    use image::{GrayImage, Luma};
-    use std::cmp::{max, min};
 
     #[test]
     fn test_erode_dented_wall_linf_4() {
@@ -1954,6 +1945,15 @@ mod benches {
         );
         assert_eq!(grayscale_erode(&image, &mask), dilated);
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use ::test::*;
+    use image::{GrayImage, Luma};
+    use std::cmp::{max, min};
 
     fn square() -> GrayImage {
         GrayImage::from_fn(500, 500, |x, y| {
