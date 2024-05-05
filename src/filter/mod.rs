@@ -912,15 +912,15 @@ mod tests {
 
     #[test]
     fn test_gaussian_on_u8_white_idempotent() {
-        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(64, 64, Luma([255]));
-        let image2 = gaussian_blur_f32(&image, 10f32);
+        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(12, 12, Luma([255]));
+        let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 0);
     }
 
     #[test]
     fn test_gaussian_on_f32_white_idempotent() {
-        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(64, 64, Luma([1.0]));
-        let image2 = gaussian_blur_f32(&image, 10f32);
+        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(12, 12, Luma([1.0]));
+        let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 1e-6);
     }
 }

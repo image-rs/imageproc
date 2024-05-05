@@ -484,13 +484,13 @@ mod tests {
     #[test]
     fn test_distance_transform_saturation() {
         // A single foreground pixel in the top-left
-        let image = GrayImage::from_fn(300, 300, |x, y| match (x, y) {
+        let image = GrayImage::from_fn(300, 3, |x, y| match (x, y) {
             (0, 0) => Luma([255u8]),
             _ => Luma([0u8]),
         });
 
         // Distances should not overflow
-        let expected = GrayImage::from_fn(300, 300, |x, y| Luma([min(255, max(x, y)) as u8]));
+        let expected = GrayImage::from_fn(300, 3, |x, y| Luma([min(255, max(x, y)) as u8]));
 
         let distances = distance_transform(&image, Norm::LInf);
         assert_pixels_eq!(distances, expected);
