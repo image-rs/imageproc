@@ -8,6 +8,7 @@ use rayon::prelude::*;
 
 use crate::definitions::{HasBlack, HasWhite};
 use crate::integral_image::{integral_image, sum_image_pixels};
+use crate::map::map_subpixels_mut;
 use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
@@ -266,6 +267,85 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
     out
 }
 
+/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
+/// pair to the output_min and output_max pair.
+///
+/// # Example
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
+/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
+/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
+/// All values between 50 and 100 are then linearly interpolated into the output range.
+/// Such as 75 -> 128
+///
+///
+/// # Panic
+/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
+pub fn scale_linear(
+    image: &GrayImage,
+    input_min: u8,
+    input_max: u8,
+    output_min: u8,
+    output_max: u8,
+) -> GrayImage {
+    let mut out = image.clone();
+    scale_linear_mut(&mut out, input_min, input_max, output_min, output_max);
+    out
+}
+
+/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
+/// pair to the output_min and output_max pair.
+///
+/// # Example
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
+/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
+/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
+/// All values between 50 and 100 are then linearly interpolated into the output range.
+/// Such as 75 -> 128
+///
+///
+/// # Panic
+/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
+pub fn scale_linear_mut(
+    image: &mut GrayImage,
+    input_min: u8,
+    input_max: u8,
+    output_min: u8,
+    output_max: u8,
+) {
+    assert!(
+        input_min < input_max,
+        "input_min must be smaller than input_max"
+    );
+    assert!(
+        output_min <= output_max,
+        "output_min must be smaller or equal to output_max"
+    );
+
+    let input_min: u16 = input_min.into();
+    let input_max: u16 = input_max.into();
+    let output_min: u16 = output_min.into();
+    let output_max: u16 = output_max.into();
+
+    let input_width = input_max - input_min;
+    let output_width = output_max - output_min;
+
+    let f = |p: u8| {
+        let p: u16 = p.into();
+
+        let output = if p <= input_min {
+            output_min
+        } else if p >= input_max {
+            output_max
+        } else {
+            (((p - input_min) * output_width) / input_width) + output_min
+        };
+
+        output as u8
+    };
+
+    map_subpixels_mut(image, f);
+}
+
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
 /// histogram is as close as possible to that of the target image.
 pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
@@ -320,62 +400,6 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
     }
 
     lut
-}
-
-/// Linearly stretches the contrast in an image, sending `lower` to `0u8` and `upper` to `2558u8`.
-///
-/// Is it common to choose `upper` and `lower` values using image percentiles - see [`percentile`](../stats/fn.percentile.html).
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::contrast::stretch_contrast;
-///
-/// let image = gray_image!(
-///      0,   20,  50;
-///     80,  100, 255);
-///
-/// let lower = 20;
-/// let upper = 100;
-///
-/// // Pixel intensities between 20 and 100 are linearly
-/// // scaled so that 20 is mapped to 0 and 100 is mapped to 255.
-/// // Pixel intensities less than 20 are sent to 0 and pixel
-/// // intensities greater than 100 are sent to 255.
-/// let stretched = stretch_contrast(&image, lower, upper);
-///
-/// let expected = gray_image!(
-///       0,   0,  95;
-///     191, 255, 255);
-///
-/// assert_pixels_eq!(stretched, expected);
-/// # }
-/// ```
-pub fn stretch_contrast(image: &GrayImage, lower: u8, upper: u8) -> GrayImage {
-    let mut out = image.clone();
-    stretch_contrast_mut(&mut out, lower, upper);
-    out
-}
-
-/// Linearly stretches the contrast in an image in place, sending `lower` to `0u8` and `upper` to `2558u8`.
-///
-/// See the [`stretch_contrast`](fn.stretch_contrast.html) documentation for more.
-pub fn stretch_contrast_mut(image: &mut GrayImage, lower: u8, upper: u8) {
-    assert!(upper > lower, "upper must be strictly greater than lower");
-    let len = (upper - lower) as u16;
-    for p in image.iter_mut() {
-        if *p >= upper {
-            *p = 255;
-        } else if *p <= lower {
-            *p = 0;
-        } else {
-            let scaled = (255 * (*p as u16 - lower as u16)) / len;
-            *p = scaled as u8;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -544,6 +568,15 @@ mod tests {
         let actual = threshold(&original, 125u8, ThresholdType::Binary);
         assert_pixels_eq!(expected, actual);
     }
+
+    #[test]
+    fn test_scale_linear() {
+        let input = gray_image!(1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 255);
+
+        let expected = gray_image!(10u8, 10, 10, 11, 11, 12, 12, 13, 13, 13, 52, 120);
+
+        assert_pixels_eq!(scale_linear(&input, 1, 255, 10, 120), expected);
+    }
 }
 
 #[cfg(not(miri))]
@@ -621,29 +654,29 @@ mod benches {
     }
 
     #[bench]
-    fn bench_stretch_contrast(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let stretched = stretch_contrast(&image, 20, 80);
-            black_box(stretched);
-        });
-    }
-
-    #[bench]
-    fn bench_stretch_contrast_mut(b: &mut Bencher) {
-        let mut image = gray_bench_image(500, 500);
-        b.iter(|| {
-            stretch_contrast_mut(&mut image, 20, 80);
-            black_box(());
-        });
-    }
-
-    #[bench]
     fn bench_otsu_level(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
             let level = otsu_level(&image);
             black_box(level);
+        });
+    }
+
+    #[bench]
+    fn bench_scale_linear(b: &mut Bencher) {
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let scaled = scale_linear(&image, 0, 255, 0, 255);
+            black_box(scaled);
+        });
+    }
+
+    #[bench]
+    fn bench_scale_linear_mut(b: &mut Bencher) {
+        let mut image = gray_bench_image(200, 200);
+        b.iter(|| {
+            scale_linear_mut(&mut image, 0, 255, 0, 255);
+            black_box(());
         });
     }
 }
