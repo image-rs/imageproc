@@ -251,7 +251,6 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::gray_bench_image;
     use image::{ImageBuffer, Luma};
 
     #[rustfmt::skip::macros(gray_image)]

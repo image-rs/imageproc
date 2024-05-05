@@ -108,9 +108,6 @@ impl DisjointSetForest {
 #[cfg(test)]
 mod tests {
     use super::DisjointSetForest;
-    use ::test;
-    use rand::{rngs::StdRng, SeedableRng};
-    use rand_distr::{Distribution, Uniform};
 
     #[test]
     fn test_trees() {
@@ -185,7 +182,6 @@ mod benches {
     use super::*;
     use rand::{rngs::StdRng, SeedableRng};
     use rand_distr::{Distribution, Uniform};
-    use test::Bencher;
 
     #[bench]
     fn bench_disjoint_set_forest(b: &mut test::Bencher) {

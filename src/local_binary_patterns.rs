@@ -650,7 +650,6 @@ pub static MIN_SHIFT: [u8; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, Luma};
 
     #[test]
     fn test_uniform_representative_2() {

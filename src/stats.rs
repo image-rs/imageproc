@@ -196,7 +196,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, Luma, Rgb, RgbImage};
 
     #[test]
     fn test_range() {

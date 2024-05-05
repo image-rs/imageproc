@@ -174,7 +174,6 @@ where
 mod tests {
     use super::{local_maxima, suppress_non_maximum};
     use crate::definitions::{Position, Score};
-    use crate::noise::gaussian_noise_mut;
     use crate::property_testing::GrayTestImage;
     use crate::utils::pixel_diff_summary;
     use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
@@ -346,7 +345,7 @@ mod tests {
 mod benches {
     use super::{local_maxima, suppress_non_maximum, tests::T};
     use crate::noise::gaussian_noise_mut;
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
+    use image::{GrayImage, ImageBuffer, Luma};
     use test::Bencher;
 
     #[bench]

@@ -406,7 +406,6 @@ fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize
 mod tests {
     use super::*;
     use crate::definitions::{HasBlack, HasWhite};
-    use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
 
     #[test]
@@ -583,7 +582,6 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::definitions::{HasBlack, HasWhite};
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
     use test::{black_box, Bencher};

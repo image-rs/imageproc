@@ -205,7 +205,7 @@ fn intersection_points(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
 
     fn assert_points_eq(
         actual: Option<((f32, f32), (f32, f32))>,

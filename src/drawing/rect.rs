@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     use crate::drawing::Blend;
     use crate::rect::Rect;
-    use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
+    use image::{GrayImage, Luma, Pixel, Rgba, RgbaImage};
 
     #[test]
     fn test_draw_hollow_rect() {
@@ -149,9 +149,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::drawing::Blend;
     use crate::rect::Rect;
-    use image::{GrayImage, Luma, Pixel, Rgb, RgbImage, Rgba, RgbaImage};
+    use image::{Rgb, RgbImage};
     use test::{black_box, Bencher};
 
     #[bench]

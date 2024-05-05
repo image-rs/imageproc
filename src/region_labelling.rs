@@ -247,8 +247,6 @@ where
 mod tests {
     extern crate wasm_bindgen_test;
 
-    use ::test;
-
     use image::{GrayImage, ImageBuffer, Luma};
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
@@ -314,9 +312,9 @@ mod benches {
     use super::connected_components;
     use super::tests::chessboard;
     use super::Connectivity::{Eight, Four};
-    use crate::definitions::{HasBlack, HasWhite};
+    use crate::definitions::HasBlack;
     use ::test;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::Luma;
 
     #[bench]
     fn bench_connected_components_eight_chessboard(b: &mut test::Bencher) {
