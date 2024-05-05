@@ -580,7 +580,7 @@ mod tests {
         out
     }
 
-    #[cfg(not(miri))]
+    #[cfg_attr(miri, ignore = "slow")]
     #[test]
     fn test_integral_image_matches_reference_implementation() {
         fn prop(image: GrayTestImage) -> TestResult {
