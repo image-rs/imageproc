@@ -1,9 +1,6 @@
 //! Functions for performing template matching.
 use crate::definitions::Image;
-use crate::integral_image::{integral_squared_image, sum_image_pixels};
-use crate::rect::Rect;
-use image::Primitive;
-use image::{GrayImage, Luma};
+use image::{GenericImageView, GrayImage, Luma, Primitive};
 
 /// Method used to compute the matching score between a template and an image region.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -23,204 +20,544 @@ pub enum MatchTemplateMethod {
     CrossCorrelationNormalized,
 }
 
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template(
     image: &GrayImage,
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
-    use image::GenericImageView;
+    use MatchTemplateMethod as M;
 
-    let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
-
-    assert!(
-        image_width >= template_width,
-        "image width must be greater than or equal to template width"
-    );
-    assert!(
-        image_height >= template_height,
-        "image height must be greater than or equal to template height"
-    );
-
-    let should_normalize = matches! { method,
-    MatchTemplateMethod::SumOfSquaredErrorsNormalized
-    | MatchTemplateMethod::CrossCorrelationNormalized };
-    let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
-    } else {
-        None
-    };
-    let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
-    } else {
-        None
-    };
-
-    let mut result = Image::new(
-        image_width - template_width + 1,
-        image_height - template_height + 1,
-    );
-
-    for y in 0..result.height() {
-        for x in 0..result.width() {
-            let mut score = 0f32;
-
-            for dy in 0..template_height {
-                for dx in 0..template_width {
-                    let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                    let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
-
-                    use MatchTemplateMethod::*;
-
-                    score += match method {
-                        SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                            (image_value - template_value).powf(2.0)
-                        }
-                        CrossCorrelation | CrossCorrelationNormalized => {
-                            image_value * template_value
-                        }
-                    };
-                }
-            }
-
-            if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
-                let region = Rect::at(x as i32, y as i32).of_size(template_width, template_height);
-                let norm = normalization_term(i, t, region);
-                if norm > 0.0 {
-                    score /= norm;
-                }
-            }
-
-            result.put_pixel(x, y, Luma([score]));
-        }
+    let input = &ImageTemplate::new(image, template);
+    match method {
+        M::SumOfSquaredErrors => methods::Sse::match_template(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalized::match_template(input),
+        M::CrossCorrelation => methods::Ccorr::match_template(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalized::match_template(input),
     }
-
-    result
 }
 
 #[cfg(feature = "rayon")]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template_parallel(
     image: &GrayImage,
     template: &GrayImage,
     method: MatchTemplateMethod,
 ) -> Image<Luma<f32>> {
-    use image::GenericImageView;
-    use rayon::prelude::*;
+    use MatchTemplateMethod as M;
 
-    let (image_width, image_height) = image.dimensions();
-    let (template_width, template_height) = template.dimensions();
+    let input = &ImageTemplate::new(image, template);
+    match method {
+        M::SumOfSquaredErrors => methods::Sse::match_template_parallel(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalized::match_template_parallel(input),
+        M::CrossCorrelation => methods::Ccorr::match_template_parallel(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalized::match_template_parallel(input),
+    }
+}
 
-    assert!(
-        image_width >= template_width,
-        "image width must be greater than or equal to template width"
-    );
-    assert!(
-        image_height >= template_height,
-        "image height must be greater than or equal to template height"
-    );
+#[cfg_attr(feature = "katexit", katexit::katexit)]
+/// Slides a `template` and a `mask` over an `image` and scores the match at each point using
+/// the requested `method`.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// # Panics
+///
+/// 1. If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+/// 2. If `template.dimensions() != mask.dimensions()`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
+pub fn match_template_with_mask(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+    mask: &GrayImage,
+) -> Image<Luma<f32>> {
+    use MatchTemplateMethod as M;
 
-    let should_normalize = matches! { method,
-    MatchTemplateMethod::SumOfSquaredErrorsNormalized
-    | MatchTemplateMethod::CrossCorrelationNormalized };
-    let image_squared_integral = if should_normalize {
-        Some(integral_squared_image(image))
-    } else {
-        None
-    };
-    let template_squared_sum = if should_normalize {
-        Some(sum_squares(template))
-    } else {
-        None
-    };
+    let input = &ImageTemplateMask::new(image, template, mask);
+    match method {
+        M::SumOfSquaredErrors => methods::SseWithMask::match_template(input),
+        M::SumOfSquaredErrorsNormalized => methods::SseNormalizedWithMask::match_template(input),
+        M::CrossCorrelation => methods::CcorrWithMask::match_template(input),
+        M::CrossCorrelationNormalized => methods::CcorrNormalizedWithMask::match_template(input),
+    }
+}
 
-    let result_width = image_width - template_width + 1;
-    let result_height = image_height - template_height + 1;
+#[cfg(feature = "rayon")]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
+/// Slides a `template` and a `mask` over an `image` and scores the match at each point using
+/// the requested `method`. This version uses rayon to parallelize the computation.
+///
+/// The returned image has dimensions `image.width() - template.width() + 1` by
+/// `image.height() - template.height() + 1`.
+///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// # Panics
+///
+/// 1. If either dimension of `template` is not strictly less than the corresponding dimension
+/// of `image`.
+/// 2. If `template.dimensions() != mask.dimensions()`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
+pub fn match_template_with_mask_parallel(
+    image: &GrayImage,
+    template: &GrayImage,
+    method: MatchTemplateMethod,
+    mask: &GrayImage,
+) -> Image<Luma<f32>> {
+    use MatchTemplateMethod as M;
 
-    let rows = (0..result_height)
-        .into_par_iter()
-        .map(|y| {
-            let mut row = Vec::with_capacity(result_width as usize);
-            for x in 0..result_width {
-                let mut score = 0f32;
+    let input = &ImageTemplateMask::new(image, template, mask);
+    match method {
+        M::SumOfSquaredErrors => methods::SseWithMask::match_template_parallel(input),
+        M::SumOfSquaredErrorsNormalized => {
+            methods::SseNormalizedWithMask::match_template_parallel(input)
+        }
+        M::CrossCorrelation => methods::CcorrWithMask::match_template_parallel(input),
+        M::CrossCorrelationNormalized => {
+            methods::CcorrNormalizedWithMask::match_template_parallel(input)
+        }
+    }
+}
 
-                for dy in 0..template_height {
-                    for dx in 0..template_width {
-                        let image_value =
-                            unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
-                        let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+trait MatchTemplate<'a>
+where
+    Self: Sync + Sized,
+{
+    type Input: Sync + OutputDims;
 
-                        use MatchTemplateMethod::*;
+    fn init(input: &Self::Input) -> Self;
+    fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32;
 
-                        score += match method {
-                            SumOfSquaredErrors | SumOfSquaredErrorsNormalized => {
-                                (image_value - template_value).powf(2.0)
-                            }
-                            CrossCorrelation | CrossCorrelationNormalized => {
-                                image_value * template_value
-                            }
-                        };
-                    }
-                }
+    fn match_template(input: &Self::Input) -> Image<Luma<f32>> {
+        let method = Self::init(input);
+        let (width, height) = input.output_dims();
 
-                if let (Some(i), &Some(t)) = (&image_squared_integral, &template_squared_sum) {
-                    let region =
-                        Rect::at(x as i32, y as i32).of_size(template_width, template_height);
-                    let norm = normalization_term(i, t, region);
-                    if norm > 0.0 {
-                        score /= norm;
-                    }
-                }
-
-                row.push(Luma([score]));
-            }
-            row
+        Image::from_fn(width, height, |x, y| {
+            let score = method.score_at((x, y), input);
+            Luma([score])
         })
-        .collect::<Vec<_>>();
+    }
+    #[cfg(feature = "rayon")]
+    fn match_template_parallel(input: &Self::Input) -> Image<Luma<f32>> {
+        use rayon::prelude::*;
 
-    Image::from_fn(result_width, result_height, |x, y| {
-        rows[y as usize][x as usize]
-    })
+        let method = Self::init(input);
+        let (width, height) = input.output_dims();
+
+        let rows = (0..height)
+            .into_par_iter()
+            .map(|y| {
+                (0..width)
+                    .map(|x| method.score_at((x, y), input))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+        Image::from_fn(width, height, |x, y| {
+            let score = rows[y as usize][x as usize];
+            Luma([score])
+        })
+    }
 }
 
-fn sum_squares(template: &GrayImage) -> f32 {
-    template.iter().map(|p| *p as f32 * *p as f32).sum()
+trait OutputDims {
+    fn output_dims(&self) -> (u32, u32);
 }
 
-/// Returns the square root of the product of the sum of squares of
-/// pixel intensities in template and the provided region of image.
-fn normalization_term(
-    image_squared_integral: &Image<Luma<u64>>,
-    template_squared_sum: f32,
-    region: Rect,
-) -> f32 {
-    let image_sum = sum_image_pixels(
-        image_squared_integral,
-        region.left() as u32,
-        region.top() as u32,
-        region.right() as u32,
-        region.bottom() as u32,
-    )[0] as f32;
-    (image_sum * template_squared_sum).sqrt()
+mod methods {
+    use super::*;
+
+    pub struct Sse;
+    impl<'a> MatchTemplate<'a> for Sse {
+        type Input = ImageTemplate<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += (t - i).powi(2);
+                })
+            };
+            score
+        }
+    }
+
+    pub struct SseNormalized {
+        template_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for SseNormalized {
+        type Input = ImageTemplate<'a>;
+        fn init(input: &Self::Input) -> Self {
+            Self {
+                template_squared_sum: square_sum(input.template),
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut ii = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += (t - i).powi(2);
+                    ii += i * i;
+                })
+            };
+            let norm = (ii * self.template_squared_sum).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    pub struct Ccorr;
+    impl<'a> MatchTemplate<'a> for Ccorr {
+        type Input = ImageTemplate<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += i * t;
+                })
+            };
+            score
+        }
+    }
+
+    pub struct CcorrNormalized {
+        template_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for CcorrNormalized {
+        type Input = ImageTemplate<'a>;
+        fn init(input: &Self::Input) -> Self {
+            Self {
+                template_squared_sum: square_sum(input.template),
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut ii = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t| {
+                    score += i * t;
+                    ii += i * i;
+                })
+            };
+            let norm = (ii * self.template_squared_sum).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    pub struct SseWithMask;
+    impl<'a> MatchTemplate<'a> for SseWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += ((t - i) * m).powi(2);
+                })
+            };
+            score
+        }
+    }
+
+    pub struct SseNormalizedWithMask {
+        template_mask_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for SseNormalizedWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(input: &Self::Input) -> Self {
+            let template_mask_squared_sum = mult_square_sum(input.inner.template, input.mask);
+            Self {
+                template_mask_squared_sum,
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut im_im = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += ((t - i) * m).powi(2);
+                    im_im += (i * m).powi(2);
+                })
+            };
+            let norm = (self.template_mask_squared_sum * im_im).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+    pub struct CcorrWithMask;
+    impl<'a> MatchTemplate<'a> for CcorrWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(_: &Self::Input) -> Self {
+            Self
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += t * i * m * m;
+                })
+            };
+            score
+        }
+    }
+
+    pub struct CcorrNormalizedWithMask {
+        template_mask_squared_sum: f32,
+    }
+    impl<'a> MatchTemplate<'a> for CcorrNormalizedWithMask {
+        type Input = ImageTemplateMask<'a>;
+        fn init(input: &Self::Input) -> Self {
+            let template_mask_squared_sum = mult_square_sum(input.inner.template, input.mask);
+            Self {
+                template_mask_squared_sum,
+            }
+        }
+        fn score_at(&self, at: (u32, u32), input: &Self::Input) -> f32 {
+            let mut score = 0f32;
+            let mut im_im = 0f32;
+            unsafe {
+                input.slide_window_at(at, |i, t, m| {
+                    score += t * i * m * m;
+                    im_im += (i * m).powi(2);
+                })
+            };
+            let norm = (self.template_mask_squared_sum * im_im).sqrt();
+            if norm > 0.0 {
+                score / norm
+            } else {
+                score
+            }
+        }
+    }
+
+    fn square_sum(input: &GrayImage) -> f32 {
+        input.iter().map(|&x| (x as f32 * x as f32)).sum()
+    }
+    fn mult_square_sum(a: &GrayImage, b: &GrayImage) -> f32 {
+        a.iter()
+            .zip(b.iter())
+            .map(|(&x, &y)| (x as f32 * y as f32).powi(2))
+            .sum()
+    }
+}
+
+struct ImageTemplate<'a> {
+    image: &'a GrayImage,
+    template: &'a GrayImage,
+}
+impl<'a> ImageTemplate<'a> {
+    fn new(image: &'a GrayImage, template: &'a GrayImage) -> Self {
+        assert!(
+            image.width() >= template.width(),
+            "image width must be greater than or equal to template width"
+        );
+        assert!(
+            image.height() >= template.height(),
+            "image height must be greater than or equal to template height"
+        );
+        Self { image, template }
+    }
+    unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32)) {
+        let (image, template) = (self.image, self.template);
+        debug_assert!(x + template.width() - 1 < image.width());
+        debug_assert!(y + template.height() - 1 < image.height());
+
+        for dy in 0..template.height() {
+            for dx in 0..template.width() {
+                let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                for_each(image_value, template_value);
+            }
+        }
+    }
+}
+impl<'a> OutputDims for ImageTemplate<'a> {
+    fn output_dims(&self) -> (u32, u32) {
+        let width = self.image.width() - self.template.width() + 1;
+        let height = self.image.height() - self.template.height() + 1;
+        (width, height)
+    }
+}
+
+struct ImageTemplateMask<'a> {
+    inner: ImageTemplate<'a>,
+    mask: &'a GrayImage,
+}
+impl<'a> ImageTemplateMask<'a> {
+    fn new(image: &'a GrayImage, template: &'a GrayImage, mask: &'a GrayImage) -> Self {
+        assert_eq!(
+            template.dimensions(),
+            mask.dimensions(),
+            "the template and mask must be the same size"
+        );
+        let inner = ImageTemplate::new(image, template);
+        Self { inner, mask }
+    }
+    unsafe fn slide_window_at(&self, (x, y): (u32, u32), mut for_each: impl FnMut(f32, f32, f32)) {
+        let Self { mask, inner } = self;
+        let (image, template) = (inner.image, inner.template);
+        debug_assert!(x + template.width() - 1 < image.width());
+        debug_assert!(y + template.height() - 1 < image.height());
+
+        for dy in 0..template.height() {
+            for dx in 0..template.width() {
+                let image_value = unsafe { image.unsafe_get_pixel(x + dx, y + dy)[0] as f32 };
+                let template_value = unsafe { template.unsafe_get_pixel(dx, dy)[0] as f32 };
+                let mask_value = unsafe { mask.unsafe_get_pixel(dx, dy)[0] as f32 };
+                for_each(image_value, template_value, mask_value);
+            }
+        }
+    }
+}
+impl<'a> OutputDims for ImageTemplateMask<'a> {
+    fn output_dims(&self) -> (u32, u32) {
+        self.inner.output_dims()
+    }
 }
 
 /// The largest and smallest values in an image,
@@ -417,6 +754,162 @@ mod tests {
     }
 
     #[test]
+    fn match_template_sum_of_squared_errors_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let expected = gray_image!(type: f32,
+            89., 25.;
+            10., 1.
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrors,
+            &mask,
+        );
+        assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::SumOfSquaredErrors,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
+    }
+
+    #[test]
+    fn match_template_sum_of_squared_errors_normalized_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let expected = gray_image!(type: f32,
+            1.0246822 , 0.19536021;
+            0.067865655, 0.005362412
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+            &mask,
+        );
+        assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::SumOfSquaredErrorsNormalized,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
+    }
+
+    #[test]
+    fn match_template_cross_correlation_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let expected = gray_image!(type: f32,
+            68., 124.;
+            146., 186.
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelation,
+            &mask,
+        );
+        assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::CrossCorrelation,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
+    }
+
+    #[test]
+    fn match_template_cross_correlation_normalized_with_mask() {
+        let image = gray_image!(
+            1, 4, 2;
+            2, 1, 3;
+            3, 3, 4
+        );
+        let template = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let mask = gray_image!(
+            0, 1;
+            2, 3
+        );
+        let expected = gray_image!(type: f32,
+            0.78290325, 0.96898663;
+            0.9908386, 0.9974086
+        );
+        let actual = match_template_with_mask(
+            &image,
+            &template,
+            MatchTemplateMethod::CrossCorrelationNormalized,
+            &mask,
+        );
+        assert_pixels_eq!(actual, expected);
+
+        #[cfg(feature = "rayon")]
+        {
+            let actual_parallel = match_template_with_mask_parallel(
+                &image,
+                &template,
+                MatchTemplateMethod::CrossCorrelationNormalized,
+                &mask,
+            );
+            assert_pixels_eq!(actual_parallel, expected);
+        }
+    }
+
+    #[test]
     fn test_find_extremes() {
         let image = gray_image!(
             10,  7,  8,  1;
@@ -488,6 +981,62 @@ mod benches {
 
     bench_match_template!(
         bench_match_template_s100_t16_sse_norm,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    macro_rules! bench_match_template_with_mask {
+        ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image = gray_bench_image($s, $s);
+                let template = gray_bench_image($t, $t);
+                let mask = gray_bench_image($t, $t);
+                b.iter(|| {
+                    let result = match_template_with_mask(
+                        &image,
+                        &template,
+                        MatchTemplateMethod::SumOfSquaredErrors,
+                        &mask,
+                    );
+                    black_box(result);
+                })
+            }
+        };
+    }
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t1_sse,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t4_sse,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t16_sse,
+        image_size: 100,
+        template_size: 16,
+        method: MatchTemplateMethod::SumOfSquaredErrors);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t1_sse_norm,
+        image_size: 100,
+        template_size: 1,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t4_sse_norm,
+        image_size: 100,
+        template_size: 4,
+        method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
+
+    bench_match_template_with_mask!(
+        bench_match_template_with_mask_s100_t16_sse_norm,
         image_size: 100,
         template_size: 16,
         method: MatchTemplateMethod::SumOfSquaredErrorsNormalized);
