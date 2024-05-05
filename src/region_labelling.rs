@@ -312,8 +312,8 @@ mod benches {
     use super::connected_components;
     use super::tests::chessboard;
     use super::Connectivity::{Eight, Four};
-    use ::test;
     use crate::definitions::HasBlack;
+    use ::test;
     use image::Luma;
 
     #[bench]
