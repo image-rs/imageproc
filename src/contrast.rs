@@ -271,15 +271,15 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
 /// pair to the output_min and output_max pair.
 ///
 /// # Example
-/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the `u8` range.
-/// 200 -> 255 since it also saturates outside the `u8` range.
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
+/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
 /// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
 /// All values between 50 and 100 are then linearly interpolated into the output range.
 /// Such as 75 -> 128
 ///
 ///
 /// # Panic
-/// This function panics if `input_min` > `input_max` or `output_min` > `output_max`.
+/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
 pub fn scale_linear(
     image: &GrayImage,
     input_min: u8,
@@ -296,8 +296,8 @@ pub fn scale_linear(
 /// pair to the output_min and output_max pair.
 ///
 /// # Example
-/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the `u8` range.
-/// 200 -> 255 since it also saturates outside the `u8` range.
+/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
+/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
 /// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
 /// All values between 50 and 100 are then linearly interpolated into the output range.
 /// Such as 75 -> 128
