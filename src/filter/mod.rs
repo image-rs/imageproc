@@ -570,11 +570,10 @@ pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
 mod tests {
     use super::*;
     use crate::definitions::{Clamp, Image};
-    use crate::utils::{gray_bench_image, rgb_bench_image};
-    use image::imageops::blur;
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
+    use crate::utils::{gray_bench_image};
+    use image::{GrayImage, ImageBuffer, Luma};
     use std::cmp::{max, min};
-    use test::{black_box, Bencher};
+    use test::{black_box};
 
     #[test]
     fn test_bilateral_filter() {
@@ -929,11 +928,10 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::definitions::{Clamp, Image};
+    use crate::definitions::Image;
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::imageops::blur;
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Rgb};
-    use std::cmp::{max, min};
+    use image::{GenericImage, ImageBuffer, Luma, Rgb};
     use test::{black_box, Bencher};
 
     #[bench]

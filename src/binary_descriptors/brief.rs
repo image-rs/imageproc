@@ -270,9 +270,6 @@ pub fn brief(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::gray_bench_image;
-    use rand::Rng;
-    use test::{black_box, Bencher};
 
     #[test]
     fn test_compute_hamming_distance() {

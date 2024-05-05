@@ -596,7 +596,6 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
-    use super::*;
     use image::{GrayImage, Luma};
 
     macro_rules! bench_antialiased_lines {

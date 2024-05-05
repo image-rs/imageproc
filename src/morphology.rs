@@ -355,8 +355,6 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, Luma};
-    use std::cmp::{max, min};
 
     #[test]
     fn test_dilate_point_l1_0() {

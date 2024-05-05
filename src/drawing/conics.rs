@@ -309,7 +309,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::draw_filled_ellipse_mut;
-    use image::{GenericImage, GrayImage, Luma};
+    use image::GenericImage;
 
     struct Ellipse {
         center: (i32, i32),
@@ -382,7 +382,6 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
-    use super::*;
     use image::{GrayImage, Luma};
 
     macro_rules! bench_hollow_ellipse {

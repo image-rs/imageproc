@@ -466,7 +466,7 @@ mod tests {
     use super::*;
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
-    use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
+    use crate::utils::pixel_diff_summary;
     use image::{GenericImage, ImageBuffer, Luma};
     use quickcheck::{quickcheck, TestResult};
 
@@ -598,7 +598,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::utils::{gray_bench_image, pixel_diff_summary, rgb_bench_image};
+    use crate::utils::{gray_bench_image, rgb_bench_image};
     use ::test;
 
     #[bench]
