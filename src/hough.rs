@@ -516,6 +516,7 @@ mod tests {
 
     macro_rules! test_detect_line {
         ($name:ident, $r:expr, $angle:expr) => {
+            #[cfg(not(miri))]
             #[test]
             fn $name() {
                 let options = LineDetectionOptions {
