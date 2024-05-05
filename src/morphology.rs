@@ -5,7 +5,7 @@
 use crate::distance_transform::{
     distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
 };
-use image::{GenericImageView, GrayImage, Luma};
+use image::{GrayImage, Luma};
 use itertools::Itertools;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
