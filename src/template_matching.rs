@@ -20,16 +20,44 @@ pub enum MatchTemplateMethod {
     CrossCorrelationNormalized,
 }
 
+#[cfg_attr(doc, katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template(
     image: &GrayImage,
     template: &GrayImage,
@@ -47,16 +75,44 @@ pub fn match_template(
 }
 
 #[cfg(feature = "rayon")]
+#[cfg_attr(doc, katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)}
+///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template_parallel(
     image: &GrayImage,
     template: &GrayImage,
@@ -73,17 +129,45 @@ pub fn match_template_parallel(
     }
 }
 
+#[cfg_attr(doc, katexit::katexit)]
 /// Slides a `template` and a `mask` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// 1. If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
-/// 2. If `template.dimensions() != mask.dimensions()`
+/// 2. If `template.dimensions() != mask.dimensions()`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template_with_mask(
     image: &GrayImage,
     template: &GrayImage,
@@ -102,17 +186,45 @@ pub fn match_template_with_mask(
 }
 
 #[cfg(feature = "rayon")]
+#[cfg_attr(doc, katexit::katexit)]
 /// Slides a `template` and a `mask` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
 /// The returned image has dimensions `image.width() - template.width() + 1` by
 /// `image.height() - template.height() + 1`.
 ///
+/// ### [`SumOfSquaredErrors`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2
+/// $$
+///
+/// ### [`SumOfSquaredErrorsNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
+/// ### [`CrossCorrelation`]
+/// $$
+/// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)
+/// $$
+///
+/// ### [`CrossCorrelationNormalized`]
+/// $$
+/// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)}
+///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
+/// $$
+///
 /// # Panics
 ///
 /// 1. If either dimension of `template` is not strictly less than the corresponding dimension
 /// of `image`.
-/// 2. If `template.dimensions() != mask.dimensions()`
+/// 2. If `template.dimensions() != mask.dimensions()`.
+///
+/// [`SumOfSquaredErrors`]: self::MatchTemplateMethod#variant.SumOfSquaredErrors
+/// [`SumOfSquaredErrorsNormalized`]: self::MatchTemplateMethod#variant.SumOfSquaredErrorsNormalized
+/// [`CrossCorrelation`]: self::MatchTemplateMethod#variant.CrossCorrelation
+/// [`CrossCorrelationNormalized`]: self::MatchTemplateMethod#variant.CrossCorrelationNormalized
 pub fn match_template_with_mask_parallel(
     image: &GrayImage,
     template: &GrayImage,
