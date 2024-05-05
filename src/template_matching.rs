@@ -20,7 +20,7 @@ pub enum MatchTemplateMethod {
     CrossCorrelationNormalized,
 }
 
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
@@ -75,7 +75,7 @@ pub fn match_template(
 }
 
 #[cfg(feature = "rayon")]
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
@@ -129,7 +129,7 @@ pub fn match_template_parallel(
     }
 }
 
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` and a `mask` over an `image` and scores the match at each point using
 /// the requested `method`.
 ///
@@ -186,7 +186,7 @@ pub fn match_template_with_mask(
 }
 
 #[cfg(feature = "rayon")]
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 /// Slides a `template` and a `mask` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
