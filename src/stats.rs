@@ -4,7 +4,7 @@ use crate::definitions::Image;
 use image::{GenericImageView, GrayImage, Pixel, Primitive};
 use num::Bounded;
 
-/// A minimum and maximum value returned by [`minmax()`]
+/// A minimum and maximum value returned by [`min_max()`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MinMax<T> {
     /// The minimum value
@@ -14,7 +14,7 @@ pub struct MinMax<T> {
 }
 
 /// Returns the minimum and maximum values per channel in an image.
-pub fn minmax<P, T>(image: &Image<P>) -> Vec<MinMax<T>>
+pub fn min_max<P, T>(image: &Image<P>) -> Vec<MinMax<T>>
 where
     P: Pixel<Subpixel = T>,
     T: Ord + Copy,
@@ -209,7 +209,7 @@ mod tests {
         );
 
         assert_eq!(
-            minmax(&image),
+            min_max(&image),
             vec![
                 MinMax { min: 1, max: 3 },
                 MinMax { min: 10, max: 30 },

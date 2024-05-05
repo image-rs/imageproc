@@ -5,6 +5,10 @@
 Changes:
 - `contrast::stretch_contrast{_mut}` had been extended and renamed to `contrast::scale_linear{_mut}`
 
+Added:
+- Added a new `min_max()` function and `MinMax` return struct for finding the
+  minimum and maximum value pixel in an image
+
 ## [0.24.0] - 2024-03-16
 
 New features:
