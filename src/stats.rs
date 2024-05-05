@@ -2,7 +2,6 @@
 
 use crate::definitions::Image;
 use image::{GenericImageView, GrayImage, Pixel, Primitive};
-use itertools::Itertools;
 use num::Bounded;
 
 /// A minimum and maximum value returned by [`minmax()`]

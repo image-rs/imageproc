@@ -1,7 +1,6 @@
 //! Functions for manipulating the contrast of images.
 
 use std::cmp::{max, min};
-use std::f64::consts::E;
 
 use image::{GrayImage, ImageBuffer, Luma};
 #[cfg(feature = "rayon")]
@@ -9,8 +8,8 @@ use rayon::prelude::*;
 
 use crate::definitions::{HasBlack, HasWhite};
 use crate::integral_image::{integral_image, sum_image_pixels};
-use crate::map::map_pixels_mut;
-use crate::stats::{cumulative_histogram, histogram, minmax};
+use crate::map::map_subpixels_mut;
+use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
 ///
@@ -305,7 +304,7 @@ pub fn scale_linear(
 ///
 ///
 /// # Panic
-/// This function panics if `input_min` > `input_max` or `output_min` > `output_max`.
+/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
 pub fn scale_linear_mut(
     image: &mut GrayImage,
     input_min: u8,
@@ -314,8 +313,8 @@ pub fn scale_linear_mut(
     output_max: u8,
 ) {
     assert!(
-        input_min <= input_max,
-        "input_min must be smaller or equal to input_max"
+        input_min < input_max,
+        "input_min must be smaller than input_max"
     );
     assert!(
         output_min <= output_max,
@@ -330,8 +329,8 @@ pub fn scale_linear_mut(
     let input_width = input_max - input_min;
     let output_width = output_max - output_min;
 
-    let f = |_, _, pixel: Luma<u8>| {
-        let p: u16 = pixel.0[0].into();
+    let f = |p: u8| {
+        let p: u16 = p.into();
 
         let output = if p <= input_min {
             output_min
@@ -341,10 +340,10 @@ pub fn scale_linear_mut(
             (((p - input_min) * output_width) / input_width) + output_min
         };
 
-        Luma([output as u8])
+        output as u8
     };
 
-    map_pixels_mut(image, f);
+    map_subpixels_mut(image, f);
 }
 
 /// Adjusts contrast of an 8bpp grayscale image in place so that its
@@ -409,8 +408,6 @@ mod tests {
     use crate::definitions::{HasBlack, HasWhite};
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use itertools::Itertools;
-    use test::{black_box, Bencher};
 
     #[test]
     fn adaptive_threshold_constant() {
@@ -578,7 +575,7 @@ mod tests {
 
         let expected = gray_image!(10u8, 10, 10, 11, 11, 12, 12, 13, 13, 13, 52, 120);
 
-        assert_eq!(scale_linear(&input, 1, 255, 10, 120), expected);
+        assert_pixels_eq!(scale_linear(&input, 1, 255, 10, 120), expected);
     }
 }
 

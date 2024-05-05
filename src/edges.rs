@@ -1,8 +1,7 @@
 //! Functions for detecting edges in images.
 
-use crate::contrast;
 use crate::definitions::{HasBlack, HasWhite};
-use crate::filter::{gaussian_blur_f32, laplacian_filter};
+use crate::filter::gaussian_blur_f32;
 use crate::gradients::{horizontal_sobel, vertical_sobel};
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::f32;
