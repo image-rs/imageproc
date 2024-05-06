@@ -304,12 +304,7 @@ fn test_affine_bicubic_rgb() {
 fn test_sobel_gradients() {
     fn sobel_gradients(image: &GrayImage) -> GrayImage {
         imageproc::map::map_subpixels(
-            &gradients::gradients(
-                image,
-                &GradientKernel::Sobel.as_horizontal_kernel(),
-                &GradientKernel::Sobel.as_vertical_kernel(),
-                |p| p,
-            ),
+            &gradients::gradients(image, GradientKernel::Sobel, |p| p),
             <u8 as Clamp<u16>>::clamp,
         )
     }
