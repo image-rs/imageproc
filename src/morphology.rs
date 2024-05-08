@@ -361,7 +361,7 @@ pub struct Mask {
     /// for any optimisation/arithmetic purposes, it is garanteed that :
     ///
     /// - all the integer values will be strictly between -512 and 512
-    /// - all tuples will be sorted in lexicographic order
+    /// - all tuples will be sorted in reverse lexicographic order, line by line ((-1,-1),(0,-1),(1,-1),(-1,0),(0,0),...)
     /// - no tuple shall appear twice
     elements: Vec<(i16, i16)>,
 }
@@ -428,11 +428,22 @@ impl Mask {
             "the input image must be at most 511 pixels high"
         );
         Self {
-            elements: (0..image.width() as i16)
-                .cartesian_product(0..(image.height() as i16))
-                .filter(|(x, y)| image.get_pixel(*x as u32, *y as u32).0[0] != 0)
-                .map(|(x, y)| (x - center_x as i16, y - center_y as i16))
-                .collect(),
+            elements: if image.width() == 0 {
+                vec![]
+            } else {
+                image
+                    .chunks(image.width() as usize)
+                    .enumerate()
+                    .flat_map(|(y, line)| {
+                        line.iter()
+                            .enumerate()
+                            .filter(|(_, p)| **p != 0)
+                            .map(move |(x, _)| {
+                                (x as i16 - center_x as i16, y as i16 - center_y as i16)
+                            })
+                    })
+                    .collect()
+            },
         }
     }
 
@@ -467,7 +478,11 @@ impl Mask {
     pub fn square(radius: u8) -> Self {
         let range = -(radius as i16)..=(radius as i16);
         Self {
-            elements: range.clone().cartesian_product(range).collect(),
+            elements: range
+                .clone()
+                .cartesian_product(range)
+                .map(|(y, x)| (x, y))
+                .collect(),
         }
     }
 
@@ -513,8 +528,8 @@ impl Mask {
     pub fn diamond(radius: u8) -> Self {
         Self {
             elements: (-(radius as i16)..=(radius as i16))
-                .flat_map(|x| {
-                    ((x.abs() - radius as i16)..=(radius as i16 - x.abs())).map(move |y| (x, y))
+                .flat_map(|y| {
+                    ((y.abs() - radius as i16)..=(radius as i16 - y.abs())).map(move |x| (x, y))
                 })
                 .collect(),
         }
@@ -581,10 +596,11 @@ impl Mask {
             elements: range
                 .clone()
                 .cartesian_product(range)
-                .filter(|(x, y)| {
+                .filter(|(y, x)| {
                     (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
                         <= (radius as u32).pow(2)
                 })
+                .map(|(y, x)| (x, y))
                 .collect(),
         }
     }
@@ -1991,4 +2007,29 @@ mod benches {
             black_box(dilated);
         })
     }
+
+    #[bench]
+    fn bench_grayscale_mask_from_image(b: &mut Bencher) {
+        let image = GrayImage::from_fn(200, 200, |x, y| Luma([(x + y % 3) as u8]));
+        b.iter(|| {
+            let mask = Mask::from_image(&image, 100, 100);
+            black_box(mask);
+        })
+    }
+
+    macro_rules! bench_grayscale_mask {
+        ($name:ident, $f:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                b.iter(|| {
+                    let mask = $f(100);
+                    black_box(mask);
+                })
+            }
+        };
+    }
+
+    bench_grayscale_mask!(bench_grayscale_square_mask, Mask::square);
+    bench_grayscale_mask!(bench_grayscale_diamond_mask, Mask::diamond);
+    bench_grayscale_mask!(bench_grayscale_disk_mask, Mask::disk);
 }
