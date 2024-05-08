@@ -514,11 +514,10 @@ impl Mask {
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
-        let mut elements = Vec::new();
-        let mut iter = (-(radius as i16)..=(radius as i16)).flat_map(|y| {
+        let mut elements = Vec::with_capacity(1 + 2 * (radius as usize) * (radius as usize + 1));
+        elements.extend((-(radius as i16)..=(radius as i16)).flat_map(|y| {
             ((y.abs() - radius as i16)..=(radius as i16 - y.abs())).map(move |x| Point::new(x, y))
-        });
-        elements.resize_with(1 + 2 * (radius as usize) * (radius as usize + 1), || iter.next().expect("the size of iter is exactly equal to 1 + 2 * radius * (radius + 1) (i, Morgane55440, did the math)"));
+        }));
         Self { elements }
     }
 
@@ -578,18 +577,28 @@ impl Mask {
     /// # }
     /// ```
     pub fn disk(radius: u8) -> Self {
-        let range = -(radius as i16)..=(radius as i16);
         let radius_squared = (radius as u32) * (radius as u32);
-        let elements = range
-            .clone()
-            .cartesian_product(range)
-            .filter(|(y, x)| {
-                (x.unsigned_abs() as u32) * (x.unsigned_abs() as u32)
-                    + (y.unsigned_abs() as u32) * (y.unsigned_abs() as u32)
-                    <= radius_squared
-            })
-            .map(|(y, x)| Point::new(x, y))
-            .collect();
+        let radiis = std::iter::successors(Some((-(radius as i16), 0_i16)), |(y, r)| {
+            if *y == (radius as i16) {
+                return None;
+            };
+            let next_y = y + 1;
+            let mut next_r = *r as u32;
+            let y_squared = (next_y.unsigned_abs() as u32) * (next_y.unsigned_abs() as u32);
+            if next_y <= 0 {
+                while ((next_r + 1) * (next_r + 1) + y_squared) <= radius_squared {
+                    next_r += 1;
+                }
+            } else {
+                while ((next_r) * (next_r) + y_squared) > radius_squared {
+                    next_r -= 1;
+                }
+            }
+            Some((next_y, next_r as i16))
+        });
+        let mut elements =
+            Vec::with_capacity(radiis.clone().map(|(_, r)| 2 * (r as usize) + 1).sum());
+        elements.extend(radiis.flat_map(|(y, r)| ((-r)..=r).map(move |x| Point::new(x, y))));
         Self { elements }
     }
 
