@@ -2,8 +2,9 @@
 //!
 //! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
-use crate::distance_transform::{
-    distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
+use crate::{
+    distance_transform::{distance_transform_impl, distance_transform_mut, DistanceFrom, Norm},
+    point::Point,
 };
 use image::{GrayImage, Luma};
 use itertools::Itertools;
@@ -363,7 +364,7 @@ pub struct Mask {
     /// - all the integer values will be strictly between -512 and 512
     /// - all tuples will be sorted in reverse lexicographic order, line by line ((-1,-1),(0,-1),(1,-1),(-1,0),(0,0),...)
     /// - no tuple shall appear twice
-    elements: Vec<(i16, i16)>,
+    elements: Vec<Point<i16>>,
 }
 
 impl Mask {
@@ -427,24 +428,12 @@ impl Mask {
             image.height() < 512,
             "the input image must be at most 511 pixels high"
         );
-        Self {
-            elements: if image.width() == 0 {
-                vec![]
-            } else {
-                image
-                    .chunks(image.width() as usize)
-                    .enumerate()
-                    .flat_map(|(y, line)| {
-                        line.iter()
-                            .enumerate()
-                            .filter(|(_, p)| **p != 0)
-                            .map(move |(x, _)| {
-                                (x as i16 - center_x as i16, y as i16 - center_y as i16)
-                            })
-                    })
-                    .collect()
-            },
-        }
+        let elements = image
+            .enumerate_pixels()
+            .filter(|(_, _, &p)| p[0] != 0)
+            .map(|(x, y, _)| Point::new(x as i16 - center_x as i16, y as i16 - center_y as i16))
+            .collect();
+        Self { elements }
     }
 
     /// creates a square-shaped mask
@@ -481,7 +470,7 @@ impl Mask {
             elements: range
                 .clone()
                 .cartesian_product(range)
-                .map(|(y, x)| (x, y))
+                .map(|(y, x)| Point::new(x, y))
                 .collect(),
         }
     }
@@ -529,7 +518,8 @@ impl Mask {
         Self {
             elements: (-(radius as i16)..=(radius as i16))
                 .flat_map(|y| {
-                    ((y.abs() - radius as i16)..=(radius as i16 - y.abs())).map(move |x| (x, y))
+                    ((y.abs() - radius as i16)..=(radius as i16 - y.abs()))
+                        .map(move |x| Point::new(x, y))
                 })
                 .collect(),
         }
@@ -600,7 +590,7 @@ impl Mask {
                     (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
                         <= (radius as u32).pow(2)
                 })
-                .map(|(y, x)| (x, y))
+                .map(|(y, x)| Point::new(x, y))
                 .collect(),
         }
     }
@@ -613,7 +603,7 @@ impl Mask {
     ) -> impl Iterator<Item = &'a Luma<u8>> {
         self.elements
             .iter()
-            .map(move |(i, j)| (x as i64 + *i as i64, y as i64 + *j as i64))
+            .map(move |p| (x as i64 + p.x as i64, y as i64 + p.y as i64))
             .filter(move |(i, j)| {
                 0 <= *i && *i < image.width() as i64 && 0 <= *j && *j < image.height() as i64
             })
