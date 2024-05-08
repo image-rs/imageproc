@@ -1018,6 +1018,14 @@ mod proptests {
             let out = vertical_filter(&img, &ker);
             assert_eq!(out.dimensions(), img.dimensions());
         }
+
+        #[test]
+        fn proptest_laplacian_filter(
+            img in arbitrary_image_with::<Luma<u8>>(0..120, 0..120),
+        ) {
+            let out = laplacian_filter(&img);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
     }
 }
 
