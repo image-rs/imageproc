@@ -466,13 +466,12 @@ impl Mask {
     /// ```
     pub fn square(radius: u8) -> Self {
         let range = -(radius as i16)..=(radius as i16);
-        Self {
-            elements: range
-                .clone()
-                .cartesian_product(range)
-                .map(|(y, x)| Point::new(x, y))
-                .collect(),
-        }
+        let elements = range
+            .clone()
+            .cartesian_product(range)
+            .map(|(y, x)| Point::new(x, y))
+            .collect();
+        Self { elements }
     }
 
     /// creates a diamond-shaped mask
@@ -515,14 +514,12 @@ impl Mask {
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
-        Self {
-            elements: (-(radius as i16)..=(radius as i16))
-                .flat_map(|y| {
-                    ((y.abs() - radius as i16)..=(radius as i16 - y.abs()))
-                        .map(move |x| Point::new(x, y))
-                })
-                .collect(),
-        }
+        let mut elements = Vec::new();
+        let mut iter = (-(radius as i16)..=(radius as i16)).flat_map(|y| {
+            ((y.abs() - radius as i16)..=(radius as i16 - y.abs())).map(move |x| Point::new(x, y))
+        });
+        elements.resize_with(1 + 2 * (radius as usize) * (radius as usize + 1), || iter.next().expect("the size of iter is exactly equal to 1 + 2 * radius * (radius + 1) (i, Morgane55440, did the math)"));
+        Self { elements }
     }
 
     /// creates a disk-shaped mask
@@ -582,17 +579,18 @@ impl Mask {
     /// ```
     pub fn disk(radius: u8) -> Self {
         let range = -(radius as i16)..=(radius as i16);
-        Self {
-            elements: range
-                .clone()
-                .cartesian_product(range)
-                .filter(|(y, x)| {
-                    (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
-                        <= (radius as u32).pow(2)
-                })
-                .map(|(y, x)| Point::new(x, y))
-                .collect(),
-        }
+        let radius_squared = (radius as u32) * (radius as u32);
+        let elements = range
+            .clone()
+            .cartesian_product(range)
+            .filter(|(y, x)| {
+                (x.unsigned_abs() as u32) * (x.unsigned_abs() as u32)
+                    + (y.unsigned_abs() as u32) * (y.unsigned_abs() as u32)
+                    <= radius_squared
+            })
+            .map(|(y, x)| Point::new(x, y))
+            .collect();
+        Self { elements }
     }
 
     fn apply<'a, 'b: 'a, 'c: 'a>(
