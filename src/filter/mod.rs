@@ -41,7 +41,8 @@ use std::f32;
 ///
 /// # Panics
 ///
-/// Panics if `image.width() > i32::MAX as u32` or `image.height() > i32::MAX as u32`.
+/// 1. If `image.width() > i32::MAX as u32` or `image.height() > i32::MAX as u32`.
+/// 2. If `image.is_empty()`.
 ///
 /// # Examples
 ///
@@ -108,8 +109,7 @@ pub fn bilateral_filter(
     Image::from_fn(width, height, |col, row| {
         let mut total_val = 0f32;
         let mut total_weight = 0f32;
-        debug_assert!(col < width);
-        debug_assert!(row < height);
+        debug_assert!(image.in_bounds(col, row));
         // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
         let window_center_val = unsafe { image.unsafe_get_pixel(col, row)[0] } as i32;
 
@@ -120,8 +120,7 @@ pub fn bilateral_filter(
             for window_col in -window_extent..window_extent + 1 {
                 let window_col_abs =
                     (col as i32 + window_col).clamp(0, width.saturating_sub(1) as i32) as u32;
-                debug_assert!(window_col_abs < width);
-                debug_assert!(window_row_abs < height);
+                debug_assert!(image.in_bounds(window_col_abs, window_row_abs));
                 // Safety: we clamped `window_row_abs` and `window_col_abs` to be in bounds.
                 let val = unsafe { image.unsafe_get_pixel(window_col_abs, window_row_abs)[0] };
 
@@ -165,6 +164,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
         row_running_sum(image, y, &mut row_buffer, x_radius);
         let val = row_buffer[(2 * x_radius) as usize] / kernel_width;
         unsafe {
+            debug_assert!(out.in_bounds(0, y));
             out.unsafe_put_pixel(0, y, Luma([val as u8]));
         }
         for x in 1..width {
@@ -174,6 +174,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
             let l = (x - 1) as usize;
             let val = (row_buffer[u] - row_buffer[l]) / kernel_width;
             unsafe {
+                debug_assert!(out.in_bounds(x, y));
                 out.unsafe_put_pixel(x, y, Luma([val as u8]));
             }
         }
@@ -184,6 +185,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
         column_running_sum(&out, x, &mut col_buffer, y_radius);
         let val = col_buffer[(2 * y_radius) as usize] / kernel_height;
         unsafe {
+            debug_assert!(out.in_bounds(x, 0));
             out.unsafe_put_pixel(x, 0, Luma([val as u8]));
         }
         for y in 1..height {
@@ -191,6 +193,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
             let l = (y - 1) as usize;
             let val = (col_buffer[u] - col_buffer[l]) / kernel_height;
             unsafe {
+                debug_assert!(out.in_bounds(x, y));
                 out.unsafe_put_pixel(x, y, Luma([val as u8]));
             }
         }
@@ -209,6 +212,10 @@ pub struct Kernel<'a, K> {
 impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major form.
+    ///
+    /// # Panics
+    ///
+    /// If `width == 0 || height == 0`.
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
         assert!(
@@ -247,6 +254,9 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                     let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
                     for k_x in 0..k_width {
                         let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
+
+                        debug_assert!(image.in_bounds(x_p, y_p));
+                        debug_assert!(((k_y * k_width + k_x) as usize) < self.data.len());
                         accumulate(
                             &mut acc,
                             unsafe { &image.unsafe_get_pixel(x_p, y_p) },
@@ -371,6 +381,7 @@ where
                 for (i, k) in kernel.iter().enumerate() {
                     let x_unchecked = (x as i32) + i as i32 - k_width / 2;
                     let x_p = max(0, min(x_unchecked, width as i32 - 1)) as u32;
+                    debug_assert!(image.in_bounds(x_p, y));
                     let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                     accumulate(&mut acc, &p, *k);
                 }
@@ -394,6 +405,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = max(0, x_unchecked) as u32;
+                debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -410,6 +422,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = x_unchecked as u32;
+                debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -426,6 +439,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = min(x_unchecked, width as i32 - 1) as u32;
+                debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -467,6 +481,7 @@ where
                 for (i, k) in kernel.iter().enumerate() {
                     let y_unchecked = (y as i32) + i as i32 - k_height / 2;
                     let y_p = max(0, min(y_unchecked, height as i32 - 1)) as u32;
+                    debug_assert!(image.in_bounds(x, y_p));
                     let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                     accumulate(&mut acc, &p, *k);
                 }
@@ -490,6 +505,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = max(0, y_unchecked) as u32;
+                debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -508,6 +524,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = y_unchecked as u32;
+                debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -526,6 +543,7 @@ where
             for (i, k) in kernel.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = min(y_unchecked, height as i32 - 1) as u32;
+                debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
                 accumulate(&mut acc, &p, *k);
             }
@@ -921,6 +939,85 @@ mod tests {
         let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(12, 12, Luma([1.0]));
         let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 1e-6);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::arbitrary_image_with;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_bilateral_filter(
+            img in arbitrary_image_with::<Luma<u8>>(1..40, 1..40),
+            window_size in 0..25u32,
+            sigma_color in any::<f32>(),
+            sigma_spatial in any::<f32>(),
+        ) {
+            let out = bilateral_filter(&img, window_size, sigma_color, sigma_spatial);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_box_filter(
+            img in arbitrary_image_with::<Luma<u8>>(0..200, 0..200),
+            x_radius in 0..100u32,
+            y_radius in 0..100u32,
+        ) {
+            let out = box_filter(&img, x_radius, y_radius);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_gaussian_blur_f32(
+            img in arbitrary_image_with::<Luma<u8>>(0..20, 0..20),
+            sigma in (0.0..150f32).prop_filter("contract", |&x| x > 0.0),
+        ) {
+            let out = gaussian_blur_f32(&img, sigma);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_kernel_luma_f32(
+            img in arbitrary_image_with::<Luma<f32>>(0..30, 0..30),
+            ker in arbitrary_image_with::<Luma<f32>>(1..20, 1..20),
+        ) {
+            let kernel = Kernel::new(&ker, ker.width(), ker.height());
+            let out: Image<Luma<f32>> = kernel.filter(&img, |dst, src| {
+                *dst = src;
+            });
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_filter3x3(
+            img in arbitrary_image_with::<Luma<u8>>(0..50, 0..50),
+            ker in proptest::collection::vec(any::<f32>(), 9),
+        ) {
+            let out: Image<Luma<f32>> = filter3x3(&img, &ker);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_horizontal_filter_luma_f32(
+            img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
+            ker in proptest::collection::vec(-100f32..100f32, 0..50),
+        ) {
+            let out = horizontal_filter(&img, &ker);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        fn proptest_vertical_filter_luma_f32(
+            img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
+            ker in proptest::collection::vec(-100f32..100f32, 0..50),
+        ) {
+            let out = vertical_filter(&img, &ker);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
     }
 }
 
