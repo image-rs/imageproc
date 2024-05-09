@@ -627,8 +627,10 @@ impl Mask {
     }
 
     /// all the slices are garanteed to be non empty
-    fn lines(&self) -> impl Iterator<Item = &[Point<i16>]> {
-        self.elements.chunk_by(|p1, p2| p1.y == p2.y)
+    fn lines(&self) -> impl Iterator<Item = (i16, Vec<i16>)> + '_ {
+        self.elements.iter().group_by(|p| p.y).into_iter().map(
+            |(y,s)| (y, s.into_iter().map(|p|p.x).collect())
+        ).collect::<Vec<_>>().into_iter()
     }
 }
 
@@ -716,8 +718,8 @@ impl Mask {
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     let mut result = GrayImage::from_fn(image.width(), image.height(), |_, _| Luma([u8::MIN]));
-    for line in mask.lines() {
-        let y = line[0].y as i64;
+    for (y16, x_line) in mask.lines() {
+        let y = i64::from(y16);
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(0i64.max(y) as usize);
@@ -725,23 +727,23 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
             .chunks_mut(image.width() as usize)
             .skip(0i64.max(-y) as usize);
         for (input_row, output_row) in input_rows.zip(output_rows) {
-            let mut l_bound = line.iter().position(|p| p.x >= 0).unwrap_or(line.len());
-            let mut r_bound = line
+            let mut l_bound = x_line.iter().position(|&x| x >= 0).unwrap_or(x_line.len());
+            let mut r_bound = x_line
                 .iter()
-                .rposition(|p| input_row.len() as i64 > p.x.into())
+                .rposition(|&x| input_row.len() as i64 > x.into())
                 .map(|x| x + 1)
                 .unwrap_or(0);
 
             for i in 0..image.width() {
-                if l_bound > 0 && i64::from(line[l_bound - 1].x) >= i64::from(i) {
+                if l_bound > 0 && i64::from(x_line[l_bound - 1]) >= i64::from(i) {
                     l_bound -= 1
                 };
                 if r_bound > 0
-                    && i64::from(line[r_bound - 1].x) + i64::from(i) >= input_row.len() as i64
+                    && i64::from(x_line[r_bound - 1]) + i64::from(i) >= input_row.len() as i64
                 {
                     r_bound -= 1
                 };
-                for x in line[l_bound..r_bound].iter().map(|p| p.x) {
+                for x in x_line[l_bound..r_bound].iter().copied() {
                     output_row[i as usize] =
                         (output_row[i as usize]).max(input_row[(i as i64 + x as i64) as usize])
                 }
