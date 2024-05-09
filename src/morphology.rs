@@ -578,27 +578,37 @@ impl Mask {
     /// ```
     pub fn disk(radius: u8) -> Self {
         let radius_squared = (radius as u32) * (radius as u32);
-        let radiis = std::iter::successors(Some((-(radius as i16), 0_i16)), |(y, r)| {
-            if *y == (radius as i16) {
-                return None;
-            };
-            let next_y = y + 1;
-            let mut next_r = *r as u32;
-            let y_squared = (next_y.unsigned_abs() as u32) * (next_y.unsigned_abs() as u32);
-            if next_y <= 0 {
-                while ((next_r + 1) * (next_r + 1) + y_squared) <= radius_squared {
-                    next_r += 1;
-                }
-            } else {
-                while ((next_r) * (next_r) + y_squared) > radius_squared {
-                    next_r -= 1;
-                }
-            }
-            Some((next_y, next_r as i16))
-        });
-        let mut elements =
-            Vec::with_capacity(radiis.clone().map(|(_, r)| 2 * (r as usize) + 1).sum());
-        elements.extend(radiis.flat_map(|(y, r)| ((-r)..=r).map(move |x| Point::new(x, y))));
+        let half_widths_per_height = std::iter::successors(
+            Some((-(radius as i16), 0_i16)),
+            |(last_height, last_half_width)| {
+                if *last_height == (radius as i16) {
+                    return None;
+                };
+                let next_height = last_height + 1;
+                let height_squared =
+                    (next_height.unsigned_abs() as u32) * (next_height.unsigned_abs() as u32);
+                let next_half_width = if next_height <= 0 {
+                    // upper part of the circle => increasing width
+                    ((*last_half_width as u32)..)
+                        .find(|x| (x + 1) * (x + 1) + height_squared > radius_squared)?
+                } else {
+                    // lower part of the circle => decreasing width
+                    (0..=(*last_half_width as u32))
+                        .rev()
+                        .find(|x| x * x + height_squared <= radius_squared)?
+                } as i16;
+                Some((next_height, next_half_width))
+            },
+        );
+        let mut elements = Vec::with_capacity(
+            half_widths_per_height
+                .clone()
+                .map(|(_, half_width)| 2 * (half_width as usize) + 1)
+                .sum(),
+        );
+        elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
+            ((-half_width)..=half_width).map(move |x| Point::new(x, y))
+        }));
         Self { elements }
     }
 
