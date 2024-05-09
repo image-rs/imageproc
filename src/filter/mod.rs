@@ -946,13 +946,13 @@ mod tests {
 #[cfg(test)]
 mod proptests {
     use super::*;
-    use crate::proptest_utils::arbitrary_image_with;
+    use crate::proptest_utils::arbitrary_image;
     use proptest::prelude::*;
 
     proptest! {
         #[test]
         fn proptest_bilateral_filter(
-            img in arbitrary_image_with::<Luma<u8>>(1..40, 1..40),
+            img in arbitrary_image::<Luma<u8>>(1..40, 1..40),
             window_size in 0..25u32,
             sigma_color in any::<f32>(),
             sigma_spatial in any::<f32>(),
@@ -963,7 +963,7 @@ mod proptests {
 
         #[test]
         fn proptest_box_filter(
-            img in arbitrary_image_with::<Luma<u8>>(0..200, 0..200),
+            img in arbitrary_image::<Luma<u8>>(0..200, 0..200),
             x_radius in 0..100u32,
             y_radius in 0..100u32,
         ) {
@@ -973,7 +973,7 @@ mod proptests {
 
         #[test]
         fn proptest_gaussian_blur_f32(
-            img in arbitrary_image_with::<Luma<u8>>(0..20, 0..20),
+            img in arbitrary_image::<Luma<u8>>(0..20, 0..20),
             sigma in (0.0..150f32).prop_filter("contract", |&x| x > 0.0),
         ) {
             let out = gaussian_blur_f32(&img, sigma);
@@ -982,8 +982,8 @@ mod proptests {
 
         #[test]
         fn proptest_kernel_luma_f32(
-            img in arbitrary_image_with::<Luma<f32>>(0..30, 0..30),
-            ker in arbitrary_image_with::<Luma<f32>>(1..20, 1..20),
+            img in arbitrary_image::<Luma<f32>>(0..30, 0..30),
+            ker in arbitrary_image::<Luma<f32>>(1..20, 1..20),
         ) {
             let kernel = Kernel::new(&ker, ker.width(), ker.height());
             let out: Image<Luma<f32>> = kernel.filter(&img, |dst, src| {
@@ -994,7 +994,7 @@ mod proptests {
 
         #[test]
         fn proptest_filter3x3(
-            img in arbitrary_image_with::<Luma<u8>>(0..50, 0..50),
+            img in arbitrary_image::<Luma<u8>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 9),
         ) {
             let out: Image<Luma<f32>> = filter3x3(&img, &ker);
@@ -1003,7 +1003,7 @@ mod proptests {
 
         #[test]
         fn proptest_horizontal_filter_luma_f32(
-            img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
+            img in arbitrary_image::<Luma<f32>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = horizontal_filter(&img, &ker);
@@ -1012,7 +1012,7 @@ mod proptests {
 
         #[test]
         fn proptest_vertical_filter_luma_f32(
-            img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
+            img in arbitrary_image::<Luma<f32>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = vertical_filter(&img, &ker);
@@ -1021,7 +1021,7 @@ mod proptests {
 
         #[test]
         fn proptest_laplacian_filter(
-            img in arbitrary_image_with::<Luma<u8>>(0..120, 0..120),
+            img in arbitrary_image::<Luma<u8>>(0..120, 0..120),
         ) {
             let out = laplacian_filter(&img);
             assert_eq!(out.dimensions(), img.dimensions());
