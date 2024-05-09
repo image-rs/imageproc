@@ -1004,7 +1004,7 @@ mod proptests {
         #[test]
         fn proptest_horizontal_filter_luma_f32(
             img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
-            ker in proptest::collection::vec(-100f32..100f32, 0..50),
+            ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = horizontal_filter(&img, &ker);
             assert_eq!(out.dimensions(), img.dimensions());
@@ -1013,7 +1013,7 @@ mod proptests {
         #[test]
         fn proptest_vertical_filter_luma_f32(
             img in arbitrary_image_with::<Luma<f32>>(0..50, 0..50),
-            ker in proptest::collection::vec(-100f32..100f32, 0..50),
+            ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = vertical_filter(&img, &ker);
             assert_eq!(out.dimensions(), img.dimensions());
