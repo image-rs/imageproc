@@ -2039,4 +2039,37 @@ mod benches {
     bench_grayscale_mask!(bench_grayscale_square_mask, Mask::square);
     bench_grayscale_mask!(bench_grayscale_diamond_mask, Mask::diamond);
     bench_grayscale_mask!(bench_grayscale_disk_mask, Mask::disk);
+
+    macro_rules! bench_grayscale_operator {
+        ($name:ident, $f:expr, $mask:expr, $img_size:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image = GrayImage::from_fn($img_size, $img_size, |x, y| Luma([(x + y % 3) as u8]));
+                let mask = $mask;
+                b.iter(|| {
+                    let processed = $f(&image, &mask);
+                    black_box(processed);
+                })
+            }
+        };
+    }
+
+    bench_grayscale_operator!(bench_grayscale_op_erode_small_image_point, grayscale_erode, Mask::diamond(0), 50);
+    bench_grayscale_operator!(bench_grayscale_op_erode_medium_image_point, grayscale_erode, Mask::diamond(0), 200);
+    bench_grayscale_operator!(bench_grayscale_op_erode_big_image_point, grayscale_erode, Mask::diamond(0), 1000);
+    bench_grayscale_operator!(bench_grayscale_op_erode_small_image_diamond, grayscale_erode, Mask::diamond(5), 50);
+    bench_grayscale_operator!(bench_grayscale_op_erode_medium_image_diamond, grayscale_erode, Mask::diamond(5), 200);
+    bench_grayscale_operator!(bench_grayscale_op_erode_big_image_diamond, grayscale_erode, Mask::diamond(5), 1000);
+    bench_grayscale_operator!(bench_grayscale_op_erode_small_image_large_square, grayscale_erode, Mask::square(25), 50);
+    bench_grayscale_operator!(bench_grayscale_op_erode_medium_image_large_square, grayscale_erode, Mask::square(25), 200);
+    
+
+    bench_grayscale_operator!(bench_grayscale_op_dilate_small_image_point, grayscale_dilate, Mask::diamond(0), 50);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_medium_image_point, grayscale_dilate, Mask::diamond(0), 200);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_big_image_point, grayscale_dilate, Mask::diamond(0), 1000);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_small_image_diamond, grayscale_dilate, Mask::diamond(5), 50);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_medium_image_diamond, grayscale_dilate, Mask::diamond(5), 200);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_big_image_diamond, grayscale_dilate, Mask::diamond(5), 1000);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_small_image_large_square, grayscale_dilate, Mask::square(25), 50);
+    bench_grayscale_operator!(bench_grayscale_op_dilate_medium_image_large_square, grayscale_dilate, Mask::square(25), 200);
 }
