@@ -577,37 +577,36 @@ impl Mask {
     /// # }
     /// ```
     pub fn disk(radius: u8) -> Self {
-        let radius_squared = (radius as u32) * (radius as u32);
+        let radius_squared = u32::from(radius).pow(2);
         let half_widths_per_height = std::iter::successors(
-            Some((-(radius as i16), 0_i16)),
+            Some((-i16::from(radius), 0u8)),
             |(last_height, last_half_width)| {
-                if *last_height == (radius as i16) {
+                if *last_height == i16::from(radius) {
                     return None;
                 };
                 let next_height = last_height + 1;
-                let height_squared =
-                    (next_height.unsigned_abs() as u32) * (next_height.unsigned_abs() as u32);
+                let height_squared = (u32::from(next_height.unsigned_abs())).pow(2);
                 let next_half_width = if next_height <= 0 {
                     // upper part of the circle => increasing width
-                    ((*last_half_width as u32)..)
-                        .find(|x| (x + 1) * (x + 1) + height_squared > radius_squared)?
+                    (u32::from(*last_half_width)..)
+                        .find(|x| (x + 1).pow(2) + height_squared > radius_squared)?
                 } else {
                     // lower part of the circle => decreasing width
-                    (0..=(*last_half_width as u32))
+                    (0..=u32::from(*last_half_width))
                         .rev()
-                        .find(|x| x * x + height_squared <= radius_squared)?
-                } as i16;
+                        .find(|&x| x.pow(2) + height_squared <= radius_squared)?
+                } as u8; // next_half_width always fits in a u8 because he radius itself is a u8
                 Some((next_height, next_half_width))
             },
         );
         let mut elements = Vec::with_capacity(
             half_widths_per_height
                 .clone()
-                .map(|(_, half_width)| 2 * (half_width as usize) + 1)
+                .map(|(_, half_width)| 2 * usize::from(half_width) + 1)
                 .sum(),
         );
         elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
-            ((-half_width)..=half_width).map(move |x| Point::new(x, y))
+            ((-i16::from(half_width))..=i16::from(half_width)).map(move |x| Point::new(x, y))
         }));
         Self { elements }
     }
@@ -625,6 +624,11 @@ impl Mask {
                 0 <= *i && *i < image.width() as i64 && 0 <= *j && *j < image.height() as i64
             })
             .map(move |(i, j)| image.get_pixel(i as u32, j as u32))
+    }
+
+    /// all the slices are garanteed to be non empty
+    fn lines<'a>(&'a self) -> impl Iterator<Item = &'a [Point<i16>]> {
+        self.elements.chunk_by(|p1, p2| p1.y == p2.y)
     }
 }
 
@@ -711,13 +715,39 @@ impl Mask {
 /// # }
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
-    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .max()
-            .unwrap_or(u8::MIN)]) // default is u8::MIN because it's the neutral element of max
-    });
+    let mut result = GrayImage::from_fn(image.width(), image.height(), |_, _| Luma([u8::MIN]));
+    for line in mask.lines() {
+        let y = line[0].y as i64;
+        let input_rows = image
+            .chunks(image.width() as usize)
+            .skip(0i64.max(y) as usize);
+        let output_rows = result
+            .chunks_mut(image.width() as usize)
+            .skip(0i64.max(-y) as usize);
+        for (input_row, output_row) in input_rows.zip(output_rows) {
+            let mut l_bound = line.iter().position(|p| p.x >= 0).unwrap_or(line.len());
+            let mut r_bound = line
+                .iter()
+                .rposition(|p| input_row.len() as i64 > p.x.into())
+                .map(|x| x + 1)
+                .unwrap_or(0);
+
+            for i in 0..image.width() {
+                if l_bound > 0 && i64::from(line[l_bound - 1].x) >= i64::from(i){
+                    l_bound -= 1
+                };
+                if r_bound > 0
+                    && i64::from(line[r_bound - 1].x) + i64::from(i) >= input_row.len() as i64
+                {
+                    r_bound -= 1
+                };
+                for x in line[l_bound..r_bound].iter().map(|p| p.x) {
+                    output_row[i as usize] =
+                        (output_row[i as usize]).max(input_row[(i as i64 + x as i64) as usize])
+                }
+            }
+        }
+    }
     result
 }
 
