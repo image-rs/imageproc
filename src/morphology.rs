@@ -627,7 +627,7 @@ impl Mask {
     }
 
     /// all the slices are garanteed to be non empty
-    fn lines<'a>(&'a self) -> impl Iterator<Item = &'a [Point<i16>]> {
+    fn lines(&self) -> impl Iterator<Item = &[Point<i16>]> {
         self.elements.chunk_by(|p1, p2| p1.y == p2.y)
     }
 }
@@ -733,7 +733,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
                 .unwrap_or(0);
 
             for i in 0..image.width() {
-                if l_bound > 0 && i64::from(line[l_bound - 1].x) >= i64::from(i){
+                if l_bound > 0 && i64::from(line[l_bound - 1].x) >= i64::from(i) {
                     l_bound -= 1
                 };
                 if r_bound > 0
