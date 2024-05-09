@@ -628,9 +628,13 @@ impl Mask {
 
     /// all the slices are garanteed to be non empty
     fn lines(&self) -> impl Iterator<Item = (i16, Vec<i16>)> + '_ {
-        self.elements.iter().group_by(|p| p.y).into_iter().map(
-            |(y,s)| (y, s.into_iter().map(|p|p.x).collect())
-        ).collect::<Vec<_>>().into_iter()
+        self.elements
+            .iter()
+            .group_by(|p| p.y)
+            .into_iter()
+            .map(|(y, g)| (y, g.map(|p| p.x).collect()))
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
 
@@ -718,8 +722,8 @@ impl Mask {
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     let mut result = GrayImage::from_fn(image.width(), image.height(), |_, _| Luma([u8::MIN]));
-    for (y16, x_line) in mask.lines() {
-        let y = i64::from(y16);
+    for (y_16, x_line) in mask.lines() {
+        let y = i64::from(y_16);
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(0i64.max(y) as usize);
@@ -734,18 +738,16 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
                 .map(|x| x + 1)
                 .unwrap_or(0);
 
-            for i in 0..image.width() {
-                if l_bound > 0 && i64::from(x_line[l_bound - 1]) >= i64::from(i) {
+            for (i, p) in output_row.iter_mut().enumerate() {
+                let i_i64 = i as i64; // works because image size fits into u32
+                if l_bound > 0 && i64::from(x_line[l_bound - 1]) + i_i64 >= 0 {
                     l_bound -= 1
                 };
-                if r_bound > 0
-                    && i64::from(x_line[r_bound - 1]) + i64::from(i) >= input_row.len() as i64
-                {
+                if r_bound > 0 && i64::from(x_line[r_bound - 1]) + i_i64 >= input_row.len() as i64 {
                     r_bound -= 1
                 };
                 for x in x_line[l_bound..r_bound].iter().copied() {
-                    output_row[i as usize] =
-                        (output_row[i as usize]).max(input_row[(i as i64 + x as i64) as usize])
+                    *p = (*p).max(input_row[(i_i64 + i64::from(x)) as usize])
                 }
             }
         }
