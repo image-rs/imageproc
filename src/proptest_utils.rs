@@ -58,13 +58,13 @@ mod proptests {
 
     proptest! {
         #[test]
-        fn test_arb_fixed_rgb(img in arbitrary_image::<Rgb<u8>>(3, 7)) {
+        fn test_arbitrary_fixed_rgb(img in arbitrary_image::<Rgb<u8>>(3, 7)) {
             assert_eq!(img.width(), 3);
             assert_eq!(img.height(), 7);
         }
 
         #[test]
-        fn test_arb_gray(img in arbitrary_image::<Luma<u8>>(1..30, 2..=150)) {
+        fn test_arbitrary_gray(img in arbitrary_image::<Luma<u8>>(1..30, 2..=150)) {
             assert!((1..30).contains(&img.width()));
             assert!((2..=150).contains(&img.height()));
         }
