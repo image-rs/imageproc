@@ -8,6 +8,8 @@ use image::{GenericImage, GenericImageView, Pixel};
 use itertools::multizip;
 
 /// Different kernels for finding detecting gradients in images.
+///
+/// See [`gradients()`] for how it can be used.
 #[derive(Debug, Copy, Clone)]
 pub enum GradientKernel {
     /// The 3x3 Sobel kernel
@@ -30,33 +32,33 @@ impl GradientKernel {
         GradientKernel::Roberts,
     ];
 
-    /// The vertical gradient kernel component
-    pub fn horizontal_kernel<K>(&self) -> OwnedKernel<K>
+    /// The first gradient kernel component
+    pub fn kernel1<K>(&self) -> OwnedKernel<K>
     where
         K: From<i8>,
     {
-        let horizontal = match self {
+        let x = match self {
             GradientKernel::Sobel => OwnedKernel::new(vec![-1, 0, 1, -2, 0, 2, -1, 0, 1], 3, 3),
             GradientKernel::Scharr => OwnedKernel::new(vec![-3, 0, 3, -10, 0, 10, -3, 0, 3], 3, 3),
             GradientKernel::Prewitt => OwnedKernel::new(vec![-1, 0, 1, -1, 0, 1, -1, 0, 1], 3, 3),
             GradientKernel::Roberts => OwnedKernel::new(vec![0, 1, -1, -0], 2, 2),
         };
 
-        horizontal.map(&K::from)
+        x.map(&K::from)
     }
-    /// The vertical gradient kernel component
-    pub fn vertical_kernel<K>(&self) -> OwnedKernel<K>
+    /// The second gradient kernel component
+    pub fn kernel2<K>(&self) -> OwnedKernel<K>
     where
         K: From<i8>,
     {
-        let vertical = match self {
+        let x = match self {
             GradientKernel::Sobel => OwnedKernel::new(vec![-1, -2, -1, 0, 0, 0, 1, 2, 1], 3, 3),
             GradientKernel::Scharr => OwnedKernel::new(vec![-3, -10, -3, 0, 0, 0, 3, 10, 3], 3, 3),
             GradientKernel::Prewitt => OwnedKernel::new(vec![-1, -1, -1, 0, 0, 0, 1, 1, 1], 3, 3),
             GradientKernel::Roberts => OwnedKernel::new(vec![1, 0, 0, -1], 2, 2),
         };
 
-        vertical.map(&K::from)
+        x.map(&K::from)
     }
 }
 impl<K> From<GradientKernel> for TwoKernels<OwnedKernel<K>>
@@ -65,8 +67,8 @@ where
 {
     fn from(value: GradientKernel) -> Self {
         TwoKernels {
-            kernel1: value.horizontal_kernel(),
-            kernel2: value.vertical_kernel(),
+            kernel1: value.kernel1(),
+            kernel2: value.kernel2(),
         }
     }
 }
@@ -255,7 +257,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter3x3(&image, GradientKernel::Sobel.horizontal_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Sobel.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -271,7 +273,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter3x3(&image, GradientKernel::Sobel.vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Sobel.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -287,7 +289,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter3x3(&image, GradientKernel::Scharr.horizontal_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Scharr.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -303,7 +305,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter3x3(&image, GradientKernel::Scharr.vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Scharr.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -319,7 +321,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter3x3(&image, GradientKernel::Prewitt.horizontal_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Prewitt.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -335,7 +337,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter3x3(&image, GradientKernel::Prewitt.vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Prewitt.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 }

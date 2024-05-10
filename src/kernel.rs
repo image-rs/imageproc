@@ -74,8 +74,36 @@ impl<K> OwnedKernel<K> {
         }
     }
 }
-
 impl<K> Kernel<K> for OwnedKernel<K> {
+    fn width(&self) -> u32 {
+        self.width
+    }
+    fn height(&self) -> u32 {
+        self.height
+    }
+    fn get(&self, x: u32, y: u32) -> &K {
+        &self.data[(y * self.width + x) as usize]
+    }
+    fn enumerate<'a>(&'a self) -> impl Iterator<Item = (Point<u32>, &'a K)>
+    where
+        K: 'a,
+    {
+        let points = (0..self.height)
+            .cartesian_product(0..self.width)
+            .map(|(y, x)| Point { x, y });
+
+        points.zip(self.data.iter())
+    }
+}
+
+#[derive(Debug)]
+/// An borrowed 2D kernel, used to filter images via convolution.
+pub struct BorrowedKernel<'a, K> {
+    data: &'a [K],
+    width: u32,
+    height: u32,
+}
+impl<'b, K> Kernel<K> for BorrowedKernel<'b, K> {
     fn width(&self) -> u32 {
         self.width
     }

@@ -37,8 +37,8 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
 
     // 2. Intensity of gradients.
     let gradient_kernel = GradientKernel::Sobel;
-    let gx = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.horizontal_kernel());
-    let gy = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.vertical_kernel());
+    let gx = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.kernel1());
+    let gy = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.kernel2());
     let g: Vec<f32> = gx
         .iter()
         .zip(gy.iter())
