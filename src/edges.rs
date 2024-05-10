@@ -1,8 +1,7 @@
 //! Functions for detecting edges in images.
 
 use crate::definitions::{HasBlack, HasWhite};
-use crate::filter::filter3x3;
-use crate::filter::gaussian_blur_f32;
+use crate::filter::{filter_clamped, gaussian_blur_f32};
 use crate::gradients::GradientKernel;
 use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
 use std::f32;
@@ -37,8 +36,8 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
 
     // 2. Intensity of gradients.
     let gradient_kernel = GradientKernel::Sobel;
-    let gx = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.kernel1());
-    let gy = filter3x3::<_, i16, i16>(&blurred, &gradient_kernel.kernel2());
+    let gx = filter_clamped::<_, i16, i16>(&blurred, &gradient_kernel.kernel1());
+    let gy = filter_clamped::<_, i16, i16>(&blurred, &gradient_kernel.kernel2());
     let g: Vec<f32> = gx
         .iter()
         .zip(gy.iter())

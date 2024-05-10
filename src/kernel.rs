@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::point::Point;
 
-/// A kernel object, in column major layout
+/// A 2D kernel
 ///
 /// Used in methods such as [`gradients()`](crate::gradients::gradients)
 pub trait Kernel<K> {

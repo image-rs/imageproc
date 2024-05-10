@@ -5,7 +5,7 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-use imageproc::{filter::filter3x3, gradients::GradientKernel, map::map_subpixels};
+use imageproc::{filter::filter_clamped, gradients::GradientKernel, map::map_subpixels};
 use std::{env, fs, path::Path};
 
 fn save_gradients(
@@ -15,8 +15,8 @@ fn save_gradients(
     name: &str,
     scale: i16,
 ) {
-    let horizontal_gradients = filter3x3(input, gradient_kernel.kernel1::<i16>());
-    let vertical_gradients = filter3x3(input, gradient_kernel.kernel2::<i16>());
+    let horizontal_gradients = filter_clamped(input, gradient_kernel.kernel1::<i16>());
+    let vertical_gradients = filter_clamped(input, gradient_kernel.kernel2::<i16>());
 
     let horizontal_scaled = map_subpixels(&horizontal_gradients, |p: i16| (p.abs() / scale) as u8);
     let vertical_scaled = map_subpixels(&vertical_gradients, |p: i16| (p.abs() / scale) as u8);

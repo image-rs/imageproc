@@ -179,8 +179,8 @@ where
             //      as measured by bench_sobel_gradients
             //  Correctness
             //      x and y are in bounds for image by construction,
-            //      vertical and horizontal are the result of calling filter3x3 on image,
-            //      and filter3x3 returns an image of the same size as its input
+            //      vertical and horizontal are the result of calling filter_clamped on image,
+            //      and filter_clamped returns an image of the same size as its input
             let (h, v) = unsafe { (pass1.unsafe_get_pixel(x, y), pass2.unsafe_get_pixel(x, y)) };
             let mut p = ChannelMap::<P, u16>::black();
 
@@ -211,7 +211,7 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use crate::filter::filter3x3;
+    use crate::filter::filter_clamped;
 
     use super::*;
     use image::{ImageBuffer, Luma};
@@ -257,7 +257,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter3x3(&image, GradientKernel::Sobel.kernel1::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Sobel.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -273,7 +273,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter3x3(&image, GradientKernel::Sobel.kernel2::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Sobel.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -289,7 +289,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter3x3(&image, GradientKernel::Scharr.kernel1::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Scharr.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -305,7 +305,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter3x3(&image, GradientKernel::Scharr.kernel2::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Scharr.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -321,7 +321,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter3x3(&image, GradientKernel::Prewitt.kernel1::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Prewitt.kernel1::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -337,7 +337,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter3x3(&image, GradientKernel::Prewitt.kernel2::<i16>());
+        let filtered = filter_clamped(&image, GradientKernel::Prewitt.kernel2::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 }

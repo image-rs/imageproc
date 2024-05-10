@@ -316,27 +316,15 @@ where
     separable_filter(image, kernel, kernel)
 }
 
-/// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
+/// Returns 2d correlation of an image with a row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
-#[must_use = "the function does not modify the original image"]
-pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: impl Kernel<K>) -> Image<ChannelMap<P, S>>
+pub fn filter_clamped<P, K, S>(image: &Image<P>, kernel: impl Kernel<K>) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: Into<K>,
     S: Clamp<K> + Primitive,
     P: WithChannel<S>,
     K: Num + Copy,
 {
-    assert_eq!(
-        kernel.width(),
-        3,
-        "kernel width must equal 3 to use filter3x3"
-    );
-    assert_eq!(
-        kernel.height(),
-        3,
-        "kernel height must equal 3 to use filter3x3"
-    );
-
     filter(image, kernel, |channel, acc| *channel = S::clamp(acc))
 }
 
@@ -559,7 +547,7 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
     let kernel: OwnedKernel<i16> = OwnedKernel::new(vec![0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
-    filter3x3(image, kernel)
+    filter_clamped(image, kernel)
 }
 
 #[cfg(test)]
@@ -802,7 +790,7 @@ mod tests {
         black_box(vertical_filter(&image, &kernel));
     }
     #[test]
-    fn test_filter3x3_with_results_outside_input_channel_range() {
+    fn test_filter_clamped_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
         let kernel: OwnedKernel<i32> = OwnedKernel::new(vec![
             -1, 0, 1,
@@ -821,7 +809,7 @@ mod tests {
             -4, -8, -4
         );
 
-        let filtered = filter3x3(&image, kernel);
+        let filtered = filter_clamped(&image, kernel);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -980,7 +968,7 @@ mod benches {
     }
 
     #[bench]
-    fn bench_filter3x3_i32_filter(b: &mut Bencher) {
+    fn bench_filter_clamped_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         #[rustfmt::skip]
         let kernel: OwnedKernel<i32> = OwnedKernel::new(vec![
@@ -991,7 +979,7 @@ mod benches {
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
-                filter3x3::<_, _, i16>(&image, &kernel);
+                filter_clamped::<_, _, i16>(&image, &kernel);
             black_box(filtered);
         });
     }
