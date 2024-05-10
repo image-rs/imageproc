@@ -199,17 +199,58 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
     out
 }
 
+/// Returns 2d correlation of an image. Intermediate calculations are performed
+/// at type K, and the results converted to pixel Q via f. Pads by continuity.
+pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: &Kernel<K>, mut f: F) -> Image<Q>
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<K>,
+    Q: Pixel,
+    F: FnMut(&mut Q::Subpixel, K),
+    K: num::Num + Copy,
+{
+    let (width, height) = image.dimensions();
+    let mut out = Image::<Q>::new(width, height);
+    let num_channels = P::CHANNEL_COUNT as usize;
+    let zero = K::zero();
+    let mut acc = vec![zero; num_channels];
+    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
+    let (width, height) = (width as i64, height as i64);
+
+    for y in 0..height {
+        for x in 0..width {
+            for k_y in 0..k_height {
+                let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
+                for k_x in 0..k_width {
+                    let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
+                    accumulate(
+                        &mut acc,
+                        unsafe { &image.unsafe_get_pixel(x_p, y_p) },
+                        unsafe { *kernel.data.get_unchecked((k_y * k_width + k_x) as usize) },
+                    );
+                }
+            }
+            let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
+            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                f(c, *a);
+                *a = zero;
+            }
+        }
+    }
+
+    out
+}
+
 /// A 2D kernel, used to filter images via convolution.
-pub struct Kernel<'a, K> {
-    data: &'a [K],
+pub struct Kernel<K> {
+    pub(crate) data: Vec<K>,
     width: u32,
     height: u32,
 }
-
-impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
+impl<K: Num + Copy> Kernel<K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major form.
-    pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
+    pub fn new(data: Vec<K>, width: u32, height: u32) -> Kernel<K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
         assert!(
             width * height == data.len() as u32,
@@ -223,46 +264,16 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
             height,
         }
     }
-
-    /// Returns 2d correlation of an image. Intermediate calculations are performed
-    /// at type K, and the results converted to pixel Q via f. Pads by continuity.
-    pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
+    /// Maps the kernel from type `K` to `Q` via the closure `F`.
+    pub fn map<F, Q>(self, f: F) -> Kernel<Q>
     where
-        P: Pixel,
-        <P as Pixel>::Subpixel: Into<K>,
-        Q: Pixel,
-        F: FnMut(&mut Q::Subpixel, K),
+        F: Fn(K) -> Q,
     {
-        let (width, height) = image.dimensions();
-        let mut out = Image::<Q>::new(width, height);
-        let num_channels = P::CHANNEL_COUNT as usize;
-        let zero = K::zero();
-        let mut acc = vec![zero; num_channels];
-        let (k_width, k_height) = (self.width as i64, self.height as i64);
-        let (width, height) = (width as i64, height as i64);
-
-        for y in 0..height {
-            for x in 0..width {
-                for k_y in 0..k_height {
-                    let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                    for k_x in 0..k_width {
-                        let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-                        accumulate(
-                            &mut acc,
-                            unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                            unsafe { *self.data.get_unchecked((k_y * k_width + k_x) as usize) },
-                        );
-                    }
-                }
-                let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
-                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                    f(c, *a);
-                    *a = zero;
-                }
-            }
+        Kernel {
+            data: self.data.into_iter().map(f).collect(),
+            width: self.width,
+            height: self.height,
         }
-
-        out
     }
 }
 
@@ -273,7 +284,7 @@ fn gaussian(x: f32, r: f32) -> f32 {
 
 /// Construct a one dimensional float-valued kernel for performing a Gaussian blur
 /// with standard deviation sigma.
-fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
+fn gaussian_kernel_f32(sigma: f32) -> Kernel<f32> {
     let kernel_radius = (2.0 * sigma).ceil() as usize;
     let mut kernel_data = vec![0.0; 2 * kernel_radius + 1];
     for i in 0..kernel_radius + 1 {
@@ -283,7 +294,12 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
     }
     let sum: f32 = kernel_data.iter().sum();
     kernel_data.iter_mut().for_each(|x| *x /= sum);
-    kernel_data
+
+    Kernel {
+        width: kernel_data.len() as u32,
+        height: 1,
+        data: kernel_data,
+    }
 }
 
 /// Blurs an image using a Gaussian of standard deviation sigma.
@@ -308,7 +324,11 @@ where
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels `h_kernel` and `v_kernel`.
 #[must_use = "the function does not modify the original image"]
-pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
+pub fn separable_filter<P, K>(
+    image: &Image<P>,
+    h_kernel: &Kernel<K>,
+    v_kernel: &Kernel<K>,
+) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
@@ -321,39 +341,57 @@ where
 /// Returns 2d correlation of an image with the outer product of the 1d
 /// kernel filter with itself.
 #[must_use = "the function does not modify the original image"]
-pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &Kernel<K>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
+    assert_eq!(
+        kernel.height, 1,
+        "separable_filter only works with 1 dimensional kernels"
+    );
+
     separable_filter(image, kernel, kernel)
 }
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
 #[must_use = "the function does not modify the original image"]
-pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &Kernel<K>) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: Into<K>,
     S: Clamp<K> + Primitive,
     P: WithChannel<S>,
     K: Num + Copy,
 {
-    let kernel = Kernel::new(kernel, 3, 3);
-    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+    assert_eq!(
+        kernel.width, 3,
+        "kernel width must equal 3 to use filter3x3"
+    );
+    assert_eq!(
+        kernel.height, 3,
+        "kernel height must equal 3 to use filter3x3"
+    );
+
+    filter(image, kernel, |channel, acc| *channel = S::clamp(acc))
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
 #[must_use = "the function does not modify the original image"]
-pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &Kernel<K>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
+    assert_eq!(
+        kernel.height, 1,
+        "horizontal_filter only works with 1 dimensional kernels"
+    );
+
     // Don't replace this with a call to Kernel::filter without
     // checking the benchmark results. At the time of writing this
     // specialised implementation is faster.
@@ -361,14 +399,14 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_width = kernel.len() as i32;
+    let k_width = kernel.data.len() as i32;
 
     // Typically the image side will be much larger than the kernel length.
     // In that case we can remove a lot of bounds checks for most pixels.
     if k_width >= width as i32 {
         for y in 0..height {
             for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
+                for (i, k) in kernel.data.iter().enumerate() {
                     let x_unchecked = (x as i32) + i as i32 - k_width / 2;
                     let x_p = max(0, min(x_unchecked, width as i32 - 1)) as u32;
                     let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -391,7 +429,7 @@ where
     for y in 0..height {
         // Left margin - need to check lower bound only
         for x in 0..half_k {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = max(0, x_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -407,7 +445,7 @@ where
 
         // Neither margin - don't need bounds check on either side
         for x in half_k..(width as i32 - half_k) {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = x_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -423,7 +461,7 @@ where
 
         // Right margin - need to check upper bound only
         for x in (width as i32 - half_k)..(width as i32) {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let x_unchecked = x + i as i32 - k_width / 2;
                 let x_p = min(x_unchecked, width as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -444,12 +482,17 @@ where
 /// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity.
 #[must_use = "the function does not modify the original image"]
-pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &Kernel<K>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
+    assert_eq!(
+        kernel.height, 1,
+        "vertical_filter only works with 1 dimensional kernels"
+    );
+
     // Don't replace this with a call to Kernel::filter without
     // checking the benchmark results. At the time of writing this
     // specialised implementation is faster.
@@ -457,14 +500,14 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_height = kernel.len() as i32;
+    let k_height = kernel.data.len() as i32;
 
     // Typically the image side will be much larger than the kernel length.
     // In that case we can remove a lot of bounds checks for most pixels.
     if k_height >= height as i32 {
         for y in 0..height {
             for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
+                for (i, k) in kernel.data.iter().enumerate() {
                     let y_unchecked = (y as i32) + i as i32 - k_height / 2;
                     let y_p = max(0, min(y_unchecked, height as i32 - 1)) as u32;
                     let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -487,7 +530,7 @@ where
     // Top margin - need to check lower bound only
     for y in 0..half_k {
         for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = max(0, y_unchecked) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -505,7 +548,7 @@ where
     // Neither margin - don't need bounds check on either side
     for y in half_k..(height as i32 - half_k) {
         for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = y_unchecked as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -523,7 +566,7 @@ where
     // Right margin - need to check upper bound only
     for y in (height as i32 - half_k)..(height as i32) {
         for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
+            for (i, k) in kernel.data.iter().enumerate() {
                 let y_unchecked = y + i as i32 - k_height / 2;
                 let y_p = min(y_unchecked, height as i32 - 1) as u32;
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -562,7 +605,7 @@ where
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    let kernel: [i16; 9] = [0, 1, 0, 1, -4, 1, 0, 1, 0];
+    let kernel: Kernel<i16> = Kernel::new(vec![0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
     filter3x3(image, &kernel)
 }
 
@@ -627,7 +670,7 @@ mod tests {
             4, 5, 5;
             6, 7, 7);
 
-        let kernel = vec![1f32 / 3f32; 3];
+        let kernel = Kernel::new(vec![1f32 / 3f32; 3], 3, 1);
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -645,7 +688,7 @@ mod tests {
             39, 45, 51;
             57, 63, 69);
 
-        let kernel = vec![1i32; 3];
+        let kernel = Kernel::new(vec![1i32; 3], 3, 1);
         let filtered = separable_filter_equal(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -653,7 +696,12 @@ mod tests {
 
     /// Reference implementation of horizontal_filter. Used to validate
     /// the (presumably faster) actual implementation.
-    fn horizontal_filter_reference(image: &GrayImage, kernel: &[f32]) -> GrayImage {
+    fn horizontal_filter_reference(image: &GrayImage, kernel: &Kernel<f32>) -> GrayImage {
+        assert_eq!(
+            kernel.height, 1,
+            "horizontal_filter_reference only works with 1 dimensional kernels"
+        );
+
         let (width, height) = image.dimensions();
         let mut out = GrayImage::new(width, height);
 
@@ -661,14 +709,14 @@ mod tests {
             for x in 0..width {
                 let mut acc = 0f32;
 
-                for k in 0..kernel.len() {
-                    let mut x_unchecked = x as i32 + k as i32 - (kernel.len() / 2) as i32;
+                for k in 0..kernel.data.len() {
+                    let mut x_unchecked = x as i32 + k as i32 - (kernel.data.len() / 2) as i32;
                     x_unchecked = max(0, x_unchecked);
                     x_unchecked = min(x_unchecked, width as i32 - 1);
 
                     let x_checked = x_unchecked as u32;
                     let color = image.get_pixel(x_checked, y)[0];
-                    let weight = kernel[k];
+                    let weight = kernel.data[k];
 
                     acc += color as f32 * weight;
                 }
@@ -683,7 +731,12 @@ mod tests {
 
     /// Reference implementation of vertical_filter. Used to validate
     /// the (presumably faster) actual implementation.
-    fn vertical_filter_reference(image: &GrayImage, kernel: &[f32]) -> GrayImage {
+    fn vertical_filter_reference(image: &GrayImage, kernel: &Kernel<f32>) -> GrayImage {
+        assert_eq!(
+            kernel.height, 1,
+            "vertical_filter_reference only works with 1 dimensional kernels"
+        );
+
         let (width, height) = image.dimensions();
         let mut out = GrayImage::new(width, height);
 
@@ -691,14 +744,14 @@ mod tests {
             for x in 0..width {
                 let mut acc = 0f32;
 
-                for k in 0..kernel.len() {
-                    let mut y_unchecked = y as i32 + k as i32 - (kernel.len() / 2) as i32;
+                for k in 0..kernel.data.len() {
+                    let mut y_unchecked = y as i32 + k as i32 - (kernel.data.len() / 2) as i32;
                     y_unchecked = max(0, y_unchecked);
                     y_unchecked = min(y_unchecked, height as i32 - 1);
 
                     let y_checked = y_unchecked as u32;
                     let color = image.get_pixel(x, y_checked)[0];
-                    let weight = kernel[k];
+                    let weight = kernel.data[k];
 
                     acc += color as f32 * weight;
                 }
@@ -721,10 +774,13 @@ mod tests {
                 // examples via quickcheck.
                 for height in 0..5 {
                     for width in 0..5 {
-                        for kernel_length in 0..15 {
+                        for kernel_length in 1..15 {
                             let image = gray_bench_image(width, height);
-                            let kernel: Vec<f32> =
-                                (0..kernel_length).map(|i| i as f32 % 1.35).collect();
+                            let kernel: Kernel<f32> = Kernel::new(
+                                (0..kernel_length).map(|i| i as f32 % 1.35).collect(),
+                                kernel_length,
+                                1,
+                            );
 
                             let expected = $reference_impl(&image, &kernel);
                             let actual = $under_test(&image, &kernel);
@@ -761,7 +817,7 @@ mod tests {
             5, 5, 5;
             2, 2, 2);
 
-        let kernel = vec![1f32 / 3f32; 3];
+        let kernel = Kernel::new(vec![1f32 / 3f32; 3], 3, 1);
         let filtered = horizontal_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -774,7 +830,7 @@ mod tests {
             4, 7, 4;
             1, 4, 1);
 
-        let kernel = vec![1f32 / 10f32; 10];
+        let kernel = Kernel::new(vec![1f32 / 10f32; 10], 10, 1);
         black_box(horizontal_filter(&image, &kernel));
     }
     #[test]
@@ -789,7 +845,7 @@ mod tests {
             2, 5, 2;
             2, 5, 2);
 
-        let kernel = vec![1f32 / 3f32; 3];
+        let kernel = Kernel::new(vec![1f32 / 3f32; 3], 3, 1);
         let filtered = vertical_filter(&image, &kernel);
 
         assert_pixels_eq!(filtered, expected);
@@ -802,17 +858,17 @@ mod tests {
             4, 7, 4;
             1, 4, 1);
 
-        let kernel = vec![1f32 / 10f32; 10];
+        let kernel = Kernel::new(vec![1f32 / 10f32; 10], 10, 1);
         black_box(vertical_filter(&image, &kernel));
     }
     #[test]
     fn test_filter3x3_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
-        let kernel: Vec<i32> = vec![
+        let kernel: Kernel<i32> = Kernel::new(vec![
             -1, 0, 1,
             -2, 0, 2,
             -1, 0, 1
-        ];
+        ], 3, 3);
 
         let image = gray_image!(
             3, 2, 1;
@@ -833,7 +889,7 @@ mod tests {
     #[should_panic]
     fn test_kernel_must_be_nonempty() {
         let k: Vec<u8> = Vec::new();
-        let _ = Kernel::new(&k, 0, 0);
+        let _ = Kernel::new(k, 0, 0);
     }
 
     #[test]
@@ -843,8 +899,8 @@ mod tests {
             4, 1);
 
         let k = vec![1u8, 2u8];
-        let kernel = Kernel::new(&k, 2, 1);
-        let filtered = kernel.filter(&image, |c, a| *c = a);
+        let kernel = Kernel::new(k, 2, 1);
+        let filtered = filter(&image, &kernel, |c, a| *c = a);
 
         let expected = gray_image!(
              9,  7;
@@ -858,8 +914,8 @@ mod tests {
         let image = gray_image!();
 
         let k = vec![2u8];
-        let kernel = Kernel::new(&k, 1, 1);
-        let filtered = kernel.filter(&image, |c, a| *c = a);
+        let kernel = Kernel::new(k, 1, 1);
+        let filtered = filter(&image, &kernel, |c, a| *c = a);
 
         let expected = gray_image!();
         assert_pixels_eq!(filtered, expected);
@@ -877,9 +933,9 @@ mod tests {
             0.2, 0.4, 0.2,
             0.1, 0.2, 0.1
         ];
-        let kernel = Kernel::new(&k, 3, 3);
+        let kernel = Kernel::new(k, 3, 3);
         let filtered: Image<Luma<u8>> =
-            kernel.filter(&image, |c, a| *c = <u8 as Clamp<f32>>::clamp(a));
+            filter(&image, &kernel, |c, a| *c = <u8 as Clamp<f32>>::clamp(a));
 
         let expected = gray_image!(
             11,  7;
@@ -955,8 +1011,8 @@ mod benches {
     #[bench]
     fn bench_separable_filter(b: &mut Bencher) {
         let image = gray_bench_image(300, 300);
-        let h_kernel = vec![1f32 / 5f32; 5];
-        let v_kernel = vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
+        let h_kernel = Kernel::new(vec![1f32 / 5f32; 5], 5, 1);
+        let v_kernel = Kernel::new(vec![0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32], 5, 1);
         b.iter(|| {
             let filtered = separable_filter(&image, &h_kernel, &v_kernel);
             black_box(filtered);
@@ -966,7 +1022,7 @@ mod benches {
     #[bench]
     fn bench_horizontal_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
+        let kernel = Kernel::new(vec![1f32 / 5f32; 5], 5, 1);
         b.iter(|| {
             let filtered = horizontal_filter(&image, &kernel);
             black_box(filtered);
@@ -976,7 +1032,7 @@ mod benches {
     #[bench]
     fn bench_vertical_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
-        let kernel = vec![1f32 / 5f32; 5];
+        let kernel = Kernel::new(vec![1f32 / 5f32; 5], 5, 1);
         b.iter(|| {
             let filtered = vertical_filter(&image, &kernel);
             black_box(filtered);
@@ -987,11 +1043,11 @@ mod benches {
     fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         #[rustfmt::skip]
-        let kernel: Vec<i32> = vec![
+        let kernel: Kernel<i32> = Kernel::new(vec![
             -1, 0, 1,
             -2, 0, 2,
             -1, 0, 1
-        ];
+        ], 3, 3);
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
