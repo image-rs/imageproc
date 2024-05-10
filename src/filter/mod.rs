@@ -242,12 +242,29 @@ where
 }
 
 /// A 2D kernel, used to filter images via convolution.
+#[derive(Debug, Clone)]
+pub struct SeparableKernel<K> {
+    pub(crate) horizontal_kernel: Kernel<K>,
+    pub(crate) vertical_kernel: Kernel<K>,
+}
+impl<K> SeparableKernel<K> {
+    /// Maps the separable kernel from type `K` to `Q` via the closure `f`.
+    pub fn map<Q>(self, f: &impl Fn(K) -> Q) -> SeparableKernel<Q> {
+        SeparableKernel {
+            horizontal_kernel: self.horizontal_kernel.map(f),
+            vertical_kernel: self.vertical_kernel.map(f),
+        }
+    }
+}
+
+/// A 2D kernel, used to filter images via convolution.
+#[derive(Debug, Clone)]
 pub struct Kernel<K> {
     pub(crate) data: Vec<K>,
     width: u32,
     height: u32,
 }
-impl<K: Num + Copy> Kernel<K> {
+impl<K> Kernel<K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major form.
     pub fn new(data: Vec<K>, width: u32, height: u32) -> Kernel<K> {
@@ -264,11 +281,8 @@ impl<K: Num + Copy> Kernel<K> {
             height,
         }
     }
-    /// Maps the kernel from type `K` to `Q` via the closure `F`.
-    pub fn map<F, Q>(self, f: F) -> Kernel<Q>
-    where
-        F: Fn(K) -> Q,
-    {
+    /// Maps the kernel from type `K` to `Q` via the closure `f`.
+    pub fn map<Q>(self, f: &impl Fn(K) -> Q) -> Kernel<Q> {
         Kernel {
             data: self.data.into_iter().map(f).collect(),
             width: self.width,

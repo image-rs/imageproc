@@ -25,7 +25,7 @@ fn save_gradients(
         .save(&output_dir.join(format!("{name}_horizontal.png")))
         .unwrap();
     vertical_scaled
-        .save(&output_dir.join(format!("{name}_horizontal.png")))
+        .save(&output_dir.join(format!("{name}_vertical.png")))
         .unwrap();
 }
 

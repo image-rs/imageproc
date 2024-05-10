@@ -54,17 +54,11 @@ where
         "Cannot find seams if image width is < 2"
     );
 
-    let gradient_kernel = GradientKernel::Sobel;
-    let mut gradients = gradients(
-        image,
-        &gradient_kernel.as_horizontal_kernel(),
-        &gradient_kernel.as_vertical_kernel(),
-        |p| {
-            let gradient_sum: u16 = p.channels().iter().sum();
-            let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
-            Luma([gradient_mean as u32])
-        },
-    );
+    let mut gradients = gradients(image, GradientKernel::Sobel, |p| {
+        let gradient_sum: u16 = p.channels().iter().sum();
+        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
+        Luma([gradient_mean as u32])
+    });
 
     // Find the least energy path through the gradient image.
     for y in 1..height {

@@ -60,16 +60,10 @@ fn main() {
     annotated.save(&annotated_path).unwrap();
 
     // Draw the seams on the gradient magnitude image.
-    let gradient_kernel = GradientKernel::Sobel;
-    let gradients = gradients(
-        &input_image,
-        &gradient_kernel.as_horizontal_kernel(),
-        &gradient_kernel.as_vertical_kernel(),
-        |p| {
-            let mean = (p[0] + p[1] + p[2]) / 3;
-            Luma([mean as u32])
-        },
-    );
+    let gradients = gradients(&input_image, GradientKernel::Sobel, |p| {
+        let mean = (p[0] + p[1] + p[2]) / 3;
+        Luma([mean as u32])
+    });
     let clamped_gradients: GrayImage = map_colors(&gradients, |p| Luma([Clamp::clamp(p[0])]));
     let annotated_gradients = draw_vertical_seams(&clamped_gradients, &seams);
     let gradients_path = output_dir.join("gradients.png");
