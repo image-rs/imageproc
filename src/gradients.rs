@@ -1,7 +1,7 @@
 //! Functions for computing gradients of image intensities.
 
 use crate::definitions::{Clamp, HasBlack, Image};
-use crate::filter::{filter, filter3x3};
+use crate::filter::filter;
 use crate::kernel::{Kernel, OwnedKernel, TwoKernels};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, Pixel};

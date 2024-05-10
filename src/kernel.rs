@@ -6,7 +6,7 @@ use crate::point::Point;
 
 /// A kernel object, in column major layout
 ///
-/// Used in methods such as [`gradents()`]
+/// Used in methods such as [`gradients()`]
 pub trait Kernel<K> {
     /// The width of the kernel
     fn width(&self) -> u32;
