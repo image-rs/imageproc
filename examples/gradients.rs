@@ -15,8 +15,8 @@ fn save_gradients(
     name: &str,
     scale: i16,
 ) {
-    let horizontal_gradients = filter3x3(input, &gradient_kernel.as_horizontal_kernel::<i16>());
-    let vertical_gradients = filter3x3(input, &gradient_kernel.as_vertical_kernel::<i16>());
+    let horizontal_gradients = filter3x3(input, gradient_kernel.horizontal_kernel::<i16>());
+    let vertical_gradients = filter3x3(input, gradient_kernel.vertical_kernel::<i16>());
 
     let horizontal_scaled = map_subpixels(&horizontal_gradients, |p: i16| (p.abs() / scale) as u8);
     let vertical_scaled = map_subpixels(&vertical_gradients, |p: i16| (p.abs() / scale) as u8);

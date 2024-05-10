@@ -260,8 +260,8 @@ pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
     let cell_side = spec.options.cell_side as f32;
 
     let gradient_kernel = GradientKernel::Sobel;
-    let horizontal = filter3x3::<_, _, i32>(image, &gradient_kernel.as_horizontal_kernel());
-    let vertical = filter3x3::<_, _, i32>(image, &gradient_kernel.as_vertical_kernel());
+    let horizontal = filter3x3::<_, _, i32>(image, &gradient_kernel.horizontal_kernel());
+    let vertical = filter3x3::<_, _, i32>(image, &gradient_kernel.vertical_kernel());
     let interval = orientation_bin_width(spec.options);
     let range = direction_range(spec.options);
 

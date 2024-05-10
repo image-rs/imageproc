@@ -1,7 +1,8 @@
 //! Functions for computing gradients of image intensities.
 
 use crate::definitions::{Clamp, HasBlack, Image};
-use crate::filter::{filter, filter3x3, Kernel, SeparableKernel};
+use crate::filter::{filter, filter3x3};
+use crate::kernel::{Kernel, OwnedKernel, TwoKernels};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, Pixel};
 use itertools::multizip;
@@ -20,33 +21,6 @@ pub enum GradientKernel {
     /// See <https://en.wikipedia.org/wiki/Roberts_cross>
     Roberts,
 }
-impl<K> From<GradientKernel> for SeparableKernel<K>
-where
-    K: From<i8> + Copy,
-{
-    fn from(value: GradientKernel) -> Self {
-        let x = match value {
-            GradientKernel::Sobel => SeparableKernel {
-                horizontal_kernel: Kernel::new(vec![-1, 0, 1, -2, 0, 2, -1, 0, 1], 3, 3),
-                vertical_kernel: Kernel::new(vec![-1, -2, -1, 0, 0, 0, 1, 2, 1], 3, 3),
-            },
-            GradientKernel::Scharr => SeparableKernel {
-                horizontal_kernel: Kernel::new(vec![-3, 0, 3, -10, 0, 10, -3, 0, 3], 3, 3),
-                vertical_kernel: Kernel::new(vec![-3, -10, -3, 0, 0, 0, 3, 10, 3], 3, 3),
-            },
-            GradientKernel::Prewitt => SeparableKernel {
-                horizontal_kernel: Kernel::new(vec![-1, 0, 1, -1, 0, 1, -1, 0, 1], 3, 3),
-                vertical_kernel: Kernel::new(vec![-1, -1, -1, 0, 0, 0, 1, 1, 1], 3, 3),
-            },
-            GradientKernel::Roberts => SeparableKernel {
-                horizontal_kernel: Kernel::new(vec![0, 1, -1, -0], 2, 2),
-                vertical_kernel: Kernel::new(vec![1, 0, 0, -1], 2, 2),
-            },
-        };
-
-        x.map(&K::from)
-    }
-}
 impl GradientKernel {
     /// A slice of all the [`GradientKernel`] variants.
     pub const ALL: [GradientKernel; 4] = [
@@ -56,19 +30,44 @@ impl GradientKernel {
         GradientKernel::Roberts,
     ];
 
-    /// Returns the horizontal separable matrix of the gradient kernel.
-    pub fn as_horizontal_kernel<K>(&self) -> Kernel<K>
+    /// The vertical gradient kernel component
+    pub fn horizontal_kernel<K>(&self) -> OwnedKernel<K>
     where
-        K: From<i8> + Copy,
+        K: From<i8>,
     {
-        SeparableKernel::from(*self).horizontal_kernel
+        let horizontal = match self {
+            GradientKernel::Sobel => OwnedKernel::new(vec![-1, 0, 1, -2, 0, 2, -1, 0, 1], 3, 3),
+            GradientKernel::Scharr => OwnedKernel::new(vec![-3, 0, 3, -10, 0, 10, -3, 0, 3], 3, 3),
+            GradientKernel::Prewitt => OwnedKernel::new(vec![-1, 0, 1, -1, 0, 1, -1, 0, 1], 3, 3),
+            GradientKernel::Roberts => OwnedKernel::new(vec![0, 1, -1, -0], 2, 2),
+        };
+
+        horizontal.map(&K::from)
     }
-    /// Returns the vertical separable matrix of the gradient kernel.
-    pub fn as_vertical_kernel<K>(&self) -> Kernel<K>
+    /// The vertical gradient kernel component
+    pub fn vertical_kernel<K>(&self) -> OwnedKernel<K>
     where
-        K: From<i8> + Copy,
+        K: From<i8>,
     {
-        SeparableKernel::from(*self).vertical_kernel
+        let vertical = match self {
+            GradientKernel::Sobel => OwnedKernel::new(vec![-1, -2, -1, 0, 0, 0, 1, 2, 1], 3, 3),
+            GradientKernel::Scharr => OwnedKernel::new(vec![-3, -10, -3, 0, 0, 0, 3, 10, 3], 3, 3),
+            GradientKernel::Prewitt => OwnedKernel::new(vec![-1, -1, -1, 0, 0, 0, 1, 1, 1], 3, 3),
+            GradientKernel::Roberts => OwnedKernel::new(vec![1, 0, 0, -1], 2, 2),
+        };
+
+        vertical.map(&K::from)
+    }
+}
+impl<K> From<GradientKernel> for TwoKernels<OwnedKernel<K>>
+where
+    K: From<i8>,
+{
+    fn from(value: GradientKernel) -> Self {
+        TwoKernels {
+            kernel1: value.horizontal_kernel(),
+            kernel2: value.vertical_kernel(),
+        }
     }
 }
 
@@ -145,9 +144,9 @@ impl GradientKernel {
 ///     max_gradient
 /// );
 /// # }
-pub fn gradients<P, F, Q>(
+pub fn gradients<P, F, Q, T>(
     image: &Image<P>,
-    separable_kernel: impl Into<SeparableKernel<i32>>,
+    two_kernels: impl Into<TwoKernels<T>>,
     f: F,
 ) -> Image<Q>
 where
@@ -155,18 +154,16 @@ where
     Q: Pixel,
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
+    T: Kernel<i32>,
 {
-    let separable_kernel: SeparableKernel<i32> = separable_kernel.into();
+    let two_kernels: TwoKernels<_> = two_kernels.into();
 
-    let horizontal: Image<ChannelMap<P, i16>> = filter(
-        image,
-        &separable_kernel.horizontal_kernel,
-        |channel, acc| *channel = <i16 as Clamp<i32>>::clamp(acc),
-    );
-    let vertical: Image<ChannelMap<P, i16>> =
-        filter(image, &separable_kernel.vertical_kernel, |channel, acc| {
-            *channel = <i16 as Clamp<i32>>::clamp(acc)
-        });
+    let pass1: Image<ChannelMap<P, i16>> = filter(image, two_kernels.kernel1, |channel, acc| {
+        *channel = <i16 as Clamp<i32>>::clamp(acc)
+    });
+    let pass2: Image<ChannelMap<P, i16>> = filter(image, two_kernels.kernel2, |channel, acc| {
+        *channel = <i16 as Clamp<i32>>::clamp(acc)
+    });
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
@@ -182,12 +179,7 @@ where
             //      x and y are in bounds for image by construction,
             //      vertical and horizontal are the result of calling filter3x3 on image,
             //      and filter3x3 returns an image of the same size as its input
-            let (h, v) = unsafe {
-                (
-                    horizontal.unsafe_get_pixel(x, y),
-                    vertical.unsafe_get_pixel(x, y),
-                )
-            };
+            let (h, v) = unsafe { (pass1.unsafe_get_pixel(x, y), pass2.unsafe_get_pixel(x, y)) };
             let mut p = ChannelMap::<P, u16>::black();
 
             for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
@@ -263,7 +255,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter3x3(&image, &GradientKernel::Sobel.as_horizontal_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Sobel.horizontal_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -279,7 +271,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter3x3(&image, &GradientKernel::Sobel.as_vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Sobel.vertical_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -295,10 +287,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter3x3(
-            &image,
-            &GradientKernel::Scharr.as_horizontal_kernel::<i16>(),
-        );
+        let filtered = filter3x3(&image, GradientKernel::Scharr.horizontal_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -314,7 +303,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter3x3(&image, &GradientKernel::Scharr.as_vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Scharr.vertical_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -330,10 +319,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter3x3(
-            &image,
-            &GradientKernel::Prewitt.as_horizontal_kernel::<i16>(),
-        );
+        let filtered = filter3x3(&image, GradientKernel::Prewitt.horizontal_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -349,7 +335,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter3x3(&image, &GradientKernel::Prewitt.as_vertical_kernel::<i16>());
+        let filtered = filter3x3(&image, GradientKernel::Prewitt.vertical_kernel::<i16>());
         assert_pixels_eq!(filtered, expected);
     }
 }
