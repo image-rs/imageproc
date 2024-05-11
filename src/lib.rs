@@ -30,6 +30,9 @@ extern crate test;
 #[macro_use]
 extern crate assert_approx_eq;
 
+#[cfg(test)]
+mod proptest_utils;
+
 #[macro_use]
 pub mod utils;
 pub mod binary_descriptors;

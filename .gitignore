@@ -21,3 +21,5 @@
 /.idea/
 rusti.sh
 Cargo.lock
+
+proptest-regressions

@@ -40,6 +40,7 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
+proptest = "1.4.0"
 quickcheck = "1.0.3"
 wasm-bindgen-test = "0.3.38"
 
