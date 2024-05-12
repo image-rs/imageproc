@@ -668,7 +668,7 @@ mod benches {
     fn bench_map_subpixels_100(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let mapped = map_subpixels(&image, |x| x * 2);
+            let mapped = map_subpixels(&image, |x| x.saturating_mul(2));
             black_box(mapped);
         });
     }
@@ -676,7 +676,7 @@ mod benches {
     fn bench_map_subpixels_1000(b: &mut Bencher) {
         let image = rgb_bench_image(1000, 1000);
         b.iter(|| {
-            let mapped = map_subpixels(&image, |x| x * 2);
+            let mapped = map_subpixels(&image, |x| x.saturating_mul(2));
             black_box(mapped);
         });
     }
@@ -685,7 +685,7 @@ mod benches {
     fn bench_map_subpixels_parallel_100(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let mapped = map_subpixels_parallel(&image, |x| x * 2);
+            let mapped = map_subpixels_parallel(&image, |x| x.saturating_mul(2));
             black_box(mapped);
         });
     }
@@ -693,7 +693,7 @@ mod benches {
     fn bench_map_subpixels_parallel_1000(b: &mut Bencher) {
         let image = rgb_bench_image(1000, 1000);
         b.iter(|| {
-            let mapped = map_subpixels_parallel(&image, |x| x * 2);
+            let mapped = map_subpixels_parallel(&image, |x| x.saturating_mul(2));
             black_box(mapped);
         });
     }
