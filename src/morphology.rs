@@ -368,6 +368,11 @@ pub struct Mask {
 }
 
 impl Mask {
+    fn new(elements: Vec<Point<i16>>) -> Self {
+        assert!(elements.len() <= (511 * 511) as usize);
+        Self { elements }
+    }
+
     /// creates a mask from a grayscale image
     ///
     /// a pixel is part of the mask if and only if it is non-zero
@@ -428,12 +433,13 @@ impl Mask {
             image.height() < 512,
             "the input image must be at most 511 pixels high"
         );
+        let (center_x, center_y) = (i16::from(center_x), i16::from(center_y));
         let elements = image
             .enumerate_pixels()
             .filter(|(_, _, &p)| p[0] != 0)
-            .map(|(x, y, _)| Point::new(x as i16 - center_x as i16, y as i16 - center_y as i16))
+            .map(|(x, y, _)| Point::new(x as i16 - center_x, y as i16 - center_y)) // cast to i16 ok because of the size check
             .collect();
-        Self { elements }
+        Self::new(elements)
     }
 
     /// creates a square-shaped mask
@@ -465,7 +471,8 @@ impl Mask {
     /// # }
     /// ```
     pub fn square(radius: u8) -> Self {
-        let range = -(radius as i16)..=(radius as i16);
+        let radius = i16::from(radius);
+        let range = -radius..=radius;
         let elements = range
             .clone()
             .cartesian_product(range)
@@ -514,11 +521,13 @@ impl Mask {
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
-        let mut elements = Vec::with_capacity(1 + 2 * (radius as usize) * (radius as usize + 1));
-        elements.extend((-(radius as i16)..=(radius as i16)).flat_map(|y| {
-            ((y.abs() - radius as i16)..=(radius as i16 - y.abs())).map(move |x| Point::new(x, y))
+        let mut elements =
+            Vec::with_capacity(1 + 2 * (usize::from(radius)) * (usize::from(radius) + 1));
+        let radius = i16::from(radius);
+        elements.extend((-radius..=radius).flat_map(|y| {
+            ((y.abs() - radius)..=(radius - y.abs())).map(move |x| Point::new(x, y))
         }));
-        Self { elements }
+        Self::new(elements)
     }
 
     /// creates a disk-shaped mask
@@ -608,22 +617,24 @@ impl Mask {
         elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
             ((-i16::from(half_width))..=i16::from(half_width)).map(move |x| Point::new(x, y))
         }));
-        Self { elements }
+        Self::new(elements)
     }
 
+    #[allow(dead_code)] // might be useful for later rewrites
     fn apply<'a, 'b: 'a, 'c: 'a>(
         &'c self,
         image: &'b GrayImage,
         x: u32,
         y: u32,
     ) -> impl Iterator<Item = &'a Luma<u8>> {
+        let (x, y) = (i64::from(x), i64::from(y));
         self.elements
             .iter()
-            .map(move |p| (x as i64 + p.x as i64, y as i64 + p.y as i64))
+            .map(move |p| (x + i64::from(p.x), y + i64::from(p.y)))
             .filter(move |(i, j)| {
-                0 <= *i && *i < image.width() as i64 && 0 <= *j && *j < image.height() as i64
+                0 <= *i && *i < image.width().into() && 0 <= *j && *j < image.height().into()
             })
-            .map(move |(i, j)| image.get_pixel(i as u32, j as u32))
+            .map(move |(i, j)| image.get_pixel(i as u32, j as u32)) // the cast is ok because of the bound-checking filter above
     }
 
     /// all the slices are garanteed to be non empty
@@ -721,33 +732,23 @@ impl Mask {
 /// # }
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
-    let mut result = GrayImage::from_fn(image.width(), image.height(), |_, _| Luma([u8::MIN]));
-    for (y_16, x_line) in mask.lines() {
-        let y = i64::from(y_16);
+    // default is u8::MIN because it's the neutral element of max
+    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
+        GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MIN]));
+    for (y, x_line) in mask.lines() {
+        let y = i64::from(y);
         let input_rows = image
             .chunks(image.width() as usize)
-            .skip(0i64.max(y) as usize);
+            .skip(y.try_into().unwrap_or(0));
         let output_rows = result
             .chunks_mut(image.width() as usize)
-            .skip(0i64.max(-y) as usize);
+            .skip((-y).try_into().unwrap_or(0));
         for (input_row, output_row) in input_rows.zip(output_rows) {
-            let mut l_bound = x_line.iter().position(|&x| x >= 0).unwrap_or(x_line.len());
-            let mut r_bound = x_line
-                .iter()
-                .rposition(|&x| input_row.len() as i64 > x.into())
-                .map(|x| x + 1)
-                .unwrap_or(0);
-
-            for (i, p) in output_row.iter_mut().enumerate() {
-                let i_i64 = i as i64; // works because image size fits into u32
-                if l_bound > 0 && i64::from(x_line[l_bound - 1]) + i_i64 >= 0 {
-                    l_bound -= 1
-                };
-                if r_bound > 0 && i64::from(x_line[r_bound - 1]) + i_i64 >= input_row.len() as i64 {
-                    r_bound -= 1
-                };
-                for x in x_line[l_bound..r_bound].iter().copied() {
-                    *p = (*p).max(input_row[(i_i64 + i64::from(x)) as usize])
+            for x in x_line.iter().copied() {
+                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
+                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
+                {
+                    *output = (*output).max(*input);
                 }
             }
         }
@@ -838,13 +839,27 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// # }
 /// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
-    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .min()
-            .unwrap_or(u8::MAX)]) // default is u8::MAX because it's the neutral element of min
-    });
+    // default is u8::MAX because it's the neutral element of min
+    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
+        GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MAX]));
+    for (y, x_line) in mask.lines() {
+        let y = i64::from(y);
+        let input_rows = image
+            .chunks(image.width() as usize)
+            .skip(y.try_into().unwrap_or(0));
+        let output_rows = result
+            .chunks_mut(image.width() as usize)
+            .skip((-y).try_into().unwrap_or(0));
+        for (input_row, output_row) in input_rows.zip(output_rows) {
+            for x in x_line.iter().copied() {
+                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
+                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
+                {
+                    *output = (*output).min(*input);
+                }
+            }
+        }
+    }
     result
 }
 
