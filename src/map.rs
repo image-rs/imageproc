@@ -188,21 +188,22 @@ where
     <P as WithChannel<S>>::Pixel: std::marker::Send,
     <P as WithChannel<S>>::Pixel: std::marker::Sync,
 {
-    use rayon::iter::IndexedParallelIterator;
-    use rayon::iter::ParallelIterator;
+    use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+    use rayon::slice::{ParallelSlice, ParallelSliceMut};
 
     let (width, height) = image.dimensions();
     let mut out: ImageBuffer<ChannelMap<P, S>, Vec<S>> = ImageBuffer::new(width, height);
 
+    const MIN_SUBPIXEL_PER_CHUNK: usize = 10000;
+    let subpixel_per_chunk =
+        (width as usize * <P as Pixel>::CHANNEL_COUNT as usize).max(MIN_SUBPIXEL_PER_CHUNK);
     image
-        .par_pixels()
-        .zip_eq(out.par_pixels_mut())
-        .for_each(|(input_pixel, output_channels)| {
-            input_pixel
-                .channels()
-                .iter()
-                .zip(output_channels.channels_mut())
-                .for_each(|(input_subpixel, output_subpixel)| *output_subpixel = f(*input_subpixel))
+        .par_chunks(subpixel_per_chunk)
+        .zip_eq(out.par_chunks_mut(subpixel_per_chunk))
+        .for_each(|(input_line, output_line)| {
+            input_line.iter().zip(output_line.iter_mut()).for_each(
+                |(input_subpixel, output_subpixel)| *output_subpixel = f(*input_subpixel),
+            );
         });
 
     out
@@ -665,6 +666,30 @@ mod benches {
     use test::{black_box, Bencher};
 
     #[bench]
+    fn bench_map_subpixels_10(b: &mut Bencher) {
+        let image = rgb_bench_image(10, 10);
+        b.iter(|| {
+            let mapped = map_subpixels(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
+    #[bench]
+    fn bench_map_subpixels_30(b: &mut Bencher) {
+        let image = rgb_bench_image(30, 30);
+        b.iter(|| {
+            let mapped = map_subpixels(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
+    #[bench]
+    fn bench_map_subpixels_60(b: &mut Bencher) {
+        let image = rgb_bench_image(60, 60);
+        b.iter(|| {
+            let mapped = map_subpixels(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
+    #[bench]
     fn bench_map_subpixels_100(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
@@ -681,6 +706,30 @@ mod benches {
         });
     }
 
+    #[bench]
+    fn bench_map_subpixels_parallel_10(b: &mut Bencher) {
+        let image = rgb_bench_image(10, 10);
+        b.iter(|| {
+            let mapped = map_subpixels_parallel(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
+    #[bench]
+    fn bench_map_subpixels_parallel_30(b: &mut Bencher) {
+        let image = rgb_bench_image(30, 30);
+        b.iter(|| {
+            let mapped = map_subpixels_parallel(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
+    #[bench]
+    fn bench_map_subpixels_parallel_60(b: &mut Bencher) {
+        let image = rgb_bench_image(60, 60);
+        b.iter(|| {
+            let mapped = map_subpixels_parallel(&image, |x| x.saturating_mul(2));
+            black_box(mapped);
+        });
+    }
     #[bench]
     fn bench_map_subpixels_parallel_100(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
