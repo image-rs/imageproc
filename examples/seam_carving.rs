@@ -1,7 +1,7 @@
 use image::{open, GrayImage, Luma, Pixel};
 use imageproc::definitions::Clamp;
 use imageproc::gradients::gradients;
-use imageproc::gradients::GradientKernel;
+use imageproc::kernel::OwnedKernel;
 use imageproc::map::map_colors;
 use imageproc::seam_carving::*;
 use std::env;
@@ -60,10 +60,15 @@ fn main() {
     annotated.save(&annotated_path).unwrap();
 
     // Draw the seams on the gradient magnitude image.
-    let gradients = gradients(&input_image, GradientKernel::Sobel, |p| {
-        let mean = (p[0] + p[1] + p[2]) / 3;
-        Luma([mean as u32])
-    });
+    let gradients = gradients(
+        &input_image,
+        OwnedKernel::sobel_horizontal_3x3(),
+        OwnedKernel::sobel_vertical_3x3(),
+        |p| {
+            let mean = (p[0] + p[1] + p[2]) / 3;
+            Luma([mean as u32])
+        },
+    );
     let clamped_gradients: GrayImage = map_colors(&gradients, |p| Luma([Clamp::clamp(p[0])]));
     let annotated_gradients = draw_vertical_seams(&clamped_gradients, &seams);
     let gradients_path = output_dir.join("gradients.png");

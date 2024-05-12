@@ -4,7 +4,8 @@
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
 use crate::definitions::{HasBlack, Image};
-use crate::gradients::{gradients, GradientKernel};
+use crate::gradients::gradients;
+use crate::kernel::OwnedKernel;
 use crate::map::{map_colors, WithChannel};
 use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
@@ -54,11 +55,16 @@ where
         "Cannot find seams if image width is < 2"
     );
 
-    let mut gradients = gradients(image, GradientKernel::Sobel, |p| {
-        let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
-        Luma([gradient_mean as u32])
-    });
+    let mut gradients = gradients(
+        image,
+        OwnedKernel::sobel_horizontal_3x3(),
+        OwnedKernel::sobel_vertical_3x3(),
+        |p| {
+            let gradient_sum: u16 = p.channels().iter().sum();
+            let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
+            Luma([gradient_mean as u32])
+        },
+    );
 
     // Find the least energy path through the gradient image.
     for y in 1..height {

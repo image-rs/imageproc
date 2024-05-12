@@ -3,7 +3,7 @@
 
 use crate::definitions::{Clamp, Image};
 use crate::filter::filter_clamped;
-use crate::gradients::GradientKernel;
+use crate::kernel::OwnedKernel;
 use crate::math::l2_norm;
 use image::{GenericImage, GrayImage, ImageBuffer, Luma};
 use num::Zero;
@@ -259,9 +259,8 @@ pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
     let cell_area = spec.cell_area() as f32;
     let cell_side = spec.options.cell_side as f32;
 
-    let gradient_kernel = GradientKernel::Sobel;
-    let horizontal = filter_clamped::<_, _, i32>(image, &gradient_kernel.kernel1());
-    let vertical = filter_clamped::<_, _, i32>(image, &gradient_kernel.kernel2());
+    let horizontal = filter_clamped::<_, _, i32>(image, OwnedKernel::sobel_horizontal_3x3());
+    let vertical = filter_clamped::<_, _, i32>(image, OwnedKernel::sobel_vertical_3x3());
     let interval = orientation_bin_width(spec.options);
     let range = direction_range(spec.options);
 

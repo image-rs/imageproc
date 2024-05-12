@@ -5,18 +5,19 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-use imageproc::{filter::filter_clamped, gradients::GradientKernel, map::map_subpixels};
+use imageproc::{filter::filter_clamped, kernel::OwnedKernel, map::map_subpixels};
 use std::{env, fs, path::Path};
 
 fn save_gradients(
     input: &GrayImage,
-    gradient_kernel: &GradientKernel,
+    horizontal_kernel: &OwnedKernel<i16>,
+    vertical_kernel: &OwnedKernel<i16>,
     output_dir: &Path,
     name: &str,
     scale: i16,
 ) {
-    let horizontal_gradients = filter_clamped(input, gradient_kernel.kernel1::<i16>());
-    let vertical_gradients = filter_clamped(input, gradient_kernel.kernel2::<i16>());
+    let horizontal_gradients = filter_clamped(input, horizontal_kernel);
+    let vertical_gradients = filter_clamped(input, vertical_kernel);
 
     let horizontal_scaled = map_subpixels(&horizontal_gradients, |p: i16| (p.abs() / scale) as u8);
     let vertical_scaled = map_subpixels(&vertical_gradients, |p: i16| (p.abs() / scale) as u8);
@@ -57,19 +58,38 @@ fn main() {
     let gray_path = output_dir.join("grey.png");
     input_image.save(&gray_path).unwrap();
 
-    for gradient_kernel in GradientKernel::ALL {
-        let scale = match gradient_kernel {
-            GradientKernel::Sobel => 32,
-            GradientKernel::Scharr => 8,
-            GradientKernel::Prewitt => 6,
-            GradientKernel::Roberts => 4,
-        };
-
+    for (name, horizontal, vertical, scale) in [
+        (
+            "sobel",
+            OwnedKernel::sobel_horizontal_3x3(),
+            OwnedKernel::sobel_vertical_3x3(),
+            32,
+        ),
+        (
+            "scharr",
+            OwnedKernel::scharr_horizontal_3x3(),
+            OwnedKernel::scharr_vertical_3x3(),
+            8,
+        ),
+        (
+            "prewitt",
+            OwnedKernel::prewitt_horizontal_3x3(),
+            OwnedKernel::prewitt_vertical_3x3(),
+            6,
+        ),
+        (
+            "roberts",
+            OwnedKernel::roberts_horizontal_2x2(),
+            OwnedKernel::roberts_vertical_2x2(),
+            4,
+        ),
+    ] {
         save_gradients(
             &input_image,
-            &gradient_kernel,
+            &horizontal,
+            &vertical,
             output_dir,
-            &format!("{gradient_kernel:?}"),
+            name,
             scale,
         );
     }

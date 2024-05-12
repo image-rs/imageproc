@@ -73,6 +73,110 @@ impl<K> OwnedKernel<K> {
             height: self.height,
         }
     }
+
+    /// Returns the sobel horizontal 3x3 kernel.
+    pub fn sobel_horizontal_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-1, 0, 1, -2, 0, 2, -1, 0, 1].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+    /// Returns the sobel vertical 3x3 kernel.
+    pub fn sobel_vertical_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-1, -2, -1, 0, 0, 0, 1, 2, 1].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+
+    /// Returns the scharr horizontal 3x3 kernel.
+    pub fn scharr_horizontal_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-3, 0, 3, -10, 0, 10, -3, 0, 3].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+    /// Returns the scharr vertical 3x3 kernel.
+    pub fn scharr_vertical_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-3, -10, -3, 0, 0, 0, 3, 10, 3].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+
+    /// Returns the prewitt horizontal 3x3 kernel.
+    pub fn prewitt_horizontal_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-1, 0, 1, -1, 0, 1, -1, 0, 1].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+    /// Returns the prewitt vertical 3x3 kernel.
+    pub fn prewitt_vertical_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [-1, -1, -1, 0, 0, 0, 1, 1, 1].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
+
+    /// Returns the roberts horizontal 3x3 kernel.
+    pub fn roberts_horizontal_2x2() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [1, 0, 0, -1].map(K::from).to_vec(),
+            width: 2,
+            height: 2,
+        }
+    }
+    /// Returns the roberts vertical 3x3 kernel.
+    pub fn roberts_vertical_2x2() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [0, 1, -1, -0].map(K::from).to_vec(),
+            width: 2,
+            height: 2,
+        }
+    }
+
+    /// Returns the laplacian 3x3 kernel.
+    pub fn laplacian_3x3() -> Self
+    where
+        K: From<i8> + Clone,
+    {
+        Self {
+            data: [0, 1, 0, 1, -4, 1, 0, 1, 0].map(K::from).to_vec(),
+            width: 3,
+            height: 3,
+        }
+    }
 }
 impl<K> Kernel<K> for OwnedKernel<K> {
     fn width(&self) -> u32 {
@@ -123,12 +227,4 @@ impl<'b, K> Kernel<K> for BorrowedKernel<'b, K> {
 
         points.zip(self.data.iter())
     }
-}
-
-/// A type for combining two kernels into one struct
-pub struct TwoKernels<T> {
-    /// The first of the two kernels
-    pub kernel1: T,
-    /// The second of the two kernels
-    pub kernel2: T,
 }
