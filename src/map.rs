@@ -147,6 +147,67 @@ where
     }
 }
 
+/// Applies `f` to each subpixel of the input image in parallel.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::map::map_subpixels_parallel;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let scaled = gray_image!(type: i16,
+///     -2, -4;
+///     -6, -8);
+///
+/// assert_pixels_eq!(
+///     map_subpixels_parallel(&image, |x| -2 * (x as i16)),
+///     scaled);
+/// # }
+/// ```
+#[cfg(feature = "rayon")]
+pub fn map_subpixels_parallel<P, F, S>(
+    image: &ImageBuffer<P, Vec<P::Subpixel>>,
+    f: F,
+) -> Image<ChannelMap<P, S>>
+where
+    P: WithChannel<S>,
+    S: Primitive,
+    F: Fn(P::Subpixel) -> S + std::marker::Sync,
+    P::Subpixel: std::marker::Send,
+    P::Subpixel: std::marker::Sync,
+    P: std::marker::Send,
+    P: std::marker::Sync,
+    S: std::marker::Send,
+    S: std::marker::Sync,
+    <P as WithChannel<S>>::Pixel: std::marker::Send,
+    <P as WithChannel<S>>::Pixel: std::marker::Sync,
+{
+    use rayon::iter::IndexedParallelIterator;
+    use rayon::iter::ParallelIterator;
+
+    let (width, height) = image.dimensions();
+    let mut out: ImageBuffer<ChannelMap<P, S>, Vec<S>> = ImageBuffer::new(width, height);
+
+    image
+        .par_pixels()
+        .zip_eq(out.par_pixels_mut())
+        .for_each(|(input_pixel, output_channels)| {
+            input_pixel
+                .channels()
+                .iter()
+                .zip(output_channels.channels_mut())
+                .for_each(|(input_subpixel, output_subpixel)| *output_subpixel = f(*input_subpixel))
+        });
+
+    out
+}
+
 /// Applies `f` to the color of each pixel in the input image.
 ///
 /// # Examples
