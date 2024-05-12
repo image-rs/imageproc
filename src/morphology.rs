@@ -2,12 +2,14 @@
 //!
 //! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
+use std::slice::Iter;
+
 use crate::{
     distance_transform::{distance_transform_impl, distance_transform_mut, DistanceFrom, Norm},
     point::Point,
 };
 use image::{GrayImage, Luma};
-use itertools::Itertools;
+use itertools::{GroupBy, Itertools};
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -620,32 +622,11 @@ impl Mask {
         Self::new(elements)
     }
 
-    #[allow(dead_code)] // might be useful for later rewrites
-    fn apply<'a, 'b: 'a, 'c: 'a>(
-        &'c self,
-        image: &'b GrayImage,
-        x: u32,
-        y: u32,
-    ) -> impl Iterator<Item = &'a Luma<u8>> {
-        let (x, y) = (i64::from(x), i64::from(y));
-        self.elements
-            .iter()
-            .map(move |p| (x + i64::from(p.x), y + i64::from(p.y)))
-            .filter(move |(i, j)| {
-                0 <= *i && *i < image.width().into() && 0 <= *j && *j < image.height().into()
-            })
-            .map(move |(i, j)| image.get_pixel(i as u32, j as u32)) // the cast is ok because of the bound-checking filter above
-    }
-
     /// all the slices are garanteed to be non empty
-    fn lines(&self) -> impl Iterator<Item = (i16, Vec<i16>)> + '_ {
-        self.elements
-            .iter()
-            .group_by(|p| p.y)
-            .into_iter()
-            .map(|(y, g)| (y, g.map(|p| p.x).collect()))
-            .collect::<Vec<_>>()
-            .into_iter()
+    fn lines<'a>(
+        &'a self,
+    ) -> GroupBy<i16, Iter<Point<i16>>, impl FnMut(&&'a Point<i16>) -> i16 + '_> {
+        self.elements.iter().group_by(|p: &&'a Point<i16>| p.y)
     }
 }
 
@@ -735,8 +716,9 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     // default is u8::MIN because it's the neutral element of max
     let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
         GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MIN]));
-    for (y, x_line) in mask.lines() {
+    for (y, line_group) in mask.lines().into_iter() {
         let y = i64::from(y);
+        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(y.try_into().unwrap_or(0));
@@ -842,8 +824,9 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     // default is u8::MAX because it's the neutral element of min
     let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
         GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MAX]));
-    for (y, x_line) in mask.lines() {
+    for (y, line_group) in mask.lines().into_iter() {
         let y = i64::from(y);
+        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(y.try_into().unwrap_or(0));
