@@ -171,11 +171,9 @@ where
 /// # }
 /// ```
 #[cfg(feature = "rayon")]
-pub fn map_subpixels_parallel<P, F, S>(
-    image: &ImageBuffer<P, Vec<P::Subpixel>>,
-    f: F,
-) -> Image<ChannelMap<P, S>>
+pub fn map_subpixels_parallel<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
 where
+    I: GenericImage<Pixel = P> + std::ops::Deref<Target = [P::Subpixel]>,
     P: WithChannel<S>,
     S: Primitive,
     F: Fn(P::Subpixel) -> S + std::marker::Sync,
@@ -188,14 +186,15 @@ where
     <P as WithChannel<S>>::Pixel: std::marker::Send,
     <P as WithChannel<S>>::Pixel: std::marker::Sync,
 {
-    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+    use rayon::iter::IntoParallelRefIterator;
+    use rayon::iter::ParallelIterator;
 
     let (width, height) = image.dimensions();
 
     ImageBuffer::<ChannelMap<P, S>, Vec<S>>::from_vec(
         width,
         height,
-        image.par_iter().map(|subp| f(*subp)).collect(),
+        image.par_iter().map(|subpixel| f(*subpixel)).collect(),
     )
     .expect("of course the length is good, it's just a map")
 }
