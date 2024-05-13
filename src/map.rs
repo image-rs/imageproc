@@ -676,12 +676,12 @@ mod benches {
     }
 
     macro_rules! bench_map_subpixels {
-        ($name:ident, $side_len:expr, $f:expr, $mapper:expr) => {
+        ($name:ident, $side_len:expr, $mapper:expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
                 let image = rgb_bench_image($side_len, $side_len);
                 b.iter(|| {
-                    let mapped = $mapper(&image, $f);
+                    let mapped = $mapper(&image, |x| f64::from(x).sqrt() as u8 + 1);
                     black_box(mapped);
                 });
             }
@@ -689,69 +689,28 @@ mod benches {
     }
 
     macro_rules! bench_map_subpixels_sequential {
-        ($name:ident, $side_len:expr, $f:expr) => {
-            bench_map_subpixels!($name, $side_len, $f, map_subpixels_sequential);
+        ($name:ident, $side_len:expr) => {
+            bench_map_subpixels!($name, $side_len, map_subpixels_sequential);
         };
     }
 
-    bench_map_subpixels_sequential!(
-        bench_map_subpixels_sequential_10,
-        10,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_sequential!(
-        bench_map_subpixels_sequential_30,
-        30,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_sequential!(
-        bench_map_subpixels_sequential_60,
-        60,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_sequential!(
-        bench_map_subpixels_sequential_100,
-        100,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_1000, 1000, |x| f64::from(x)
-        .sqrt()
-        as u8
-        + 1);
-    bench_map_subpixels_sequential!(
-        bench_map_subpixels_sequential_10_000,
-        10_000,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_10, 10);
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_30, 30);
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_60, 60);
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_100, 100);
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_1000, 1000);
+    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_10_000, 10_000);
 
     macro_rules! bench_map_subpixels_parallel {
-        ($name:ident, $side_len:expr, $f:expr) => {
-            bench_map_subpixels!($name, $side_len, $f, map_subpixels_parallel);
+        ($name:ident, $side_len:expr) => {
+            bench_map_subpixels!($name, $side_len, map_subpixels_parallel);
         };
     }
 
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_10, 10, |x| f64::from(x).sqrt()
-        as u8
-        + 1);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_30, 30, |x| f64::from(x).sqrt()
-        as u8
-        + 1);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_60, 60, |x| f64::from(x).sqrt()
-        as u8
-        + 1);
-    bench_map_subpixels_parallel!(
-        bench_map_subpixels_parallel_100,
-        100,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_parallel!(
-        bench_map_subpixels_parallel_1000,
-        1000,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
-    bench_map_subpixels_parallel!(
-        bench_map_subpixels_parallel_10_000,
-        10_000,
-        |x| f64::from(x).sqrt() as u8 + 1
-    );
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_10, 10);
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_30, 30);
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_60, 60);
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_100, 100);
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_1000, 1000);
+    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_10_000, 10_000);
 }
