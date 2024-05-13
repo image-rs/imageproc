@@ -845,7 +845,7 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// use imageproc::morphology::{Mask, grayscale_open};
 ///
 /// // Isolated regions of foreground pixels are removed,
-/// // while isolated zones of background pixels are maintaned
+/// // while isolated zones of background pixels are maintained
 /// let image = gray_image!(
 ///   100,  99,  99,  99, 222,  99;
 ///    99,  99,  99, 222, 222, 222;
@@ -855,7 +855,7 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// );
 ///
 /// // Isolated regions of foreground pixels are removed,
-/// // while isolated zones of background are maintaned
+/// // while isolated zones of background are maintained
 /// let image_opened = gray_image!(
 ///    99,  99,  99,  99,  99,  99;
 ///    99,  99,  99,  99,  99,  99;
@@ -910,7 +910,7 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// );
 ///
 /// // Isolated regions of background pixels are removed,
-/// // while isolated zones of foreground pixels are maintaned
+/// // while isolated zones of foreground pixels are maintained
 /// let image_closed = gray_image!(
 ///    99,  99,  99, 222, 222, 222;
 ///    99,  99,  99, 222, 222, 222;
