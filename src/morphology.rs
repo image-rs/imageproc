@@ -630,6 +630,36 @@ impl Mask {
     }
 }
 
+fn mask_reduce<F: Fn(u8, u8) -> u8>(
+    image: &GrayImage,
+    mask: &Mask,
+    neutral: u8,
+    operator: F,
+) -> GrayImage {
+    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
+        GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
+    for (y, line_group) in mask.lines().into_iter() {
+        let y = i64::from(y);
+        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
+        let input_rows = image
+            .chunks(image.width() as usize)
+            .skip(y.try_into().unwrap_or(0));
+        let output_rows = result
+            .chunks_mut(image.width() as usize)
+            .skip((-y).try_into().unwrap_or(0));
+        for (input_row, output_row) in input_rows.zip(output_rows) {
+            for x in x_line.iter().copied() {
+                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
+                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
+                {
+                    *output = operator(*input, *output);
+                }
+            }
+        }
+    }
+    result
+}
+
 /// computes the morphologic dilation of the input image with the given mask
 ///
 /// for each input pixel, the output pixel will be the maximum of all pixels included
@@ -714,28 +744,7 @@ impl Mask {
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
     // default is u8::MIN because it's the neutral element of max
-    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
-        GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MIN]));
-    for (y, line_group) in mask.lines().into_iter() {
-        let y = i64::from(y);
-        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
-        let input_rows = image
-            .chunks(image.width() as usize)
-            .skip(y.try_into().unwrap_or(0));
-        let output_rows = result
-            .chunks_mut(image.width() as usize)
-            .skip((-y).try_into().unwrap_or(0));
-        for (input_row, output_row) in input_rows.zip(output_rows) {
-            for x in x_line.iter().copied() {
-                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
-                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
-                {
-                    *output = (*output).max(*input);
-                }
-            }
-        }
-    }
-    result
+    mask_reduce(image, mask, u8::MIN, u8::max)
 }
 
 /// computes the morphologic erosion of the input image with the given mask
@@ -822,28 +831,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
     // default is u8::MAX because it's the neutral element of min
-    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
-        GrayImage::from_pixel(image.width(), image.height(), Luma([u8::MAX]));
-    for (y, line_group) in mask.lines().into_iter() {
-        let y = i64::from(y);
-        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
-        let input_rows = image
-            .chunks(image.width() as usize)
-            .skip(y.try_into().unwrap_or(0));
-        let output_rows = result
-            .chunks_mut(image.width() as usize)
-            .skip((-y).try_into().unwrap_or(0));
-        for (input_row, output_row) in input_rows.zip(output_rows) {
-            for x in x_line.iter().copied() {
-                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
-                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
-                {
-                    *output = (*output).min(*input);
-                }
-            }
-        }
-    }
-    result
+    mask_reduce(image, mask, u8::MAX, u8::min)
 }
 
 /// Grayscale erosion followed by grayscale dilation.
