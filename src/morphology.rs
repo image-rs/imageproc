@@ -370,7 +370,6 @@ pub struct Mask {
 }
 
 impl Mask {
-
     /// creates a mask from a grayscale image
     ///
     /// a pixel is part of the mask if and only if it is non-zero
