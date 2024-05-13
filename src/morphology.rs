@@ -370,10 +370,6 @@ pub struct Mask {
 }
 
 impl Mask {
-    fn new(elements: Vec<Point<i16>>) -> Self {
-        assert!(elements.len() <= (511 * 511) as usize);
-        Self { elements }
-    }
 
     /// creates a mask from a grayscale image
     ///
@@ -441,7 +437,7 @@ impl Mask {
             .filter(|(_, _, &p)| p[0] != 0)
             .map(|(x, y, _)| Point::new(x as i16 - center_x, y as i16 - center_y)) // cast to i16 ok because of the size check
             .collect();
-        Self::new(elements)
+        Self { elements }
     }
 
     /// creates a square-shaped mask
@@ -529,7 +525,7 @@ impl Mask {
         elements.extend((-radius..=radius).flat_map(|y| {
             ((y.abs() - radius)..=(radius - y.abs())).map(move |x| Point::new(x, y))
         }));
-        Self::new(elements)
+        Self { elements }
     }
 
     /// creates a disk-shaped mask
@@ -619,7 +615,7 @@ impl Mask {
         elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
             ((-i16::from(half_width))..=i16::from(half_width)).map(move |x| Point::new(x, y))
         }));
-        Self::new(elements)
+        Self { elements }
     }
 
     /// all the slices are guaranteed to be non empty
