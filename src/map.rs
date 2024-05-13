@@ -670,7 +670,7 @@ mod benches {
         ImageBuffer::<ChannelMap<P, S>, Vec<S>>::from_vec(
             width,
             height,
-            image.into_iter().map(|subp| f(*subp)).collect(),
+            image.iter().map(|subp| f(*subp)).collect(),
         )
         .expect("of course the length is good, it's just a map")
     }
