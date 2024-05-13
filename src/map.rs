@@ -101,53 +101,13 @@ where
     out
 }
 
-/// Applies `f` to each subpixel of the input image in place.
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::map::map_subpixels_mut;
-///
-/// let mut image = gray_image!(
-///     1, 2;
-///     3, 4);
-///
-/// let want = gray_image!(
-///     2, 4;
-///     6, 8);
-///
-/// map_subpixels_mut(&mut image, |x| 2 * x);
-///
-/// assert_pixels_eq!(
-///     image,
-///     want);
-/// # }
-/// ```
-pub fn map_subpixels_mut<I, P, F>(image: &mut I, f: F)
-where
-    I: GenericImage<Pixel = P>,
-    P: Pixel,
-    F: Fn(P::Subpixel) -> P::Subpixel,
-{
-    let (width, height) = image.dimensions();
-
-    for y in 0..height {
-        for x in 0..width {
-            let mut pixel = image.get_pixel(x, y);
-            let channels = pixel.channels_mut();
-            for c in 0..P::CHANNEL_COUNT as usize {
-                channels[c] =
-                    f(unsafe { *image.unsafe_get_pixel(x, y).channels().get_unchecked(c) });
-            }
-            image.put_pixel(x, y, pixel);
-        }
-    }
-}
-
 /// Applies `f` to each subpixel of the input image in parallel.
+///
+/// The performance of this function depends on the dimensions of the image and the complexity of
+/// the mapping function `f`. For small images and fast mapping functions the non-parallel version
+/// is often faster whereas for large images with slow mapping functions the parallel version is
+/// often faster. It is a good idea to benchmark your individual usecases to make sure you are using the most
+/// appropriate version.
 ///
 /// # Examples
 /// ```
@@ -197,6 +157,52 @@ where
         image.par_iter().map(|subpixel| f(*subpixel)).collect(),
     )
     .expect("of course the length is good, it's just a map")
+}
+
+/// Applies `f` to each subpixel of the input image in place.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::map::map_subpixels_mut;
+///
+/// let mut image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let want = gray_image!(
+///     2, 4;
+///     6, 8);
+///
+/// map_subpixels_mut(&mut image, |x| 2 * x);
+///
+/// assert_pixels_eq!(
+///     image,
+///     want);
+/// # }
+/// ```
+pub fn map_subpixels_mut<I, P, F>(image: &mut I, f: F)
+where
+    I: GenericImage<Pixel = P>,
+    P: Pixel,
+    F: Fn(P::Subpixel) -> P::Subpixel,
+{
+    let (width, height) = image.dimensions();
+
+    for y in 0..height {
+        for x in 0..width {
+            let mut pixel = image.get_pixel(x, y);
+            let channels = pixel.channels_mut();
+            for c in 0..P::CHANNEL_COUNT as usize {
+                channels[c] =
+                    f(unsafe { *image.unsafe_get_pixel(x, y).channels().get_unchecked(c) });
+            }
+            image.put_pixel(x, y, pixel);
+        }
+    }
 }
 
 /// Applies `f` to the color of each pixel in the input image.
