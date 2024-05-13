@@ -622,7 +622,7 @@ impl Mask {
         Self::new(elements)
     }
 
-    /// all the slices are garanteed to be non empty
+    /// all the slices are guaranteed to be non empty
     fn lines<'a>(
         &'a self,
     ) -> GroupBy<i16, Iter<Point<i16>>, impl FnMut(&&'a Point<i16>) -> i16 + '_> {
