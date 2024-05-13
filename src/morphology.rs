@@ -361,7 +361,7 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// The mask can have any size between 0 by 0 to 511 by 511 pixels
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
-    /// for any optimisation/arithmetic purposes, it is garanteed that :
+    /// for any optimisation/arithmetic purposes, it is guaranteed that:
     ///
     /// - all the integer values will be strictly between -512 and 512
     /// - all tuples will be sorted in reverse lexicographic order, line by line ((-1,-1),(0,-1),(1,-1),(-1,0),(0,0),...)
