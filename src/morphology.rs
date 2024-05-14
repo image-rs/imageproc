@@ -369,7 +369,12 @@ pub struct Mask {
 
 macro_rules! lines {
     ($mask:expr) => {
-        $mask.elements.iter().group_by(|p| p.y).into_iter()
+        $mask
+            .elements
+            .iter()
+            .group_by(|p| p.y)
+            .into_iter()
+            .map(|(y, line)| (y, line.map(|p| p.x)))
     };
 }
 
@@ -644,7 +649,7 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
     let mut result = GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
     for (y, line_group) in lines!(mask) {
         let y = i64::from(y);
-        let line = line_group.map(|p| p.x).collect::<Vec<_>>();
+        let line = line_group.collect::<Vec<_>>();
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(y.try_into().unwrap_or(0));
