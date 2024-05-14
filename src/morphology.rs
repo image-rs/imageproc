@@ -380,7 +380,7 @@ impl Mask {
     /// but the image itself must be at most 511 pixel wide and 511 pixel high.
     ///
     /// # Panics
-    /// if the input image is 512 or more pixels wide or 512 or more pixel high
+    /// If `image.width() >= 512` or `image.height() >= 512`.
     ///
     /// # Example
     /// ```
