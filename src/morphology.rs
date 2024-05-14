@@ -2051,7 +2051,7 @@ mod proptests {
         fn proptest_mask_disk(radius in any::<u8>()) {
             let actual = Mask::disk(radius);
             let expected = reference_mask_disk(radius);
-            assert_eq!(actual.elements, expected.elements);
+            assert_eq!(actual, expected);
         }
     }
 }

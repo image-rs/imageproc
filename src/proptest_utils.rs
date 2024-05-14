@@ -54,16 +54,45 @@ where
 }
 
 fn dims(width: impl Into<SizeRange>, height: impl Into<SizeRange>) -> BoxedStrategy<(u32, u32)> {
-    let width = dim(width);
-    let height = dim(height);
+    let width = to_range(width);
+    let height = to_range(height);
     width
         .prop_flat_map(move |w| height.clone().prop_map(move |h| (w, h)))
         .boxed()
 }
 
-fn dim(range: impl Into<SizeRange>) -> RangeInclusive<u32> {
+fn to_range(range: impl Into<SizeRange>) -> RangeInclusive<u32> {
     let range = range.into();
     range.start() as u32..=range.end_incl() as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_range() {
+        macro_rules! to_range {
+            ($range:expr) => {
+                to_range($range).collect::<Vec<_>>()
+            };
+        }
+
+        macro_rules! to_vec {
+            ($range:expr) => {
+                ($range).map(|x| x as u32).collect::<Vec<_>>()
+            };
+        }
+
+        assert_eq!(to_range!(0), [0]);
+        assert_eq!(to_range!(1), [1]);
+        assert_eq!(to_range!(..2), to_vec!(0..2));
+        assert_eq!(to_range!(..=2), to_vec!(0..=2));
+        assert_eq!(to_range!(2..4), to_vec!(2..4));
+        assert_eq!(to_range!(2..=4), to_vec!(2..=4));
+        assert_eq!(to_range!(2..2), to_vec!(2..2));
+        assert_eq!(to_range!(2..=2), to_vec!(2..=2));
+    }
 }
 
 #[cfg(not(miri))]
