@@ -60,7 +60,7 @@ impl<T: NumCast> Point<T> {
         Point::new(self.x.to_i32().unwrap(), self.y.to_i32().unwrap())
     }
 
-    /// Converts to a Point<i32>. Panics if the cast fails.
+    /// Converts to a Point<i16>. Panics if the cast fails.
     pub(crate) fn to_i16(&self) -> Point<i16> {
         Point::new(self.x.to_i16().unwrap(), self.y.to_i16().unwrap())
     }

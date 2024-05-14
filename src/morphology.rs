@@ -442,13 +442,7 @@ impl Mask {
 
     fn new(elements: Vec<Point<i16>>) -> Self {
         assert!(elements.len() <= (511 * 511) as usize);
-        debug_assert!({
-            let unique = elements
-                .iter()
-                .map(|p| (p.x, p.y))
-                .collect::<std::collections::HashSet<_>>();
-            unique.len() == elements.len()
-        });
+        debug_assert!(elements.iter().map(|p| (p.x, p.y)).all_unique());
         Self { elements }
     }
 
