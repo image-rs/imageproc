@@ -2004,7 +2004,7 @@ mod proptests {
     use crate::proptest_utils::{arbitrary_image, arbitrary_image_with};
     use proptest::prelude::*;
 
-    fn reference_mask_from_disk(radius: u8) -> Mask {
+    fn reference_mask_disk(radius: u8) -> Mask {
         let range = -(radius as i16)..=(radius as i16);
         let elements = range
             .clone()
@@ -2038,19 +2038,19 @@ mod proptests {
         }
 
         #[test]
-        fn proptest_mask_from_square(radius in any::<u8>()) {
+        fn proptest_mask_square(radius in any::<u8>()) {
             Mask::square(radius);
         }
 
         #[test]
-        fn proptest_mask_from_diamond(radius in any::<u8>()) {
+        fn proptest_mask_diamond(radius in any::<u8>()) {
             Mask::diamond(radius);
         }
 
         #[test]
-        fn proptest_mask_from_disk(radius in any::<u8>()) {
+        fn proptest_mask_disk(radius in any::<u8>()) {
             let actual = Mask::disk(radius);
-            let expected = reference_mask_from_disk(radius);
+            let expected = reference_mask_disk(radius);
             assert_eq!(actual.elements, expected.elements);
         }
     }
