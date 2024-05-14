@@ -446,13 +446,14 @@ impl Mask {
 
     fn new(elements: Vec<Point<i16>>) -> Self {
         assert!(elements.len() <= (511 * 511) as usize);
-        debug_assert!(elements.iter().map(|p| (p.x, p.y)).all_unique());
-        debug_assert!(elements.iter().tuple_windows().all(|(a, b)| a.y <= b.y));
-        let mask = Self { elements };
-        debug_assert!(
-            lines!(mask).all(|(_, line)| { line.tuple_windows().all(|(a, b)| a.x < b.x) })
-        );
-        mask
+        debug_assert!(elements.iter().tuple_windows().all(|(a, b)| {
+            if a.y == b.y {
+                a.x < b.x
+            } else {
+                a.y < b.y
+            }
+        }));
+        Self { elements }
     }
 
     /// creates a square-shaped mask
