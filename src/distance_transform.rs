@@ -143,7 +143,7 @@ fn distance_transform_impl_linf_or_l1<const IS_LINF: bool>(
     // We use an unsafe code block for optimisation purposes here
     // We use the 'unsafe_get_pixel' and 'check' unsafe functions,
     // which are faster than safe functions,
-    // and we garantee that they are used safely
+    // and we guarantee that they are used safely
     // by making sure we are always within the bounds of the image
 
     unsafe {

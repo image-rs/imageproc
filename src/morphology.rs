@@ -2,11 +2,14 @@
 //!
 //! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
-use crate::distance_transform::{
-    distance_transform_impl, distance_transform_mut, DistanceFrom, Norm,
+use std::slice::Iter;
+
+use crate::{
+    distance_transform::{distance_transform_impl, distance_transform_mut, DistanceFrom, Norm},
+    point::Point,
 };
 use image::{GrayImage, Luma};
-use itertools::Itertools;
+use itertools::{GroupBy, Itertools};
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -358,12 +361,12 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 /// The mask can have any size between 0 by 0 to 511 by 511 pixels
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
-    /// for any optimisation/arithmetic purposes, it is garanteed that :
+    /// for any optimisation/arithmetic purposes, it is guaranteed that:
     ///
     /// - all the integer values will be strictly between -512 and 512
-    /// - all tuples will be sorted in lexicographic order
+    /// - all tuples will be sorted in reverse lexicographic order, line by line ((-1,-1),(0,-1),(1,-1),(-1,0),(0,0),...)
     /// - no tuple shall appear twice
-    elements: Vec<(i16, i16)>,
+    elements: Vec<Point<i16>>,
 }
 
 impl Mask {
@@ -427,13 +430,13 @@ impl Mask {
             image.height() < 512,
             "the input image must be at most 511 pixels high"
         );
-        Self {
-            elements: (0..image.width() as i16)
-                .cartesian_product(0..(image.height() as i16))
-                .filter(|(x, y)| image.get_pixel(*x as u32, *y as u32).0[0] != 0)
-                .map(|(x, y)| (x - center_x as i16, y - center_y as i16))
-                .collect(),
-        }
+        let (center_x, center_y) = (i16::from(center_x), i16::from(center_y));
+        let elements = image
+            .enumerate_pixels()
+            .filter(|(_, _, &p)| p[0] != 0)
+            .map(|(x, y, _)| Point::new(x as i16 - center_x, y as i16 - center_y)) // cast to i16 ok because of the size check
+            .collect();
+        Self { elements }
     }
 
     /// creates a square-shaped mask
@@ -465,10 +468,14 @@ impl Mask {
     /// # }
     /// ```
     pub fn square(radius: u8) -> Self {
-        let range = -(radius as i16)..=(radius as i16);
-        Self {
-            elements: range.clone().cartesian_product(range).collect(),
-        }
+        let radius = i16::from(radius);
+        let range = -radius..=radius;
+        let elements = range
+            .clone()
+            .cartesian_product(range)
+            .map(|(y, x)| Point::new(x, y))
+            .collect();
+        Self { elements }
     }
 
     /// creates a diamond-shaped mask
@@ -511,13 +518,13 @@ impl Mask {
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
-        Self {
-            elements: (-(radius as i16)..=(radius as i16))
-                .flat_map(|x| {
-                    ((x.abs() - radius as i16)..=(radius as i16 - x.abs())).map(move |y| (x, y))
-                })
-                .collect(),
-        }
+        let mut elements =
+            Vec::with_capacity(1 + 2 * (usize::from(radius)) * (usize::from(radius) + 1));
+        let radius = i16::from(radius);
+        elements.extend((-radius..=radius).flat_map(|y| {
+            ((y.abs() - radius)..=(radius - y.abs())).map(move |x| Point::new(x, y))
+        }));
+        Self { elements }
     }
 
     /// creates a disk-shaped mask
@@ -576,33 +583,76 @@ impl Mask {
     /// # }
     /// ```
     pub fn disk(radius: u8) -> Self {
-        let range = -(radius as i16)..=(radius as i16);
-        Self {
-            elements: range
+        let radius_squared = u32::from(radius).pow(2);
+        let half_widths_per_height = std::iter::successors(
+            Some((-i16::from(radius), 0u8)),
+            |(last_height, last_half_width)| {
+                if *last_height == i16::from(radius) {
+                    return None;
+                };
+                let next_height = last_height + 1;
+                let height_squared = (u32::from(next_height.unsigned_abs())).pow(2);
+                let next_half_width = if next_height <= 0 {
+                    // upper part of the circle => increasing width
+                    (u32::from(*last_half_width)..)
+                        .find(|x| (x + 1).pow(2) + height_squared > radius_squared)?
+                } else {
+                    // lower part of the circle => decreasing width
+                    (0..=u32::from(*last_half_width))
+                        .rev()
+                        .find(|&x| x.pow(2) + height_squared <= radius_squared)?
+                } as u8; // next_half_width always fits in a u8 because he radius itself is a u8
+                Some((next_height, next_half_width))
+            },
+        );
+        let mut elements = Vec::with_capacity(
+            half_widths_per_height
                 .clone()
-                .cartesian_product(range)
-                .filter(|(x, y)| {
-                    (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
-                        <= (radius as u32).pow(2)
-                })
-                .collect(),
-        }
+                .map(|(_, half_width)| 2 * usize::from(half_width) + 1)
+                .sum(),
+        );
+        elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
+            ((-i16::from(half_width))..=i16::from(half_width)).map(move |x| Point::new(x, y))
+        }));
+        Self { elements }
     }
 
-    fn apply<'a, 'b: 'a, 'c: 'a>(
-        &'c self,
-        image: &'b GrayImage,
-        x: u32,
-        y: u32,
-    ) -> impl Iterator<Item = &'a Luma<u8>> {
-        self.elements
-            .iter()
-            .map(move |(i, j)| (x as i64 + *i as i64, y as i64 + *j as i64))
-            .filter(move |(i, j)| {
-                0 <= *i && *i < image.width() as i64 && 0 <= *j && *j < image.height() as i64
-            })
-            .map(move |(i, j)| image.get_pixel(i as u32, j as u32))
+    /// all the slices are guaranteed to be non empty
+    fn lines<'a>(
+        &'a self,
+    ) -> GroupBy<i16, Iter<Point<i16>>, impl FnMut(&&'a Point<i16>) -> i16 + '_> {
+        self.elements.iter().group_by(|p: &&'a Point<i16>| p.y)
     }
+}
+
+fn mask_reduce<F: Fn(u8, u8) -> u8>(
+    image: &GrayImage,
+    mask: &Mask,
+    neutral: u8,
+    operator: F,
+) -> GrayImage {
+    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
+        GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
+    for (y, line_group) in mask.lines().into_iter() {
+        let y = i64::from(y);
+        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
+        let input_rows = image
+            .chunks(image.width() as usize)
+            .skip(y.try_into().unwrap_or(0));
+        let output_rows = result
+            .chunks_mut(image.width() as usize)
+            .skip((-y).try_into().unwrap_or(0));
+        for (input_row, output_row) in input_rows.zip(output_rows) {
+            for x in x_line.iter().copied() {
+                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
+                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
+                {
+                    *output = operator(*input, *output);
+                }
+            }
+        }
+    }
+    result
 }
 
 /// computes the morphologic dilation of the input image with the given mask
@@ -688,14 +738,8 @@ impl Mask {
 /// # }
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
-    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .max()
-            .unwrap_or(u8::MIN)]) // default is u8::MIN because it's the neutral element of max
-    });
-    result
+    // default is u8::MIN because it's the neutral element of max
+    mask_reduce(image, mask, u8::MIN, u8::max)
 }
 
 /// computes the morphologic erosion of the input image with the given mask
@@ -781,14 +825,8 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// # }
 /// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
-    let result = GrayImage::from_fn(image.width(), image.height(), |x, y| {
-        Luma([mask
-            .apply(image, x, y)
-            .map(|l| l.0[0])
-            .min()
-            .unwrap_or(u8::MAX)]) // default is u8::MAX because it's the neutral element of min
-    });
-    result
+    // default is u8::MAX because it's the neutral element of min
+    mask_reduce(image, mask, u8::MAX, u8::min)
 }
 
 /// Grayscale erosion followed by grayscale dilation.
@@ -807,7 +845,7 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// use imageproc::morphology::{Mask, grayscale_open};
 ///
 /// // Isolated regions of foreground pixels are removed,
-/// // while isolated zones of background pixels are maintaned
+/// // while isolated zones of background pixels are maintained
 /// let image = gray_image!(
 ///   100,  99,  99,  99, 222,  99;
 ///    99,  99,  99, 222, 222, 222;
@@ -817,7 +855,7 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// );
 ///
 /// // Isolated regions of foreground pixels are removed,
-/// // while isolated zones of background are maintaned
+/// // while isolated zones of background are maintained
 /// let image_opened = gray_image!(
 ///    99,  99,  99,  99,  99,  99;
 ///    99,  99,  99,  99,  99,  99;
@@ -872,7 +910,7 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// );
 ///
 /// // Isolated regions of background pixels are removed,
-/// // while isolated zones of foreground pixels are maintaned
+/// // while isolated zones of foreground pixels are maintained
 /// let image_closed = gray_image!(
 ///    99,  99,  99, 222, 222, 222;
 ///    99,  99,  99, 222, 222, 222;
@@ -1991,4 +2029,142 @@ mod benches {
             black_box(dilated);
         })
     }
+
+    #[bench]
+    fn bench_grayscale_mask_from_image(b: &mut Bencher) {
+        let image = GrayImage::from_fn(200, 200, |x, y| Luma([(x + y % 3) as u8]));
+        b.iter(|| {
+            let mask = Mask::from_image(&image, 100, 100);
+            black_box(mask);
+        })
+    }
+
+    macro_rules! bench_grayscale_mask {
+        ($name:ident, $f:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                b.iter(|| {
+                    let mask = $f(100);
+                    black_box(mask);
+                })
+            }
+        };
+    }
+
+    bench_grayscale_mask!(bench_grayscale_square_mask, Mask::square);
+    bench_grayscale_mask!(bench_grayscale_diamond_mask, Mask::diamond);
+    bench_grayscale_mask!(bench_grayscale_disk_mask, Mask::disk);
+
+    macro_rules! bench_grayscale_operator {
+        ($name:ident, $f:expr, $mask:expr, $img_size:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image =
+                    GrayImage::from_fn($img_size, $img_size, |x, y| Luma([(x + y % 3) as u8]));
+                let mask = $mask;
+                b.iter(|| {
+                    let processed = $f(&image, &mask);
+                    black_box(processed);
+                })
+            }
+        };
+    }
+
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_small_image_point,
+        grayscale_erode,
+        Mask::diamond(0),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_medium_image_point,
+        grayscale_erode,
+        Mask::diamond(0),
+        200
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_big_image_point,
+        grayscale_erode,
+        Mask::diamond(0),
+        1000
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_small_image_diamond,
+        grayscale_erode,
+        Mask::diamond(5),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_medium_image_diamond,
+        grayscale_erode,
+        Mask::diamond(5),
+        200
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_big_image_diamond,
+        grayscale_erode,
+        Mask::diamond(5),
+        1000
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_small_image_large_square,
+        grayscale_erode,
+        Mask::square(25),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_erode_medium_image_large_square,
+        grayscale_erode,
+        Mask::square(25),
+        200
+    );
+
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_small_image_point,
+        grayscale_dilate,
+        Mask::diamond(0),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_medium_image_point,
+        grayscale_dilate,
+        Mask::diamond(0),
+        200
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_big_image_point,
+        grayscale_dilate,
+        Mask::diamond(0),
+        1000
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_small_image_diamond,
+        grayscale_dilate,
+        Mask::diamond(5),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_medium_image_diamond,
+        grayscale_dilate,
+        Mask::diamond(5),
+        200
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_big_image_diamond,
+        grayscale_dilate,
+        Mask::diamond(5),
+        1000
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_small_image_large_square,
+        grayscale_dilate,
+        Mask::square(25),
+        50
+    );
+    bench_grayscale_operator!(
+        bench_grayscale_op_dilate_medium_image_large_square,
+        grayscale_dilate,
+        Mask::square(25),
+        200
+    );
 }
