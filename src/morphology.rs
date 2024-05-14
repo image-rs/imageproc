@@ -2,14 +2,12 @@
 //!
 //! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
-use std::slice::Iter;
-
 use crate::{
     distance_transform::{distance_transform_impl, distance_transform_mut, DistanceFrom, Norm},
     point::Point,
 };
 use image::{GrayImage, Luma};
-use itertools::{GroupBy, Itertools};
+use itertools::Itertools;
 
 /// Sets all pixels within distance `k` of a foreground pixel to white.
 ///
@@ -369,6 +367,12 @@ pub struct Mask {
     elements: Vec<Point<i16>>,
 }
 
+macro_rules! lines {
+    ($mask:expr) => {
+        $mask.elements.iter().group_by(|p| p.y).into_iter()
+    };
+}
+
 impl Mask {
     /// creates a mask from a grayscale image
     ///
@@ -443,7 +447,12 @@ impl Mask {
     fn new(elements: Vec<Point<i16>>) -> Self {
         assert!(elements.len() <= (511 * 511) as usize);
         debug_assert!(elements.iter().map(|p| (p.x, p.y)).all_unique());
-        Self { elements }
+        debug_assert!(elements.iter().tuple_windows().all(|(a, b)| a.y <= b.y));
+        let mask = Self { elements };
+        debug_assert!(
+            lines!(mask).all(|(_, line)| { line.tuple_windows().all(|(a, b)| a.x < b.x) })
+        );
+        mask
     }
 
     /// creates a square-shaped mask
@@ -623,13 +632,6 @@ impl Mask {
         elements.extend(points);
         Self::new(elements)
     }
-
-    /// all the slices are guaranteed to be non empty
-    fn lines<'a>(
-        &'a self,
-    ) -> GroupBy<i16, Iter<Point<i16>>, impl FnMut(&&'a Point<i16>) -> i16 + '_> {
-        self.elements.iter().group_by(|p: &&'a Point<i16>| p.y)
-    }
 }
 
 fn mask_reduce<F: Fn(u8, u8) -> u8>(
@@ -639,9 +641,9 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
     operator: F,
 ) -> GrayImage {
     let mut result = GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
-    for (y, line_group) in mask.lines().into_iter() {
+    for (y, line_group) in lines!(mask) {
         let y = i64::from(y);
-        let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
+        let line = line_group.map(|p| p.x).collect::<Vec<_>>();
         let input_rows = image
             .chunks(image.width() as usize)
             .skip(y.try_into().unwrap_or(0));
@@ -649,11 +651,11 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
             .chunks_mut(image.width() as usize)
             .skip((-y).try_into().unwrap_or(0));
         for (input_row, output_row) in input_rows.zip(output_rows) {
-            for x in x_line.iter().copied() {
-                for (input, output) in (input_row.iter().skip(x.try_into().unwrap_or(0)))
-                    .zip(output_row.iter_mut().skip((-x).try_into().unwrap_or(0)))
-                {
-                    *output = operator(*input, *output);
+            for x in line.iter().copied() {
+                let inputs = input_row.iter().skip(x.try_into().unwrap_or(0));
+                let outputs = output_row.iter_mut().skip((-x).try_into().unwrap_or(0));
+                for (&input, output) in inputs.zip(outputs) {
+                    *output = operator(input, *output);
                 }
             }
         }
