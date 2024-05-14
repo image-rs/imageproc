@@ -7,7 +7,7 @@ use proptest::{
 };
 use std::{fmt, ops::RangeInclusive};
 
-/// Create a strategy to generate images with arbitrary dimensions selected
+/// Create a strategy to generate arbitrary images with dimensions selected
 /// within the specified ranges.
 pub(crate) fn arbitrary_image<P>(
     width_range: impl Into<SizeRange>,
@@ -15,22 +15,39 @@ pub(crate) fn arbitrary_image<P>(
 ) -> BoxedStrategy<Image<P>>
 where
     P: Pixel + fmt::Debug,
-    P::Subpixel: Arbitrary,
-    <P::Subpixel as Arbitrary>::Strategy: 'static,
+    P::Subpixel: Arbitrary + fmt::Debug,
+    <P::Subpixel as Arbitrary>::Strategy: Clone + 'static,
+{
+    arbitrary_image_with(any::<P::Subpixel>(), width_range, height_range)
+}
+
+/// Create a strategy to generate images with a given subpixel strategy and
+/// dimensions selected within the specified ranges.
+pub(crate) fn arbitrary_image_with<P>(
+    subpixels: impl Strategy<Value = P::Subpixel> + Clone + 'static,
+    width_range: impl Into<SizeRange>,
+    height_range: impl Into<SizeRange>,
+) -> BoxedStrategy<Image<P>>
+where
+    P: Pixel + fmt::Debug,
+    P::Subpixel: fmt::Debug,
 {
     dims(width_range, height_range)
-        .prop_flat_map(|(w, h)| arbitrary_image_fixed(w, h))
+        .prop_flat_map(move |(w, h)| fixed_image_with(subpixels.clone(), w, h))
         .boxed()
 }
 
-fn arbitrary_image_fixed<P>(width: u32, height: u32) -> BoxedStrategy<Image<P>>
+fn fixed_image_with<P>(
+    strategy: impl Strategy<Value = P::Subpixel> + 'static,
+    width: u32,
+    height: u32,
+) -> BoxedStrategy<Image<P>>
 where
     P: Pixel + fmt::Debug,
-    P::Subpixel: Arbitrary,
-    <P::Subpixel as Arbitrary>::Strategy: 'static,
+    P::Subpixel: fmt::Debug,
 {
     let size = (width * height * P::CHANNEL_COUNT as u32) as usize;
-    let vecs = proptest::collection::vec(any::<P::Subpixel>(), size);
+    let vecs = proptest::collection::vec(strategy, size);
 
     vecs.prop_map(move |v| Image::from_vec(width, height, v).unwrap())
         .boxed()

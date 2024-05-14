@@ -430,12 +430,18 @@ impl Mask {
             image.height() < 512,
             "the input image must be at most 511 pixels high"
         );
-        let (center_x, center_y) = (i16::from(center_x), i16::from(center_y));
+        let center = Point::new(center_x, center_y).to_i16();
         let elements = image
             .enumerate_pixels()
             .filter(|(_, _, &p)| p[0] != 0)
-            .map(|(x, y, _)| Point::new(x as i16 - center_x, y as i16 - center_y)) // cast to i16 ok because of the size check
+            .map(|(x, y, _)| Point::new(x, y).to_i16())
+            .map(|p| p - center)
             .collect();
+        Self::new(elements)
+    }
+
+    fn new(elements: Vec<Point<i16>>) -> Self {
+        assert!(elements.len() <= (511 * 511) as usize);
         Self { elements }
     }
 
@@ -475,7 +481,7 @@ impl Mask {
             .cartesian_product(range)
             .map(|(y, x)| Point::new(x, y))
             .collect();
-        Self { elements }
+        Self::new(elements)
     }
 
     /// creates a diamond-shaped mask
@@ -518,13 +524,13 @@ impl Mask {
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
-        let mut elements =
-            Vec::with_capacity(1 + 2 * (usize::from(radius)) * (usize::from(radius) + 1));
+        let cap = 1 + 2 * usize::from(radius) * (usize::from(radius) + 1);
+        let mut elements = Vec::with_capacity(cap);
         let radius = i16::from(radius);
-        elements.extend((-radius..=radius).flat_map(|y| {
-            ((y.abs() - radius)..=(radius - y.abs())).map(move |x| Point::new(x, y))
-        }));
-        Self { elements }
+        let points = (-radius..=radius)
+            .flat_map(|y| ((y.abs() - radius)..=(radius - y.abs())).map(move |x| Point::new(x, y)));
+        elements.extend(points);
+        Self::new(elements)
     }
 
     /// creates a disk-shaped mask
@@ -586,35 +592,35 @@ impl Mask {
         let radius_squared = u32::from(radius).pow(2);
         let half_widths_per_height = std::iter::successors(
             Some((-i16::from(radius), 0u8)),
-            |(last_height, last_half_width)| {
-                if *last_height == i16::from(radius) {
+            |&(last_height, last_half_width)| {
+                if last_height == i16::from(radius) {
                     return None;
                 };
                 let next_height = last_height + 1;
                 let height_squared = (u32::from(next_height.unsigned_abs())).pow(2);
                 let next_half_width = if next_height <= 0 {
                     // upper part of the circle => increasing width
-                    (u32::from(*last_half_width)..)
+                    (u32::from(last_half_width)..)
                         .find(|x| (x + 1).pow(2) + height_squared > radius_squared)?
                 } else {
                     // lower part of the circle => decreasing width
-                    (0..=u32::from(*last_half_width))
+                    (0u32..=last_half_width.into())
                         .rev()
                         .find(|&x| x.pow(2) + height_squared <= radius_squared)?
-                } as u8; // next_half_width always fits in a u8 because he radius itself is a u8
-                Some((next_height, next_half_width))
+                };
+                Some((next_height, next_half_width.try_into().unwrap()))
             },
         );
-        let mut elements = Vec::with_capacity(
-            half_widths_per_height
-                .clone()
-                .map(|(_, half_width)| 2 * usize::from(half_width) + 1)
-                .sum(),
-        );
-        elements.extend(half_widths_per_height.flat_map(|(y, half_width)| {
-            ((-i16::from(half_width))..=i16::from(half_width)).map(move |x| Point::new(x, y))
-        }));
-        Self { elements }
+        let cap = half_widths_per_height
+            .clone()
+            .map(|(_, half_width)| 2 * usize::from(half_width) + 1)
+            .sum();
+        let mut elements = Vec::with_capacity(cap);
+        let points = half_widths_per_height.flat_map(|(y, half_width)| {
+            (-i16::from(half_width)..=i16::from(half_width)).map(move |x| Point::new(x, y))
+        });
+        elements.extend(points);
+        Self::new(elements)
     }
 
     /// all the slices are guaranteed to be non empty
@@ -631,8 +637,7 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
     neutral: u8,
     operator: F,
 ) -> GrayImage {
-    let mut result: image::ImageBuffer<Luma<u8>, Vec<u8>> =
-        GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
+    let mut result = GrayImage::from_pixel(image.width(), image.height(), Luma([neutral]));
     for (y, line_group) in mask.lines().into_iter() {
         let y = i64::from(y);
         let x_line = line_group.map(|p| p.x).collect::<Vec<_>>();
@@ -1982,6 +1987,64 @@ mod tests {
             u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX, u8::MAX
         );
         assert_eq!(grayscale_erode(&image, &mask), dilated);
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::{arbitrary_image, arbitrary_image_with};
+    use proptest::prelude::*;
+
+    fn reference_mask_from_disk(radius: u8) -> Mask {
+        let range = -(radius as i16)..=(radius as i16);
+        let elements = range
+            .clone()
+            .cartesian_product(range)
+            .filter(|(y, x)| {
+                (x.unsigned_abs() as u32).pow(2) + (y.unsigned_abs() as u32).pow(2)
+                    <= (radius as u32).pow(2)
+            })
+            .map(|(y, x)| Point::new(x, y))
+            .collect();
+        Mask::new(elements)
+    }
+
+    proptest! {
+        #[test]
+        fn proptest_mask_from_white_image(
+            img in arbitrary_image_with(Just(255), 0..=511, 0..=511),
+            x in any::<u8>(),
+            y in any::<u8>(),
+        ) {
+            Mask::from_image(&img, x, y);
+        }
+
+        #[test]
+        fn proptest_mask_from_image(
+            img in arbitrary_image(0..=511, 0..=511),
+            x in any::<u8>(),
+            y in any::<u8>(),
+        ) {
+            Mask::from_image(&img, x, y);
+        }
+
+        #[test]
+        fn proptest_mask_from_square(radius in any::<u8>()) {
+            Mask::square(radius);
+        }
+
+        #[test]
+        fn proptest_mask_from_diamond(radius in any::<u8>()) {
+            Mask::diamond(radius);
+        }
+
+        #[test]
+        fn proptest_mask_from_disk(radius in any::<u8>()) {
+            let actual = Mask::disk(radius);
+            let expected = reference_mask_from_disk(radius);
+            assert_eq!(actual.elements, expected.elements);
+        }
     }
 }
 
