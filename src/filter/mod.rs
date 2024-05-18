@@ -282,11 +282,12 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
     #[cfg(feature = "rayon")]
-    pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
+    pub fn filter<P, F, Q>(&self, image: &Image<P>, f: F) -> Image<Q>
     where
         P: Pixel + Sync,
-        <P as Pixel>::Subpixel: Into<K> + Sync,
+        <P as Pixel>::Subpixel: Into<K> + Send + Sync,
         Q: Pixel + Send + Sync,
+        <Q as Pixel>::Subpixel: Send,
         K: Sync,
         F: Fn(&mut Q::Subpixel, K) + Send + Sync, // TODO: Had to lift FnMut to Fn
     {
@@ -296,56 +297,44 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
         let (k_width, k_height) = (self.width as i64, self.height as i64);
         let (width, height) = (width as i64, height as i64);
 
-        let mut out = Image::<Q>::new(width as u32, height as u32);
+        let out = Image::<Q>::new(width as u32, height as u32);
         if width == 0 || height == 0 {
             return out;
         }
 
-        // We can't call Q::new() directly.
-        let seed = out.get_pixel(0, 0).clone();
+        let mut out_data = out.into_raw();
 
-        // TODO: Pre-allocate output image, then take slices of rows
-        let lines: Vec<(u32, Vec<Q>)> = (0..height)
-            .into_par_iter()
-            .map(|y| {
-                let mut out_line = Vec::with_capacity(width as usize);
+        out_data
+            .par_chunks_mut(width as usize * num_channels)
+            .enumerate()
+            .for_each(|(y, out_row)| {
                 let mut acc = vec![zero; num_channels];
+
                 for x in 0..width {
                     for k_y in 0..k_height {
-                        let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
+                        let y_p = min(height - 1, max(0, y as i64 + k_y - k_height / 2)) as u32;
                         for k_x in 0..k_width {
                             let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
                             debug_assert!(image.in_bounds(x_p, y_p));
                             debug_assert!(((k_y * k_width + k_x) as usize) < self.data.len());
-                            accumulate(
-                                &mut acc,
-                                unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                                unsafe { *self.data.get_unchecked((k_y * k_width + k_x) as usize) },
-                            );
+                            let px = unsafe { &image.unsafe_get_pixel(x_p, y_p) };
+                            let coefficient =
+                                unsafe { *self.data.get_unchecked((k_y * k_width + k_x) as usize) };
+                            accumulate(&mut acc, px, coefficient);
                         }
                     }
-                    let mut out_pixel = seed.clone();
-                    {
-                        let out_channels = out_pixel.channels_mut();
-                        for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                            f(c, *a);
-                            *a = zero;
-                        }
+
+                    let pixel_slice = &mut out_row[(x as usize * num_channels)..][..num_channels];
+
+                    for (a, c) in acc.iter_mut().zip(pixel_slice.iter_mut()) {
+                        f(c, *a);
+                        *a = zero;
                     }
-                    out_line.push(out_pixel);
                 }
-                (y as u32, out_line)
-            })
-            .collect();
+            });
 
-        // TODO: Can this be improved?
-        for (y, line) in lines {
-            for (x, pixel) in line.into_iter().enumerate() {
-                out.put_pixel(x as u32, y, pixel);
-            }
-        }
-
-        out
+        Image::<Q>::from_raw(width as u32, height as u32, out_data)
+            .expect("failed to create output from raw data")
     }
 }
 
