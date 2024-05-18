@@ -16,6 +16,9 @@ use num::Num;
 use std::cmp::{max, min};
 use std::f32;
 
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+
 /// Denoise 8-bit grayscale image using bilateral filtering.
 ///
 /// # Arguments
@@ -233,6 +236,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+    #[cfg(not(feature = "rayon"))]
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
         P: Pixel,
@@ -269,6 +273,75 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
                     f(c, *a);
                     *a = zero;
                 }
+            }
+        }
+
+        out
+    }
+
+    /// Returns 2d correlation of an image. Intermediate calculations are performed
+    /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+    #[cfg(feature = "rayon")]
+    pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
+    where
+        P: Pixel + Sync,
+        <P as Pixel>::Subpixel: Into<K> + Sync,
+        Q: Pixel + Send + Sync,
+        K: Sync,
+        F: Fn(&mut Q::Subpixel, K) + Send + Sync, // TODO: Had to lift FnMut to Fn
+    {
+        let (width, height) = image.dimensions();
+        let num_channels = P::CHANNEL_COUNT as usize;
+        let zero = K::zero();
+        let (k_width, k_height) = (self.width as i64, self.height as i64);
+        let (width, height) = (width as i64, height as i64);
+
+        let mut out = Image::<Q>::new(width as u32, height as u32);
+        if width == 0 || height == 0 {
+            return out;
+        }
+
+        // We can't call Q::new() directly.
+        let seed = out.get_pixel(0, 0).clone();
+
+        // TODO: Pre-allocate output image, then take slices of rows
+        let lines: Vec<(u32, Vec<Q>)> = (0..height)
+            .into_par_iter()
+            .map(|y| {
+                let mut out_line = Vec::with_capacity(width as usize);
+                let mut acc = vec![zero; num_channels];
+                for x in 0..width {
+                    for k_y in 0..k_height {
+                        let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
+                        for k_x in 0..k_width {
+                            let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
+                            debug_assert!(image.in_bounds(x_p, y_p));
+                            debug_assert!(((k_y * k_width + k_x) as usize) < self.data.len());
+                            accumulate(
+                                &mut acc,
+                                unsafe { &image.unsafe_get_pixel(x_p, y_p) },
+                                unsafe { *self.data.get_unchecked((k_y * k_width + k_x) as usize) },
+                            );
+                        }
+                    }
+                    let mut out_pixel = seed.clone();
+                    {
+                        let out_channels = out_pixel.channels_mut();
+                        for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
+                            f(c, *a);
+                            *a = zero;
+                        }
+                    }
+                    out_line.push(out_pixel);
+                }
+                (y as u32, out_line)
+            })
+            .collect();
+
+        // TODO: Can this be improved?
+        for (y, line) in lines {
+            for (x, pixel) in line.into_iter().enumerate() {
+                out.put_pixel(x as u32, y, pixel);
             }
         }
 
@@ -345,10 +418,11 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
-    P::Subpixel: Into<K>,
-    S: Clamp<K> + Primitive,
-    P: WithChannel<S>,
-    K: Num + Copy,
+    P::Subpixel: Into<K> + Send + Sync,
+    S: Clamp<K> + Primitive + Send + Sync,
+    P: WithChannel<S> + Send + Sync,
+    <P as WithChannel<S>>::Pixel: Send + Sync,
+    K: Num + Copy + Send + Sync,
 {
     let kernel = Kernel::new(kernel, 3, 3);
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
