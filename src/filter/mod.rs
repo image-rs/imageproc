@@ -386,6 +386,9 @@ where
 
 /// Returns 2d correlation of an image with a row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+///
+/// A parallelized version of this function exists with [`filter_clamped_parallel`] when
+/// the crate `rayon` feature is enabled.
 pub fn filter_clamped<P, K, S>(image: &Image<P>, kernel: Kernel<K>) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: Into<K>,
