@@ -647,6 +647,7 @@ pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Calculates the Laplacian of an image.
+/// This version uses rayon to parallelize the computation.
 ///
 /// The Laplacian is computed by filtering the image using the following 3x3 kernel:
 /// ```notrust
@@ -925,6 +926,31 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rayon")]
+    fn test_filter_clamped_parallel_with_results_outside_input_channel_range() {
+        #[rustfmt::skip]
+            let kernel: Kernel<i32> = Kernel::new(&[
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1
+        ], 3, 3);
+
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4
+        );
+
+        let filtered = filter_clamped_parallel(&image, kernel);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
     #[should_panic]
     fn test_kernel_must_be_nonempty() {
         let k: &[u8] = &[];
@@ -1174,7 +1200,7 @@ mod benches {
     }
 
     #[bench]
-    fn bench_filter3x3_parallel_i32_filter(b: &mut Bencher) {
+    fn bench_filter_clamped_parallel_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         #[rustfmt::skip]
         let kernel: Kernel<i32> = Kernel::new(&[
