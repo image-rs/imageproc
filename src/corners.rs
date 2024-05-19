@@ -318,15 +318,8 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
         )
     };
 
-    let above = (p0 > high_thresh && p4 > high_thresh)
-        || (p4 > high_thresh && p8 > high_thresh)
-        || (p8 > high_thresh && p12 > high_thresh)
-        || (p12 > high_thresh && p0 > high_thresh);
-
-    let below = (p0 < low_thresh && p4 < low_thresh)
-        || (p4 < low_thresh && p8 < low_thresh)
-        || (p8 < low_thresh && p12 < low_thresh)
-        || (p12 < low_thresh && p0 < low_thresh);
+    let above = (p12 > high_thresh || p4 > high_thresh) && (p8 > high_thresh || p0 > high_thresh);
+    let below = (p12 < low_thresh || p4 < low_thresh) && (p8 < low_thresh || p0 < low_thresh);
 
     if !above && !below {
         return false;

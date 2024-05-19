@@ -650,7 +650,7 @@ fn colored(s: &str, c: Color) -> String {
 
 /// Loads image at given path, panicking on failure.
 pub fn load_image_or_panic<P: AsRef<Path> + fmt::Debug>(path: P) -> DynamicImage {
-    open(path.as_ref()).expect(&format!("Could not load image at {:?}", path.as_ref()))
+    open(path.as_ref()).unwrap_or_else(|_| panic!("Could not load image at {:?}", path.as_ref()))
 }
 
 /// Gray image to use in benchmarks. This is neither noise nor
