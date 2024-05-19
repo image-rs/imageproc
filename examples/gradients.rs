@@ -5,11 +5,8 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-#[cfg(not(feature = "rayon"))]
-use imageproc::filter::filter_clamped;
-#[cfg(feature = "rayon")]
-use imageproc::filter::filter_clamped_parallel as filter_clamped;
 use imageproc::{
+    filter::filter_clamped,
     kernel::{self, Kernel},
     map::map_subpixels,
 };
