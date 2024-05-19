@@ -4,29 +4,34 @@
 //!
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
-use image::{open, GrayImage, Luma};
+use image::{open, GrayImage};
 use imageproc::{
-    definitions::Image,
-    gradients::{
-        horizontal_prewitt, horizontal_scharr, horizontal_sobel, vertical_prewitt, vertical_scharr,
-        vertical_sobel,
-    },
-    map::map_pixels,
+    filter::filter_clamped,
+    kernel::{self, Kernel},
+    map::map_subpixels,
 };
 use std::{env, fs, path::Path};
 
-fn compute_gradients<F>(
+fn save_gradients(
     input: &GrayImage,
-    gradient_func: F,
+    horizontal_kernel: Kernel<i32>,
+    vertical_kernel: Kernel<i32>,
     output_dir: &Path,
-    file_name: &str,
+    name: &str,
     scale: i16,
-) where
-    F: Fn(&GrayImage) -> Image<Luma<i16>>,
-{
-    let gradient = gradient_func(input);
-    let gradient = map_pixels(&gradient, |_, _, p| Luma([(p[0].abs() / scale) as u8]));
-    gradient.save(&output_dir.join(file_name)).unwrap();
+) {
+    let horizontal_gradients = filter_clamped(input, horizontal_kernel);
+    let vertical_gradients = filter_clamped(input, vertical_kernel);
+
+    let horizontal_scaled = map_subpixels(&horizontal_gradients, |p: i16| (p.abs() / scale) as u8);
+    let vertical_scaled = map_subpixels(&vertical_gradients, |p: i16| (p.abs() / scale) as u8);
+
+    horizontal_scaled
+        .save(&output_dir.join(format!("{name}_horizontal.png")))
+        .unwrap();
+    vertical_scaled
+        .save(&output_dir.join(format!("{name}_vertical.png")))
+        .unwrap();
 }
 
 fn main() {
@@ -57,46 +62,32 @@ fn main() {
     let gray_path = output_dir.join("grey.png");
     input_image.save(&gray_path).unwrap();
 
-    compute_gradients(
-        &input_image,
-        horizontal_scharr,
-        output_dir,
-        "horizontal_scharr.png",
-        32,
-    );
-    compute_gradients(
-        &input_image,
-        vertical_scharr,
-        output_dir,
-        "vertical_scharr.png",
-        32,
-    );
-    compute_gradients(
-        &input_image,
-        horizontal_sobel,
-        output_dir,
-        "horizontal_sobel.png",
-        8,
-    );
-    compute_gradients(
-        &input_image,
-        vertical_sobel,
-        output_dir,
-        "vertical_sobel.png",
-        8,
-    );
-    compute_gradients(
-        &input_image,
-        horizontal_prewitt,
-        output_dir,
-        "horizontal_prewitt.png",
-        6,
-    );
-    compute_gradients(
-        &input_image,
-        vertical_prewitt,
-        output_dir,
-        "vertical_prewitt.png",
-        6,
-    );
+    for (name, horizontal, vertical, scale) in [
+        (
+            "sobel",
+            kernel::SOBEL_HORIZONTAL_3X3,
+            kernel::SOBEL_VERTICAL_3X3,
+            32,
+        ),
+        (
+            "scharr",
+            kernel::SCHARR_HORIZONTAL_3X3,
+            kernel::SCHARR_VERTICAL_3X3,
+            8,
+        ),
+        (
+            "prewitt",
+            kernel::PREWITT_HORIZONTAL_3X3,
+            kernel::PREWITT_VERTICAL_3X3,
+            6,
+        ),
+        (
+            "roberts",
+            kernel::ROBERTS_HORIZONTAL_2X2,
+            kernel::ROBERTS_VERTICAL_2X2,
+            4,
+        ),
+    ] {
+        save_gradients(&input_image, horizontal, vertical, output_dir, name, scale);
+    }
 }
