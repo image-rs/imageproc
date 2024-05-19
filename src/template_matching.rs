@@ -92,6 +92,7 @@ pub fn match_template(
 }
 
 #[cfg(feature = "rayon")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 /// Slides a `template` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///

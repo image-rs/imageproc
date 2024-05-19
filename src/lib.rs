@@ -9,6 +9,7 @@
 //! [image]: https://github.com/image-rs/image
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(
     clippy::cast_lossless,
     clippy::too_many_arguments,
@@ -68,6 +69,7 @@ pub mod suppress;
 pub mod template_matching;
 pub mod union_find;
 #[cfg(feature = "display-window")]
+#[cfg_attr(docsrs, doc(cfg(feature = "display-window")))]
 pub mod window;
 
 pub use image;
