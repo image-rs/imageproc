@@ -37,70 +37,68 @@ impl<'a, K> Kernel<'a, K> {
     }
 }
 
-impl<'a> Kernel<'a, i32> {
-    /// The sobel horizontal 3x3 kernel.
-    pub const SOBEL_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-1, 0, 1, -2, 0, 2, -1, 0, 1],
-        width: 3,
-        height: 3,
-    };
-    /// The sobel vertical 3x3 kernel.
-    pub const SOBEL_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-1, -2, -1, 0, 0, 0, 1, 2, 1],
-        width: 3,
-        height: 3,
-    };
+/// The sobel horizontal 3x3 kernel.
+pub const SOBEL_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-1, 0, 1, -2, 0, 2, -1, 0, 1],
+    width: 3,
+    height: 3,
+};
+/// The sobel vertical 3x3 kernel.
+pub const SOBEL_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-1, -2, -1, 0, 0, 0, 1, 2, 1],
+    width: 3,
+    height: 3,
+};
 
-    /// The scharr horizontal 3x3 kernel.
-    pub const SCHARR_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-3, 0, 3, -10, 0, 10, -3, 0, 3],
-        width: 3,
-        height: 3,
-    };
-    /// The scharr vertical 3x3 kernel.
-    pub const SCHARR_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-3, -10, -3, 0, 0, 0, 3, 10, 3],
-        width: 3,
-        height: 3,
-    };
+/// The scharr horizontal 3x3 kernel.
+pub const SCHARR_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-3, 0, 3, -10, 0, 10, -3, 0, 3],
+    width: 3,
+    height: 3,
+};
+/// The scharr vertical 3x3 kernel.
+pub const SCHARR_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-3, -10, -3, 0, 0, 0, 3, 10, 3],
+    width: 3,
+    height: 3,
+};
 
-    /// The prewitt horizontal 3x3 kernel.
-    pub const PREWITT_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-1, 0, 1, -1, 0, 1, -1, 0, 1],
-        width: 3,
-        height: 3,
-    };
-    /// The prewitt vertical 3x3 kernel.
-    pub const PREWITT_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-        data: &[-1, -1, -1, 0, 0, 0, 1, 1, 1],
-        width: 3,
-        height: 3,
-    };
+/// The prewitt horizontal 3x3 kernel.
+pub const PREWITT_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-1, 0, 1, -1, 0, 1, -1, 0, 1],
+    width: 3,
+    height: 3,
+};
+/// The prewitt vertical 3x3 kernel.
+pub const PREWITT_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
+    data: &[-1, -1, -1, 0, 0, 0, 1, 1, 1],
+    width: 3,
+    height: 3,
+};
 
-    /// The roberts horizontal 3x3 kernel.
-    pub const ROBERTS_HORIZONTAL_2X2: Kernel<'static, i32> = Kernel {
-        data: &[1, 0, 0, -1],
-        width: 2,
-        height: 2,
-    };
-    /// The roberts vertical 3x3 kernel.
-    pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel {
-        data: &[0, 1, -1, -0],
-        width: 2,
-        height: 2,
-    };
+/// The roberts horizontal 3x3 kernel.
+pub const ROBERTS_HORIZONTAL_2X2: Kernel<'static, i32> = Kernel {
+    data: &[1, 0, 0, -1],
+    width: 2,
+    height: 2,
+};
+/// The roberts vertical 3x3 kernel.
+pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel {
+    data: &[0, 1, -1, -0],
+    width: 2,
+    height: 2,
+};
 
-    /// The 4-connectivity laplacian 3x3 kernel.
-    pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
-        data: &[1, 1, 1, 1, -4, 1, 1, 1, 1],
-        width: 3,
-        height: 3,
-    };
+/// The 4-connectivity laplacian 3x3 kernel.
+pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
+    data: &[1, 1, 1, 1, -4, 1, 1, 1, 1],
+    width: 3,
+    height: 3,
+};
 
-    /// The 8-connectivity laplacian 3x3 kernel.
-    pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
-        data: &[1, 1, 1, 1, -8, 1, 1, 1, 1],
-        width: 3,
-        height: 3,
-    };
-}
+/// The 8-connectivity laplacian 3x3 kernel.
+pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
+    data: &[1, 1, 1, 1, -8, 1, 1, 1, 1],
+    width: 3,
+    height: 3,
+};
