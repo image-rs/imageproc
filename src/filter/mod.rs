@@ -10,7 +10,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
-use crate::kernel::{Kernel, OwnedKernel};
+use crate::kernel::Kernel;
 use crate::map::{ChannelMap, WithChannel};
 use num::Num;
 
@@ -202,7 +202,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
 /// at type K, and the results converted to pixel Q via f. Pads by continuity.
-pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: impl Kernel<K>, mut f: F) -> Image<Q>
+pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, mut f: F) -> Image<Q>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K>,
@@ -216,7 +216,7 @@ where
     let zero = K::zero();
     let mut acc = vec![zero; num_channels];
 
-    let (k_width, k_height) = (kernel.width(), kernel.height());
+    let (k_width, k_height) = (kernel.width, kernel.height);
 
     let (width, height, k_width, k_height) =
         (width as i64, height as i64, k_width as i64, k_height as i64);
@@ -230,7 +230,7 @@ where
                     accumulate(
                         &mut acc,
                         unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                        *kernel.get(k_x as u32, k_y as u32),
+                        *kernel.get_unchecked(k_x as u32, k_y as u32),
                     );
                 }
             }
@@ -318,7 +318,7 @@ where
 
 /// Returns 2d correlation of an image with a row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
-pub fn filter_clamped<P, K, S>(image: &Image<P>, kernel: impl Kernel<K>) -> Image<ChannelMap<P, S>>
+pub fn filter_clamped<P, K, S>(image: &Image<P>, kernel: Kernel<K>) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: Into<K>,
     S: Clamp<K> + Primitive,
@@ -546,8 +546,7 @@ where
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    let kernel: OwnedKernel<i16> = OwnedKernel::new(vec![0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
-    filter_clamped(image, kernel)
+    filter_clamped(image, Kernel::<i16>::LAPLACIAN_3X3)
 }
 
 #[cfg(test)]
@@ -792,7 +791,7 @@ mod tests {
     #[test]
     fn test_filter_clamped_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
-        let kernel: OwnedKernel<i32> = OwnedKernel::new(vec![
+        let kernel: Kernel<i32> = Kernel::new(&[
             -1, 0, 1,
             -2, 0, 2,
             -1, 0, 1
@@ -816,8 +815,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_kernel_must_be_nonempty() {
-        let k: Vec<u8> = Vec::new();
-        let _ = OwnedKernel::new(k, 0, 0);
+        let k: &[u8] = &[];
+        let _ = Kernel::new(k, 0, 0);
     }
 
     #[test]
@@ -826,8 +825,8 @@ mod tests {
             3, 2;
             4, 1);
 
-        let k = vec![1u8, 2u8];
-        let kernel = OwnedKernel::new(k, 2, 1);
+        let k = &[1u8, 2u8];
+        let kernel = Kernel::new(k, 2, 1);
         let filtered = filter(&image, kernel, |c, a| *c = a);
 
         let expected = gray_image!(
@@ -841,8 +840,8 @@ mod tests {
     fn test_kernel_filter_with_empty_image() {
         let image = gray_image!();
 
-        let k = vec![2u8];
-        let kernel = OwnedKernel::new(k, 1, 1);
+        let k = &[2u8];
+        let kernel = Kernel::new(k, 1, 1);
         let filtered = filter(&image, kernel, |c, a| *c = a);
 
         let expected = gray_image!();
@@ -856,12 +855,12 @@ mod tests {
             8, 1);
 
         #[rustfmt::skip]
-        let k: Vec<f32> = vec![
+        let k: &[f32] = &[
             0.1, 0.2, 0.1,
             0.2, 0.4, 0.2,
             0.1, 0.2, 0.1
         ];
-        let kernel = OwnedKernel::new(k, 3, 3);
+        let kernel = Kernel::new(k, 3, 3);
         let filtered: Image<Luma<u8>> =
             filter(&image, kernel, |c, a| *c = <u8 as Clamp<f32>>::clamp(a));
 
@@ -971,7 +970,7 @@ mod benches {
     fn bench_filter_clamped_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         #[rustfmt::skip]
-        let kernel: OwnedKernel<i32> = OwnedKernel::new(vec![
+        let kernel: Kernel<i32> = Kernel::new(&[
             -1, 0, 1,
             -2, 0, 2,
             -1, 0, 1
@@ -979,7 +978,7 @@ mod benches {
 
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
-                filter_clamped::<_, _, i16>(&image, &kernel);
+                filter_clamped::<_, _, i16>(&image, kernel);
             black_box(filtered);
         });
     }

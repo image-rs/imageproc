@@ -22,7 +22,7 @@ use itertools::multizip;
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::gradients::gradients;
-/// use imageproc::kernel::OwnedKernel;
+/// use imageproc::kernel::Kernel;
 /// use image::Luma;
 /// use std::cmp;
 ///
@@ -42,8 +42,8 @@ use itertools::multizip;
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
 /// );
 ///
-/// let horizontal_kernel = OwnedKernel::sobel_horizontal_3x3();
-/// let vertical_kernel = OwnedKernel::sobel_vertical_3x3();
+/// let horizontal_kernel = Kernel::SOBEL_HORIZONTAL_3X3;
+/// let vertical_kernel = Kernel::SOBEL_VERTICAL_3X3;
 ///
 /// assert_pixels_eq!(
 ///     gradients(&input, &horizontal_kernel, &vertical_kernel, |p| p),
@@ -84,8 +84,8 @@ use itertools::multizip;
 /// # }
 pub fn gradients<P, F, Q>(
     image: &Image<P>,
-    kernel1: impl Kernel<i32>,
-    kernel2: impl Kernel<i32>,
+    kernel1: Kernel<i32>,
+    kernel2: Kernel<i32>,
     f: F,
 ) -> Image<Q>
 where
@@ -145,7 +145,7 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{filter::filter_clamped, kernel::OwnedKernel};
+    use crate::{filter::filter_clamped, kernel::Kernel};
 
     use super::*;
     use image::{ImageBuffer, Luma};
@@ -158,8 +158,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                OwnedKernel::sobel_horizontal_3x3(),
-                OwnedKernel::sobel_vertical_3x3(),
+                Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
+                Kernel::<i32>::SOBEL_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -173,8 +173,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                OwnedKernel::scharr_horizontal_3x3(),
-                OwnedKernel::scharr_vertical_3x3(),
+                Kernel::<i32>::SCHARR_HORIZONTAL_3X3,
+                Kernel::<i32>::SCHARR_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -188,8 +188,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                OwnedKernel::prewitt_horizontal_3x3(),
-                OwnedKernel::prewitt_vertical_3x3(),
+                Kernel::<i32>::PREWITT_HORIZONTAL_3X3,
+                Kernel::<i32>::PREWITT_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -203,8 +203,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                OwnedKernel::roberts_horizontal_2x2(),
-                OwnedKernel::roberts_vertical_2x2(),
+                Kernel::<i32>::ROBERTS_HORIZONTAL_2X2,
+                Kernel::<i32>::ROBERTS_VERTICAL_2X2,
                 |p| p
             ),
             expected
@@ -223,7 +223,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::sobel_horizontal_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::SOBEL_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -239,7 +239,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::sobel_vertical_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::SOBEL_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -255,7 +255,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::scharr_horizontal_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::SCHARR_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -271,7 +271,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::scharr_vertical_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::SCHARR_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -287,7 +287,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::prewitt_horizontal_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::PREWITT_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -303,7 +303,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::prewitt_vertical_3x3());
+        let filtered = filter_clamped(&image, Kernel::<i16>::PREWITT_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -319,7 +319,7 @@ mod tests {
             1, -2, -2;
             1, -2, -2);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::roberts_horizontal_2x2());
+        let filtered = filter_clamped(&image, Kernel::<i16>::ROBERTS_HORIZONTAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
     #[test]
@@ -334,7 +334,7 @@ mod tests {
             1, 4, 4;
             1, 4, 4);
 
-        let filtered = filter_clamped(&image, OwnedKernel::<i16>::roberts_vertical_2x2());
+        let filtered = filter_clamped(&image, Kernel::<i16>::ROBERTS_VERTICAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
 }
@@ -343,7 +343,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{kernel::OwnedKernel, utils::gray_bench_image};
+    use crate::{kernel::Kernel, utils::gray_bench_image};
     use test::{black_box, Bencher};
 
     #[bench]
@@ -352,8 +352,8 @@ mod benches {
         b.iter(|| {
             let gradients = gradients(
                 &image,
-                OwnedKernel::sobel_horizontal_3x3(),
-                OwnedKernel::sobel_vertical_3x3(),
+                Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
+                Kernel::<i32>::SOBEL_VERTICAL_3X3,
                 |p| p,
             );
             black_box(gradients);

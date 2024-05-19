@@ -5,13 +5,13 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-use imageproc::{filter::filter_clamped, kernel::OwnedKernel, map::map_subpixels};
+use imageproc::{filter::filter_clamped, kernel::Kernel, map::map_subpixels};
 use std::{env, fs, path::Path};
 
 fn save_gradients(
     input: &GrayImage,
-    horizontal_kernel: &OwnedKernel<i16>,
-    vertical_kernel: &OwnedKernel<i16>,
+    horizontal_kernel: Kernel<i32>,
+    vertical_kernel: Kernel<i32>,
     output_dir: &Path,
     name: &str,
     scale: i16,
@@ -61,36 +61,29 @@ fn main() {
     for (name, horizontal, vertical, scale) in [
         (
             "sobel",
-            OwnedKernel::sobel_horizontal_3x3(),
-            OwnedKernel::sobel_vertical_3x3(),
+            Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
+            Kernel::<i32>::SOBEL_VERTICAL_3X3,
             32,
         ),
         (
             "scharr",
-            OwnedKernel::scharr_horizontal_3x3(),
-            OwnedKernel::scharr_vertical_3x3(),
+            Kernel::<i32>::SCHARR_HORIZONTAL_3X3,
+            Kernel::<i32>::SCHARR_VERTICAL_3X3,
             8,
         ),
         (
             "prewitt",
-            OwnedKernel::prewitt_horizontal_3x3(),
-            OwnedKernel::prewitt_vertical_3x3(),
+            Kernel::<i32>::PREWITT_HORIZONTAL_3X3,
+            Kernel::<i32>::PREWITT_VERTICAL_3X3,
             6,
         ),
         (
             "roberts",
-            OwnedKernel::roberts_horizontal_2x2(),
-            OwnedKernel::roberts_vertical_2x2(),
+            Kernel::<i32>::ROBERTS_HORIZONTAL_2X2,
+            Kernel::<i32>::ROBERTS_VERTICAL_2X2,
             4,
         ),
     ] {
-        save_gradients(
-            &input_image,
-            &horizontal,
-            &vertical,
-            output_dir,
-            name,
-            scale,
-        );
+        save_gradients(&input_image, horizontal, vertical, output_dir, name, scale);
     }
 }
