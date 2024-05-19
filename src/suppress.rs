@@ -77,6 +77,7 @@ where
 /// Returns true if the given block contains a larger value than
 /// the input, or contains an equal value with lexicographically
 /// lesser coordinates.
+#[allow(clippy::too_many_arguments)]
 fn contains_greater_value<I, C>(
     image: &I,
     x: u32,
