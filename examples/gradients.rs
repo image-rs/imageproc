@@ -5,7 +5,11 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-use imageproc::{filter::filter_clamped, kernel::{self, Kernel}, map::map_subpixels};
+use imageproc::{
+    filter::filter_clamped,
+    kernel::{self, Kernel},
+    map::map_subpixels,
+};
 use std::{env, fs, path::Path};
 
 fn save_gradients(
