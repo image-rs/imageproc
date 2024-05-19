@@ -298,7 +298,7 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
 /// assert_pixels_eq!(stretched, expected);
 /// # }
 /// ```
-/// 
+///
 /// # Panics
 /// If `input_lower >= input_upper` or `output_lower > output_upper`.
 pub fn stretch_contrast(
@@ -309,7 +309,13 @@ pub fn stretch_contrast(
     output_upper: u8,
 ) -> GrayImage {
     let mut out = image.clone();
-    stretch_contrast_mut(&mut out, input_lower, input_upper, output_lower, output_upper);
+    stretch_contrast_mut(
+        &mut out,
+        input_lower,
+        input_upper,
+        output_lower,
+        output_upper,
+    );
     out
 }
 

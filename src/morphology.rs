@@ -445,7 +445,7 @@ impl Mask {
     }
 
     /// Creates a diamond-shaped mask containing all points with `L1` norm at most `radius`.
-    /// 
+    ///
     /// # Example
     /// ```
     /// # extern crate image;
@@ -585,7 +585,7 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 }
 
 /// Computes the morphologic dilation of `image` with the given mask.
-/// 
+///
 /// For each input pixel, the output pixel will be the maximum of all pixels included
 /// in the mask at that position. If the mask doesn't intersect any input pixel at some point,
 /// it will default to a value of [`u8::MIN`].
@@ -666,7 +666,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// For each input pixel, the output pixel will be the minimum of all pixels included
 /// in the mask at that position. If the mask doesn't intersect any input pixel at some point,
 /// it will default to a value of [`u8::MAX`].
-/// 
+///
 /// # Examples
 /// ```
 /// # extern crate image;
