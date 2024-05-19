@@ -24,13 +24,17 @@ fn main() {
         &image_grey,
         radius,
         sigma_spatial,
-        GaussianEuclideanColorDistance { sigma_squared: sigma_color },
+        GaussianEuclideanColorDistance {
+            sigma_squared: sigma_color,
+        },
     );
     let bilateral_color = bilateral_filter(
         &image_color,
         radius,
         sigma_spatial,
-        GaussianEuclideanColorDistance { sigma_squared: sigma_color },
+        GaussianEuclideanColorDistance {
+            sigma_squared: sigma_color,
+        },
     );
 
     bilateral_grey.save("bilateral_grey.png").unwrap();
