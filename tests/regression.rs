@@ -23,11 +23,13 @@ use image::{
 };
 
 use imageproc::contrast::ThresholdType;
+use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
+use imageproc::filter::bilateral_filter;
 use imageproc::kernel::{self};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
-    filter::{bilateral_filter, gaussian_blur_f32, sharpen3x3},
+    filter::{gaussian_blur_f32, sharpen3x3},
     geometric_transformations::{rotate_about_center, warp, Interpolation, Projection},
     gradients,
     utils::load_image_or_panic,
@@ -801,11 +803,14 @@ fn test_hough_line_detection() {
 #[test]
 fn test_bilateral_filter() {
     fn filter(image: &GrayImage) -> GrayImage {
-        let sigma_color: f32 = 20.;
-        let sigma_spatial: f32 = 2.;
-        let radius: f32 = 3. * sigma_spatial;
-        let win_size = (radius * 2. + 1.) as u32;
-        bilateral_filter(image, win_size, sigma_color, sigma_spatial)
+        bilateral_filter(
+            image,
+            2,
+            10.0,
+            GaussianEuclideanColorDistance {
+                sigma_squared: 10.0,
+            },
+        )
     }
 
     compare_to_truth_with_tolerance("lumaphant.png", "lumaphant_bilateral.png", filter, 1)
