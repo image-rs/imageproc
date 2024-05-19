@@ -580,7 +580,7 @@ mod tests {
             5, 5, 6;
             6, 7, 8);
         let actual = bilateral_filter(&image, 3, 10., 3.);
-        assert_pixels_eq!(expect, actual);
+        assert_pixels_eq!(actual, expect);
     }
 
     #[test]

@@ -434,7 +434,7 @@ mod tests {
         let image = GrayImage::from_pixel(3, 3, Luma([100u8]));
         let binary = adaptive_threshold(&image, 1);
         let expected = GrayImage::from_pixel(3, 3, Luma::white());
-        assert_pixels_eq!(expected, binary);
+        assert_pixels_eq!(binary, expected);
     }
 
     #[test]
@@ -586,7 +586,7 @@ mod tests {
         let expected = GrayImage::from_raw(26, 1, expected_contents).unwrap();
 
         let actual = threshold(&original, 125u8, ThresholdType::Binary);
-        assert_pixels_eq!(expected, actual);
+        assert_pixels_eq!(actual, expected);
     }
 
     #[test]
