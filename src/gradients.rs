@@ -69,7 +69,7 @@ pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
-/// kernel to detect horizontal gradients.
+/// kernel to detect horizontal gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn horizontal_sobel_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &HORIZONTAL_SOBEL)
@@ -82,7 +82,7 @@ pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
-/// kernel to detect vertical gradients.
+/// kernel to detect vertical gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn vertical_sobel_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &VERTICAL_SOBEL)
@@ -95,7 +95,7 @@ pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
-/// kernel to detect horizontal gradients.
+/// kernel to detect horizontal gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn horizontal_scharr_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &HORIZONTAL_SCHARR)
@@ -108,7 +108,7 @@ pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
-/// kernel to detect vertical gradients.
+/// kernel to detect vertical gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn vertical_scharr_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &VERTICAL_SCHARR)
@@ -121,7 +121,7 @@ pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
-/// kernel to detect horizontal gradients.
+/// kernel to detect horizontal gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn horizontal_prewitt_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &HORIZONTAL_PREWITT)
@@ -134,7 +134,7 @@ pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
 }
 
 /// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
-/// kernel to detect vertical gradients.
+/// kernel to detect vertical gradients. This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn vertical_prewitt_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3_parallel(image, &VERTICAL_PREWITT)
@@ -146,6 +146,7 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
+/// This version uses rayon to parallelize the computation.
 #[cfg(feature = "rayon")]
 pub fn sobel_gradients_parallel(image: &GrayImage) -> Image<Luma<u16>> {
     gradients_parallel(image, &HORIZONTAL_SOBEL, &VERTICAL_SOBEL, |p| p)
@@ -228,7 +229,7 @@ where
 }
 
 /// Computes per-channel gradients using Sobel filters and calls `f`
-/// to compute each output pixel.
+/// to compute each output pixel. This version uses rayon to parallelize the computation.
 ///
 /// # Examples
 /// ```
@@ -309,6 +310,13 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
     gradients(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT, |p| p)
 }
 
+/// Returns the magnitudes of gradients in an image using Prewitt filters.
+/// This version uses rayon to parallelize the computation.
+#[cfg(feature = "rayon")]
+pub fn prewitt_gradients_parallel(image: &GrayImage) -> Image<Luma<u16>> {
+    gradients_parallel(image, &HORIZONTAL_PREWITT, &VERTICAL_PREWITT, |p| p)
+}
+
 // TODO: Returns directions as well as magnitudes.
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
@@ -374,6 +382,7 @@ where
 // TODO: Support filtering without allocating a fresh image - filtering functions could
 // TODO: take some kind of pixel-sink. This would allow us to compute gradient magnitudes
 // TODO: and directions without allocating intermediates for vertical and horizontal gradients.
+/// Similar to [`gradients`]. This version uses rayon to parallelize the computation.
 fn gradients_parallel<P, F, Q>(
     image: &Image<P>,
     horizontal_kernel: &[i32; 9],

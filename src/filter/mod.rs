@@ -280,6 +280,7 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+    /// This version uses rayon to parallelize the computation.
     #[cfg(feature = "rayon")]
     pub fn filter_parallel<P, F, Q>(&self, image: &Image<P>, f: F) -> Image<Q>
     where
@@ -417,6 +418,7 @@ where
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
 /// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+/// This version uses rayon to parallelize the computation.
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
 pub fn filter3x3_parallel<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
