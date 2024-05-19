@@ -4,9 +4,8 @@
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
 use crate::definitions::{HasBlack, Image};
-use crate::gradients::sobel_gradient_map;
-#[cfg(feature = "rayon")]
-use crate::gradients::sobel_gradient_map_parallel;
+use crate::gradients::gradients;
+use crate::kernel::{self};
 use crate::map::{map_colors, WithChannel};
 use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
@@ -43,36 +42,6 @@ where
     result
 }
 
-/// Reduces the width of an image using seam carving.
-///
-/// Warning: this is very slow! It implements the algorithm from
-/// <https://inst.eecs.berkeley.edu/~cs194-26/fa16/hw/proj4-seamcarving/imret.pdf>, with some
-/// extra unnecessary allocations thrown in. Rather than attempting to optimise the implementation
-/// of this inherently slow algorithm, the planned next step is to switch to the algorithm from
-/// <https://users.cs.cf.ac.uk/Paul.Rosin/resources/papers/seam-carving-ChinaF.pdf>.
-pub fn shrink_width_parallel<P>(image: &Image<P>, target_width: u32) -> Image<P>
-// TODO: this is pretty silly! We should just be able to express that we want a pixel which is a slice of integral values
-where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + Send + Sync,
-    <P as WithChannel<i16>>::Pixel: Send + Sync,
-    <P as WithChannel<u16>>::Pixel: HasBlack,
-{
-    assert!(
-        target_width <= image.width(),
-        "target_width must be <= input image width"
-    );
-
-    let iterations = image.width() - target_width;
-    let mut result = image.clone();
-
-    for _ in 0..iterations {
-        let seam = find_vertical_seam_parallel(&result);
-        result = remove_vertical_seam(&result, &seam);
-    }
-
-    result
-}
-
 /// Computes an 8-connected path from the bottom of the image to the top whose sum of
 /// gradient magnitudes is minimal.
 pub fn find_vertical_seam<P>(image: &Image<P>) -> VerticalSeam
@@ -86,81 +55,16 @@ where
         "Cannot find seams if image width is < 2"
     );
 
-    let mut gradients = sobel_gradient_map(image, |p| {
-        let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
-        Luma([gradient_mean as u32])
-    });
-
-    // Find the least energy path through the gradient image.
-    for y in 1..height {
-        for x in 0..width {
-            set_path_energy(&mut gradients, x, y);
-        }
-    }
-
-    // Retrace our steps to find the vertical seam.
-    let mut min_x = 0;
-    let mut min_energy = gradients.get_pixel(0, height - 1)[0];
-
-    for x in 1..width {
-        let c = gradients.get_pixel(x, height - 1)[0];
-        if c < min_energy {
-            min_x = x;
-            min_energy = c;
-        }
-    }
-
-    let mut seam = Vec::with_capacity(height as usize);
-
-    seam.push(min_x);
-
-    let mut last_x = min_x;
-
-    for y in (1..height).rev() {
-        let above = gradients.get_pixel(last_x, y - 1)[0];
-        if last_x > 0 {
-            let left = gradients.get_pixel(last_x - 1, y - 1)[0];
-            if left < above {
-                min_x = last_x - 1;
-                min_energy = left;
-            }
-        }
-        if last_x < width - 1 {
-            let right = gradients.get_pixel(last_x + 1, y - 1)[0];
-            if right < min_energy {
-                min_x = last_x + 1;
-                min_energy = right;
-            }
-        }
-
-        last_x = min_x;
-        seam.push(min_x);
-    }
-
-    VerticalSeam(seam)
-}
-
-/// Computes an 8-connected path from the bottom of the image to the top whose sum of
-/// gradient magnitudes is minimal.
-#[cfg(feature = "rayon")]
-pub fn find_vertical_seam_parallel<P>(image: &Image<P>) -> VerticalSeam
-where
-    P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16> + Send + Sync,
-    <P as WithChannel<i16>>::Pixel: Send + Sync,
-    <P as WithChannel<u16>>::Pixel: HasBlack,
-{
-    let (width, height) = image.dimensions();
-    assert!(
-        image.width() >= 2,
-        "Cannot find seams if image width is < 2"
+    let mut gradients = gradients(
+        image,
+        kernel::SOBEL_HORIZONTAL_3X3,
+        kernel::SOBEL_VERTICAL_3X3,
+        |p| {
+            let gradient_sum: u16 = p.channels().iter().sum();
+            let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
+            Luma([gradient_mean as u32])
+        },
     );
-
-    let mut gradients = sobel_gradient_map_parallel(image, |p| {
-        let gradient_sum: u16 = p.channels().iter().sum();
-        let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;
-        Luma([gradient_mean as u32])
-    });
 
     // Find the least energy path through the gradient image.
     for y in 1..height {
@@ -303,24 +207,7 @@ mod benches {
         };
     }
 
-    macro_rules! bench_shrink_width_parallel {
-        ($name:ident, side: $s:expr, shrink_by: $m:expr) => {
-            #[bench]
-            fn $name(b: &mut Bencher) {
-                let image = gray_bench_image($s, $s);
-                b.iter(|| {
-                    let filtered = shrink_width_parallel(&image, $s - $m);
-                    black_box(filtered);
-                })
-            }
-        };
-    }
-
     bench_shrink_width!(bench_shrink_width_s100_r1, side: 100, shrink_by: 1);
     bench_shrink_width!(bench_shrink_width_s100_r4, side: 100, shrink_by: 4);
     bench_shrink_width!(bench_shrink_width_s100_r8, side: 100, shrink_by: 8);
-
-    bench_shrink_width_parallel!(bench_shrink_width_parallel_s100_r1, side: 100, shrink_by: 1);
-    bench_shrink_width_parallel!(bench_shrink_width_parallel_s100_r4, side: 100, shrink_by: 4);
-    bench_shrink_width_parallel!(bench_shrink_width_parallel_s100_r8, side: 100, shrink_by: 8);
 }

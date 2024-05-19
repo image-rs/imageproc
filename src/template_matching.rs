@@ -152,6 +152,7 @@ pub fn match_template_with_mask(
 }
 
 #[cfg(feature = "rayon")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 /// Slides a `template` and a `mask` over an `image` and scores the match at each point using
 /// the requested `method`. This version uses rayon to parallelize the computation.
 ///
@@ -204,6 +205,7 @@ where
         })
     }
     #[cfg(feature = "rayon")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
     fn match_template_parallel(input: &Self::Input) -> Image<Luma<f32>> {
         use rayon::prelude::*;
 

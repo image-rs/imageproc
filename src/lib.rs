@@ -52,6 +52,7 @@ pub mod haar;
 pub mod hog;
 pub mod hough;
 pub mod integral_image;
+pub mod kernel;
 pub mod local_binary_patterns;
 pub mod map;
 pub mod math;
@@ -60,6 +61,7 @@ pub mod noise;
 pub mod pixelops;
 pub mod point;
 #[cfg(any(feature = "property-testing", test))]
+#[cfg_attr(docsrs, doc(cfg(feature = "property-testing")))]
 pub mod property_testing;
 pub mod rect;
 pub mod region_labelling;

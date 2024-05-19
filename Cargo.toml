@@ -1,6 +1,6 @@
 [package]
 name = "imageproc"
-version = "0.25.0"
+version = "0.26.0"
 authors = ["theotherphil"]
 # note: when changed, also update `msrv` in `.github/workflows/check.yml`
 rust-version = "1.70.0"
