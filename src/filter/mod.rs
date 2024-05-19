@@ -10,7 +10,7 @@ use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel,
 
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
-use crate::kernel::Kernel;
+use crate::kernel::{self, Kernel};
 use crate::map::{ChannelMap, WithChannel};
 use num::Num;
 
@@ -341,7 +341,7 @@ where
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
-    // Don't replace this with a call to Kernel::filter without
+    // Don't replace this with a call to filter() without
     // checking the benchmark results. At the time of writing this
     // specialised implementation is faster.
     let (width, height) = image.dimensions();
@@ -441,7 +441,7 @@ where
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
-    // Don't replace this with a call to Kernel::filter without
+    // Don't replace this with a call to filter() without
     // checking the benchmark results. At the time of writing this
     // specialised implementation is faster.
     let (width, height) = image.dimensions();
@@ -557,7 +557,7 @@ where
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::FOUR_LAPLACIAN_3X3)
+    filter_clamped(image, kernel::FOUR_LAPLACIAN_3X3)
 }
 
 #[cfg(test)]

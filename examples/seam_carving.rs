@@ -1,7 +1,7 @@
 use image::{open, GrayImage, Luma, Pixel};
 use imageproc::definitions::Clamp;
 use imageproc::gradients::gradients;
-use imageproc::kernel::Kernel;
+use imageproc::kernel;
 use imageproc::map::map_colors;
 use imageproc::seam_carving::*;
 use std::env;
@@ -62,8 +62,8 @@ fn main() {
     // Draw the seams on the gradient magnitude image.
     let gradients = gradients(
         &input_image,
-        Kernel::SOBEL_HORIZONTAL_3X3,
-        Kernel::SOBEL_VERTICAL_3X3,
+        kernel::SOBEL_HORIZONTAL_3X3,
+        kernel::SOBEL_VERTICAL_3X3,
         |p| {
             let mean = (p[0] + p[1] + p[2]) / 3;
             Luma([mean as u32])

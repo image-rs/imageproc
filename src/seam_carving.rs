@@ -5,7 +5,7 @@
 
 use crate::definitions::{HasBlack, Image};
 use crate::gradients::gradients;
-use crate::kernel::Kernel;
+use crate::kernel::{self};
 use crate::map::{map_colors, WithChannel};
 use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
@@ -57,8 +57,8 @@ where
 
     let mut gradients = gradients(
         image,
-        Kernel::SOBEL_HORIZONTAL_3X3,
-        Kernel::SOBEL_VERTICAL_3X3,
+        kernel::SOBEL_HORIZONTAL_3X3,
+        kernel::SOBEL_VERTICAL_3X3,
         |p| {
             let gradient_sum: u16 = p.channels().iter().sum();
             let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;

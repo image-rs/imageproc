@@ -5,7 +5,7 @@
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
 use image::{open, GrayImage};
-use imageproc::{filter::filter_clamped, kernel::Kernel, map::map_subpixels};
+use imageproc::{filter::filter_clamped, kernel::{self, Kernel}, map::map_subpixels};
 use std::{env, fs, path::Path};
 
 fn save_gradients(
@@ -61,26 +61,26 @@ fn main() {
     for (name, horizontal, vertical, scale) in [
         (
             "sobel",
-            Kernel::SOBEL_HORIZONTAL_3X3,
-            Kernel::SOBEL_VERTICAL_3X3,
+            kernel::SOBEL_HORIZONTAL_3X3,
+            kernel::SOBEL_VERTICAL_3X3,
             32,
         ),
         (
             "scharr",
-            Kernel::SCHARR_HORIZONTAL_3X3,
-            Kernel::SCHARR_VERTICAL_3X3,
+            kernel::SCHARR_HORIZONTAL_3X3,
+            kernel::SCHARR_VERTICAL_3X3,
             8,
         ),
         (
             "prewitt",
-            Kernel::PREWITT_HORIZONTAL_3X3,
-            Kernel::PREWITT_VERTICAL_3X3,
+            kernel::PREWITT_HORIZONTAL_3X3,
+            kernel::PREWITT_VERTICAL_3X3,
             6,
         ),
         (
             "roberts",
-            Kernel::ROBERTS_HORIZONTAL_2X2,
-            Kernel::ROBERTS_VERTICAL_2X2,
+            kernel::ROBERTS_HORIZONTAL_2X2,
+            kernel::ROBERTS_VERTICAL_2X2,
             4,
         ),
     ] {

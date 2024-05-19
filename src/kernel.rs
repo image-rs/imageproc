@@ -95,7 +95,6 @@ pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
     width: 3,
     height: 3,
 };
-
 /// The 8-connectivity laplacian 3x3 kernel.
 pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
     data: &[1, 1, 1, 1, -8, 1, 1, 1, 1],

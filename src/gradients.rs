@@ -2,7 +2,7 @@
 
 use crate::definitions::{Clamp, HasBlack, Image};
 use crate::filter::{filter, filter_clamped};
-use crate::kernel::Kernel;
+use crate::kernel::{self, Kernel};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
@@ -33,6 +33,7 @@ pub fn gradients_greyscale<P, F, Q>(
 /// # fn main() {
 /// use imageproc::gradients::gradients;
 /// use imageproc::kernel::Kernel;
+/// use imageproc::kernel;
 /// use image::Luma;
 /// use std::cmp;
 ///
@@ -52,8 +53,8 @@ pub fn gradients_greyscale<P, F, Q>(
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
 /// );
 ///
-/// let horizontal_kernel = Kernel::SOBEL_HORIZONTAL_3X3;
-/// let vertical_kernel = Kernel::SOBEL_VERTICAL_3X3;
+/// let horizontal_kernel = kernel::SOBEL_HORIZONTAL_3X3;
+/// let vertical_kernel = kernel::SOBEL_VERTICAL_3X3;
 ///
 /// assert_pixels_eq!(
 ///     gradients(&input, horizontal_kernel, vertical_kernel, |p| p),
@@ -157,72 +158,72 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 /// kernel to detect horizontal gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::SOBEL_HORIZONTAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::SOBEL_HORIZONTAL_3X3)` which is more flexible and explicit"
 )]
 pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::SOBEL_HORIZONTAL_3X3)
+    filter_clamped(image, kernel::SOBEL_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
 /// kernel to detect vertical gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
 )]
 pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::SOBEL_VERTICAL_3X3)
+    filter_clamped(image, kernel::SOBEL_VERTICAL_3X3)
 }
 
 /// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
 /// kernel to detect horizontal gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::SCHARR_HORIZONTAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::SCHARR_HORIZONTAL_3X3)` which is more flexible and explicit"
 )]
 pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::SCHARR_HORIZONTAL_3X3)
+    filter_clamped(image, kernel::SCHARR_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
 /// kernel to detect vertical gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::SCHARR_VERTICAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::SCHARR_VERTICAL_3X3)` which is more flexible and explicit"
 )]
 pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::SCHARR_VERTICAL_3X3)
+    filter_clamped(image, kernel::SCHARR_VERTICAL_3X3)
 }
 
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
 /// kernel to detect horizontal gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::PREWITT_HORIZONTAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::PREWITT_HORIZONTAL_3X3)` which is more flexible and explicit"
 )]
 pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::PREWITT_HORIZONTAL_3X3)
+    filter_clamped(image, kernel::PREWITT_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
 /// kernel to detect vertical gradients.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, Kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `filter_clamped(image, kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
 )]
 pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::PREWITT_VERTICAL_3X3)
+    filter_clamped(image, kernel::PREWITT_VERTICAL_3X3)
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `gradients_greyscale(image, Kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `gradients_greyscale(image, kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
 )]
 pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
     gradients(
         image,
-        Kernel::SOBEL_HORIZONTAL_3X3,
-        Kernel::SOBEL_VERTICAL_3X3,
+        kernel::SOBEL_HORIZONTAL_3X3,
+        kernel::SOBEL_VERTICAL_3X3,
         |p| p,
     )
 }
@@ -230,13 +231,13 @@ pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `gradients_greyscale(image, Kernel::PREWITT_HORIZONTAL_3X3, Kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
+    note = "users should instead use `gradients_greyscale(image, kernel::PREWITT_HORIZONTAL_3X3, Kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
 )]
 pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
     gradients(
         image,
-        Kernel::PREWITT_HORIZONTAL_3X3,
-        Kernel::PREWITT_VERTICAL_3X3,
+        kernel::PREWITT_HORIZONTAL_3X3,
+        kernel::PREWITT_VERTICAL_3X3,
         |p| p,
     )
 }
@@ -309,7 +310,7 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// # }
 #[deprecated(
     since = "0.25.0",
-    note = "users should instead use `gradients(image, Kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3, f)` which is more flexible and explicit"
+    note = "users should instead use `gradients(image, kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3, f)` which is more flexible and explicit"
 )]
 pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
 where
@@ -320,15 +321,15 @@ where
 {
     gradients(
         image,
-        Kernel::SOBEL_HORIZONTAL_3X3,
-        Kernel::SOBEL_VERTICAL_3X3,
+        kernel::SOBEL_HORIZONTAL_3X3,
+        kernel::SOBEL_VERTICAL_3X3,
         f,
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{filter::filter_clamped, kernel::Kernel};
+    use crate::filter::filter_clamped;
 
     use super::*;
     use image::{ImageBuffer, Luma};
@@ -341,8 +342,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::SOBEL_HORIZONTAL_3X3,
-                Kernel::SOBEL_VERTICAL_3X3,
+                kernel::SOBEL_HORIZONTAL_3X3,
+                kernel::SOBEL_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -356,8 +357,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::SCHARR_HORIZONTAL_3X3,
-                Kernel::SCHARR_VERTICAL_3X3,
+                kernel::SCHARR_HORIZONTAL_3X3,
+                kernel::SCHARR_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -371,8 +372,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::PREWITT_HORIZONTAL_3X3,
-                Kernel::PREWITT_VERTICAL_3X3,
+                kernel::PREWITT_HORIZONTAL_3X3,
+                kernel::PREWITT_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -386,8 +387,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::ROBERTS_HORIZONTAL_2X2,
-                Kernel::ROBERTS_VERTICAL_2X2,
+                kernel::ROBERTS_HORIZONTAL_2X2,
+                kernel::ROBERTS_VERTICAL_2X2,
                 |p| p
             ),
             expected
@@ -406,7 +407,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped(&image, Kernel::SOBEL_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SOBEL_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -422,7 +423,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped(&image, Kernel::SOBEL_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SOBEL_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -438,7 +439,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped(&image, Kernel::SCHARR_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SCHARR_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -454,7 +455,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped(&image, Kernel::SCHARR_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SCHARR_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -470,7 +471,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped(&image, Kernel::PREWITT_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::PREWITT_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -486,7 +487,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped(&image, Kernel::PREWITT_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::PREWITT_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -502,7 +503,7 @@ mod tests {
             1, -2, -2;
             1, -2, -2);
 
-        let filtered = filter_clamped(&image, Kernel::ROBERTS_HORIZONTAL_2X2);
+        let filtered = filter_clamped(&image, kernel::ROBERTS_HORIZONTAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
     #[test]
@@ -517,7 +518,7 @@ mod tests {
             1, 4, 4;
             1, 4, 4);
 
-        let filtered = filter_clamped(&image, Kernel::ROBERTS_VERTICAL_2X2);
+        let filtered = filter_clamped(&image, kernel::ROBERTS_VERTICAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
 }
@@ -526,7 +527,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{kernel::Kernel, utils::gray_bench_image};
+    use crate::utils::gray_bench_image;
     use test::{black_box, Bencher};
 
     #[bench]
@@ -535,8 +536,8 @@ mod benches {
         b.iter(|| {
             let gradients = gradients(
                 &image,
-                Kernel::SOBEL_HORIZONTAL_3X3,
-                Kernel::SOBEL_VERTICAL_3X3,
+                kernel::SOBEL_HORIZONTAL_3X3,
+                kernel::SOBEL_VERTICAL_3X3,
                 |p| p,
             );
             black_box(gradients);
