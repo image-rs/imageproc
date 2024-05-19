@@ -354,6 +354,21 @@ mod tests {
     //   / 2 | 1 \
 
     #[test]
+    fn test_draw_line_segment_zero_length() {
+        let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
+
+        let expected = gray_image!(
+            1, 1, 1, 1, 1;
+            4, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1);
+
+        let actual = draw_line_segment(&image, (0f32, 1f32), (0f32, 1f32), Luma([4u8]));
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_draw_line_segment_horizontal() {
         let image = GrayImage::from_pixel(5, 5, Luma([1u8]));
 
