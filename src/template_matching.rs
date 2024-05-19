@@ -7,26 +7,26 @@ use image::{GenericImageView, GrayImage, Luma, Primitive};
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MatchTemplateMethod {
     /// Sum of the squares of the difference between image and template pixel intensities. Smaller values indicate a better match.
-    /// 
+    ///
     /// Without a mask:
     /// $$
     /// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2
     /// $$
-    /// 
+    ///
     /// With a mask:
     /// $$
     /// \text{output}(x, y) = \sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2
     /// $$
-    /// 
+    ///
     SumOfSquaredErrors,
     /// Divides the sum computed using `SumOfSquaredErrors` by a normalization term. Smaller values indicate a better match.
-    /// 
+    ///
     /// Without a mask:
     /// $$
     /// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') - \text{image}(x+x', y+y') \right)^2}
     ///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
     /// $$
-    /// 
+    ///
     /// With a mask:
     /// $$
     /// \text{output}(x, y) = \frac{\sum_{x', y'} \left( (\text{template}(x', y') - \text{image}(x+x', y+y')) \cdot \text{mask}(x', y') \right)^2}
@@ -34,32 +34,32 @@ pub enum MatchTemplateMethod {
     /// $$
     SumOfSquaredErrorsNormalized,
     /// Cross Correlation. Larger values indicate a better match.
-    /// 
+    ///
     /// Without a mask:
     /// $$
     /// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)
     /// $$
-    /// 
+    ///
     /// With a mask:
     /// $$
     /// \text{output}(x, y) = \sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)
     /// $$
-    /// 
+    ///
     CrossCorrelation,
     /// Divides the sum computed using `CrossCorrelation` by a normalization term. Larger values indicate a better match.
-    /// 
+    ///
     /// Without a mask:
     /// $$
     /// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \right)}
     ///                     {\sqrt{ \sum_{x', y'} {\text{template}(x', y')}^2 \cdot \sum_{x', y'} {\text{image}(x+x', y+y')}^2 }}
     /// $$
-    /// 
+    ///
     /// With a mask:
     /// $$
     /// \text{output}(x, y) = \frac{\sum_{x', y'} \left( \text{template}(x', y') \cdot \text{image}(x+x', y+y') \cdot {\text{mask}(x', y')}^2 \right)}
     ///         {\sqrt{ \sum_{x', y'}{(\text{template}(x', y') \cdot \text{mask}(x', y'))}^2 \cdot \sum_{x', y'}{(\text{image}(x+x', y+y') \cdot \text{mask}(x', y'))}^2 }}
     /// $$
-    /// 
+    ///
     CrossCorrelationNormalized,
 }
 
@@ -99,7 +99,7 @@ pub fn match_template(
 /// `image.height() - template.height() + 1`.
 ///
 /// See [`MatchTemplateMethod`] for details of the matching methods.
-/// 
+///
 /// # Panics
 ///
 /// If either dimension of `template` is not strictly less than the corresponding dimension
