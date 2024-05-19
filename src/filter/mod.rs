@@ -236,7 +236,6 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
 
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
-    #[cfg(not(feature = "rayon"))]
     pub fn filter<P, F, Q>(&self, image: &Image<P>, mut f: F) -> Image<Q>
     where
         P: Pixel,
@@ -282,14 +281,14 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// Returns 2d correlation of an image. Intermediate calculations are performed
     /// at type K, and the results converted to pixel Q via f. Pads by continuity.
     #[cfg(feature = "rayon")]
-    pub fn filter<P, F, Q>(&self, image: &Image<P>, f: F) -> Image<Q>
+    pub fn filter_parallel<P, F, Q>(&self, image: &Image<P>, f: F) -> Image<Q>
     where
         P: Pixel + Sync,
         <P as Pixel>::Subpixel: Into<K> + Send + Sync,
         Q: Pixel + Send + Sync,
         <Q as Pixel>::Subpixel: Send,
         K: Sync,
-        F: Fn(&mut Q::Subpixel, K) + Send + Sync, // TODO: Had to lift FnMut to Fn
+        F: Fn(&mut Q::Subpixel, K) + Send + Sync,
     {
         let (width, height) = image.dimensions();
         let num_channels = P::CHANNEL_COUNT as usize;
@@ -407,6 +406,21 @@ where
 #[must_use = "the function does not modify the original image"]
 pub fn filter3x3<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
+    P::Subpixel: Into<K>,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
+    K: Num + Copy,
+{
+    let kernel = Kernel::new(kernel, 3, 3);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+}
+
+/// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
+/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+#[must_use = "the function does not modify the original image"]
+#[cfg(feature = "rayon")]
+pub fn filter3x3_parallel<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+where
     P::Subpixel: Into<K> + Send + Sync,
     S: Clamp<K> + Primitive + Send + Sync,
     P: WithChannel<S> + Send + Sync,
@@ -414,7 +428,7 @@ where
     K: Num + Copy + Send + Sync,
 {
     let kernel = Kernel::new(kernel, 3, 3);
-    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+    kernel.filter_parallel(image, |channel, acc| *channel = S::clamp(acc))
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
@@ -647,6 +661,21 @@ pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
     filter3x3(image, &kernel)
 }
 
+/// Calculates the Laplacian of an image.
+///
+/// The Laplacian is computed by filtering the image using the following 3x3 kernel:
+/// ```notrust
+/// 0, 1, 0,
+/// 1, -4, 1,
+/// 0, 1, 0
+/// ```
+#[must_use = "the function does not modify the original image"]
+#[cfg(feature = "rayon")]
+pub fn laplacian_filter_parallel(image: &GrayImage) -> Image<Luma<i16>> {
+    let kernel: [i16; 9] = [0, 1, 0, 1, -4, 1, 0, 1, 0];
+    filter3x3_parallel(image, &kernel)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -797,7 +826,7 @@ mod tests {
             #[test]
             fn $test_name() {
                 // I think the interesting edge cases here are determined entirely
-                // by the relative sizes of the kernel and the image side length, so
+                // by the relative sizes of the kernel and the image side length, soz
                 // I'm just enumerating over small values instead of generating random
                 // examples via quickcheck.
                 for height in 0..5 {
@@ -1065,6 +1094,15 @@ mod proptests {
         }
 
         #[test]
+        fn proptest_filter3x3_parallel(
+            img in arbitrary_image::<Luma<u8>>(0..50, 0..50),
+            ker in proptest::collection::vec(any::<f32>(), 9),
+        ) {
+            let out: Image<Luma<f32>> = filter3x3_parallel(&img, &ker);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
         fn proptest_horizontal_filter_luma_f32(
             img in arbitrary_image::<Luma<f32>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 0..50),
@@ -1164,6 +1202,23 @@ mod benches {
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
                 filter3x3::<_, _, i16>(&image, &kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_filter3x3_parallel_i32_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        #[rustfmt::skip]
+            let kernel: Vec<i32> = vec![
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1
+        ];
+
+        b.iter(|| {
+            let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
+                filter3x3_parallel::<_, _, i16>(&image, &kernel);
             black_box(filtered);
         });
     }
