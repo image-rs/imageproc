@@ -105,12 +105,8 @@ where
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {
-    let pass1: Image<ChannelMap<P, i16>> = filter(image, kernel1, |channel, acc| {
-        *channel = <i16 as Clamp<i32>>::clamp(acc)
-    });
-    let pass2: Image<ChannelMap<P, i16>> = filter(image, kernel2, |channel, acc| {
-        *channel = <i16 as Clamp<i32>>::clamp(acc)
-    });
+    let pass1: Image<ChannelMap<P, i16>> = filter(image, kernel1, <i16 as Clamp<i32>>::clamp);
+    let pass2: Image<ChannelMap<P, i16>> = filter(image, kernel2, <i16 as Clamp<i32>>::clamp);
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);

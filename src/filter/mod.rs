@@ -7,6 +7,7 @@ mod sharpen;
 pub use self::sharpen::*;
 
 use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
+use itertools::Itertools;
 
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
@@ -16,9 +17,6 @@ use num::Num;
 
 use std::cmp::{max, min};
 use std::f32;
-
-#[cfg(feature = "rayon")]
-use rayon::prelude::*;
 
 /// Denoise 8-bit grayscale image using bilateral filtering.
 ///
@@ -206,45 +204,76 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
     out
 }
 
-/// Returns 2d correlation of an image. Intermediate calculations are performed
-/// at type K, and the results converted to pixel Q via f. Pads by continuity.
-pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, mut f: F) -> Image<Q>
+/// Calculates the new pixel value for a particular pixel and kernel.
+fn filter_pixel<P, K, F, Q>(x: u32, y: u32, kernel: Kernel<K>, f: F, image: &Image<P>) -> Q
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: Into<K>,
     Q: Pixel,
-    F: FnMut(&mut Q::Subpixel, K),
-    K: num::Num + Copy,
+    F: Fn(K) -> Q::Subpixel,
+    K: num::Num + Copy + From<P::Subpixel>,
 {
+    let (width, height) = (image.width() as i64, image.height() as i64);
+    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
+    let (x, y) = (i64::from(x), i64::from(y));
+
+    let weighted_pixels = (0..kernel.height as i64)
+        .cartesian_product(0..kernel.width as i64)
+        .map(|(k_y, k_x)| {
+            let kernel_weight = *kernel.at(k_x as u32, k_y as u32);
+
+            let window_y = (y + k_y - k_height / 2).clamp(0, height - 1);
+            let window_x = (x + k_x - k_width / 2).clamp(0, width - 1);
+
+            debug_assert!(image.in_bounds(window_x as u32, window_y as u32));
+
+            // Safety: we clamped `window_x` and `window_y` to be in bounds.
+            let window_pixel = unsafe { image.unsafe_get_pixel(window_x as u32, window_y as u32) };
+
+            //optimisation: remove allocation when `Pixel::map` allows mapping to a different
+            //type
+            #[allow(clippy::unnecessary_to_owned)]
+            let weighted_pixel = window_pixel
+                .channels()
+                .to_vec()
+                .into_iter()
+                .map(move |c| kernel_weight * K::from(c));
+
+            weighted_pixel
+        });
+
+    let final_channel_sum = weighted_pixels.fold(
+        //optimisation: do this without allocation when `Pixel` gains a method of constant initialization
+        vec![K::zero(); Q::CHANNEL_COUNT as usize],
+        |mut accumulator, weighted_pixel| {
+            for (i, weighted_subpixel) in weighted_pixel.enumerate() {
+                accumulator[i] = accumulator[i] + weighted_subpixel;
+            }
+
+            accumulator
+        },
+    );
+
+    *Q::from_slice(&final_channel_sum.into_iter().map(f).collect_vec())
+}
+
+/// Returns 2d correlation of an image. Intermediate calculations are performed
+/// at type K, and the results converted to pixel Q via f. Pads by continuity.
+pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, f: F) -> Image<Q>
+where
+    P: Pixel,
+    Q: Pixel,
+    F: Fn(K) -> Q::Subpixel,
+    K: num::Num + Copy + From<P::Subpixel>,
+{
+    //TODO refactor this to use the `crate::maps` functions once that lands
+
     let (width, height) = image.dimensions();
+
     let mut out = Image::<Q>::new(width, height);
-    let num_channels = P::CHANNEL_COUNT as usize;
-    let zero = K::zero();
-    let mut acc = vec![zero; num_channels];
-
-    let (k_width, k_height) = (kernel.width, kernel.height);
-
-    let (width, height, k_width, k_height) =
-        (width as i64, height as i64, k_width as i64, k_height as i64);
 
     for y in 0..height {
         for x in 0..width {
-            for k_y in 0..k_height {
-                let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                for k_x in 0..k_width {
-                    let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-                    accumulate(
-                        &mut acc,
-                        unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                        *kernel.at(k_x as u32, k_y as u32),
-                    );
-                }
-            }
-            let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                f(c, *a);
-                *a = zero;
-            }
+            out.put_pixel(x, y, filter_pixel(x, y, kernel, &f, image));
         }
     }
 
@@ -259,58 +288,29 @@ where
 pub fn filter_parallel<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, f: F) -> Image<Q>
 where
     P: Pixel + Sync,
-    <P as Pixel>::Subpixel: Into<K> + Send + Sync,
     Q: Pixel + Send + Sync,
-    <Q as Pixel>::Subpixel: Send,
-    K: num::Num + Copy + Send + Sync,
-    F: Fn(&mut Q::Subpixel, K) + Send + Sync,
+    P::Subpixel: Sync,
+    Q::Subpixel: Send + Sync,
+    F: Fn(K) -> Q::Subpixel + Send + Sync,
+    K: Num + Copy + From<P::Subpixel> + Sync,
 {
+    //TODO refactor this to use the `crate::maps` functions once that lands
+
+    use rayon::iter::IndexedParallelIterator;
+    use rayon::iter::ParallelIterator;
+
     let (width, height) = image.dimensions();
-    let num_channels = P::CHANNEL_COUNT as usize;
-    let zero = K::zero();
-    let (k_width, k_height) = (kernel.width, kernel.height);
-    let (width, height) = (width as i64, height as i64);
 
-    let out = Image::<Q>::new(width as u32, height as u32);
-    if width == 0 || height == 0 {
-        return out;
-    }
+    let mut out: Image<Q> = Image::new(width, height);
 
-    let mut out_data = out.into_raw();
-
-    out_data
-        .par_chunks_mut(width as usize * num_channels)
-        .enumerate()
-        .for_each(|(y, out_row)| {
-            let mut acc = vec![zero; num_channels];
-
-            for x in 0..width {
-                for k_y in 0..k_height {
-                    let y_p = min(
-                        height - 1,
-                        max(0, y as i64 + k_y as i64 - k_height as i64 / 2),
-                    ) as u32;
-                    for k_x in 0..k_width {
-                        let x_p =
-                            min(width - 1, max(0, x + k_x as i64 - k_width as i64 / 2)) as u32;
-                        debug_assert!(image.in_bounds(x_p, y_p));
-                        let px = unsafe { &image.unsafe_get_pixel(x_p, y_p) };
-                        let coefficient = *kernel.at(k_x, k_y);
-                        accumulate(&mut acc, px, coefficient);
-                    }
-                }
-
-                let pixel_slice = &mut out_row[(x as usize * num_channels)..][..num_channels];
-
-                for (a, c) in acc.iter_mut().zip(pixel_slice.iter_mut()) {
-                    f(c, *a);
-                    *a = zero;
-                }
-            }
+    image
+        .par_enumerate_pixels()
+        .zip_eq(out.par_pixels_mut())
+        .for_each(move |((x, y, _), output_pixel)| {
+            *output_pixel = filter_pixel(x, y, kernel, &f, image);
         });
 
-    Image::<Q>::from_raw(width as u32, height as u32, out_data)
-        .expect("failed to create output from raw data")
+    out
 }
 
 #[inline]
@@ -394,9 +394,9 @@ where
     P::Subpixel: Into<K>,
     S: Clamp<K> + Primitive,
     P: WithChannel<S>,
-    K: Num + Copy,
+    K: Num + Copy + From<<P as image::Pixel>::Subpixel>,
 {
-    filter(image, kernel, |channel, acc| *channel = S::clamp(acc))
+    filter(image, kernel, S::clamp)
 }
 
 /// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
@@ -411,13 +411,13 @@ pub fn filter_clamped_parallel<P, K, S>(
 ) -> Image<ChannelMap<P, S>>
 where
     P: Sync,
-    P::Subpixel: Into<K> + Send + Sync,
+    P::Subpixel: Send + Sync,
     <P as WithChannel<S>>::Pixel: Send + Sync,
-    S: Clamp<K> + Primitive + Send,
+    S: Clamp<K> + Primitive + Send + Sync,
     P: WithChannel<S>,
-    K: Num + Copy + Send + Sync,
+    K: Num + Copy + Send + Sync + From<P::Subpixel>,
 {
-    filter_parallel(image, kernel, |channel, acc| *channel = S::clamp(acc))
+    filter_parallel(image, kernel, |x| S::clamp(x))
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
@@ -968,7 +968,7 @@ mod tests {
 
         let k = &[1u8, 2u8];
         let kernel = Kernel::new(k, 2, 1);
-        let filtered = filter(&image, kernel, |c, a| *c = a);
+        let filtered = filter(&image, kernel, |x| x);
 
         let expected = gray_image!(
              9,  7;
@@ -983,7 +983,7 @@ mod tests {
 
         let k = &[2u8];
         let kernel = Kernel::new(k, 1, 1);
-        let filtered = filter(&image, kernel, |c, a| *c = a);
+        let filtered = filter(&image, kernel, |x| x);
 
         let expected = gray_image!();
         assert_pixels_eq!(filtered, expected);
@@ -1002,8 +1002,7 @@ mod tests {
             0.1, 0.2, 0.1
         ];
         let kernel = Kernel::new(k, 3, 3);
-        let filtered: Image<Luma<u8>> =
-            filter(&image, kernel, |c, a| *c = <u8 as Clamp<f32>>::clamp(a));
+        let filtered: Image<Luma<u8>> = filter(&image, kernel, <u8 as Clamp<f32>>::clamp);
 
         let expected = gray_image!(
             11,  7;
@@ -1092,8 +1091,8 @@ mod proptests {
             ker in arbitrary_image::<Luma<f32>>(1..20, 1..20),
         ) {
             let kernel = Kernel::new(&ker, ker.width(), ker.height());
-            let out: Image<Luma<f32>> = filter(&img, kernel, |dst, src| {
-                *dst = src;
+            let out: Image<Luma<f32>> = filter(&img, kernel, |x| {
+                x
             });
             assert_eq!(out.dimensions(), img.dimensions());
         }
