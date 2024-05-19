@@ -421,6 +421,7 @@ where
 /// This version uses rayon to parallelize the computation.
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 pub fn filter3x3_parallel<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
 where
     P::Subpixel: Into<K> + Send + Sync,
@@ -673,6 +674,7 @@ pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
 /// ```
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 pub fn laplacian_filter_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     let kernel: [i16; 9] = [0, 1, 0, 1, -4, 1, 0, 1, 0];
     filter3x3_parallel(image, &kernel)

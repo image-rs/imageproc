@@ -17,6 +17,7 @@ pub fn sharpen3x3(image: &GrayImage) -> GrayImage {
 /// Sharpens a grayscale image by applying a 3x3 approximation to the Laplacian.
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 pub fn sharpen3x3_parallel(image: &GrayImage) -> GrayImage {
     let identity_minus_laplacian = [0, -1, 0, -1, 5, -1, 0, -1, 0];
     filter3x3_parallel(image, &identity_minus_laplacian)
