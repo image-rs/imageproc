@@ -323,15 +323,8 @@ struct HistSet {
 
 impl HistSet {
     fn new(num_channels: u8, expected_count: u32) -> HistSet {
-        // Can't use vec![[0u32; 256], num_channels as usize]
-        // because arrays of length > 32 aren't cloneable.
-        let mut data = Vec::with_capacity(num_channels as usize);
-        for _ in 0..num_channels {
-            data.push([0u32; 256]);
-        }
-
         HistSet {
-            data,
+            data: vec![[0u32; 256]; num_channels.into()],
             expected_count,
         }
     }
