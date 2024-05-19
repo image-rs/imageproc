@@ -170,9 +170,6 @@ pub fn intersection_points(
 
     if right_y >= 0.0 && right_y <= h {
         let right_intersect = (w, right_y);
-        if let Some(s) = start {
-            return Some((s, right_intersect));
-        }
         start = Some(right_intersect);
     }
 
