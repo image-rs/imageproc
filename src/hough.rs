@@ -130,7 +130,7 @@ where
 /// or `None` if the line and image bounding box are disjoint. The x value of an intersection
 /// point lies within the closed interval [0, image_width] and the y value within the closed
 /// interval [0, image_height].
-fn intersection_points(
+pub fn intersection_points(
     line: PolarLine,
     image_width: u32,
     image_height: u32,
