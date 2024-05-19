@@ -14,14 +14,40 @@ pub struct MinMax<T> {
 }
 
 /// Returns the minimum and maximum values per channel in an image.
+///
+/// # Panics
+///
+/// 1. If `image.is_empty()`
+///
+/// # Examples
+///
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::stats::min_max;
+///
+/// let image = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// // A greyscale image has only one channel.
+/// let min_max = min_max(&image)[0];
+///
+/// assert_eq!(min_max.min, 1);
+/// assert_eq!(min_max.max, 6);
+/// # }
+/// ````
 pub fn min_max<P, T>(image: &Image<P>) -> Vec<MinMax<T>>
 where
     P: Pixel<Subpixel = T>,
     T: Ord + Copy,
 {
-    if image.is_empty() {
-        panic!("cannot find the range of an empty image");
-    }
+    assert!(
+        !image.is_empty(),
+        "cannot find the min_max() of an empty image"
+    );
 
     let mut ranges = vec![(None, None); P::CHANNEL_COUNT as usize];
 
