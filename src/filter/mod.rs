@@ -233,7 +233,7 @@ where
                     accumulate(
                         &mut acc,
                         unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                        *kernel.get_unchecked(k_x as u32, k_y as u32),
+                        *kernel.at(k_x as u32, k_y as u32),
                     );
                 }
             }
@@ -557,7 +557,7 @@ where
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, Kernel::<i16>::FOUR_LAPLACIAN_3X3)
+    filter_clamped(image, Kernel::FOUR_LAPLACIAN_3X3)
 }
 
 #[cfg(test)]

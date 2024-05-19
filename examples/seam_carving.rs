@@ -62,8 +62,8 @@ fn main() {
     // Draw the seams on the gradient magnitude image.
     let gradients = gradients(
         &input_image,
-        Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-        Kernel::<i32>::SOBEL_VERTICAL_3X3,
+        Kernel::SOBEL_HORIZONTAL_3X3,
+        Kernel::SOBEL_VERTICAL_3X3,
         |p| {
             let mean = (p[0] + p[1] + p[2]) / 3;
             Luma([mean as u32])

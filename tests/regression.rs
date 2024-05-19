@@ -306,8 +306,8 @@ fn test_sobel_gradients() {
         imageproc::map::map_subpixels(
             &gradients::gradients(
                 image,
-                Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-                Kernel::<i32>::SOBEL_VERTICAL_3X3,
+                Kernel::SOBEL_HORIZONTAL_3X3,
+                Kernel::SOBEL_VERTICAL_3X3,
                 |p| p,
             ),
             <u8 as Clamp<u16>>::clamp,

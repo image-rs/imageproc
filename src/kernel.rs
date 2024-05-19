@@ -27,11 +27,17 @@ impl<'a, K> Kernel<'a, K> {
     }
 
     /// Get the value in the kernel at the given `x` and `y` position.
+    ///
+    /// # Panics
+    ///
+    /// If the `x` or `y` is outside of the width or height of the kernel.
     #[inline]
-    pub fn get_unchecked(&self, x: u32, y: u32) -> &K {
+    pub fn at(&self, x: u32, y: u32) -> &K {
         &self.data[(y * self.width + x) as usize]
     }
+}
 
+impl<'a> Kernel<'a, i32> {
     /// The sobel horizontal 3x3 kernel.
     pub const SOBEL_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
         data: &[-1, 0, 1, -2, 0, 2, -1, 0, 1],

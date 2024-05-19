@@ -42,8 +42,8 @@ use itertools::multizip;
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
 /// );
 ///
-/// let horizontal_kernel = Kernel::<i32>::SOBEL_HORIZONTAL_3X3;
-/// let vertical_kernel = Kernel::<i32>::SOBEL_VERTICAL_3X3;
+/// let horizontal_kernel = Kernel::SOBEL_HORIZONTAL_3X3;
+/// let vertical_kernel = Kernel::SOBEL_VERTICAL_3X3;
 ///
 /// assert_pixels_eq!(
 ///     gradients(&input, horizontal_kernel, vertical_kernel, |p| p),
@@ -158,8 +158,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-                Kernel::<i32>::SOBEL_VERTICAL_3X3,
+                Kernel::SOBEL_HORIZONTAL_3X3,
+                Kernel::SOBEL_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -173,8 +173,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::<i32>::SCHARR_HORIZONTAL_3X3,
-                Kernel::<i32>::SCHARR_VERTICAL_3X3,
+                Kernel::SCHARR_HORIZONTAL_3X3,
+                Kernel::SCHARR_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -188,8 +188,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::<i32>::PREWITT_HORIZONTAL_3X3,
-                Kernel::<i32>::PREWITT_VERTICAL_3X3,
+                Kernel::PREWITT_HORIZONTAL_3X3,
+                Kernel::PREWITT_VERTICAL_3X3,
                 |p| p
             ),
             expected
@@ -203,8 +203,8 @@ mod tests {
         assert_pixels_eq!(
             gradients(
                 &image,
-                Kernel::<i32>::ROBERTS_HORIZONTAL_2X2,
-                Kernel::<i32>::ROBERTS_VERTICAL_2X2,
+                Kernel::ROBERTS_HORIZONTAL_2X2,
+                Kernel::ROBERTS_VERTICAL_2X2,
                 |p| p
             ),
             expected
@@ -223,7 +223,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::SOBEL_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::SOBEL_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -239,7 +239,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::SOBEL_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::SOBEL_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -255,7 +255,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::SCHARR_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::SCHARR_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -271,7 +271,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::SCHARR_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::SCHARR_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -287,7 +287,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::PREWITT_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::PREWITT_HORIZONTAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -303,7 +303,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::PREWITT_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, Kernel::PREWITT_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -319,7 +319,7 @@ mod tests {
             1, -2, -2;
             1, -2, -2);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::ROBERTS_HORIZONTAL_2X2);
+        let filtered = filter_clamped(&image, Kernel::ROBERTS_HORIZONTAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
     #[test]
@@ -334,7 +334,7 @@ mod tests {
             1, 4, 4;
             1, 4, 4);
 
-        let filtered = filter_clamped(&image, Kernel::<i16>::ROBERTS_VERTICAL_2X2);
+        let filtered = filter_clamped(&image, Kernel::ROBERTS_VERTICAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
 }
@@ -352,8 +352,8 @@ mod benches {
         b.iter(|| {
             let gradients = gradients(
                 &image,
-                Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-                Kernel::<i32>::SOBEL_VERTICAL_3X3,
+                Kernel::SOBEL_HORIZONTAL_3X3,
+                Kernel::SOBEL_VERTICAL_3X3,
                 |p| p,
             );
             black_box(gradients);

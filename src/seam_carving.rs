@@ -57,8 +57,8 @@ where
 
     let mut gradients = gradients(
         image,
-        Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-        Kernel::<i32>::SOBEL_VERTICAL_3X3,
+        Kernel::SOBEL_HORIZONTAL_3X3,
+        Kernel::SOBEL_VERTICAL_3X3,
         |p| {
             let gradient_sum: u16 = p.channels().iter().sum();
             let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;

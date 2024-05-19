@@ -61,26 +61,26 @@ fn main() {
     for (name, horizontal, vertical, scale) in [
         (
             "sobel",
-            Kernel::<i32>::SOBEL_HORIZONTAL_3X3,
-            Kernel::<i32>::SOBEL_VERTICAL_3X3,
+            Kernel::SOBEL_HORIZONTAL_3X3,
+            Kernel::SOBEL_VERTICAL_3X3,
             32,
         ),
         (
             "scharr",
-            Kernel::<i32>::SCHARR_HORIZONTAL_3X3,
-            Kernel::<i32>::SCHARR_VERTICAL_3X3,
+            Kernel::SCHARR_HORIZONTAL_3X3,
+            Kernel::SCHARR_VERTICAL_3X3,
             8,
         ),
         (
             "prewitt",
-            Kernel::<i32>::PREWITT_HORIZONTAL_3X3,
-            Kernel::<i32>::PREWITT_VERTICAL_3X3,
+            Kernel::PREWITT_HORIZONTAL_3X3,
+            Kernel::PREWITT_VERTICAL_3X3,
             6,
         ),
         (
             "roberts",
-            Kernel::<i32>::ROBERTS_HORIZONTAL_2X2,
-            Kernel::<i32>::ROBERTS_VERTICAL_2X2,
+            Kernel::ROBERTS_HORIZONTAL_2X2,
+            Kernel::ROBERTS_VERTICAL_2X2,
             4,
         ),
     ] {
