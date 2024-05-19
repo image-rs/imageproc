@@ -354,7 +354,7 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     erode_mut(image, norm, k);
 }
 
-/// A mask used in grapyscale morphological operations.
+/// A mask used in grayscale morphological operations.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
     /// For any optimisation/arithmetic purposes, it is guaranteed that:

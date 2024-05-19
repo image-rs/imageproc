@@ -4,7 +4,7 @@
 
 New features:
 * Added functions `template_matching::match_template_with_mask` and `template_matching::match_template_with_mask_parallel` to support masked templates in template matching.
-* Added `L2` variant to the `distance_transform::Norm` enum used to choose the definition of distance used in `distance_transfrom::distance_transform` and several functions in the `morphology` module.
+* Added `L2` variant to the `distance_transform::Norm` enum used to specify the distance function in `distance_transfrom::distance_transform` and several functions in the `morphology` module.
 * Added function `filter::laplacian_filter` using a 3x3 approximation to the Laplacian kernel.
 * Added function `stats::min_max()` which reports the min and max intensities in an image for each channel.
 * Added support for grayscale morphology operators: `grayscale_(dilate|erode|open|close)`.
@@ -17,7 +17,7 @@ Breaking changes:
 
 Bug fixes:
 * Fix panic when drawing large ellipses.
-* Fix BresenhamLineIter panic when using non-integer endpoints.
+* Fix `BresenhamLineIter` panic when using non-integer endpoints.
 * Fix text rendering for overlapping glyphs, e.g. Arabic.
 * Fix Gaussian blur by normalising kernel values.
 
