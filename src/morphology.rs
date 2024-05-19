@@ -354,13 +354,10 @@ pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     erode_mut(image, norm, k);
 }
 
-/// A struct representing a mask used in morphological operations
-///
-/// The mask can have any size between 0 by 0 to 511 by 511 pixels
+/// A mask used in grayscale morphological operations.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mask {
-    /// for any optimisation/arithmetic purposes, it is guaranteed that:
-    ///
+    /// For any optimisation/arithmetic purposes, it is guaranteed that:
     /// - all the integer values will be strictly between -512 and 512
     /// - all tuples will be sorted in reverse lexicographic order, line by line ((-1,-1),(0,-1),(1,-1),(-1,0),(0,0),...)
     /// - no tuple shall appear twice
@@ -379,57 +376,13 @@ macro_rules! lines {
 }
 
 impl Mask {
-    /// creates a mask from a grayscale image
+    /// Creates a mask containing the points `(x, y) - (center_x, center_y)` for each `(x, y)` with non-zero intensity in `image`.
     ///
-    /// a pixel is part of the mask if and only if it is non-zero
-    ///
-    /// `center_x` and `center_y` define the coordinates of the center of the mask.
-    /// They may take any value between 0 and 255,
-    /// including outside of the bounds of the input image,
-    /// but the image itself must be at most 511 pixel wide and 511 pixel high.
+    /// Mask contents are represented using signed integers, so `(center_x, center_y)` is not required to be within bounds for `image`. However, `image`
+    /// is restricted to have a side length of at most 511 pixels.
     ///
     /// # Panics
     /// If `image.width() >= 512` or `image.height() >= 512`.
-    ///
-    /// # Example
-    /// ```
-    /// # extern crate image;
-    /// # #[macro_use]
-    /// # extern crate imageproc;
-    /// # fn main() {
-    /// use imageproc::morphology::Mask;
-    ///
-    ///
-    /// let ring_mask_base = gray_image!(
-    ///     100,  75, 255, 222;
-    ///      84,   0,   0,   1;
-    ///      99,   0,   0,  22;
-    ///     255,   7, 255,  20
-    /// );
-    ///
-    /// let ring_mask_inside = Mask::from_image(&ring_mask_base, 1, 1);
-    ///
-    /// // two different images with identical zeroes will create the same mask
-    /// let other_ring_mask_base = gray_image!(
-    ///      10, 172,  13,   5;
-    ///      45,   0,   0, 101;
-    ///     222,   0,   0,  93;
-    ///       1,   7, 212,  35
-    /// );
-    ///
-    /// assert_eq!(ring_mask_inside, Mask::from_image(&other_ring_mask_base, 1, 1));
-    ///
-    /// // using two identical images with different centers will usually make different masks
-    /// assert_ne!(Mask::from_image(&ring_mask_base, 1, 1), Mask::from_image(&ring_mask_base, 2, 2));
-    ///
-    /// // the center may be out of the image bounds
-    /// let ring_mask_outside = Mask::from_image(&ring_mask_base, 8, 8);
-    ///
-    /// // but the input image itself must be at most 511 pixel wide and 511 pixel wide.
-    /// // the code below would panic :
-    /// // let some_mask = Mask::from_image(&GrayImage::new(600, 600), 2, 2);
-    /// # }
-    /// ```
     pub fn from_image(image: &GrayImage, center_x: u8, center_y: u8) -> Self {
         assert!(
             image.width() < 512,
@@ -461,12 +414,7 @@ impl Mask {
         Self { elements }
     }
 
-    /// creates a square-shaped mask
-    ///
-    /// the mask contains exactly all the pixels `radius` pixels or less
-    /// away from the center according to the `Linf` norm.
-    ///
-    /// therefore, `square(0)` will make a 1x1 square, `square(1)` a 3x3 square, etc...
+    /// Creates a square mask of side length `2 * radius + 1`.
     ///
     /// # Example
     /// ```
@@ -476,17 +424,13 @@ impl Mask {
     /// # fn main() {
     /// use imageproc::morphology::Mask;
     ///
-    /// let single_pixel = gray_image!(100);
-    ///
-    /// assert_eq!(Mask::square(0), Mask::from_image(&single_pixel, 0, 0));
-    ///
-    /// let three_by_three_mask_base = gray_image!(
-    ///     100, 154, 222;
-    ///     184, 184, 211;
-    ///     255, 127, 255
+    /// // Mask::square(1) is a 3x3 square mask centered at the origin.
+    /// let square = gray_image!(
+    ///     255, 255, 255;
+    ///     255, 255, 255;
+    ///     255, 255, 255
     /// );
-    ///
-    /// assert_eq!(Mask::square(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
+    /// assert_eq!(Mask::square(1), Mask::from_image(&square, 1, 1));
     /// # }
     /// ```
     pub fn square(radius: u8) -> Self {
@@ -500,13 +444,7 @@ impl Mask {
         Self::new(elements)
     }
 
-    /// creates a diamond-shaped mask
-    ///
-    /// the mask contains exactly all the pixels `radius` pixels or less
-    /// away from the center according to the `L1` norm.
-    ///
-    /// therefore, `diamond(0)` will make a 1x1 square, `diamond(1)` a 3x3 cross,
-    /// `diamond(2)` a 5x5 diamond, `diamond(3)` a 7x7 diamond, etc...
+    /// Creates a diamond-shaped mask containing all points with `L1` norm at most `radius`.
     ///
     /// # Example
     /// ```
@@ -516,27 +454,23 @@ impl Mask {
     /// # fn main() {
     /// use imageproc::morphology::Mask;
     ///
-    /// let single_pixel = gray_image!(100);
-    ///
-    /// assert_eq!(Mask::diamond(0), Mask::from_image(&single_pixel, 0, 0));
-    ///
-    /// let three_by_three_mask_base = gray_image!(
+    /// // Mask::diamond(1) is a 3x3 cross centered at the origin.
+    /// let diamond_1 = gray_image!(
     ///       0, 255,   0;
-    ///      84, 204, 101;
-    ///       0, 217,   0
+    ///     255, 255, 255;
+    ///       0, 255,   0
     /// );
+    /// assert_eq!(Mask::diamond(1), Mask::from_image(&diamond_1, 1, 1));
     ///
-    /// assert_eq!(Mask::diamond(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
-    ///
-    /// let five_by_five_mask_base = gray_image!(
+    /// // Mask::diamond(2) is a 5x5 diamond centered at the origin.
+    /// let diamond_2 = gray_image!(
     ///       0,   0, 255,   0,   0;
-    ///       0, 231, 204, 101,   0;
-    ///     149, 193, 188, 137, 199;
-    ///       0, 222, 182, 114,   0;
-    ///       0,   0, 217,   0,   0
+    ///       0, 255, 255, 255,   0;
+    ///     255, 255, 255, 255, 255;
+    ///       0, 255, 255, 255,   0;
+    ///       0,   0, 255,   0,   0
     /// );
-    ///
-    /// assert_eq!(Mask::diamond(2), Mask::from_image(&five_by_five_mask_base, 2, 2));
+    /// assert_eq!(Mask::diamond(2), Mask::from_image(&diamond_2, 2, 2));
     /// # }
     /// ```
     pub fn diamond(radius: u8) -> Self {
@@ -549,14 +483,10 @@ impl Mask {
         Self::new(elements)
     }
 
-    /// creates a disk-shaped mask
-    ///
-    /// the mask contains exactly all the pixels `radius` pixels or less
-    /// away from the center according to the `L2` norm.
+    /// Creates a disk-shaped mask containing all points with `L2` norm at most `radius`.
     ///
     /// When computing distances using the L2 norm we take the ceiling of the true values.
-    /// This means that using the L2 norm gives the same results as the L1 norm for `radius <= 2`.
-    ///
+    /// This means that using the L2 norm gives the same results as the `L1` norm for `radius <= 2`.
     ///
     /// # Example
     /// ```
@@ -566,42 +496,27 @@ impl Mask {
     /// # fn main() {
     /// use imageproc::morphology::Mask;
     ///
-    /// let single_pixel = gray_image!(100);
-    ///
-    /// assert_eq!(Mask::disk(0), Mask::from_image(&single_pixel, 0, 0));
-    ///
-    /// let three_by_three_mask_base = gray_image!(
-    ///       0, 255,   0;
-    ///      84, 204, 101;
-    ///       0, 217,   0
-    /// );
-    ///
-    /// assert_eq!(Mask::disk(1), Mask::from_image(&three_by_three_mask_base, 1, 1));
-    ///
-    /// let five_by_five_mask_base = gray_image!(
+    /// // For radius <= 2, Mask::disk(radius) is the same as Mask::diamond(radius).
+    /// let disk_2 = gray_image!(
     ///       0,   0, 255,   0,   0;
     ///       0, 231, 204, 101,   0;
     ///     149, 193, 188, 137, 199;
     ///       0, 222, 182, 114,   0;
     ///       0,   0, 217,   0,   0
     /// );
+    /// assert_eq!(Mask::disk(2), Mask::from_image(&disk_2, 2, 2));
     ///
-    /// assert_eq!(Mask::disk(2), Mask::from_image(&five_by_five_mask_base, 2, 2));
-    ///
-    /// // disk() finally separates from diamond() at a radius of 3
-    ///
-    /// let seven_by_seven_mask_base = gray_image!(
+    /// // Mask::disk(3) is a filled circle of radius 3.
+    /// let disk_3 = gray_image!(
     ///       0,   0,   0, 255,   0,   0,   0;
-    ///       0, 217, 188, 101, 222, 137,   0;
-    ///       0, 231, 204, 255, 182, 193,   0;
-    ///     149, 193, 101, 188, 217, 149, 114;
-    ///       0, 217, 188, 231, 222, 137,   0;
-    ///       0, 101, 204, 222, 255, 193,   0;
-    ///       0,   0,   0, 182,   0,   0,   0
+    ///       0, 255, 255, 255, 255, 255,   0;
+    ///       0, 255, 255, 255, 255, 255,   0;
+    ///     255, 255, 255, 255, 255, 255, 255;
+    ///       0, 255, 255, 255, 255, 255,   0;
+    ///       0, 255, 255, 255, 255, 255,   0;
+    ///       0,   0,   0, 255,   0,   0,   0
     /// );
-    ///
-    /// assert_eq!(Mask::disk(3), Mask::from_image(&seven_by_seven_mask_base, 3, 3));
-    ///
+    /// assert_eq!(Mask::disk(3), Mask::from_image(&disk_3, 3, 3));
     /// # }
     /// ```
     pub fn disk(radius: u8) -> Self {
@@ -669,12 +584,10 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
     result
 }
 
-/// computes the morphologic dilation of the input image with the given mask
+/// Computes the morphologic dilation of `image` with the given mask.
 ///
-/// for each input pixel, the output pixel will be the maximum of all pixels included
-/// in the mask at that position.
-///
-/// if the mask doesn't intersect any input pixel at some point,
+/// For each input pixel, the output pixel will be the maximum of all pixels included
+/// in the mask at that position. If the mask doesn't intersect any input pixel at some point,
 /// it will default to a value of [`u8::MIN`].
 ///
 /// # Examples
@@ -694,7 +607,7 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///     0,   0,   0,   0,   0, 222
 /// );
 ///
-/// // using a diamond mask
+/// // Using a diamond mask
 /// let diamond_dilated = gray_image!(
 ///     7,   7,   0,   0,   0,   0;
 ///     7,   0,  99,   0,   0,   0;
@@ -702,10 +615,9 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///     0,   0,  99,   0,   0, 222;
 ///     0,   0,   0,   0, 222, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_dilate(&image, &Mask::diamond(1)), diamond_dilated);
 ///
-/// // using a disk mask
+/// // Using a disk mask
 /// let disk_dilated = gray_image!(
 ///    99,  99,  99,  99,  99,   0;
 ///    99,  99,  99,  99,  99, 222;
@@ -713,10 +625,9 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///    99,  99,  99, 222, 222, 222;
 ///    99,  99, 222, 222, 222, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_dilate(&image, &Mask::disk(3)), disk_dilated);
 ///
-/// // using a square mask
+/// // Using a square mask
 /// let square_dilated = gray_image!(
 ///     7,   7,   0,   0,   0,   0;
 ///     7,  99,  99,  99,   0,   0;
@@ -724,22 +635,18 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///     0,  99,  99,  99, 222, 222;
 ///     0,   0,   0,   0, 222, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_dilate(&image, &Mask::square(1)), square_dilated);
 ///
-///
-/// // using an arbitrary mask
-/// // the center of the mask is the '4' here, cause it's coordinates are (0,1)
+/// // Using an arbitrary mask
 /// let column_mask = Mask::from_image(
 ///     &gray_image!(
-///         8;
-///         1;
-///         9;
-///         2
+///       255;
+///       255;
+///       255;
+///       255
 ///     ),  
 ///     0,  1
 /// );
-///
 /// let column_dilated = gray_image!(
 ///     7,   0,  99,   0,   0,   0;
 ///     7,   0,  99,   0,   0,   0;
@@ -747,21 +654,17 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///     0,   0,  99,   0,   0, 222;
 ///     0,   0,   0,   0,   0, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_dilate(&image, &column_mask), column_dilated);
 /// # }
 /// ```
 pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
-    // default is u8::MIN because it's the neutral element of max
     mask_reduce(image, mask, u8::MIN, u8::max)
 }
 
-/// computes the morphologic erosion of the input image with the given mask
+/// Computes the morphologic erosion of `image` with the given mask.
 ///
-/// for each input pixel, the output pixel will be the minimum of all pixels included
-/// in the mask at that position.
-///
-/// if the mask doesn't intersect any input pixel at some point,
+/// For each input pixel, the output pixel will be the minimum of all pixels included
+/// in the mask at that position. If the mask doesn't intersect any input pixel at some point,
 /// it will default to a value of [`u8::MAX`].
 ///
 /// # Examples
@@ -781,7 +684,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///    99,  99,  99, 222, 222, 222
 /// );
 ///
-/// // using a diamond mask
+/// // Using a diamond mask
 /// let diamond_eroded = gray_image!(
 ///     7,   7,  99,  99,  99,  99;
 ///     7,  99,  99,  99,  99,  99;
@@ -789,10 +692,9 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///     7,   7,  99,  99,  99, 222;
 ///     7,  99,  99,  99, 222, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_erode(&image, &Mask::diamond(1)), diamond_eroded);
 ///
-/// // using a disk mask
+/// // Using a disk mask
 /// let disk_eroded = gray_image!(
 ///     7,   7,   7,   7,  99,  99;
 ///     7,   7,   7,  99,  99,  99;
@@ -800,10 +702,9 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///     7,   7,   7,   7,  99,  99;
 ///     7,   7,   7,  99,  99,  99
 /// );
-///
 /// assert_pixels_eq!(grayscale_erode(&image, &Mask::disk(3)), disk_eroded);
 ///
-/// // using a square mask
+/// // Using a square mask
 /// let square_eroded = gray_image!(
 ///     7,   7,  99,  99,  99,  99;
 ///     7,   7,  99,  99,  99,  99;
@@ -811,22 +712,18 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///     7,   7,  99,  99,  99, 222;
 ///     7,   7,  99,  99,  99, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_erode(&image, &Mask::square(1)), square_eroded);
 ///
-///
-/// // using an arbitrary mask
-/// // the center of the mask is the '4' here, cause it's coordinates are (0,1)
+/// // Using an arbitrary mask
 /// let column_mask = Mask::from_image(
 ///     &gray_image!(
-///         8;
-///         4;
-///         9;
-///         2
+///       255;
+///       255;
+///       255;
+///       255
 ///     ),  
 ///     0,  1
 /// );
-///
 /// let column_eroded = gray_image!(
 ///     7,  99,  99,  99,  99, 222;
 ///     7,  99,  99,  99,  99, 222;
@@ -834,12 +731,10 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///     7,  99,  99,  99, 222, 222;
 ///     7,  99,  99,  99, 222, 222
 /// );
-///
 /// assert_pixels_eq!(grayscale_erode(&image, &column_mask), column_eroded);
 /// # }
 /// ```
 pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
-    // default is u8::MAX because it's the neutral element of min
     mask_reduce(image, mask, u8::MAX, u8::min)
 }
 
@@ -858,8 +753,6 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 /// use image::GrayImage;
 /// use imageproc::morphology::{Mask, grayscale_open};
 ///
-/// // Isolated regions of foreground pixels are removed,
-/// // while isolated zones of background pixels are maintained
 /// let image = gray_image!(
 ///   100,  99,  99,  99, 222,  99;
 ///    99,  99,  99, 222, 222, 222;
@@ -877,23 +770,10 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///     7,   7,   7,  99,  99,  99;
 ///     7,   7,   7,  99,  99,  99
 /// );
-///
 /// assert_pixels_eq!(grayscale_open(&image, &Mask::square(1)), image_opened);
 ///
-/// // because it is a morhological operator, applying the same
-/// // opening a second time doesn't do anything
+/// // grayscale_open is idempotent - applying it a second time has no effect.
 /// assert_pixels_eq!(grayscale_open(&image_opened, &Mask::square(1)), image_opened);
-///
-/// // which regions are removed depends on the mask used
-/// let image_opened_diamond = gray_image!(
-///    99,  99,  99,  99, 222,  99;
-///    99,  99,  99, 222, 222, 222;
-///    99,   7,  99,  99, 222,  99;
-///     7,   7,   7,  99,  99,  99;
-///     7,   7,  99,  99,  99,  99
-/// );
-///
-/// assert_pixels_eq!(grayscale_open(&image, &Mask::diamond(1)), image_opened_diamond);
 /// # }
 /// ```
 pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
@@ -932,23 +812,10 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///    99,  99,  99,  99,  99,  99;
 ///    99,  99,  99,  99,  99,  99
 /// );
-///
 /// assert_pixels_eq!(grayscale_close(&image, &Mask::square(1)), image_closed);
 ///
-/// // because it is a morphological operator, applying the same
-/// // closing a second time doesn't do anything
+/// // grayscale_close is idempotent - applying it a second time has no effect.
 /// assert_pixels_eq!(grayscale_close(&image_closed, &Mask::square(1)), image_closed);
-///
-/// // which regions are removed depends on the mask used
-/// let image_closed_diamond = gray_image!(
-///    99,  99,  99,  99, 222, 222;
-///    99,  99,  99, 222, 222, 222;
-///    99,   7,  99,  99, 222,  99;
-///     7,   7,   7,  99,  99,  99;
-///    99,   7,  99,  99,  99,  99
-/// );
-///
-/// assert_pixels_eq!(grayscale_close(&image, &Mask::diamond(1)), image_closed_diamond);
 /// # }
 /// ```
 pub fn grayscale_close(image: &GrayImage, mask: &Mask) -> GrayImage {

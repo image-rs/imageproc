@@ -1,13 +1,25 @@
 # Change Log
 
-## Unreleased
+## [0.25.0] - 2024-05-19
 
-Changes:
-- `contrast::stretch_contrast{_mut}` had been extended and renamed to `contrast::scale_linear{_mut}`
+New features:
+* Added functions `template_matching::match_template_with_mask` and `template_matching::match_template_with_mask_parallel` to support masked templates in template matching.
+* Added `L2` variant to the `distance_transform::Norm` enum used to specify the distance function in `distance_transfrom::distance_transform` and several functions in the `morphology` module.
+* Added function `filter::laplacian_filter` using a 3x3 approximation to the Laplacian kernel.
+* Added function `stats::min_max()` which reports the min and max intensities in an image for each channel.
+* Added support for grayscale morphology operators: `grayscale_(dilate|erode|open|close)`.
 
-Added:
-- Added a new `min_max()` function and `MinMax` return struct for finding the
-  minimum and maximum value pixel in an image
+Breaking changes:
+* Added `ThresholdType` parameter to `contrast::threshold{_mut}` to allow configuration of thresholding behaviour. To match the behaviour of `threshold(image, thresh)` from `imageproc 0.24`, use `threshold(image, thresh, ThresholdType::Binary)`.
+* Changed the signature of `contrast::stretch_contrast{_mut}` to make the output intensity range configurable. To match the behaviour of `stretch_contrast(image, lower, upper)` from `imageproc 0.24`, use `stretch_contrast(image, lower, upper, 0u8, 255u8)`.
+* Changed input parameter to `convex_hull` from `&[Point<T>]` to `impl Into<Vec<Point<T>>>`.
+* Removed dependency on `conv` crate and removed function `math::cast`. This replaces `ValueInto<K>` trait bounds with `Into<K>` in many function signatures.
+
+Bug fixes:
+* Fix panic when drawing large ellipses.
+* Fix `BresenhamLineIter` panic when using non-integer endpoints.
+* Fix text rendering for overlapping glyphs, e.g. Arabic.
+* Fix Gaussian blur by normalising kernel values.
 
 ## [0.24.0] - 2024-03-16
 

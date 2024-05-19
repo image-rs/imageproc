@@ -267,45 +267,66 @@ pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
     out
 }
 
-/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
-/// pair to the output_min and output_max pair.
+/// Stretches the contrast in an image, linearly mapping intensities in `(input_lower, input_upper)` to `(output_lower, output_upper)` and saturating
+/// values outside this input range.
 ///
-/// # Example
-/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
-/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
-/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
-/// All values between 50 and 100 are then linearly interpolated into the output range.
-/// Such as 75 -> 128
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use imageproc::contrast::stretch_contrast;
 ///
+/// let image = gray_image!(
+///      0,   20,  50;
+///     80,  100, 255);
 ///
-/// # Panic
-/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
-pub fn scale_linear(
+/// let lower = 20;
+/// let upper = 100;
+///
+/// // Pixel intensities between 20 and 100 are linearly
+/// // scaled so that 20 is mapped to 0 and 100 is mapped to 255.
+/// // Pixel intensities less than 20 are sent to 0 and pixel
+/// // intensities greater than 100 are sent to 255.
+/// let stretched = stretch_contrast(&image, lower, upper, 0u8, 255u8);
+///
+/// let expected = gray_image!(
+///       0,   0,  95;
+///     191, 255, 255);
+///
+/// assert_pixels_eq!(stretched, expected);
+/// # }
+/// ```
+///
+/// # Panics
+/// If `input_lower >= input_upper` or `output_lower > output_upper`.
+pub fn stretch_contrast(
     image: &GrayImage,
-    input_min: u8,
-    input_max: u8,
-    output_min: u8,
-    output_max: u8,
+    input_lower: u8,
+    input_upper: u8,
+    output_lower: u8,
+    output_upper: u8,
 ) -> GrayImage {
     let mut out = image.clone();
-    scale_linear_mut(&mut out, input_min, input_max, output_min, output_max);
+    stretch_contrast_mut(
+        &mut out,
+        input_lower,
+        input_upper,
+        output_lower,
+        output_upper,
+    );
     out
 }
 
-/// Scales each pixel in the image using the scaling effect to take the input_min and input_max
-/// pair to the output_min and output_max pair.
+/// Stretches the contrast in an image, linearly mapping intensities in `(input_lower, input_upper)` to `(output_lower, output_upper)` and saturating
+/// values outside this input range.
 ///
-/// # Example
-/// (50, 100) -> (0, 255) would make 8 -> 0 since it saturates outside the input range as 8 < 50.
-/// 200 -> 255 since it also saturates outside the input range as 200 > 100.
-/// 50 -> 0, and 100 -> 255 by definition of the scaling pairs.
-/// All values between 50 and 100 are then linearly interpolated into the output range.
-/// Such as 75 -> 128
+/// See the [`stretch_contrast`](fn.stretch_contrast.html) documentation for more.
 ///
-///
-/// # Panic
-/// This function panics if `input_min` >= `input_max` or `output_min` > `output_max`.
-pub fn scale_linear_mut(
+/// # Panics
+/// If `input_lower >= input_upper` or `output_lower > output_upper`.
+pub fn stretch_contrast_mut(
     image: &mut GrayImage,
     input_min: u8,
     input_max: u8,
@@ -569,12 +590,10 @@ mod tests {
     }
 
     #[test]
-    fn test_scale_linear() {
+    fn test_stretch_contrast() {
         let input = gray_image!(1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 255);
-
         let expected = gray_image!(10u8, 10, 10, 11, 11, 12, 12, 13, 13, 13, 52, 120);
-
-        assert_pixels_eq!(scale_linear(&input, 1, 255, 10, 120), expected);
+        assert_pixels_eq!(stretch_contrast(&input, 1, 255, 10, 120), expected);
     }
 }
 
@@ -661,19 +680,19 @@ mod benches {
     }
 
     #[bench]
-    fn bench_scale_linear(b: &mut Bencher) {
+    fn bench_stretch_contrast(b: &mut Bencher) {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
-            let scaled = scale_linear(&image, 0, 255, 0, 255);
+            let scaled = stretch_contrast(&image, 0, 255, 0, 255);
             black_box(scaled);
         });
     }
 
     #[bench]
-    fn bench_scale_linear_mut(b: &mut Bencher) {
+    fn bench_stretch_contrast_mut(b: &mut Bencher) {
         let mut image = gray_bench_image(200, 200);
         b.iter(|| {
-            scale_linear_mut(&mut image, 0, 255, 0, 255);
+            stretch_contrast_mut(&mut image, 0, 255, 0, 255);
             black_box(());
         });
     }
