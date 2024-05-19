@@ -295,7 +295,7 @@ where
                             min(width - 1, max(0, x + k_x as i64 - k_width as i64 / 2)) as u32;
                         debug_assert!(image.in_bounds(x_p, y_p));
                         let px = unsafe { &image.unsafe_get_pixel(x_p, y_p) };
-                        let coefficient = *kernel.at(k_x as u32, k_y as u32);
+                        let coefficient = *kernel.at(k_x, k_y);
                         accumulate(&mut acc, px, coefficient);
                     }
                 }

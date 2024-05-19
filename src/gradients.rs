@@ -546,6 +546,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rayon")]
     fn test_horizontal_prewitt_gradient_image_parallel() {
         let image = gray_image!(
             3, 2, 1;
