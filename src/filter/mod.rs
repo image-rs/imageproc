@@ -962,18 +962,9 @@ mod proptests {
             ker in arbitrary_image::<Luma<f32>>(1..20, 1..20),
         ) {
             let kernel = Kernel::new(&ker, ker.width(), ker.height());
-            let out: Image<Luma<f32>> = kernel.filter(&img, |dst, src| {
+            let out: Image<Luma<f32>> = filter(&img, kernel, |dst, src| {
                 *dst = src;
             });
-            assert_eq!(out.dimensions(), img.dimensions());
-        }
-
-        #[test]
-        fn proptest_filter3x3(
-            img in arbitrary_image::<Luma<u8>>(0..50, 0..50),
-            ker in proptest::collection::vec(any::<f32>(), 9),
-        ) {
-            let out: Image<Luma<f32>> = filter3x3(&img, &ker);
             assert_eq!(out.dimensions(), img.dimensions());
         }
 
