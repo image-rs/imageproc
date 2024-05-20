@@ -210,14 +210,14 @@ mod tests {
             1, 2, 3;
             4, 5, 6;
             7, 8, 9);
-        let actual = bilateral_filter(&image, 1, 3., GaussianEuclideanColorDistance::new(10.0));
+        let actual = bilateral_filter(&image, 1, 3.0, GaussianEuclideanColorDistance::new(10.0));
 
-        let expected = gray_image!(
-            1, 2, 2;
-            4, 4, 5;
-            7, 7, 8);
+        let expect = gray_image!(
+            2, 2, 3;
+            4, 5, 5;
+            6, 7, 7);
 
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq!(actual, expect);
     }
 }
 
