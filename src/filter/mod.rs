@@ -1,6 +1,8 @@
 //! Functions for filtering images.
 
+pub mod bilateral;
 mod median;
+pub use self::bilateral::bilateral_filter;
 pub use self::median::median_filter;
 
 mod sharpen;
@@ -16,128 +18,6 @@ use num::Num;
 
 use std::cmp::{max, min};
 use std::f32;
-
-/// Denoise 8-bit grayscale image using bilateral filtering.
-///
-/// # Arguments
-///
-/// * `image` - Grayscale image to be filtered.
-/// * `window_size` - Window size for filtering.
-/// * `sigma_color` - Standard deviation for grayscale distance. A larger value results
-///     in averaging of pixels with larger grayscale differences.
-/// * `sigma_spatial` - Standard deviation for range distance. A larger value results in
-///     averaging of pixels separated by larger distances.
-///
-/// This is a denoising filter designed to preserve edges. It averages pixels based on their spatial
-/// closeness and radiometric similarity \[1\]. Spatial closeness is measured by the Gaussian function
-/// of the Euclidean distance between two pixels with user-specified standard deviation
-/// (`sigma_spatial`). Radiometric similarity is measured by the Gaussian function of the difference
-/// between two grayscale values with user-specified standard deviation (`sigma_color`).
-///
-/// # References
-///
-///   \[1\] C. Tomasi and R. Manduchi. "Bilateral Filtering for Gray and Color
-///        Images." IEEE International Conference on Computer Vision (1998)
-///        839-846. DOI: 10.1109/ICCV.1998.710815
-///
-/// # Panics
-///
-/// 1. If `image.width() > i32::MAX as u32` or `image.height() > i32::MAX as u32`.
-/// 2. If `image.is_empty()`.
-///
-/// # Examples
-///
-/// ```
-/// use imageproc::filter::bilateral_filter;
-/// use imageproc::utils::gray_bench_image;
-/// let image = gray_bench_image(500, 500);
-/// let filtered = bilateral_filter(&image, 10, 10., 3.);
-/// ```
-#[must_use = "the function does not modify the original image"]
-pub fn bilateral_filter(
-    image: &GrayImage,
-    window_size: u32,
-    sigma_color: f32,
-    sigma_spatial: f32,
-) -> Image<Luma<u8>> {
-    /// Un-normalized Gaussian weights for look-up tables.
-    fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
-        (-0.5 * x.powi(2) / sigma_squared).exp()
-    }
-
-    /// Create look-up table of Gaussian weights for color dimension.
-    fn compute_color_lut(bins: u32, sigma: f32, max_value: f32) -> Vec<f32> {
-        let step_size = max_value / bins as f32;
-        let sigma_squared = sigma.powi(2);
-        (0..bins)
-            .map(|x| x as f32 * step_size)
-            .map(|x| gaussian_weight(x, sigma_squared))
-            .collect()
-    }
-
-    /// Create look-up table of weights corresponding to flattened 2-D Gaussian kernel.
-    fn compute_spatial_lut(window_size: u32, sigma: f32) -> Vec<f32> {
-        let window_start = (-(window_size as f32) / 2.0).floor() as i32;
-        let window_end = (window_size as f32 / 2.0).floor() as i32 + 1;
-        let window_range = window_start..window_end;
-
-        let cc = window_range.clone().cycle().take(window_range.len().pow(2));
-        let n = window_size as usize + 1;
-        let rr = window_range.flat_map(|i| std::iter::repeat(i).take(n));
-
-        let sigma_squared = sigma.powi(2);
-        rr.zip(cc)
-            .map(|(r, c)| {
-                let dist = ((r as f32).powi(2) + (c as f32).powi(2)).sqrt();
-                gaussian_weight(dist, sigma_squared)
-            })
-            .collect()
-    }
-
-    let max_value = *image.iter().max().unwrap() as f32;
-    let n_bins = 255u32; // for color or > 8-bit, make n_bins a user input for tuning accuracy.
-    let color_lut = compute_color_lut(n_bins, sigma_color, max_value);
-    let color_dist_scale = n_bins as f32 / max_value;
-    let max_color_bin = (n_bins - 1) as usize;
-    let range_lut = compute_spatial_lut(window_size, sigma_spatial);
-    let window_size = window_size as i32;
-    let window_extent = (window_size - 1) / 2;
-
-    let (width, height) = image.dimensions();
-    assert!(width <= i32::MAX as u32);
-    assert!(height <= i32::MAX as u32);
-
-    Image::from_fn(width, height, |col, row| {
-        let mut total_val = 0f32;
-        let mut total_weight = 0f32;
-        debug_assert!(image.in_bounds(col, row));
-        // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
-        let window_center_val = unsafe { image.unsafe_get_pixel(col, row)[0] } as i32;
-
-        for window_row in -window_extent..window_extent + 1 {
-            let window_row_abs =
-                (row as i32 + window_row).clamp(0, height.saturating_sub(1) as i32) as u32;
-            let kr = window_row + window_extent;
-            for window_col in -window_extent..window_extent + 1 {
-                let window_col_abs =
-                    (col as i32 + window_col).clamp(0, width.saturating_sub(1) as i32) as u32;
-                debug_assert!(image.in_bounds(window_col_abs, window_row_abs));
-                // Safety: we clamped `window_row_abs` and `window_col_abs` to be in bounds.
-                let val = unsafe { image.unsafe_get_pixel(window_col_abs, window_row_abs)[0] };
-
-                let kc = window_col + window_extent;
-                let range_bin = (kr * window_size + kc) as usize;
-                let color_dist = (window_center_val - val as i32).abs() as f32;
-                let color_bin = ((color_dist * color_dist_scale) as usize).min(max_color_bin);
-                let weight = range_lut[range_bin] * color_lut[color_bin];
-                total_val += val as f32 * weight;
-                total_weight += weight;
-            }
-        }
-        let new_val = (total_val / total_weight).round() as u8;
-        Luma([new_val])
-    })
-}
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
@@ -248,9 +128,11 @@ where
     out
 }
 
+/// The gaussian probability density function with a mean of zero.
 #[inline]
-fn gaussian(x: f32, r: f32) -> f32 {
-    ((2.0 * f32::consts::PI).sqrt() * r).recip() * (-x.powi(2) / (2.0 * r.powi(2))).exp()
+fn gaussian_pdf(x: f32, sigma: f32) -> f32 {
+    // Equation derived from <https://en.wikipedia.org/wiki/Gaussian_function>
+    (sigma * (2.0 * f32::consts::PI).sqrt()).recip() * (-x.powi(2) / (2.0 * sigma.powi(2))).exp()
 }
 
 /// Construct a one dimensional float-valued kernel for performing a Gaussian blur
@@ -259,7 +141,7 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
     let kernel_radius = (2.0 * sigma).ceil() as usize;
     let mut kernel_data = vec![0.0; 2 * kernel_radius + 1];
     for i in 0..kernel_radius + 1 {
-        let value = gaussian(i as f32, sigma);
+        let value = gaussian_pdf(i as f32, sigma);
         kernel_data[kernel_radius + i] = value;
         kernel_data[kernel_radius - i] = value;
     }
@@ -568,20 +450,6 @@ mod tests {
     use image::{GrayImage, ImageBuffer, Luma};
     use std::cmp::{max, min};
     use test::black_box;
-
-    #[test]
-    fn test_bilateral_filter() {
-        let image = gray_image!(
-            1, 2, 3;
-            4, 5, 6;
-            7, 8, 9);
-        let expect = gray_image!(
-            2, 3, 4;
-            5, 5, 6;
-            6, 7, 8);
-        let actual = bilateral_filter(&image, 3, 10., 3.);
-        assert_pixels_eq!(actual, expect);
-    }
 
     #[test]
     fn test_box_filter_handles_empty_images() {
@@ -927,17 +795,6 @@ mod proptests {
 
     proptest! {
         #[test]
-        fn proptest_bilateral_filter(
-            img in arbitrary_image::<Luma<u8>>(1..40, 1..40),
-            window_size in 0..25u32,
-            sigma_color in any::<f32>(),
-            sigma_spatial in any::<f32>(),
-        ) {
-            let out = bilateral_filter(&img, window_size, sigma_color, sigma_spatial);
-            assert_eq!(out.dimensions(), img.dimensions());
-        }
-
-        #[test]
         fn proptest_box_filter(
             img in arbitrary_image::<Luma<u8>>(0..200, 0..200),
             x_radius in 0..100u32,
@@ -1005,15 +862,6 @@ mod benches {
     use image::imageops::blur;
     use image::{GenericImage, ImageBuffer, Luma, Rgb};
     use test::{black_box, Bencher};
-
-    #[bench]
-    fn bench_bilateral_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        b.iter(|| {
-            let filtered = bilateral_filter(&image, 10, 10., 3.);
-            black_box(filtered);
-        });
-    }
 
     #[bench]
     fn bench_box_filter(b: &mut Bencher) {
