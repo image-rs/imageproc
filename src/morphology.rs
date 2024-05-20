@@ -369,7 +369,7 @@ macro_rules! lines {
         $mask
             .elements
             .iter()
-            .group_by(|p| p.y)
+            .chunk_by(|p| p.y)
             .into_iter()
             .map(|(y, line)| (y, line.map(|p| p.x)))
     };
