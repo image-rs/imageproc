@@ -135,16 +135,9 @@ pub fn map_subpixels_parallel<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P
 where
     I: GenericImage<Pixel = P> + std::ops::Deref<Target = [P::Subpixel]>,
     P: WithChannel<S>,
-    S: Primitive,
-    F: Fn(P::Subpixel) -> S + std::marker::Sync,
-    P::Subpixel: std::marker::Send,
-    P::Subpixel: std::marker::Sync,
-    P: std::marker::Send,
-    P: std::marker::Sync,
-    S: std::marker::Send,
-    S: std::marker::Sync,
-    <P as WithChannel<S>>::Pixel: std::marker::Send,
-    <P as WithChannel<S>>::Pixel: std::marker::Sync,
+    P::Subpixel: Sync,
+    S: Primitive + Send,
+    F: Fn(P::Subpixel) -> S + Sync,
 {
     use rayon::iter::IntoParallelRefIterator;
     use rayon::iter::ParallelIterator;
