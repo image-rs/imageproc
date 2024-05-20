@@ -103,12 +103,6 @@ where
 
 /// Applies `f` to each subpixel of the input image in parallel.
 ///
-/// The performance of this function depends on the dimensions of the image and the complexity of
-/// the mapping function `f`. For small images and fast mapping functions the non-parallel version
-/// is often faster whereas for large images with slow mapping functions the parallel version is
-/// often faster. It is a good idea to benchmark your individual usecases to make sure you are using the most
-/// appropriate version.
-///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -644,71 +638,4 @@ where
         cs[2] = p[0];
         Rgb(cs)
     })
-}
-
-#[cfg(not(miri))]
-#[cfg(test)]
-mod benches {
-    use crate::utils::rgb_bench_image;
-
-    use super::*;
-    use test::{black_box, Bencher};
-
-    fn map_subpixels_sequential<P, F, S>(
-        image: &ImageBuffer<P, Vec<P::Subpixel>>,
-        f: F,
-    ) -> Image<ChannelMap<P, S>>
-    where
-        P: WithChannel<S>,
-        S: Primitive,
-        F: Fn(P::Subpixel) -> S,
-    {
-        let (width, height) = image.dimensions();
-
-        ImageBuffer::<ChannelMap<P, S>, Vec<S>>::from_vec(
-            width,
-            height,
-            image.iter().map(|subp| f(*subp)).collect(),
-        )
-        .expect("of course the length is good, it's just a map")
-    }
-
-    macro_rules! bench_map_subpixels {
-        ($name:ident, $side_len:expr, $mapper:expr) => {
-            #[bench]
-            fn $name(b: &mut Bencher) {
-                let image = rgb_bench_image($side_len, $side_len);
-                b.iter(|| {
-                    let mapped = $mapper(&image, |x| f64::from(x).sqrt() as u8 + 1);
-                    black_box(mapped);
-                });
-            }
-        };
-    }
-
-    macro_rules! bench_map_subpixels_sequential {
-        ($name:ident, $side_len:expr) => {
-            bench_map_subpixels!($name, $side_len, map_subpixels_sequential);
-        };
-    }
-
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_10, 10);
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_30, 30);
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_60, 60);
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_100, 100);
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_1000, 1000);
-    bench_map_subpixels_sequential!(bench_map_subpixels_sequential_10_000, 10_000);
-
-    macro_rules! bench_map_subpixels_parallel {
-        ($name:ident, $side_len:expr) => {
-            bench_map_subpixels!($name, $side_len, map_subpixels_parallel);
-        };
-    }
-
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_10, 10);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_30, 30);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_60, 60);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_100, 100);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_1000, 1000);
-    bench_map_subpixels_parallel!(bench_map_subpixels_parallel_10_000, 10_000);
 }
