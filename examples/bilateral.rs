@@ -16,9 +16,9 @@ fn main() {
     let image_grey = dynamic_image.to_luma8();
     let image_color = dynamic_image.to_rgb8();
 
-    let radius = 4;
+    let radius = 5;
     let color_sigma = 40.0;
-    let spatial_sigma = 40.0;
+    let spatial_sigma = 140.0;
 
     let bilateral_grey = bilateral_filter(
         &image_grey,
