@@ -36,6 +36,38 @@ issues for them. Nothing's set in stone.
   computer vision task?). However, worrying about how to structure the code
   can probably wait until we have more code to structure...
 
+## Color Space
+
+Throughout this library functions implicitly assume that pixels colors are
+stored in a linear color space like `RGB` as opposed to a non-linear color
+space such as `sRGB`. This is because simplifies the implementation
+complexity of various functions which average pixels by simply linearly
+averaging their channels independently, however, for a non-linear color
+space this would not be possible.Therefore if you care about color
+correctness it is important to convert your images into a linear color
+space before processing them with any functions from this library.
+
+If you pass in a non-linear color space image anyway the functions will
+still work, but you might notice incorrect color artifacting which may or may
+not be problem for your particular use-case.
+
+## Parallelism
+
+Many image processing function are [embarrassingly
+parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel), hence
+this library provides both single-threaded and multi-threaded variations
+wherever possible by using [rayon](https://github.com/rayon-rs/rayon). It
+is important to note that which variation of a function (non-parallel vs
+parallel) is faster will entirely depend on both the size of the image and
+the complexity of the operation. Generally speaking, operations on larger
+images with more complex calculations are faster in parallel than
+sequentially and smaller images with simpler calculations are faster
+sequentially.
+
+It is often hard to predict which will be faster, therefore, it is important
+to benchmark your particular use-cases if you want to be confident you are
+using the fastest variations.
+
 ## Crate Features
 
 ### Default Features
