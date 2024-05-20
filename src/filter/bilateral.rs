@@ -18,9 +18,17 @@ pub trait ColorDistance<P> {
 ///
 /// This implements [`ColorDistance`].
 pub struct GaussianEuclideanColorDistance {
-    /// The square of the standard deviation of the gaussian distribution used on
-    /// the euclidean distance between pixels' colors.
-    pub sigma_squared: f32,
+    sigma_squared: f32,
+}
+impl GaussianEuclideanColorDistance {
+    /// Creates a new [`GaussianEuclideanColorDistance`] using a given sigma value.
+    ///
+    /// Internally, this is stored as sigma squared for performance.
+    pub fn new(sigma: f32) -> Self {
+        GaussianEuclideanColorDistance {
+            sigma_squared: sigma.powi(2),
+        }
+    }
 }
 
 impl<P> ColorDistance<P> for GaussianEuclideanColorDistance
@@ -45,7 +53,8 @@ where
 /// # Arguments
 ///
 /// * `image` - Image to be filtered.
-/// * `window_size` - Window size for filtering.
+/// * `radius` - The radius of the kernel used for the filtering. 0 -> 1x1, 1 -> 3x3, 2 -> 5x5, 3
+///     -> 7x7, etc..
 /// * `spatial_sigma` - Standard deviation for euclidean spatial distance. A larger value results in
 ///     averaging of pixels with larger spatial distances.
 /// * `color_distance` - A type which implements [`ColorDistance`]. This defines the metric used to
@@ -55,7 +64,7 @@ where
 ///
 /// This filter averages pixels based on their spatial distance as well as their color
 /// distance. Spatial distance is measured by the Gaussian function of the Euclidean distance
-/// between two pixels with the user-specified standard deviation (`sigma_spatial`).
+/// between two pixels with the user-specified standard deviation (`spatial_sigma`).
 ///
 /// # References
 ///
@@ -78,7 +87,7 @@ where
 ///
 /// let image = gray_bench_image(50, 50);
 ///
-/// let filtered = bilateral_filter(&image, 2, 3., GaussianEuclideanColorDistance { sigma_squared: 10.0 });
+/// let filtered = bilateral_filter(&image, 2, 3., GaussianEuclideanColorDistance::new(10.0));
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn bilateral_filter<I, P, C>(
@@ -201,12 +210,7 @@ mod tests {
             1, 2, 3;
             4, 5, 6;
             7, 8, 9);
-        let actual = bilateral_filter(
-            &image,
-            1,
-            3.,
-            GaussianEuclideanColorDistance { sigma_squared: 10. },
-        );
+        let actual = bilateral_filter(&image, 1, 3., GaussianEuclideanColorDistance::new(10.0));
 
         let expected = gray_image!(
             1, 2, 2;
@@ -231,10 +235,10 @@ mod proptests {
         fn proptest_bilateral_filter_greyscale(
             img in arbitrary_image::<Luma<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            sigma_color in any::<f32>(),
-            sigma_spatial in any::<f32>(),
+            color_sigma in any::<f32>(),
+            spatial_sigma in any::<f32>(),
         ) {
-            let out = bilateral_filter(&img, radius, sigma_spatial, GaussianEuclideanColorDistance { sigma_squared: sigma_color });
+            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             assert_eq!(out.dimensions(), img.dimensions());
         }
 
@@ -242,10 +246,10 @@ mod proptests {
         fn proptest_bilateral_filter_rgb(
             img in arbitrary_image::<Rgb<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            sigma_color in any::<f32>(),
-            sigma_spatial in any::<f32>(),
+            color_sigma in any::<f32>(),
+            spatial_sigma in any::<f32>(),
         ) {
-            let out = bilateral_filter(&img, radius, sigma_spatial, GaussianEuclideanColorDistance { sigma_squared: sigma_color });
+            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             assert_eq!(out.dimensions(), img.dimensions());
         }
     }
@@ -262,12 +266,8 @@ mod benches {
     fn bench_bilateral_filter_greyscale(b: &mut Bencher) {
         let image = gray_bench_image(100, 100);
         b.iter(|| {
-            let filtered = bilateral_filter(
-                &image,
-                5,
-                3.,
-                GaussianEuclideanColorDistance { sigma_squared: 10. },
-            );
+            let filtered =
+                bilateral_filter(&image, 5, 3., GaussianEuclideanColorDistance::new(10.0));
             black_box(filtered);
         });
     }
@@ -276,12 +276,8 @@ mod benches {
     fn bench_bilateral_filter_rgb(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let filtered = bilateral_filter(
-                &image,
-                5,
-                3.,
-                GaussianEuclideanColorDistance { sigma_squared: 10. },
-            );
+            let filtered =
+                bilateral_filter(&image, 5, 3., GaussianEuclideanColorDistance::new(10.0));
             black_box(filtered);
         });
     }

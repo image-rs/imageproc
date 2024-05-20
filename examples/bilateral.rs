@@ -16,25 +16,21 @@ fn main() {
     let image_grey = dynamic_image.to_luma8();
     let image_color = dynamic_image.to_rgb8();
 
-    let radius = 16;
-    let sigma_color = 40.0;
-    let sigma_spatial = 40.0;
+    let radius = 4;
+    let color_sigma = 40.0;
+    let spatial_sigma = 40.0;
 
     let bilateral_grey = bilateral_filter(
         &image_grey,
         radius,
-        sigma_spatial,
-        GaussianEuclideanColorDistance {
-            sigma_squared: sigma_color,
-        },
+        spatial_sigma,
+        GaussianEuclideanColorDistance::new(color_sigma),
     );
     let bilateral_color = bilateral_filter(
         &image_color,
         radius,
-        sigma_spatial,
-        GaussianEuclideanColorDistance {
-            sigma_squared: sigma_color,
-        },
+        spatial_sigma,
+        GaussianEuclideanColorDistance::new(color_sigma),
     );
 
     bilateral_grey.save("bilateral_grey.png").unwrap();
