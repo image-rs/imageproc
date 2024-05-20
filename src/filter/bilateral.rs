@@ -196,8 +196,8 @@ where
 }
 
 /// Un-normalized Gaussian Weight
-fn gaussian_weight(x: f32, sigma_squared: f32) -> f32 {
-    (-0.5 * x.powi(2) / sigma_squared).exp()
+fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
+    (-0.5 * x_squared / sigma_squared).exp()
 }
 
 #[cfg(test)]
