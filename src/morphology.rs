@@ -73,12 +73,7 @@ pub fn dilate(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
     dilate_mut(&mut out, norm, k);
     out
 }
-
-/// Sets all pixels within distance `k` of a foreground pixel to white.
-///
-/// A pixel is treated as belonging to the foreground if it has non-zero intensity.
-///
-/// See the [`dilate`](fn.dilate.html) documentation for examples.
+#[doc=generate_mut_doc_comment!("dilate")]
 pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     distance_transform_mut(image, norm);
     for p in image.iter_mut() {
@@ -169,12 +164,7 @@ pub fn erode(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
     erode_mut(&mut out, norm, k);
     out
 }
-
-/// Sets all pixels within distance `k` of a background pixel to black.
-///
-/// A pixel is treated as belonging to the foreground if it has non-zero intensity.
-///
-/// See the [`erode`](fn.erode.html) documentation for examples.
+#[doc=generate_mut_doc_comment!("erode")]
 pub fn erode_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     distance_transform_impl(image, norm, DistanceFrom::Background);
     for p in image.iter_mut() {
@@ -238,12 +228,7 @@ pub fn open(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
     open_mut(&mut out, norm, k);
     out
 }
-
-/// Erosion followed by dilation.
-///
-/// See the [`open`](fn.open.html) documentation for examples,
-/// and the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
-/// documentation for definitions of dilation and erosion.
+#[doc=generate_mut_doc_comment!("open")]
 pub fn open_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     erode_mut(image, norm, k);
     dilate_mut(image, norm, k);
@@ -343,12 +328,7 @@ pub fn close(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
     close_mut(&mut out, norm, k);
     out
 }
-
-/// Dilation followed by erosion.
-///
-/// See the [`close`](fn.close.html) documentation for examples,
-/// and the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
-/// documentation for definitions of dilation and erosion.
+#[doc=generate_mut_doc_comment!("close")]
 pub fn close_mut(image: &mut GrayImage, norm: Norm, k: u8) {
     dilate_mut(image, norm, k);
     erode_mut(image, norm, k);

@@ -5,7 +5,7 @@ use crate::rect::Rect;
 use image::{GenericImage, ImageBuffer};
 use std::f32;
 
-/// Draws the outline of a rectangle on a new copy of an image.
+/// Draws the outline of a rectangle on an image.
 ///
 /// Draws as much of the boundary of the rectangle as lies inside the image bounds.
 #[must_use = "the function does not modify the original image"]
@@ -18,10 +18,7 @@ where
     draw_hollow_rect_mut(&mut out, rect, color);
     out
 }
-
-/// Draws the outline of a rectangle on an image in place.
-///
-/// Draws as much of the boundary of the rectangle as lies inside the image bounds.
+#[doc=generate_mut_doc_comment!("draw_hollow_rect")]
 pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
@@ -37,7 +34,7 @@ where
     draw_line_segment_mut(canvas, (right, top), (right, bottom), color);
 }
 
-/// Draws a rectangle and its contents on a new copy of an image.
+/// Draws a rectangle and its contents on an image.
 ///
 /// Draws as much of the rectangle and its contents as lies inside the image bounds.
 #[must_use = "the function does not modify the original image"]
@@ -50,10 +47,7 @@ where
     draw_filled_rect_mut(&mut out, rect, color);
     out
 }
-
-/// Draws a rectangle and its contents on an image in place.
-///
-/// Draws as much of the rectangle and its contents as lies inside the image bounds.
+#[doc=generate_mut_doc_comment!("draw_filled_rect")]
 pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,

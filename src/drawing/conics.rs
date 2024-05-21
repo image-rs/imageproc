@@ -4,7 +4,7 @@ use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer};
 
-/// Draws the outline of an ellipse on a new copy of an image.
+/// Draws the outline of an ellipse on an image.
 ///
 /// Draws as much of an ellipse as lies inside the image bounds.
 ///
@@ -30,17 +30,7 @@ where
     draw_hollow_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
 }
-
-/// Draws the outline of an ellipse on an image in place.
-///
-/// Draws as much of an ellipse as lies inside the image bounds.
-///
-/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
-/// (Modified from Bresenham's algorithm)
-///
-/// The ellipse is axis-aligned and satisfies the following equation:
-///
-/// `(x^2 / width_radius^2) + (y^2 / height_radius^2) = 1`
+#[doc=generate_mut_doc_comment!("draw_hollow_ellipse")]
 pub fn draw_hollow_ellipse_mut<C>(
     canvas: &mut C,
     center: (i32, i32),
@@ -66,7 +56,7 @@ pub fn draw_hollow_ellipse_mut<C>(
     draw_ellipse(draw_quad_pixels, center, width_radius, height_radius);
 }
 
-/// Draws an ellipse and its contents on a new copy of the image.
+/// Draws an ellipse and its contents on an image.
 ///
 /// Draw as much of the ellipse and its contents as lies inside the image bounds.
 ///
@@ -92,17 +82,7 @@ where
     draw_filled_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
 }
-
-/// Draws an ellipse and its contents on an image in place.
-///
-/// Draw as much of the ellipse and its contents as lies inside the image bounds.
-///
-/// Uses the [Midpoint Ellipse Drawing Algorithm](https://web.archive.org/web/20160128020853/http://tutsheap.com/c/mid-point-ellipse-drawing-algorithm/).
-/// (Modified from Bresenham's algorithm)
-///
-/// The ellipse is axis-aligned and satisfies the following equation:
-///
-/// `(x^2 / width_radius^2) + (y^2 / height_radius^2) <= 1`
+#[doc=generate_mut_doc_comment!("draw_filled_ellipse")]
 pub fn draw_filled_ellipse_mut<C>(
     canvas: &mut C,
     center: (i32, i32),
@@ -186,7 +166,7 @@ where
     }
 }
 
-/// Draws the outline of a circle on a new copy of an image.
+/// Draws the outline of a circle on an image.
 ///
 /// Draw as much of the circle as lies inside the image bounds.
 #[must_use = "the function does not modify the original image"]
@@ -204,10 +184,7 @@ where
     draw_hollow_circle_mut(&mut out, center, radius, color);
     out
 }
-
-/// Draws the outline of a circle on an image in place.
-///
-/// Draw as much of the circle as lies inside the image bounds.
+#[doc=generate_mut_doc_comment!("draw_hollow_circle")]
 pub fn draw_hollow_circle_mut<C>(canvas: &mut C, center: (i32, i32), radius: i32, color: C::Pixel)
 where
     C: Canvas,
@@ -238,9 +215,25 @@ where
     }
 }
 
-/// Draws a circle and its contents on an image in place.
+/// Draws a circle and its contents on an image.
 ///
 /// Draws as much of a circle and its contents as lies inside the image bounds.
+#[must_use = "the function does not modify the original image"]
+pub fn draw_filled_circle<I>(
+    image: &I,
+    center: (i32, i32),
+    radius: i32,
+    color: I::Pixel,
+) -> Image<I::Pixel>
+where
+    I: GenericImage,
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0).unwrap();
+    draw_filled_circle_mut(&mut out, center, radius, color);
+    out
+}
+#[doc=generate_mut_doc_comment!("draw_filled_circle")]
 pub fn draw_filled_circle_mut<C>(canvas: &mut C, center: (i32, i32), radius: i32, color: C::Pixel)
 where
     C: Canvas,
@@ -285,25 +278,6 @@ where
             p += 2 * (x - y) + 1;
         }
     }
-}
-
-/// Draws a circle and its contents on a new copy of the image.
-///
-/// Draws as much of a circle and its contents as lies inside the image bounds.
-#[must_use = "the function does not modify the original image"]
-pub fn draw_filled_circle<I>(
-    image: &I,
-    center: (i32, i32),
-    radius: i32,
-    color: I::Pixel,
-) -> Image<I::Pixel>
-where
-    I: GenericImage,
-{
-    let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0).unwrap();
-    draw_filled_circle_mut(&mut out, center, radius, color);
-    out
 }
 
 #[cfg(test)]

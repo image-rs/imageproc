@@ -104,10 +104,7 @@ where
     draw_polar_lines_mut(&mut out, lines, color);
     out
 }
-
-/// Draws each element of `lines` on `image` in the provided `color`.
-///
-/// See ./examples/hough.rs for example usage.
+#[doc=generate_mut_doc_comment!("draw_polar_lines")]
 pub fn draw_polar_lines_mut<P>(image: &mut Image<P>, lines: &[PolarLine], color: P)
 where
     P: Pixel,

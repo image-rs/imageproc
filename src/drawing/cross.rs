@@ -2,9 +2,20 @@ use crate::definitions::Image;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer};
 
-/// Draws a colored cross on an image in place.
+/// Draws a colored cross on an image.
 ///
 /// Handles coordinates outside image bounds.
+#[must_use = "the function does not modify the original image"]
+pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
+where
+    I: GenericImage,
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0).unwrap();
+    draw_cross_mut(&mut out, color, x, y);
+    out
+}
+#[doc=generate_mut_doc_comment!("draw_cross")]
 #[rustfmt::skip]
 pub fn draw_cross_mut<C>(canvas: &mut C, color: C::Pixel, x: i32, y: i32)
 where
@@ -33,20 +44,6 @@ where
             }
         }
     }
-}
-
-/// Draws a colored cross on a new copy of an image.
-///
-/// Handles coordinates outside image bounds.
-#[must_use = "the function does not modify the original image"]
-pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pixel>
-where
-    I: GenericImage,
-{
-    let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0).unwrap();
-    draw_cross_mut(&mut out, color, x, y);
-    out
 }
 
 #[cfg(test)]

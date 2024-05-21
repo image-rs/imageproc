@@ -159,7 +159,7 @@ impl<'a, P: Pixel> Iterator for BresenhamLinePixelIterMut<'a, P> {
     }
 }
 
-/// Draws a line segment on a new copy of an image.
+/// Draws a line segment on an image.
 ///
 /// Draws as much of the line segment between start and end as lies inside the image bounds.
 ///
@@ -179,12 +179,7 @@ where
     draw_line_segment_mut(&mut out, start, end, color);
     out
 }
-
-/// Draws a line segment on an image in place.
-///
-/// Draws as much of the line segment between start and end as lies inside the image bounds.
-///
-/// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+#[doc=generate_mut_doc_comment!("draw_line_segment")]
 pub fn draw_line_segment_mut<C>(canvas: &mut C, start: (f32, f32), end: (f32, f32), color: C::Pixel)
 where
     C: Canvas,
@@ -204,7 +199,7 @@ where
     }
 }
 
-/// Draws an antialised line segment on a new copy of an image.
+/// Draws an antialised line segment on an image.
 ///
 /// Draws as much of the line segment between `start` and `end` as lies inside the image bounds.
 ///
@@ -230,15 +225,7 @@ where
     draw_antialiased_line_segment_mut(&mut out, start, end, color, blend);
     out
 }
-
-/// Draws an antialised line segment on an image in place.
-///
-/// Draws as much of the line segment between `start` and `end` as lies inside the image bounds.
-///
-/// The parameters of blend are (line color, original color, line weight).
-/// Consider using [`interpolate`](fn.interpolate.html) for blend.
-///
-/// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
+#[doc=generate_mut_doc_comment!("draw_antialiased_line_segment")]
 pub fn draw_antialiased_line_segment_mut<I, B>(
     image: &mut I,
     start: (i32, i32),
