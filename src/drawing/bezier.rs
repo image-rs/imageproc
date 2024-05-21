@@ -3,7 +3,7 @@ use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use image::{GenericImage, ImageBuffer};
 
-/// Draws a cubic Bézier curve on a new copy of an image.
+/// Draws a cubic Bézier curve on an image.
 ///
 /// Draws as much of the curve as lies within image bounds.
 #[must_use = "the function does not modify the original image"]
@@ -23,10 +23,7 @@ where
     draw_cubic_bezier_curve_mut(&mut out, start, end, control_a, control_b, color);
     out
 }
-
-/// Draws a cubic Bézier curve on an image in place.
-///
-/// Draws as much of the curve as lies within image bounds.
+#[doc=generate_mut_doc_comment!("draw_cubic_bezier_curve")]
 pub fn draw_cubic_bezier_curve_mut<C>(
     canvas: &mut C,
     start: (f32, f32),

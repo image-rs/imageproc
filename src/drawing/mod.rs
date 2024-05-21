@@ -1,7 +1,4 @@
 //! Helpers for drawing basic shapes on images.
-//!
-//! Every `draw_` function comes in two variants: one creates a new copy of the input image, one modifies the image in place.
-//! The latter is more memory efficient, but you lose the original image.
 
 mod bezier;
 pub use self::bezier::{draw_cubic_bezier_curve, draw_cubic_bezier_curve_mut};

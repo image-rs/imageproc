@@ -43,11 +43,31 @@ pub fn text_size(scale: impl Into<PxScale> + Copy, font: &impl Font, text: &str)
     layout_glyphs(scale, font, text, |_, _| {})
 }
 
-/// Draws colored text on an image in place.
+/// Draws colored text on an image.
 ///
 /// `scale` is augmented font scaling on both the x and y axis (in pixels).
 ///
 /// Note that this function *does not* support newlines, you must do this manually.
+#[must_use = "the function does not modify the original image"]
+pub fn draw_text<I>(
+    image: &I,
+    color: I::Pixel,
+    x: i32,
+    y: i32,
+    scale: impl Into<PxScale> + Copy,
+    font: &impl Font,
+    text: &str,
+) -> Image<I::Pixel>
+where
+    I: GenericImage,
+    <I::Pixel as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let mut out = ImageBuffer::new(image.width(), image.height());
+    out.copy_from(image, 0, 0).unwrap();
+    draw_text_mut(&mut out, color, x, y, scale, font, text);
+    out
+}
+#[doc=generate_mut_doc_comment!("draw_text")]
 pub fn draw_text_mut<C>(
     canvas: &mut C,
     color: C::Pixel,
@@ -78,29 +98,4 @@ pub fn draw_text_mut<C>(
             }
         })
     });
-}
-
-/// Draws colored text on a new copy of an image.
-///
-/// `scale` is augmented font scaling on both the x and y axis (in pixels).
-///
-/// Note that this function *does not* support newlines, you must do this manually.
-#[must_use = "the function does not modify the original image"]
-pub fn draw_text<I>(
-    image: &I,
-    color: I::Pixel,
-    x: i32,
-    y: i32,
-    scale: impl Into<PxScale> + Copy,
-    font: &impl Font,
-    text: &str,
-) -> Image<I::Pixel>
-where
-    I: GenericImage,
-    <I::Pixel as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
-{
-    let mut out = ImageBuffer::new(image.width(), image.height());
-    out.copy_from(image, 0, 0).unwrap();
-    draw_text_mut(&mut out, color, x, y, scale, font, text);
-    out
 }

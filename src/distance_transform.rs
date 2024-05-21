@@ -93,16 +93,7 @@ pub fn distance_transform(image: &GrayImage, norm: Norm) -> GrayImage {
     distance_transform_mut(&mut out, norm);
     out
 }
-
-/// Updates an image in place so that each pixel contains its distance from a foreground pixel in the original image.
-///
-/// A pixel belongs to the foreground if it has non-zero intensity. As the image has a bit-depth of 8,
-/// distances saturate at 255.
-///
-/// When using `Norm::L2` this function returns the ceiling of the true distances.
-/// Use [`euclidean_squared_distance_transform`] if you need floating point distances.
-///
-/// See [`distance_transform`] for examples.
+#[doc=generate_mut_doc_comment!("distance_transform")]
 pub fn distance_transform_mut(image: &mut GrayImage, norm: Norm) {
     distance_transform_impl(image, norm, DistanceFrom::Foreground);
 }

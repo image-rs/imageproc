@@ -391,9 +391,7 @@ where
     draw_haar_feature_mut(&mut out, feature);
     out
 }
-
-/// Draws the given Haar-like feature on an image in place, drawing pixels
-/// with a positive sign white and those with a negative sign black.
+#[doc=generate_mut_doc_comment!("draw_haar_feature")]
 pub fn draw_haar_feature_mut<I>(image: &mut I, feature: HaarFeature)
 where
     I: GenericImage,

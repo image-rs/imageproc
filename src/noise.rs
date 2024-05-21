@@ -16,9 +16,7 @@ where
     gaussian_noise_mut(&mut out, mean, stddev, seed);
     out
 }
-
-/// Adds independent additive Gaussian noise to all channels
-/// of an image in place, with the given mean and standard deviation.
+#[doc=generate_mut_doc_comment!("gaussian_noise")]
 pub fn gaussian_noise_mut<P>(image: &mut Image<P>, mean: f64, stddev: f64, seed: u64)
 where
     P: Pixel,
@@ -45,9 +43,7 @@ where
     salt_and_pepper_noise_mut(&mut out, rate, seed);
     out
 }
-
-/// Converts pixels to black or white in place at the given `rate` (between 0.0 and 1.0).
-/// Black and white occur with equal probability.
+#[doc=generate_mut_doc_comment!("salt_and_pepper_noise")]
 pub fn salt_and_pepper_noise_mut<P>(image: &mut Image<P>, rate: f64, seed: u64)
 where
     P: Pixel + HasBlack + HasWhite,
