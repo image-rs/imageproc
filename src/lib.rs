@@ -23,6 +23,8 @@ mod proptest_utils;
 
 #[macro_use]
 pub mod utils;
+#[macro_use]
+pub mod doc_macros;
 pub mod binary_descriptors;
 pub mod contours;
 pub mod contrast;

@@ -181,31 +181,7 @@ pub fn threshold(image: &GrayImage, threshold: u8, threshold_type: ThresholdType
     threshold_mut(&mut out, threshold, threshold_type);
     out
 }
-
-/// Applies a threshold to each pixel in a grayscale image. The action taken depends on `threshold_type` - see [`ThresholdType`].
-///
-/// See [`threshold`] for a list of examples covering each `ThresholdType`.
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::contrast::{threshold_mut, ThresholdType};
-///
-/// let mut image = gray_image!(
-///     10, 80, 20;
-///     50, 90, 70);
-///
-/// threshold_mut(&mut image, 50, ThresholdType::Binary);
-///
-/// let result = gray_image!(
-///     0, 255,   0;
-///     0, 255, 255);
-///
-/// assert_pixels_eq!(image, result);
-/// # }
-/// ```
+#[doc=generate_mut_doc_comment!("threshold")]
 pub fn threshold_mut(image: &mut GrayImage, threshold: u8, threshold_type: ThresholdType) {
     match threshold_type {
         ThresholdType::Binary => {
