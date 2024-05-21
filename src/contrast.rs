@@ -116,7 +116,8 @@ pub enum ThresholdType {
     ToZeroInverted,
 }
 
-/// Applies a threshold to each pixel in a grayscale image. The action taken depends on `threshold_type` - see [`ThresholdType`].
+/// Applies a threshold to each pixel in a grayscale image. The action taken depends on
+/// `threshold_type` - see [`ThresholdType`].
 ///
 /// # Examples
 /// ```
@@ -212,8 +213,14 @@ pub fn threshold_mut(image: &mut GrayImage, threshold: u8, threshold_type: Thres
     }
 }
 
-/// Equalises the histogram of an 8bpp grayscale image in place. See also
+/// Equalises the histogram of an 8bpp grayscale image. See also
 /// [histogram equalization (wikipedia)](https://en.wikipedia.org/wiki/Histogram_equalization).
+pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
+    let mut out = image.clone();
+    equalize_histogram_mut(&mut out);
+    out
+}
+#[doc=generate_mut_doc_comment!("equalize_histogram")]
 pub fn equalize_histogram_mut(image: &mut GrayImage) {
     let hist = cumulative_histogram(image).channels[0];
     let total = hist[255] as f32;
@@ -233,14 +240,6 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
         let fraction = unsafe { *hist.get_unchecked(*p as usize) as f32 / total };
         *p = (f32::min(255f32, 255f32 * fraction)) as u8;
     });
-}
-
-/// Equalises the histogram of an 8bpp grayscale image. See also
-/// [histogram equalization (wikipedia)](https://en.wikipedia.org/wiki/Histogram_equalization).
-pub fn equalize_histogram(image: &GrayImage) -> GrayImage {
-    let mut out = image.clone();
-    equalize_histogram_mut(&mut out);
-    out
 }
 
 /// Stretches the contrast in an image, linearly mapping intensities in `(input_lower, input_upper)` to `(output_lower, output_upper)` and saturating
@@ -294,14 +293,7 @@ pub fn stretch_contrast(
     );
     out
 }
-
-/// Stretches the contrast in an image, linearly mapping intensities in `(input_lower, input_upper)` to `(output_lower, output_upper)` and saturating
-/// values outside this input range.
-///
-/// See the [`stretch_contrast`](fn.stretch_contrast.html) documentation for more.
-///
-/// # Panics
-/// If `input_lower >= input_upper` or `output_lower > output_upper`.
+#[doc=generate_mut_doc_comment!("stretch_contrast")]
 pub fn stretch_contrast_mut(
     image: &mut GrayImage,
     input_min: u8,
@@ -343,8 +335,14 @@ pub fn stretch_contrast_mut(
     map_subpixels_mut(image, f);
 }
 
-/// Adjusts contrast of an 8bpp grayscale image in place so that its
+/// Adjusts contrast of an 8bpp grayscale image so that its
 /// histogram is as close as possible to that of the target image.
+pub fn match_histogram(image: &GrayImage, target: &GrayImage) -> GrayImage {
+    let mut out = image.clone();
+    match_histogram_mut(&mut out, target);
+    out
+}
+#[doc=generate_mut_doc_comment!("match_histogram")]
 pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
     let image_histc = cumulative_histogram(image).channels[0];
     let target_histc = cumulative_histogram(target).channels[0];
@@ -353,14 +351,6 @@ pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
     for p in image.iter_mut() {
         *p = lut[*p as usize] as u8;
     }
-}
-
-/// Adjusts contrast of an 8bpp grayscale image so that its
-/// histogram is as close as possible to that of the target image.
-pub fn match_histogram(image: &GrayImage, target: &GrayImage) -> GrayImage {
-    let mut out = image.clone();
-    match_histogram_mut(&mut out, target);
-    out
 }
 
 /// `l = histogram_lut(s, t)` is chosen so that `target_histc[l[i]] / sum(target_histc)`
