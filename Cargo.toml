@@ -19,23 +19,28 @@ display-window = ["sdl2"]
 rayon = ["dep:rayon", "image/rayon"]
 
 [dependencies]
-ab_glyph = "0.2.23"
-approx = "0.5"
+ab_glyph = { version = "0.2.23", default-features = false, features = ["std"] }
+approx = { version = "0.5", default-features = false }
 image = { version = "0.25.0", default-features = false }
-itertools = "0.13.0"
+itertools = { version = "0.13.0", default-features = false, features = [
+	"use_std",
+] }
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }
-num = "0.4.1"
-rand = "0.8.5"
-rand_distr = "0.4.3"
-rayon = { version = "1.8.0", optional = true }
-quickcheck = { version = "1.0.3", optional = true }
+num = { version = "0.4.1", default-features = false }
+rand = { version = "0.8.5", default-features = false, features = [
+	"std",
+	"std_rng",
+] }
+rand_distr = { version = "0.4.3", default-features = false }
+rayon = { version = "1.8.0", optional = true, default-features = false }
+quickcheck = { version = "1.0.3", optional = true, default-features = false }
 sdl2 = { version = "0.36", optional = true, default-features = false, features = [
 	"bundled",
 ] }
-katexit = { version = "0.1.4", optional = true }
+katexit = { version = "0.1.4", optional = true, default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.2", default-features = false, features = ["js"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
