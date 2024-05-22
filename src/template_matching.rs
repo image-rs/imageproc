@@ -92,18 +92,7 @@ pub fn match_template(
 }
 
 #[cfg(feature = "rayon")]
-/// Slides a `template` over an `image` and scores the match at each point using
-/// the requested `method`. This version uses rayon to parallelize the computation.
-///
-/// The returned image has dimensions `image.width() - template.width() + 1` by
-/// `image.height() - template.height() + 1`.
-///
-/// See [`MatchTemplateMethod`] for details of the matching methods.
-///
-/// # Panics
-///
-/// If either dimension of `template` is not strictly less than the corresponding dimension
-/// of `image`.
+#[doc = generate_parallel_doc_comment!("match_template")]
 pub fn match_template_parallel(
     image: &GrayImage,
     template: &GrayImage,
@@ -151,18 +140,7 @@ pub fn match_template_with_mask(
 }
 
 #[cfg(feature = "rayon")]
-/// Slides a `template` and a `mask` over an `image` and scores the match at each point using
-/// the requested `method`. This version uses rayon to parallelize the computation.
-///
-/// The returned image has dimensions `image.width() - template.width() + 1` by
-/// `image.height() - template.height() + 1`.
-///
-/// See [`MatchTemplateMethod`] for details of the matching methods.
-///
-/// # Panics
-/// - If either dimension of `template` is not strictly less than the corresponding dimension
-/// of `image`.
-/// - If `template.dimensions() != mask.dimensions()`.
+#[doc = generate_parallel_doc_comment!("match_template_with_mask")]
 pub fn match_template_with_mask_parallel(
     image: &GrayImage,
     template: &GrayImage,
