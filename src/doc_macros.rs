@@ -19,7 +19,7 @@ macro_rules! generate_mut_doc_comment {
 }
 
 /// A macro for generating the doc-comments for parallel versions of various
-/// image processing functions. It takes the name of then non-parallel function as an
+/// image processing functions. It takes the name of the non-parallel function as an
 /// argument as a string literal.
 ///
 /// It uses concat! to generate doc-links to the provided original function name
