@@ -13,7 +13,7 @@ use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
 ///
-/// Equivalent to `adaptive_threshold_with_delta` with delta=0.
+/// Equivalent to [`adaptive_threshold_with_delta()`] with delta=0.
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
     adaptive_threshold_with_delta(image, block_radius, 0)
 }
