@@ -1,6 +1,6 @@
 //! Functions for mapping over pixels, colors or subpixels of images.
 
-use image::{GenericImage, ImageBuffer, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
+use image::{GenericImage, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
 
 use crate::definitions::Image;
 
@@ -82,7 +82,7 @@ where
     F: Fn(P::Subpixel) -> S,
 {
     let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<ChannelMap<P, S>, Vec<S>> = ImageBuffer::new(width, height);
+    let mut out: Image<ChannelMap<P, S>> = Image::new(width, height);
 
     for y in 0..height {
         for x in 0..width {
@@ -179,7 +179,7 @@ where
     F: Fn(P) -> Q,
 {
     let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
+    let mut out: Image<Q> = Image::new(width, height);
 
     for y in 0..height {
         for x in 0..width {
@@ -282,7 +282,7 @@ where
     assert_eq!(image1.dimensions(), image2.dimensions());
 
     let (width, height) = image1.dimensions();
-    let mut out: ImageBuffer<R, Vec<R::Subpixel>> = ImageBuffer::new(width, height);
+    let mut out: Image<R> = Image::new(width, height);
 
     for y in 0..height {
         for x in 0..width {
@@ -331,7 +331,7 @@ where
     F: Fn(u32, u32, P) -> Q,
 {
     let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<Q, Vec<Q::Subpixel>> = ImageBuffer::new(width, height);
+    let mut out: Image<Q> = Image::new(width, height);
 
     for y in 0..height {
         for x in 0..width {

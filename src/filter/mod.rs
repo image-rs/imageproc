@@ -8,7 +8,7 @@ pub use self::median::median_filter;
 mod sharpen;
 pub use self::sharpen::*;
 
-use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel, Primitive};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel, Primitive};
 
 use crate::definitions::{Clamp, Image};
 use crate::integral_image::{column_running_sum, row_running_sum};
@@ -32,7 +32,7 @@ use std::f32;
 #[must_use = "the function does not modify the original image"]
 pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
     if width == 0 || height == 0 {
         return out;
     }
@@ -447,7 +447,7 @@ mod tests {
     use super::*;
     use crate::definitions::{Clamp, Image};
     use crate::utils::gray_bench_image;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     use std::cmp::{max, min};
     use test::black_box;
 
@@ -773,14 +773,14 @@ mod tests {
 
     #[test]
     fn test_gaussian_on_u8_white_idempotent() {
-        let image = ImageBuffer::<Luma<u8>, Vec<u8>>::from_pixel(12, 12, Luma([255]));
+        let image = Image::<Luma<u8>>::from_pixel(12, 12, Luma([255]));
         let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 0);
     }
 
     #[test]
     fn test_gaussian_on_f32_white_idempotent() {
-        let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(12, 12, Luma([1.0]));
+        let image = Image::<Luma<f32>>::from_pixel(12, 12, Luma([1.0]));
         let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 1e-6);
     }
@@ -860,7 +860,7 @@ mod benches {
     use crate::definitions::Image;
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::imageops::blur;
-    use image::{GenericImage, ImageBuffer, Luma, Rgb};
+    use image::{GenericImage, Luma, Rgb};
     use test::{black_box, Bencher};
 
     #[bench]
@@ -914,7 +914,7 @@ mod benches {
         ], 3, 3);
 
         b.iter(|| {
-            let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
+            let filtered: Image<Luma<i16>> =
                 filter_clamped::<_, _, i16>(&image, kernel);
             black_box(filtered);
         });

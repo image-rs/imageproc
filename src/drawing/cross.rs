@@ -1,6 +1,6 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
-use image::{GenericImage, ImageBuffer};
+use image::GenericImage;
 
 /// Draws a colored cross on an image.
 ///
@@ -10,7 +10,7 @@ pub fn draw_cross<I>(image: &I, color: I::Pixel, x: i32, y: i32) -> Image<I::Pix
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_cross_mut(&mut out, color, x, y);
     out

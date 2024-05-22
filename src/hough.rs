@@ -5,7 +5,7 @@
 use crate::definitions::Image;
 use crate::drawing::draw_line_segment_mut;
 use crate::suppress::suppress_non_maximum;
-use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma, Pixel};
+use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use std::f32;
 
 /// A detected line, in polar coordinates.
@@ -45,7 +45,7 @@ pub fn detect_lines(image: &GrayImage, options: LineDetectionOptions) -> Vec<Pol
     // Measure angles in degrees, and use bins of width 1 pixel and height 1 degree.
     // We use the convention that distances are positive for angles in (0, 180] and
     // negative for angles in [180, 360).
-    let mut acc: ImageBuffer<Luma<u32>, Vec<u32>> = ImageBuffer::new(2 * rmax as u32 + 1, 180u32);
+    let mut acc: Image<Luma<u32>> = Image::new(2 * rmax as u32 + 1, 180u32);
 
     // Precalculate values of (cos(m), sin(m))
     let lut: Vec<(f32, f32)> = (0..180u32)
@@ -538,7 +538,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     use test::{black_box, Bencher};
 
     macro_rules! bench_detect_lines {
@@ -572,7 +572,7 @@ mod benches {
     bench_detect_lines!(bench_detect_line_neg10_120, -10.0, 120);
 
     fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| {
+        GrayImage::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
                 Luma([255u8])
             } else {

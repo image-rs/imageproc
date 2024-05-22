@@ -467,7 +467,7 @@ mod tests {
     use crate::definitions::Image;
     use crate::property_testing::GrayTestImage;
     use crate::utils::pixel_diff_summary;
-    use image::{GenericImage, ImageBuffer, Luma};
+    use image::{GenericImage, Luma};
     use quickcheck::{quickcheck, TestResult};
 
     #[test]
@@ -561,7 +561,7 @@ mod tests {
     {
         let (in_width, in_height) = image.dimensions();
         let (out_width, out_height) = (in_width + 1, in_height + 1);
-        let mut out = ImageBuffer::from_pixel(out_width, out_height, Luma([0u32]));
+        let mut out = Image::from_pixel(out_width, out_height, Luma([0u32]));
 
         for y in 1..out_height {
             for x in 0..out_width {

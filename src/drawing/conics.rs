@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use crate::drawing::draw_if_in_bounds;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
-use image::{GenericImage, ImageBuffer};
+use image::{GenericImage};
 
 /// Draws the outline of an ellipse on an image.
 ///
@@ -25,7 +25,7 @@ pub fn draw_hollow_ellipse<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_hollow_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
@@ -77,7 +77,7 @@ pub fn draw_filled_ellipse<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_filled_ellipse_mut(&mut out, center, width_radius, height_radius, color);
     out
@@ -179,7 +179,7 @@ pub fn draw_hollow_circle<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_hollow_circle_mut(&mut out, center, radius, color);
     out
@@ -228,7 +228,7 @@ pub fn draw_filled_circle<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_filled_circle_mut(&mut out, center, radius, color);
     out

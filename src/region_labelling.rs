@@ -2,7 +2,7 @@
 
 use std::cmp;
 
-use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, Luma};
 
 use crate::definitions::Image;
 use crate::union_find::DisjointSetForest;
@@ -134,7 +134,7 @@ where
         panic!("Images with 2^32 or more pixels are not supported");
     }
 
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
 
     // TODO: add macro to abandon early if either dimension is zero
     if width == 0 || height == 0 {
@@ -247,7 +247,7 @@ where
 mod tests {
     extern crate wasm_bindgen_test;
 
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
@@ -278,7 +278,7 @@ mod tests {
     // One huge component with eight-way connectivity, loads of
     // isolated components with four-way connectivity.
     pub(super) fn chessboard(width: u32, height: u32) -> GrayImage {
-        ImageBuffer::from_fn(width, height, |x, y| {
+        GrayImage::from_fn(width, height, |x, y| {
             if (x + y) % 2 == 0 {
                 Luma([255u8])
             } else {

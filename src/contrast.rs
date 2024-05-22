@@ -2,7 +2,7 @@
 
 use std::cmp::{max, min};
 
-use image::{GrayImage, ImageBuffer, Luma};
+use image::{GrayImage, Luma};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
@@ -19,7 +19,7 @@ use crate::stats::{cumulative_histogram, histogram};
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
     assert!(block_radius > 0);
     let integral = integral_image::<_, u32>(image);
-    let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
+    let mut out = GrayImage::from_pixel(image.width(), image.height(), Luma::black());
 
     for y in 0..image.height() {
         for x in 0..image.width() {

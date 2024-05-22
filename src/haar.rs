@@ -3,7 +3,7 @@
 //! [Haar-like features]: https://en.wikipedia.org/wiki/Haar-like_features
 
 use crate::definitions::{HasBlack, HasWhite, Image};
-use image::{GenericImage, GenericImageView, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, Luma};
 use itertools::Itertools;
 use std::marker::PhantomData;
 use std::ops::Range;
@@ -386,7 +386,7 @@ where
     I: GenericImage,
     I::Pixel: HasBlack + HasWhite,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_haar_feature_mut(&mut out, feature);
     out

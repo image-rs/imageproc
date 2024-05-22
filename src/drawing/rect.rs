@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
 use crate::rect::Rect;
-use image::{GenericImage, ImageBuffer};
+use image::{GenericImage};
 use std::f32;
 
 /// Draws the outline of a rectangle on an image.
@@ -13,7 +13,7 @@ pub fn draw_hollow_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::P
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_hollow_rect_mut(&mut out, rect, color);
     out
@@ -42,7 +42,7 @@ pub fn draw_filled_rect<I>(image: &I, rect: Rect, color: I::Pixel) -> Image<I::P
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_filled_rect_mut(&mut out, rect, color);
     out

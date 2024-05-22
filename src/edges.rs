@@ -1,9 +1,9 @@
 //! Functions for detecting edges in images.
 
-use crate::definitions::{HasBlack, HasWhite};
+use crate::definitions::{HasBlack, HasWhite, Image};
 use crate::filter::{filter_clamped, gaussian_blur_f32};
 use crate::kernel::{self};
-use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+use image::{GenericImageView, GrayImage, Luma};
 use std::f32;
 
 /// Runs the canny edge detection algorithm.
@@ -43,7 +43,7 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
         .map(|(h, v)| (*h as f32).hypot(*v as f32))
         .collect::<Vec<f32>>();
 
-    let g = ImageBuffer::from_raw(image.width(), image.height(), g).unwrap();
+    let g = Image::from_raw(image.width(), image.height(), g).unwrap();
 
     // 3. Non-maximum-suppression (Make edges thinner)
     let thinned = non_maximum_suppression(&g, &gx, &gy);
@@ -54,12 +54,12 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
 
 /// Finds local maxima to make the edges thinner.
 fn non_maximum_suppression(
-    g: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    gx: &ImageBuffer<Luma<i16>, Vec<i16>>,
-    gy: &ImageBuffer<Luma<i16>, Vec<i16>>,
-) -> ImageBuffer<Luma<f32>, Vec<f32>> {
+    g: &Image<Luma<f32>>,
+    gx: &Image<Luma<i16>>,
+    gy: &Image<Luma<i16>>,
+) -> Image<Luma<f32>> {
     const RADIANS_TO_DEGREES: f32 = 180f32 / f32::consts::PI;
-    let mut out = ImageBuffer::from_pixel(g.width(), g.height(), Luma([0.0]));
+    let mut out = Image::from_pixel(g.width(), g.height(), Luma([0.0]));
     for y in 1..g.height() - 1 {
         for x in 1..g.width() - 1 {
             let x_gradient = gx[(x, y)][0] as f32;
@@ -111,15 +111,11 @@ fn non_maximum_suppression(
 
 /// Filter out edges with the thresholds.
 /// Non-recursive breadth-first search.
-fn hysteresis(
-    input: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    low_thresh: f32,
-    high_thresh: f32,
-) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Image<Luma<u8>> {
     let max_brightness = Luma::white();
     let min_brightness = Luma::black();
     // Init output image as all black.
-    let mut out = ImageBuffer::from_pixel(input.width(), input.height(), min_brightness);
+    let mut out = Image::from_pixel(input.width(), input.height(), min_brightness);
     // Stack. Possible optimization: Use previously allocated memory, i.e. gx.
     let mut edges = Vec::with_capacity(((input.width() * input.height()) / 2) as usize);
     for y in 1..input.height() - 1 {

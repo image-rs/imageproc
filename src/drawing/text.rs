@@ -1,4 +1,4 @@
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, Pixel};
 use std::f32;
 
 use crate::definitions::{Clamp, Image};
@@ -62,7 +62,7 @@ where
     I: GenericImage,
     <I::Pixel as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_text_mut(&mut out, color, x, y, scale, font, text);
     out

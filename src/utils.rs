@@ -88,8 +88,10 @@ macro_rules! gray_image {
         // Empty image with the given channel type
     (type: $channel_type:ty) => {
         {
-            use image::{ImageBuffer, Luma};
-            ImageBuffer::<Luma<$channel_type>, Vec<$channel_type>>::new(0, 0)
+            use image::Luma;
+            use $crate::definitions::Image;
+
+            Image::<Luma<$channel_type>>::new(0, 0)
         }
     };
     // Non-empty image of default channel type u8
@@ -99,7 +101,8 @@ macro_rules! gray_image {
     // Non-empty image of given channel type
     (type: $channel_type:ty, $( $( $x: expr ),*);*) => {
         {
-            use image::{ImageBuffer, Luma};
+            use image::Luma;
+            use $crate::definitions::Image;
 
             let nested_array = [ $( [ $($x),* ] ),* ];
             let height = nested_array.len() as u32;
@@ -110,7 +113,7 @@ macro_rules! gray_image {
                 .cloned()
                 .collect();
 
-            ImageBuffer::<Luma<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+            Image::<Luma<$channel_type>>::from_raw(width, height, flat_array)
                 .unwrap()
         }
     }
@@ -190,8 +193,10 @@ macro_rules! rgb_image {
     // Empty image with the given channel type
     (type: $channel_type:ty) => {
         {
-            use image::{ImageBuffer, Rgb};
-            ImageBuffer::<Rgb<$channel_type>, Vec<$channel_type>>::new(0, 0)
+            use image::Rgb;
+            use $crate::definitions::Image;
+
+            Image::<Rgb<$channel_type>>::new(0, 0)
         }
     };
     // Non-empty image of default channel type u8
@@ -201,7 +206,9 @@ macro_rules! rgb_image {
     // Non-empty image of given channel type
     (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
         {
-            use image::{ImageBuffer, Rgb};
+            use image::Rgb;
+            use $crate::definitions::Image;
+
             let nested_array = [$( [ $([$r, $g, $b]),*]),*];
             let height = nested_array.len() as u32;
             let width = nested_array[0].len() as u32;
@@ -211,7 +218,7 @@ macro_rules! rgb_image {
                 .cloned()
                 .collect();
 
-            ImageBuffer::<Rgb<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+            Image::<Rgb<$channel_type>>::from_raw(width, height, flat_array)
                 .unwrap()
         }
     }
@@ -291,8 +298,10 @@ macro_rules! rgba_image {
     // Empty image with the given channel type
     (type: $channel_type:ty) => {
         {
-            use image::{ImageBuffer, Rgba};
-            ImageBuffer::<Rgba<$channel_type>, Vec<$channel_type>>::new(0, 0)
+            use image::Rgba;
+            use $crate::definitions::Image;
+
+            Image::<Rgba<$channel_type>>::new(0, 0)
         }
     };
     // Non-empty image of default channel type u8
@@ -302,7 +311,9 @@ macro_rules! rgba_image {
     // Non-empty image of given channel type
     (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr, $a: expr]),*);*) => {
         {
-            use image::{ImageBuffer, Rgba};
+            use image::Rgba;
+            use $crate::definitions::Image;
+
             let nested_array = [$( [ $([$r, $g, $b, $a]),*]),*];
             let height = nested_array.len() as u32;
             let width = nested_array[0].len() as u32;
@@ -312,7 +323,7 @@ macro_rules! rgba_image {
                 .cloned()
                 .collect();
 
-            ImageBuffer::<Rgba<$channel_type>, Vec<$channel_type>>::from_raw(width, height, flat_array)
+            Image::<Rgba<$channel_type>>::from_raw(width, height, flat_array)
                 .unwrap()
         }
     }
