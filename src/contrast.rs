@@ -17,6 +17,19 @@ use crate::stats::{cumulative_histogram, histogram};
 /// in the (2 * `block_radius` + 1) square block centered on it. If the pixel is at least as bright
 /// as the threshold then it will have a value of 255 in the output image, otherwise 0.
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
+    adaptive_threshold_with_delta(image, block_radius, 0)
+}
+
+/// Applies an adaptive threshold to an image, also accepting a delta parameter.
+///
+/// This algorithm compares each pixel's brightness with the average brightness of the pixels
+/// in the (2 * `block_radius` + 1) square block centered on it minus delta. If the pixel is at least as bright
+/// as the threshold then it will have a value of 255 in the output image, otherwise 0.
+pub fn adaptive_threshold_with_delta(
+    image: &GrayImage,
+    block_radius: u32,
+    delta: i32,
+) -> GrayImage {
     assert!(block_radius > 0);
     let integral = integral_image::<_, u32>(image);
     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
@@ -38,7 +51,7 @@ pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
             let w = (y_high - y_low + 1) * (x_high - x_low + 1);
             let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high)[0] / w;
 
-            if current_pixel[0] as u32 >= mean as u32 {
+            if current_pixel[0] as i32 >= mean as i32 - delta {
                 out.put_pixel(x, y, Luma::white());
             }
         }
