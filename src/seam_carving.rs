@@ -6,7 +6,7 @@
 use crate::definitions::{HasBlack, Image};
 use crate::gradients::gradients;
 use crate::kernel::{self};
-use crate::map::{map_colors, WithChannel};
+use crate::map::{map_pixels, WithChannel};
 use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
 
@@ -169,7 +169,7 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
     let height = image.height();
 
     let mut offsets = vec![vec![]; height as usize];
-    let mut out = map_colors(image, |p| p.to_rgb());
+    let mut out = map_pixels(image, |p| p.to_rgb());
 
     for seam in seams {
         for (y, x) in (0..height).rev().zip(&seam.0) {

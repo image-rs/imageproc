@@ -751,7 +751,7 @@ fn test_draw_filled_ellipse() {
 #[test]
 fn test_hough_line_detection() {
     use imageproc::hough::{detect_lines, draw_polar_lines, LineDetectionOptions, PolarLine};
-    use imageproc::map::map_colors;
+    use imageproc::map::map_pixels;
 
     let white = Rgb([255u8, 255u8, 255u8]);
     let black = Rgb([0u8, 0u8, 0u8]);

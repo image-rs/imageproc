@@ -1,4 +1,4 @@
-//! Functions for mapping over pixels, colors or subpixels of images.
+//! Functions for mapping pixels and subpixels of images.
 
 use image::{GenericImage, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
 
@@ -182,7 +182,7 @@ where
     }
 }
 
-/// Applies `f` to the color of each pixel in the input image.
+/// Applies `f` to each pixel of the input image.
 ///
 /// # Examples
 /// ```
@@ -191,7 +191,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Rgb;
-/// use imageproc::map::map_colors;
+/// use imageproc::map::map_pixels;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -202,11 +202,11 @@ where
 ///     [3, 6, 9], [4, 8, 12]);
 ///
 /// assert_pixels_eq!(
-///     map_colors(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
+///     map_pixels(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
 ///     rgb);
 /// # }
 /// ```
-pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
+pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
@@ -228,7 +228,7 @@ where
     out
 }
 
-/// Applies `f` to the color of each pixel in the input image in place.
+/// Applies `f` to each pixel of the input image in place.
 ///
 /// # Examples
 /// ```
@@ -237,7 +237,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::map_colors_mut;
+/// use imageproc::map::map_pixels_mut;
 ///
 /// let mut image = gray_image!(
 ///     1, 2;
@@ -247,14 +247,14 @@ where
 ///     2, 4;
 ///     6, 8);
 ///
-/// map_colors_mut(&mut image, |p| Luma([2 * p[0]]));
+/// map_pixels_mut(&mut image, |p| Luma([2 * p[0]]));
 ///
 /// assert_pixels_eq!(
 ///     image,
 ///     want);
 /// # }
 /// ```
-pub fn map_colors_mut<I, P, F>(image: &mut I, f: F)
+pub fn map_pixels_mut<I, P, F>(image: &mut I, f: F)
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
@@ -272,9 +272,12 @@ where
     }
 }
 
-/// Applies `f` to the colors of the pixels in the input images.
+/// Applies `f` to each pixel of both input images.
 ///
-/// Requires `image1` and `image2` to have the same dimensions.
+/// # Panics
+///
+/// Panics if `image1` and `image2` do not have the same dimensions.
+///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -282,7 +285,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::map_colors2;
+/// use imageproc::map::map_pixels2;
 ///
 /// let image1 = gray_image!(
 ///     1, 2,
@@ -300,12 +303,12 @@ where
 /// );
 ///
 /// assert_pixels_eq!(
-///     map_colors2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
+///     map_pixels2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
 ///     sum
 /// );
 /// # }
 /// ```
-pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
+pub fn map_pixels2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
 where
     I: GenericImage<Pixel = P>,
     J: GenericImage<Pixel = Q>,
@@ -332,7 +335,7 @@ where
     out
 }
 
-/// Applies `f` to each pixel in the input image.
+/// Applies `f` to each enumerated pixel of the input image.
 ///
 /// # Examples
 /// ```
@@ -341,7 +344,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Rgb;
-/// use imageproc::map::map_pixels;
+/// use imageproc::map::map_enumerated_pixels;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -352,13 +355,13 @@ where
 ///     [3, 0, 1], [4, 1, 1]);
 ///
 /// assert_pixels_eq!(
-///     map_pixels(&image, |x, y, p| {
+///     map_enumerated_pixels(&image, |x, y, p| {
 ///         Rgb([p[0], x as u8, y as u8])
 ///     }),
 ///     rgb);
 /// # }
 /// ```
-pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
+pub fn map_enumerated_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
@@ -380,7 +383,7 @@ where
     out
 }
 
-/// Applies `f` to each pixel in the input image in place.
+/// Applies `f` to each enumerated pixel of the input image in plpace.
 ///
 /// # Examples
 /// ```
@@ -389,7 +392,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::map_pixels_mut;
+/// use imageproc::map::map_enumerated_pixels_mut;
 ///
 /// let mut image = gray_image!(
 ///     1, 2;
@@ -399,7 +402,7 @@ where
 ///     1, 3;
 ///     4, 6);
 ///
-/// map_pixels_mut(&mut image, |x, y, p| {
+/// map_enumerated_pixels_mut(&mut image, |x, y, p| {
 ///     Luma([p[0] + x as u8 + y as u8])
 /// });
 ///
@@ -408,7 +411,7 @@ where
 ///     want);
 /// # }
 /// ```
-pub fn map_pixels_mut<I, P, F>(image: &mut I, f: F)
+pub fn map_enumerated_pixels_mut<I, P, F>(image: &mut I, f: F)
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
@@ -455,7 +458,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[0]]))
+    map_pixels(image, |p| Luma([p[0]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its red channel.
@@ -487,7 +490,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
+    map_pixels(image, |p| {
         let mut cs = [C::zero(); 3];
         cs[0] = p[0];
         Rgb(cs)
@@ -523,7 +526,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[1]]))
+    map_pixels(image, |p| Luma([p[1]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its green channel.
@@ -555,7 +558,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
+    map_pixels(image, |p| {
         let mut cs = [C::zero(); 3];
         cs[1] = p[0];
         Rgb(cs)
@@ -591,7 +594,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[2]]))
+    map_pixels(image, |p| Luma([p[2]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its blue channel.
@@ -623,7 +626,7 @@ where
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
+    map_pixels(image, |p| {
         let mut cs = [C::zero(); 3];
         cs[2] = p[0];
         Rgb(cs)
