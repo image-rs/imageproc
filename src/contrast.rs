@@ -13,21 +13,10 @@ use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
 ///
-/// Equivalent to [`adaptive_threshold_with_delta()`] with delta=0.
-pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
-    adaptive_threshold_with_delta(image, block_radius, 0)
-}
-
-/// Applies an adaptive threshold to an image, also accepting a delta parameter.
-///
 /// This algorithm compares each pixel's brightness with the average brightness of the pixels
 /// in the (2 * `block_radius` + 1) square block centered on it minus delta. If the pixel is at least as bright
 /// as the threshold then it will have a value of 255 in the output image, otherwise 0.
-pub fn adaptive_threshold_with_delta(
-    image: &GrayImage,
-    block_radius: u32,
-    delta: i32,
-) -> GrayImage {
+pub fn adaptive_threshold(image: &GrayImage, block_radius: u32, delta: i32) -> GrayImage {
     assert!(block_radius > 0);
     let integral = integral_image::<_, u32>(image);
     let mut out = ImageBuffer::from_pixel(image.width(), image.height(), Luma::black());
@@ -409,7 +398,7 @@ mod tests {
     #[test]
     fn adaptive_threshold_constant() {
         let image = GrayImage::from_pixel(3, 3, Luma([100u8]));
-        let binary = adaptive_threshold(&image, 1);
+        let binary = adaptive_threshold(&image, 1, 0);
         let expected = GrayImage::from_pixel(3, 3, Luma::white());
         assert_pixels_eq!(binary, expected);
     }
@@ -420,7 +409,7 @@ mod tests {
             for x in 0..3 {
                 let mut image = GrayImage::from_pixel(3, 3, Luma([200u8]));
                 image.put_pixel(x, y, Luma([100u8]));
-                let binary = adaptive_threshold(&image, 1);
+                let binary = adaptive_threshold(&image, 1, 0);
                 // All except the dark pixel have brightness >= their local mean
                 let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
                 expected.put_pixel(x, y, Luma::black());
@@ -436,7 +425,7 @@ mod tests {
                 let mut image = GrayImage::from_pixel(5, 5, Luma([100u8]));
                 image.put_pixel(x, y, Luma([200u8]));
 
-                let binary = adaptive_threshold(&image, 1);
+                let binary = adaptive_threshold(&image, 1, 0);
 
                 for yb in 0..5 {
                     for xb in 0..5 {
@@ -466,12 +455,12 @@ mod tests {
         image.put_pixel(2, 2, Luma::black());
 
         //big delta should make the theshold for the black pixel small enough to be white
-        let binary = adaptive_threshold_with_delta(&image, 1, 100);
+        let binary = adaptive_threshold(&image, 1, 100);
         let expected = GrayImage::from_pixel(3, 3, Luma::white());
         assert_pixels_eq!(binary, expected);
 
         //smaller delta should make the theshold the pixel to be black
-        let binary = adaptive_threshold_with_delta(&image, 1, 50);
+        let binary = adaptive_threshold(&image, 1, 50);
         let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
         expected.put_pixel(2, 2, Luma::black());
         assert_pixels_eq!(binary, expected);
@@ -604,7 +593,7 @@ mod benches {
         let image = gray_bench_image(200, 200);
         let block_radius = 10;
         b.iter(|| {
-            let thresholded = adaptive_threshold(&image, block_radius);
+            let thresholded = adaptive_threshold(&image, block_radius, 0);
             black_box(thresholded);
         });
     }
