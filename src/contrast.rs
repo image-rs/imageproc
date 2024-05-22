@@ -463,6 +463,23 @@ mod tests {
     }
 
     #[test]
+    fn test_adaptive_thesholding_with_delta() {
+        let mut image = GrayImage::from_pixel(3, 3, Luma([100u8]));
+        image.put_pixel(2, 2, Luma::black());
+
+        //big delta should make the theshold for the black pixel small enough to be white
+        let binary = adaptive_threshold_with_delta(&image, 1, 100);
+        let expected = GrayImage::from_pixel(3, 3, Luma::white());
+        assert_pixels_eq!(binary, expected);
+
+        //smaller delta should make the theshold the pixel to be black
+        let binary = adaptive_threshold_with_delta(&image, 1, 50);
+        let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
+        expected.put_pixel(2, 2, Luma::black());
+        assert_pixels_eq!(binary, expected);
+    }
+
+    #[test]
     fn test_histogram_lut_source_and_target_equal() {
         let mut histc = [0u32; 256];
         for i in 1..histc.len() {
