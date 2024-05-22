@@ -115,8 +115,7 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                     .iter_mut()
                     .for_each(|p| *p = if *p == 0 { 1 } else { 0 }),
             }
-            let float_dist: Image<Luma<f64>> =
-                euclidean_squared_distance_transform(image);
+            let float_dist: Image<Luma<f64>> = euclidean_squared_distance_transform(image);
             image
                 .iter_mut()
                 .zip(float_dist.iter())

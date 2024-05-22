@@ -18,8 +18,7 @@ extern crate imageproc;
 use std::{env, f32, path::Path};
 
 use image::{
-    DynamicImage, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
-    RgbaImage,
+    DynamicImage, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage,
 };
 
 use imageproc::contrast::ThresholdType;

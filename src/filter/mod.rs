@@ -914,8 +914,7 @@ mod benches {
         ], 3, 3);
 
         b.iter(|| {
-            let filtered: Image<Luma<i16>> =
-                filter_clamped::<_, _, i16>(&image, kernel);
+            let filtered: Image<Luma<i16>> = filter_clamped::<_, _, i16>(&image, kernel);
             black_box(filtered);
         });
     }

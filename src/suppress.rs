@@ -177,7 +177,7 @@ mod tests {
     use crate::definitions::{Image, Position, Score};
     use crate::property_testing::GrayTestImage;
     use crate::utils::pixel_diff_summary;
-    use image::{GenericImage, GrayImage,  Luma, Primitive};
+    use image::{GenericImage, GrayImage, Luma, Primitive};
     use quickcheck::{quickcheck, TestResult};
     use std::cmp;
 
@@ -345,8 +345,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::{local_maxima, suppress_non_maximum, tests::T};
-    use crate::noise::gaussian_noise_mut;
     use crate::definitions::Image;
+    use crate::noise::gaussian_noise_mut;
     use image::{GrayImage, Luma};
     use test::Bencher;
 

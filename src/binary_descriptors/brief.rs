@@ -67,12 +67,7 @@ pub struct TestPair {
     pub p1: Point<u32>,
 }
 
-fn local_pixel_average(
-    integral_image: &Image<Luma<u32>>,
-    x: u32,
-    y: u32,
-    radius: u32,
-) -> u8 {
+fn local_pixel_average(integral_image: &Image<Luma<u32>>, x: u32, y: u32, radius: u32) -> u8 {
     if radius == 0 {
         return 0;
     }

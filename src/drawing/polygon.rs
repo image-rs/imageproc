@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use crate::drawing::line::{draw_antialiased_line_segment_mut, draw_line_segment_mut};
 use crate::drawing::Canvas;
 use crate::point::Point;
-use image::{GenericImage};
+use image::GenericImage;
 use std::cmp::{max, min};
 
 /// Draws a polygon and its contents on an image.
