@@ -13,9 +13,7 @@ use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
 ///
-/// This algorithm compares each pixel's brightness with the average brightness of the pixels
-/// in the (2 * `block_radius` + 1) square block centered on it. If the pixel is at least as bright
-/// as the threshold then it will have a value of 255 in the output image, otherwise 0.
+/// Equivalent to `adaptive_threshold_with_delta` with delta=0.
 pub fn adaptive_threshold(image: &GrayImage, block_radius: u32) -> GrayImage {
     adaptive_threshold_with_delta(image, block_radius, 0)
 }
