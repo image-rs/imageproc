@@ -1,19 +1,19 @@
 //! Functions for suppressing non-maximal values.
 
-use crate::definitions::{Position, Score};
-use image::{GenericImage, ImageBuffer, Luma, Primitive};
+use crate::definitions::{Image, Position, Score};
+use image::{GenericImage, Luma, Primitive};
 use std::cmp;
 
 /// Returned image has zeroes for all inputs pixels which do not have the greatest
 /// intensity in the (2 * radius + 1) square block centred on them.
 /// Ties are resolved lexicographically.
-pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
+pub fn suppress_non_maximum<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
 where
     I: GenericImage<Pixel = Luma<C>>,
     C: Primitive + Ord,
 {
     let (width, height) = image.dimensions();
-    let mut out: ImageBuffer<Luma<C>, Vec<C>> = ImageBuffer::new(width, height);
+    let mut out: Image<Luma<C>> = Image::new(width, height);
     if width == 0 || height == 0 {
         return out;
     }
@@ -174,10 +174,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::{local_maxima, suppress_non_maximum};
-    use crate::definitions::{Position, Score};
+    use crate::definitions::{Image, Position, Score};
     use crate::property_testing::GrayTestImage;
     use crate::utils::pixel_diff_summary;
-    use image::{GenericImage, GrayImage, ImageBuffer, Luma, Primitive};
+    use image::{GenericImage, GrayImage, Luma, Primitive};
     use quickcheck::{quickcheck, TestResult};
     use std::cmp;
 
@@ -274,13 +274,13 @@ mod tests {
 
     /// Reference implementation of suppress_non_maximum. Used to validate
     /// the (presumably faster) actual implementation.
-    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> ImageBuffer<Luma<C>, Vec<C>>
+    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
     where
         I: GenericImage<Pixel = Luma<C>>,
         C: Primitive + Ord,
     {
         let (width, height) = image.dimensions();
-        let mut out = ImageBuffer::new(width, height);
+        let mut out = Image::new(width, height);
         out.copy_from(image, 0, 0).unwrap();
 
         let iradius = radius as i32;
@@ -345,8 +345,9 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::{local_maxima, suppress_non_maximum, tests::T};
+    use crate::definitions::Image;
     use crate::noise::gaussian_noise_mut;
-    use image::{GrayImage, ImageBuffer, Luma};
+    use image::{GrayImage, Luma};
     use test::Bencher;
 
     #[bench]
@@ -376,7 +377,7 @@ mod benches {
     fn bench_suppress_non_maximum_increasing_gradient(b: &mut Bencher) {
         // Increasing gradient in both directions. This can be a worst-case for
         // early-abort strategies.
-        let img = ImageBuffer::from_fn(40, 20, |x, y| Luma([(x + y) as u8]));
+        let img = Image::from_fn(40, 20, |x, y| Luma([(x + y) as u8]));
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
@@ -384,7 +385,7 @@ mod benches {
     fn bench_suppress_non_maximum_decreasing_gradient(b: &mut Bencher) {
         let width = 40u32;
         let height = 20u32;
-        let img = ImageBuffer::from_fn(width, height, |x, y| {
+        let img = Image::from_fn(width, height, |x, y| {
             Luma([((width - x) + (height - y)) as u8])
         });
         b.iter(|| suppress_non_maximum(&img, 7));
@@ -392,21 +393,21 @@ mod benches {
 
     #[bench]
     fn bench_suppress_non_maximum_noise_7(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        let mut img: GrayImage = GrayImage::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 7));
     }
 
     #[bench]
     fn bench_suppress_non_maximum_noise_3(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        let mut img: GrayImage = GrayImage::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 3));
     }
 
     #[bench]
     fn bench_suppress_non_maximum_noise_1(b: &mut Bencher) {
-        let mut img: GrayImage = ImageBuffer::new(40, 20);
+        let mut img: GrayImage = GrayImage::new(40, 20);
         gaussian_noise_mut(&mut img, 128f64, 30f64, 1);
         b.iter(|| suppress_non_maximum(&img, 1));
     }

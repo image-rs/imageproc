@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use crate::drawing::line::{draw_antialiased_line_segment_mut, draw_line_segment_mut};
 use crate::drawing::Canvas;
 use crate::point::Point;
-use image::{GenericImage, ImageBuffer};
+use image::GenericImage;
 use std::cmp::{max, min};
 
 /// Draws a polygon and its contents on an image.
@@ -88,7 +88,7 @@ pub fn draw_hollow_polygon<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_hollow_polygon_mut(&mut out, poly, color);
     out
@@ -138,7 +138,7 @@ where
     I: GenericImage,
     L: Fn(&mut Image<I::Pixel>, (f32, f32), (f32, f32), I::Pixel),
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_polygon_with_mut(&mut out, poly, color, plotter);
     out

@@ -4,7 +4,7 @@
 //! [quickcheck]: https://github.com/BurntSushi/quickcheck
 
 use crate::definitions::Image;
-use image::{GenericImage, ImageBuffer, Luma, Pixel, Primitive, Rgb};
+use image::{GenericImage, Luma, Pixel, Primitive, Rgb};
 use quickcheck::{Arbitrary, Gen};
 use rand_distr::{Distribution, Standard};
 use std::fmt;
@@ -25,7 +25,7 @@ where
 {
     fn arbitrary(g: &mut Gen) -> Self {
         let (width, height) = small_image_dimensions(g);
-        let mut image = ImageBuffer::new(width, height);
+        let mut image = Image::new(width, height);
         for y in 0..height {
             for x in 0..width {
                 let pix: T = ArbitraryPixel::arbitrary(g);
@@ -77,7 +77,7 @@ fn copy_sub<I>(image: &I, x: u32, y: u32, width: u32, height: u32) -> Image<I::P
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
     for dy in 0..height {
         let oy = y + dy;
         for dx in 0..width {

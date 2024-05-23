@@ -1,7 +1,7 @@
 //! Demonstrates the current incorrect handling of gamma for RGB images
 
-use image::{ImageBuffer, Rgb};
-use imageproc::pixelops::interpolate;
+use image::Rgb;
+use imageproc::{definitions::Image, pixelops::interpolate};
 
 fn main() {
     let red = Rgb::<u8>([255, 0, 0]);
@@ -12,7 +12,7 @@ fn main() {
 
     let naive_blend = |x| interpolate(red, green, left_weight(x));
 
-    let mut naive_image = ImageBuffer::new(800, 400);
+    let mut naive_image = Image::new(800, 400);
     for y in 0..naive_image.height() {
         for x in 0..naive_image.width() {
             naive_image.put_pixel(x, y, naive_blend(x));
@@ -39,7 +39,7 @@ fn main() {
         ])
     };
 
-    let mut gamma_image = ImageBuffer::new(800, 400);
+    let mut gamma_image = Image::new(800, 400);
     for y in 0..gamma_image.height() {
         for x in 0..gamma_image.width() {
             gamma_image.put_pixel(x, y, gamma_blend(x));

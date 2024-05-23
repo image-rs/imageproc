@@ -18,11 +18,11 @@ extern crate imageproc;
 use std::{env, f32, path::Path};
 
 use image::{
-    DynamicImage, GrayImage, ImageBuffer, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba,
-    RgbaImage,
+    DynamicImage, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage,
 };
 
 use imageproc::contrast::ThresholdType;
+use imageproc::definitions::Image;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
 use imageproc::kernel::{self};
@@ -73,8 +73,8 @@ impl FromDynamic for RgbaImage {
 fn compare_to_truth<P, F>(input_file_name: &str, truth_file_name: &str, op: F)
 where
     P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
-    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
+    Image<P>: FromDynamic,
+    F: Fn(&Image<P>) -> Image<P>,
 {
     compare_to_truth_with_tolerance(input_file_name, truth_file_name, op, 0u8);
 }
@@ -88,10 +88,10 @@ fn compare_to_truth_with_tolerance<P, F>(
     tol: u8,
 ) where
     P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
-    F: Fn(&ImageBuffer<P, Vec<u8>>) -> ImageBuffer<P, Vec<u8>>,
+    Image<P>: FromDynamic,
+    F: Fn(&Image<P>) -> Image<P>,
 {
-    let input = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
+    let input = Image::<P>::from_dynamic(&load_image_or_panic(
         Path::new(INPUT_DIR).join(input_file_name),
     ));
     let actual = op(&input);
@@ -99,29 +99,26 @@ fn compare_to_truth_with_tolerance<P, F>(
 }
 
 /// Checks that an image matches a 'truth' image.
-fn compare_to_truth_image<P>(actual: &ImageBuffer<P, Vec<u8>>, truth_file_name: &str)
+fn compare_to_truth_image<P>(actual: &Image<P>, truth_file_name: &str)
 where
     P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    Image<P>: FromDynamic,
 {
     compare_to_truth_image_with_tolerance(actual, truth_file_name, 0u8);
 }
 
 /// Checks that an image matches a 'truth' image to within a given per-pixel tolerance.
-fn compare_to_truth_image_with_tolerance<P>(
-    actual: &ImageBuffer<P, Vec<u8>>,
-    truth_file_name: &str,
-    tol: u8,
-) where
+fn compare_to_truth_image_with_tolerance<P>(actual: &Image<P>, truth_file_name: &str, tol: u8)
+where
     P: Pixel<Subpixel = u8> + PixelWithColorType,
-    ImageBuffer<P, Vec<u8>>: FromDynamic,
+    Image<P>: FromDynamic,
 {
     if should_regenerate() {
         actual
             .save(Path::new(TRUTH_DIR).join(truth_file_name))
             .unwrap();
     } else {
-        let truth = ImageBuffer::<P, Vec<u8>>::from_dynamic(&load_image_or_panic(
+        let truth = Image::<P>::from_dynamic(&load_image_or_panic(
             Path::new(TRUTH_DIR).join(truth_file_name),
         ));
         assert_pixels_eq_within!(*actual, truth, tol);

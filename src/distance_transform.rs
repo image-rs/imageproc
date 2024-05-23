@@ -2,7 +2,7 @@
 //! image from the nearest pixel of interest.
 
 use crate::definitions::Image;
-use image::{GenericImage, GenericImageView, GrayImage, ImageBuffer, Luma};
+use image::{GenericImage, GenericImageView, GrayImage, Luma};
 use std::cmp::min;
 
 /// How to measure distance between coordinates.
@@ -115,8 +115,7 @@ pub(crate) fn distance_transform_impl(image: &mut GrayImage, norm: Norm, from: D
                     .iter_mut()
                     .for_each(|p| *p = if *p == 0 { 1 } else { 0 }),
             }
-            let float_dist: ImageBuffer<Luma<f64>, Vec<f64>> =
-                euclidean_squared_distance_transform(image);
+            let float_dist: Image<Luma<f64>> = euclidean_squared_distance_transform(image);
             image
                 .iter_mut()
                 .zip(float_dist.iter())
@@ -222,7 +221,7 @@ unsafe fn check(
 /// [Distance Transforms of Sampled Functions]: https://www.cs.cornell.edu/~dph/papers/dt.pdf
 pub fn euclidean_squared_distance_transform(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
     let (width, height) = image.dimensions();
-    let mut result = ImageBuffer::new(width, height);
+    let mut result = Image::new(width, height);
     let mut column_envelope = LowerEnvelope::new(height as usize);
 
     // Compute 1d transforms of each column

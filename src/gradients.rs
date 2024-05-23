@@ -332,12 +332,12 @@ mod tests {
     use crate::filter::filter_clamped;
 
     use super::*;
-    use image::{ImageBuffer, Luma};
+    use image::Luma;
 
     #[test]
     fn test_gradients_constant_image_sobel() {
-        let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
-        let expected = ImageBuffer::from_pixel(5, 5, Luma([0u16]));
+        let image = Image::from_pixel(5, 5, Luma([15u8]));
+        let expected = Image::from_pixel(5, 5, Luma([0u16]));
 
         assert_pixels_eq!(
             gradients(
@@ -351,8 +351,8 @@ mod tests {
     }
     #[test]
     fn test_gradients_constant_image_scharr() {
-        let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
-        let expected = ImageBuffer::from_pixel(5, 5, Luma([0u16]));
+        let image = Image::from_pixel(5, 5, Luma([15u8]));
+        let expected = Image::from_pixel(5, 5, Luma([0u16]));
 
         assert_pixels_eq!(
             gradients(
@@ -366,8 +366,8 @@ mod tests {
     }
     #[test]
     fn test_gradients_constant_image_prewitt() {
-        let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
-        let expected = ImageBuffer::from_pixel(5, 5, Luma([0u16]));
+        let image = Image::from_pixel(5, 5, Luma([15u8]));
+        let expected = Image::from_pixel(5, 5, Luma([0u16]));
 
         assert_pixels_eq!(
             gradients(
@@ -381,8 +381,8 @@ mod tests {
     }
     #[test]
     fn test_gradients_constant_image_roberts() {
-        let image = ImageBuffer::from_pixel(5, 5, Luma([15u8]));
-        let expected = ImageBuffer::from_pixel(5, 5, Luma([0u16]));
+        let image = Image::from_pixel(5, 5, Luma([15u8]));
+        let expected = Image::from_pixel(5, 5, Luma([0u16]));
 
         assert_pixels_eq!(
             gradients(

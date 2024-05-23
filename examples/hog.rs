@@ -1,6 +1,7 @@
 //! Demonstrates computing and visualising HoG gradients.
 
-use image::{open, ImageBuffer};
+use image::open;
+use imageproc::definitions::Image;
 use imageproc::hog::*;
 use std::env;
 use std::path::Path;
@@ -32,7 +33,7 @@ fn create_hog_image(input: &Path, signed: bool) {
 
     // Crop image to a suitable size
     let (cropped_width, cropped_height) = (10 * (width / 10), 10 * (height / 10));
-    let mut cropped = ImageBuffer::new(cropped_width, cropped_height);
+    let mut cropped = Image::new(cropped_width, cropped_height);
     for y in 0..cropped_height {
         for x in 0..cropped_width {
             cropped.put_pixel(x, y, *image.get_pixel(x, y));

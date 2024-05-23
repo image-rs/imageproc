@@ -5,7 +5,7 @@ use crate::definitions::{Clamp, Image};
 use crate::filter::filter_clamped;
 use crate::kernel::{self};
 use crate::math::l2_norm;
-use image::{GenericImage, GrayImage, ImageBuffer, Luma};
+use image::{GenericImage, GrayImage, Luma};
 use num::Zero;
 use std::f32;
 
@@ -373,7 +373,7 @@ impl Interpolation {
 pub fn render_hist_grid(star_side: u32, grid: &View3d<'_, f32>, signed: bool) -> Image<Luma<u8>> {
     let width = grid.lengths[1] as u32 * star_side;
     let height = grid.lengths[2] as u32 * star_side;
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
 
     for y in 0..grid.lengths[2] {
         let y_window = y as u32 * star_side;

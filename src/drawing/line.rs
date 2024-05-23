@@ -1,6 +1,6 @@
 use crate::definitions::Image;
 use crate::drawing::Canvas;
-use image::{GenericImage, ImageBuffer, Pixel};
+use image::{GenericImage, Pixel};
 use std::mem::{swap, transmute};
 
 /// Iterates over the coordinates in a line segment using
@@ -174,7 +174,7 @@ pub fn draw_line_segment<I>(
 where
     I: GenericImage,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_line_segment_mut(&mut out, start, end, color);
     out
@@ -220,7 +220,7 @@ where
 
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
-    let mut out = ImageBuffer::new(image.width(), image.height());
+    let mut out = Image::new(image.width(), image.height());
     out.copy_from(image, 0, 0).unwrap();
     draw_antialiased_line_segment_mut(&mut out, start, end, color, blend);
     out

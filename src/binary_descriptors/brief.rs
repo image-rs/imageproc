@@ -2,10 +2,10 @@
 //! described in [Calonder, et. al. (2010)].
 ///
 /// [Calonder, et. al. (2010)]: https://www.cs.ubc.ca/~lowe/525/papers/calonder_eccv10.pdf
-use image::{GenericImageView, GrayImage, ImageBuffer, Luma};
+use image::{GenericImageView, GrayImage, Luma};
 use rand_distr::{Distribution, Normal};
 
-use crate::{corners::Corner, integral_image::integral_image, point::Point};
+use crate::{corners::Corner, definitions::Image, integral_image::integral_image, point::Point};
 
 use super::{
     constants::{BRIEF_PATCH_DIAMETER, BRIEF_PATCH_RADIUS},
@@ -67,12 +67,7 @@ pub struct TestPair {
     pub p1: Point<u32>,
 }
 
-fn local_pixel_average(
-    integral_image: &ImageBuffer<Luma<u32>, Vec<u32>>,
-    x: u32,
-    y: u32,
-    radius: u32,
-) -> u8 {
+fn local_pixel_average(integral_image: &Image<Luma<u32>>, x: u32, y: u32, radius: u32) -> u8 {
     if radius == 0 {
         return 0;
     }
@@ -114,7 +109,7 @@ fn local_pixel_average(
 }
 
 pub(crate) fn brief_impl(
-    integral_image: &ImageBuffer<Luma<u32>, Vec<u32>>,
+    integral_image: &Image<Luma<u32>>,
     keypoints: &[Point<u32>],
     test_pairs: &[TestPair],
     length: usize,
@@ -318,7 +313,7 @@ mod tests {
               5, 237, 254, 171, 172, 165,  50,  39;
              92,  31, 238,  88,  44,  67, 140, 255
         );
-        let integral_image: ImageBuffer<Luma<u32>, Vec<u32>> = integral_image(&image);
+        let integral_image: Image<Luma<u32>> = integral_image(&image);
         assert_eq!(local_pixel_average(&integral_image, 3, 3, 2), 117);
     }
 }

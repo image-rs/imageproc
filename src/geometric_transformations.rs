@@ -2,7 +2,7 @@
 //! projective transformations.
 
 use crate::definitions::{Clamp, Image};
-use image::{GenericImageView, ImageBuffer, Pixel};
+use image::{GenericImageView, Pixel};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::{cmp, ops::Mul};
@@ -330,7 +330,7 @@ where
     let (tx, ty) = t;
     let (w, h) = (width as i32, height as i32);
     let num_channels = P::CHANNEL_COUNT as usize;
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
 
     for y in 0..height {
         let y_in = cmp::max(0, cmp::min(y as i32 - ty, h - 1));
@@ -385,7 +385,7 @@ where
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
     warp_into(image, projection, interpolation, default, &mut out);
     out
 }
@@ -457,7 +457,7 @@ where
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
     let (width, height) = image.dimensions();
-    let mut out = ImageBuffer::new(width, height);
+    let mut out = Image::new(width, height);
     warp_into_with(image, mapping, interpolation, default, &mut out);
     out
 }
@@ -1170,7 +1170,7 @@ mod benches {
 
         b.iter(|| {
             let (width, height) = image.dimensions();
-            let mut out = ImageBuffer::new(width, height);
+            let mut out = Image::new(width, height);
             warp_into_with(
                 &image,
                 |x, y| (x - 30.0, y - 30.0),
