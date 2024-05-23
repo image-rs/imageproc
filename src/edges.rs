@@ -14,11 +14,11 @@ use std::f32;
 /// # Params
 ///
 /// - `low_threshold`: Low threshold for the hysteresis procedure.
-/// Edges with a strength higher than the low threshold will appear
-/// in the output image, if there are strong edges nearby.
+///   Edges with a strength higher than the low threshold will appear
+///   in the output image, if there are strong edges nearby.
 /// - `high_threshold`: High threshold for the hysteresis procedure.
-/// Edges with a strength higher than the high threshold will always
-/// appear as edges in the output image.
+///   Edges with a strength higher than the high threshold will always
+///   appear as edges in the output image.
 ///
 /// The greatest possible edge strength (and so largest sensible threshold)
 /// is`sqrt(5) * 2 * 255`, or approximately 1140.39.

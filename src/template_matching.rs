@@ -120,7 +120,7 @@ pub fn match_template_parallel(
 /// # Panics
 ///
 /// - If either dimension of `template` is not strictly less than the corresponding dimension
-/// of `image`.
+///   of `image`.
 /// - If `template.dimensions() != mask.dimensions()`.
 pub fn match_template_with_mask(
     image: &GrayImage,
