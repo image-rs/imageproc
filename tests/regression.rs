@@ -369,7 +369,7 @@ fn test_gaussian_blur_stdev_10() {
 fn test_adaptive_threshold() {
     use imageproc::contrast::adaptive_threshold;
     compare_to_truth("zebra.png", "zebra_adaptive_threshold.png", |image| {
-        adaptive_threshold(image, 41)
+        adaptive_threshold(image, 41, 0)
     });
 }
 
