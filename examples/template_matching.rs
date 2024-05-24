@@ -125,8 +125,12 @@ fn run_match_template(
         .unwrap();
 
     // Show location the template was extracted from
-    let roi = Rect::at(args.template_x as i32, args.template_y as i32)
-        .of_size(args.template_w, args.template_h);
+    let roi = Rect {
+        x: args.template_x,
+        y: args.template_y,
+        width: args.template_w,
+        height: args.template_h,
+    };
 
     draw_green_rect(&result_padded, roi)
 }
@@ -174,8 +178,12 @@ fn main() {
     );
 
     // Show location the template was extracted from
-    let roi = Rect::at(args.template_x as i32, args.template_y as i32)
-        .of_size(args.template_w, args.template_h);
+    let roi = Rect {
+        x: args.template_x,
+        y: args.template_y,
+        width: args.template_w,
+        height: args.template_h,
+    };
 
     let image_with_roi = draw_green_rect(&image, roi);
 
