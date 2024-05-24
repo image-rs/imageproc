@@ -163,9 +163,18 @@ mod benches {
 
     fn edge_detect_bench_image(width: u32, height: u32) -> GrayImage {
         let mut image = GrayImage::new(width, height);
-        let (w, h) = (width as i32, height as i32);
-        let large = Rect::at(w / 4, h / 4).of_size(width / 2, height / 2);
-        let small = Rect::at(9, 9).of_size(3, 3);
+        let large = Rect {
+            x: width / 4,
+            y: height / 4,
+            width: width / 2,
+            height: height / 2,
+        };
+        let small = Rect {
+            x: 9,
+            y: 9,
+            width: 3,
+            height: 3,
+        };
 
         draw_filled_rect_mut(&mut image, large, Luma([255]));
         draw_filled_rect_mut(&mut image, small, Luma([255]));

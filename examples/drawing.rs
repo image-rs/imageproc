@@ -44,18 +44,14 @@ fn main() {
     draw_line_segment_mut(&mut image, (20f32, 180f32), (20f32, 220f32), white);
 
     // Draw a hollow rect within bounds
-    draw_hollow_rect_mut(&mut image, Rect::at(60, 10).of_size(20, 20), white);
+    draw_hollow_rect_mut(&mut image, Rect{x: 60, y:10, width:20, height:20}, white);
     // Outside bounds
-    draw_hollow_rect_mut(&mut image, Rect::at(300, 10).of_size(20, 20), white);
-    // Partially outside bounds
-    draw_hollow_rect_mut(&mut image, Rect::at(90, -10).of_size(30, 20), white);
+    draw_hollow_rect_mut(&mut image, Rect{x: 300, y:10, width:20, height:20}, white);
 
     // Draw a filled rect within bounds
-    draw_filled_rect_mut(&mut image, Rect::at(130, 10).of_size(20, 20), white);
+    draw_filled_rect_mut(&mut image, Rect{x: 130, y:10, width:20, height:20}, white);
     // Outside bounds
-    draw_filled_rect_mut(&mut image, Rect::at(300, 10).of_size(20, 20), white);
-    // Partially outside bounds
-    draw_filled_rect_mut(&mut image, Rect::at(180, -10).of_size(30, 20), white);
+    draw_filled_rect_mut(&mut image, Rect{x: 300, y:10, width:20, height:20}, white);
 
     // Draw a hollow circle within bounds
     draw_hollow_circle_mut(&mut image, (100, 100), 15, white);

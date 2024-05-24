@@ -23,15 +23,15 @@ pub fn draw_hollow_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
 {
-    let left = rect.left() as f32;
-    let right = rect.right() as f32;
-    let top = rect.top() as f32;
-    let bottom = rect.bottom() as f32;
+    let left_x = rect.left_x() as f32;
+    let right_x = rect.right_x() as f32;
+    let top_y = rect.top_y() as f32;
+    let bottom_y = rect.bottom_y() as f32;
 
-    draw_line_segment_mut(canvas, (left, top), (right, top), color);
-    draw_line_segment_mut(canvas, (left, bottom), (right, bottom), color);
-    draw_line_segment_mut(canvas, (left, top), (left, bottom), color);
-    draw_line_segment_mut(canvas, (right, top), (right, bottom), color);
+    draw_line_segment_mut(canvas, (left_x, top_y), (right_x, top_y), color);
+    draw_line_segment_mut(canvas, (left_x, bottom_y), (right_x, bottom_y), color);
+    draw_line_segment_mut(canvas, (left_x, top_y), (left_x, bottom_y), color);
+    draw_line_segment_mut(canvas, (right_x, top_y), (right_x, bottom_y), color);
 }
 
 /// Draws a rectangle and its contents on an image.
@@ -52,12 +52,17 @@ pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
 {
-    let canvas_bounds = Rect::at(0, 0).of_size(canvas.width(), canvas.height());
+    let canvas_bounds = Rect {
+        x: 0,
+        y: 0,
+        width: canvas.width(),
+        height: canvas.height(),
+    };
     if let Some(intersection) = canvas_bounds.intersect(rect) {
-        for dy in 0..intersection.height() {
-            for dx in 0..intersection.width() {
-                let x = intersection.left() as u32 + dx;
-                let y = intersection.top() as u32 + dy;
+        for dy in 0..intersection.height {
+            for dx in 0..intersection.width {
+                let x = intersection.left_x() + dx;
+                let y = intersection.top_y() + dy;
                 canvas.draw_pixel(x, y, color);
             }
         }
@@ -82,7 +87,16 @@ mod tests {
             1, 1, 4, 1, 4;
             1, 1, 4, 4, 4);
 
-        let actual = draw_hollow_rect(&image, Rect::at(2, 2).of_size(3, 3), Luma([4u8]));
+        let actual = draw_hollow_rect(
+            &image,
+            Rect {
+                x: 2,
+                y: 2,
+                width: 3,
+                height: 3,
+            },
+            Luma([4u8]),
+        );
         assert_pixels_eq!(actual, expected);
     }
 
@@ -97,7 +111,16 @@ mod tests {
             1, 4, 4, 4, 1;
             1, 1, 1, 1, 1);
 
-        let actual = draw_filled_rect(&image, Rect::at(1, 1).of_size(3, 3), Luma([4u8]));
+        let actual = draw_filled_rect(
+            &image,
+            Rect {
+                x: 1,
+                y: 1,
+                width: 3,
+                height: 3,
+            },
+            Luma([4u8]),
+        );
         assert_pixels_eq!(actual, expected);
     }
 
@@ -111,10 +134,24 @@ mod tests {
 
         let mut image = Blend(RgbaImage::from_pixel(5, 5, white));
 
-        draw_filled_rect_mut(&mut image, Rect::at(1, 1).of_size(3, 3), blue);
         draw_filled_rect_mut(
             &mut image,
-            Rect::at(2, 2).of_size(1, 1),
+            Rect {
+                x: 1,
+                y: 1,
+                width: 3,
+                height: 3,
+            },
+            blue,
+        );
+        draw_filled_rect_mut(
+            &mut image,
+            Rect {
+                x: 2,
+                y: 2,
+                width: 1,
+                height: 1,
+            },
             semi_transparent_red,
         );
 
@@ -134,7 +171,16 @@ mod tests {
 
         // Draw an opaque rectangle over the central pixel as a sanity check that
         // we're blending in the correct direction only.
-        draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), blue);
+        draw_filled_rect_mut(
+            &mut image,
+            Rect {
+                x: 2,
+                y: 2,
+                width: 1,
+                height: 1,
+            },
+            blue,
+        );
         assert_eq!(*image.0.get_pixel(2, 2), blue);
     }
 }
@@ -151,7 +197,12 @@ mod benches {
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {
         let mut image = RgbImage::new(200, 200);
         let color = Rgb([120u8, 60u8, 47u8]);
-        let rect = Rect::at(50, 50).of_size(80, 90);
+        let rect = Rect {
+            x: 50,
+            y: 50,
+            width: 80,
+            height: 90,
+        };
         b.iter(|| {
             draw_filled_rect_mut(&mut image, rect, color);
             black_box(&image);
