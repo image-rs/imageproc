@@ -76,29 +76,19 @@ where
 /// ```
 pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
 where
-    I: GenericImage<Pixel = P>,
+    I: GenericImage<Pixel = P> + std::ops::Deref<Target = [P::Subpixel]>,
     P: WithChannel<S>,
     S: Primitive,
     F: Fn(P::Subpixel) -> S,
 {
     let (width, height) = image.dimensions();
-    let mut out: Image<ChannelMap<P, S>> = Image::new(width, height);
 
-    for y in 0..height {
-        for x in 0..width {
-            let out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for c in 0..P::CHANNEL_COUNT {
-                out_channels[c as usize] = f(unsafe {
-                    *image
-                        .unsafe_get_pixel(x, y)
-                        .channels()
-                        .get_unchecked(c as usize)
-                });
-            }
-        }
-    }
-
-    out
+    Image::<ChannelMap<P, S>>::from_vec(
+        width,
+        height,
+        image.iter().map(|subpixel| f(*subpixel)).collect(),
+    )
+    .expect("of course the length is good, it's just a map")
 }
 
 /// Applies `f` to each subpixel of the input image in parallel.
@@ -138,7 +128,7 @@ where
 
     let (width, height) = image.dimensions();
 
-    ImageBuffer::<ChannelMap<P, S>, Vec<S>>::from_vec(
+    Image::<ChannelMap<P, S>>::from_vec(
         width,
         height,
         image.par_iter().map(|subpixel| f(*subpixel)).collect(),
