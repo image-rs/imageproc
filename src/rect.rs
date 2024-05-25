@@ -92,20 +92,20 @@ impl Rect {
     /// assert_eq!(r.intersect(s), None);
     /// ```
     pub fn intersect(&self, other: Rect) -> Option<Rect> {
-        let left = cmp::max(self.x, other.x);
-        let top = cmp::max(self.y, other.y);
-        let right = cmp::min(self.right_x(), other.right_x());
-        let bottom = cmp::min(self.bottom_y(), other.bottom_y());
+        let left_x = cmp::max(self.x, other.x);
+        let top_y = cmp::max(self.y, other.y);
+        let right_x = cmp::min(self.right_x(), other.right_x());
+        let bottom_y = cmp::min(self.bottom_y(), other.bottom_y());
 
-        if right < left || bottom < top {
+        if right_x < left_x || bottom_y < top_y {
             return None;
         }
 
         Some(Rect {
-            x: left,
-            y: top,
-            width: (right - left) as u32 + 1,
-            height: (bottom - top) as u32 + 1,
+            x: left_x,
+            y: top_y,
+            width: right_x - left_x + 1,
+            height: bottom_y - top_y + 1,
         })
     }
 }
