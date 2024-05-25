@@ -373,7 +373,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::red_channel;
+/// use imageproc::map::into_red_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -383,7 +383,7 @@ where
 ///     1, 2;
 ///     3, 4);
 ///
-/// let actual = red_channel(&image);
+/// let actual = into_red_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
@@ -404,7 +404,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_red_channel;
+/// use imageproc::map::from_red_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -414,7 +414,7 @@ where
 ///     [1, 0, 0], [2, 0, 0];
 ///     [3, 0, 0], [4, 0, 0]);
 ///
-/// let actual = as_red_channel(&image);
+/// let actual = from_red_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
@@ -435,7 +435,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::green_channel;
+/// use imageproc::map::into_green_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -445,7 +445,7 @@ where
 ///     2, 4;
 ///     6, 8);
 ///
-/// let actual = green_channel(&image);
+/// let actual = into_green_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
@@ -466,7 +466,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_green_channel;
+/// use imageproc::map::from_green_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -476,7 +476,7 @@ where
 ///     [0, 1, 0], [0, 2, 0];
 ///     [0, 3, 0], [0, 4, 0]);
 ///
-/// let actual = as_green_channel(&image);
+/// let actual = from_green_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
@@ -497,7 +497,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::blue_channel;
+/// use imageproc::map::into_blue_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -507,7 +507,7 @@ where
 ///     3, 6;
 ///     9, 12);
 ///
-/// let actual = blue_channel(&image);
+/// let actual = into_blue_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
@@ -528,7 +528,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_blue_channel;
+/// use imageproc::map::from_blue_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -538,7 +538,7 @@ where
 ///     [0, 0, 1], [0, 0, 2];
 ///     [0, 0, 3], [0, 0, 4]);
 ///
-/// let actual = as_blue_channel(&image);
+/// let actual = from_blue_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
