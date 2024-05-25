@@ -61,4 +61,4 @@ always be faster - we recommend benchmarking for your specific use-case.
 
 ## How to contribute
 
-See [`CONTRIBUTING.md`].
+See [CONTRIBUTING.md](CONTRIBUTING.md).
