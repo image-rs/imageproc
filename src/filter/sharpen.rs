@@ -14,12 +14,9 @@ pub fn sharpen3x3(image: &GrayImage) -> GrayImage {
     let identity_minus_laplacian = Kernel::new(&[0, -1, 0, -1, 5, -1, 0, -1, 0], 3, 3);
     filter_clamped(image, identity_minus_laplacian)
 }
-
-/// Sharpens a grayscale image by applying a 3x3 approximation to the Laplacian.
-/// This version uses rayon to parallelize the computation.
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
+#[doc = generate_parallel_doc_comment!("sharpen3x3")]
 pub fn sharpen3x3_parallel(image: &GrayImage) -> GrayImage {
     let identity_minus_laplacian = Kernel::new(&[0, -1, 0, -1, 5, -1, 0, -1, 0], 3, 3);
     filter_clamped_parallel(image, identity_minus_laplacian)

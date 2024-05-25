@@ -159,12 +159,8 @@ where
 
     out
 }
-
 #[cfg(feature = "rayon")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
-/// Returns 2d correlation of an image. Intermediate calculations are performed
-/// at type K, and the results converted to pixel Q via f. Pads by continuity.
-/// This version uses rayon to parallelize the computation.
+#[doc = generate_parallel_doc_comment!("filter")]
 pub fn filter_parallel<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, f: F) -> Image<Q>
 where
     P: Pixel + Sync,
@@ -279,13 +275,8 @@ where
 {
     filter(image, kernel, S::clamp)
 }
-
-/// Returns 2d correlation of an image with a 3x3 row-major kernel. Intermediate calculations are
-/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
-/// This version uses rayon to parallelize the computation.
-#[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
+#[doc = generate_parallel_doc_comment!("filter_clamped")]
 pub fn filter_clamped_parallel<P, K, S>(
     image: &Image<P>,
     kernel: Kernel<K>,
@@ -529,19 +520,8 @@ where
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::FOUR_LAPLACIAN_3X3)
 }
-
-/// Calculates the Laplacian of an image.
-/// This version uses rayon to parallelize the computation.
-///
-/// The Laplacian is computed by filtering the image using the following 3x3 kernel:
-/// ```notrust
-/// 0, 1, 0,
-/// 1, -4, 1,
-/// 0, 1, 0
-/// ```
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rayon")))]
 pub fn laplacian_filter_parallel(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped_parallel(image, kernel::FOUR_LAPLACIAN_3X3)
 }
@@ -1058,8 +1038,7 @@ mod benches {
         ], 3, 3);
 
         b.iter(|| {
-            let filtered: Image<Luma<i16>> =
-                filter_clamped_parallel::<_, _, i16>(&image, kernel);
+            let filtered: Image<Luma<i16>> = filter_clamped_parallel::<_, _, i16>(&image, kernel);
             black_box(filtered);
         });
     }
