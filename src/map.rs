@@ -1,6 +1,6 @@
 //! Functions for mapping pixels and subpixels of images.
 
-use image::{GenericImage, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
+use image::{Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
 
 use crate::definitions::Image;
 
@@ -88,7 +88,7 @@ where
     .expect("of course the length is good, it's just a map")
 }
 #[doc=generate_mut_doc_comment!("map_subpixels")]
-pub fn map_subpixels_mut<I, P, F>(image: &mut Image<P>, f: F)
+pub fn map_subpixels_mut<P, F>(image: &mut Image<P>, f: F)
 where
     P: Pixel,
     F: Fn(P::Subpixel) -> P::Subpixel,
