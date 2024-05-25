@@ -2,7 +2,7 @@ use super::{filter_clamped, gaussian_blur_f32};
 use crate::{
     definitions::{Clamp, Image},
     kernel::Kernel,
-    map::map_subpixels,
+    map::{map_pixels2, map_subpixels},
 };
 use image::{GrayImage, Luma};
 

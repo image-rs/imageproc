@@ -308,6 +308,62 @@ where
         .for_each(|(x, y, pixel)| *pixel = f(x, y, *pixel));
 }
 
+/// Applies `f` to each pixel of both input images.
+///
+/// # Panics
+///
+/// Panics if `image1` and `image2` do not have the same dimensions.
+///
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Luma;
+/// use imageproc::map::map_pixels2;
+///
+/// let image1 = gray_image!(
+///     1, 2,
+///     3, 4
+/// );
+///
+/// let image2 = gray_image!(
+///     10, 20,
+///     30, 40
+/// );
+///
+/// let sum = gray_image!(
+///     11, 22,
+///     33, 44
+/// );
+///
+/// assert_pixels_eq!(
+///     map_pixels2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
+///     sum
+/// );
+/// # }
+/// ```
+pub fn map_pixels2<P, Q, R, F>(image1: &Image<P>, image2: &Image<Q>, f: F) -> Image<R>
+where
+    P: Pixel,
+    Q: Pixel,
+    R: Pixel,
+    F: Fn(P, Q) -> R,
+{
+    Image::from_vec(
+        image1.width(),
+        image2.height(),
+        image1
+            .pixels()
+            .zip(image2.pixels())
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|(pixel1, pixel2)| f(*pixel1, *pixel2).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
+}
+
 /// Creates a grayscale image by extracting the red channel of an RGB image.
 ///
 /// # Examples
