@@ -663,7 +663,7 @@ mod tests {
             #[test]
             fn $test_name() {
                 // I think the interesting edge cases here are determined entirely
-                // by the relative sizes of the kernel and the image side length, soz
+                // by the relative sizes of the kernel and the image side length, so
                 // I'm just enumerating over small values instead of generating random
                 // examples via quickcheck.
                 for height in 0..5 {
