@@ -789,7 +789,7 @@ fn test_hough_line_detection() {
         suppression_radius: 8,
     };
     let lines: Vec<PolarLine> = detect_lines(&image, options);
-    let color_edges = map_colors(&image, |p| if p[0] > 0 { white } else { black });
+    let color_edges = map_pixels(&image, |p| if p[0] > 0 { white } else { black });
 
     // Draw detected lines on top of original image
     let lines_image = draw_polar_lines(&color_edges, &lines, green);
