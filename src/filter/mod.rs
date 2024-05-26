@@ -1012,37 +1012,45 @@ mod benches {
         });
     }
 
-    #[bench]
-    fn bench_filter_clamped_i32_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        #[rustfmt::skip]
-        let kernel: Kernel<i32> = Kernel::new(&[
-            -1, 0, 1,
-            -2, 0, 2,
-            -1, 0, 1
-        ], 3, 3);
+    macro_rules! bench_filter_clamped_gray {
+        ($name:ident, $kernel_size:expr, $image_size:expr, $function_name:ident) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image =
+                    GrayImage::from_fn($image_size, $image_size, |x, y| Luma([(x + y % 3) as u8]));
 
-        b.iter(|| {
-            let filtered: Image<Luma<i16>> = filter_clamped::<_, _, i16>(&image, kernel);
-            black_box(filtered);
-        });
+                let kernel: Vec<i32> = (0..$kernel_size * $kernel_size).collect();
+                let kernel = Kernel::new(&kernel, $kernel_size, $kernel_size);
+                b.iter(|| {
+                    let filtered: Image<Luma<i16>> = $function_name::<_, _, i16>(&image, kernel);
+                    black_box(filtered);
+                });
+            }
+        };
     }
 
-    #[bench]
-    fn bench_filter_clamped_parallel_i32_filter(b: &mut Bencher) {
-        let image = gray_bench_image(500, 500);
-        #[rustfmt::skip]
-        let kernel: Kernel<i32> = Kernel::new(&[
-            -1, 0, 1,
-            -2, 0, 2,
-            -1, 0, 1
-        ], 3, 3);
+    bench_filter_clamped_gray!(bench_filter_clamped_gray_3x3, 3, 300, filter_clamped);
+    bench_filter_clamped_gray!(bench_filter_clamped_gray_5x5, 5, 300, filter_clamped);
+    bench_filter_clamped_gray!(bench_filter_clamped_gray_7x7, 7, 300, filter_clamped);
 
-        b.iter(|| {
-            let filtered: Image<Luma<i16>> = filter_clamped_parallel::<_, _, i16>(&image, kernel);
-            black_box(filtered);
-        });
-    }
+    bench_filter_clamped_gray!(
+        bench_filter_clamped_parallel_gray_3x3,
+        3,
+        300,
+        filter_clamped_parallel
+    );
+    bench_filter_clamped_gray!(
+        bench_filter_clamped_parallel_gray_5x5,
+        5,
+        300,
+        filter_clamped_parallel
+    );
+    bench_filter_clamped_gray!(
+        bench_filter_clamped_parallel_gray_7x7,
+        7,
+        300,
+        filter_clamped_parallel
+    );
 
     /// Baseline implementation of Gaussian blur is that provided by image::imageops.
     /// We can also use this to validate correctness of any implementations we add here.
