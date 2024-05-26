@@ -10,15 +10,14 @@ pub struct Kernel<'a, K> {
 
 impl<'a, K> Kernel<'a, K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
-    /// in row-major form.
-    pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
+    /// in row-major order.
+    ///
+    /// # Panics
+    /// 1. If `width == 0 || height == 0`.
+    /// 2. If `width * height != data.len() as u32`.
+    pub const fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
-        assert!(
-            width * height == data.len() as u32,
-            "Invalid kernel len: expecting {}, found {}",
-            width * height,
-            data.len()
-        );
+        assert!(width * height == data.len() as u32);
         Kernel {
             data,
             width,
@@ -38,66 +37,34 @@ impl<'a, K> Kernel<'a, K> {
 }
 
 /// The sobel horizontal 3x3 kernel.
-pub const SOBEL_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-1, 0, 1, -2, 0, 2, -1, 0, 1],
-    width: 3,
-    height: 3,
-};
+pub const SOBEL_HORIZONTAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-1, 0, 1, -2, 0, 2, -1, 0, 1], 3, 3);
 /// The sobel vertical 3x3 kernel.
-pub const SOBEL_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-1, -2, -1, 0, 0, 0, 1, 2, 1],
-    width: 3,
-    height: 3,
-};
+pub const SOBEL_VERTICAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-1, -2, -1, 0, 0, 0, 1, 2, 1], 3, 3);
 
 /// The scharr horizontal 3x3 kernel.
-pub const SCHARR_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-3, 0, 3, -10, 0, 10, -3, 0, 3],
-    width: 3,
-    height: 3,
-};
+pub const SCHARR_HORIZONTAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-3, 0, 3, -10, 0, 10, -3, 0, 3], 3, 3);
 /// The scharr vertical 3x3 kernel.
-pub const SCHARR_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-3, -10, -3, 0, 0, 0, 3, 10, 3],
-    width: 3,
-    height: 3,
-};
+pub const SCHARR_VERTICAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-3, -10, -3, 0, 0, 0, 3, 10, 3], 3, 3);
 
 /// The prewitt horizontal 3x3 kernel.
-pub const PREWITT_HORIZONTAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-1, 0, 1, -1, 0, 1, -1, 0, 1],
-    width: 3,
-    height: 3,
-};
+pub const PREWITT_HORIZONTAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-1, 0, 1, -1, 0, 1, -1, 0, 1], 3, 3);
 /// The prewitt vertical 3x3 kernel.
-pub const PREWITT_VERTICAL_3X3: Kernel<'static, i32> = Kernel {
-    data: &[-1, -1, -1, 0, 0, 0, 1, 1, 1],
-    width: 3,
-    height: 3,
-};
+pub const PREWITT_VERTICAL_3X3: Kernel<'static, i32> =
+    Kernel::new(&[-1, -1, -1, 0, 0, 0, 1, 1, 1], 3, 3);
 
 /// The roberts horizontal 3x3 kernel.
-pub const ROBERTS_HORIZONTAL_2X2: Kernel<'static, i32> = Kernel {
-    data: &[1, 0, 0, -1],
-    width: 2,
-    height: 2,
-};
+pub const ROBERTS_HORIZONTAL_2X2: Kernel<'static, i32> = Kernel::new(&[1, 0, 0, -1], 2, 2);
 /// The roberts vertical 3x3 kernel.
-pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel {
-    data: &[0, 1, -1, -0],
-    width: 2,
-    height: 2,
-};
+pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel::new(&[0, 1, -1, -0], 2, 2);
 
 /// The 4-connectivity laplacian 3x3 kernel.
-pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
-    data: &[1, 1, 1, 1, -4, 1, 1, 1, 1],
-    width: 3,
-    height: 3,
-};
+pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> =
+    Kernel::new(&[1, 1, 1, 1, -4, 1, 1, 1, 1], 3, 3);
 /// The 8-connectivity laplacian 3x3 kernel.
-pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> = Kernel {
-    data: &[1, 1, 1, 1, -8, 1, 1, 1, 1],
-    width: 3,
-    height: 3,
-};
+pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> =
+    Kernel::new(&[1, 1, 1, 1, -8, 1, 1, 1, 1], 3, 3);
