@@ -18,23 +18,22 @@ pub trait RectExt {
     ///
     /// # Examples
     /// ```
-    /// use imageproc::rect::Rect;
-    /// use imageproc::rect::Region;
+    /// use imageproc::rect::{Rect, RectExt};
     ///
     /// // Intersecting a rectangle with itself
     /// let r = Rect{x: 4, y: 5, width: 6, height: 7};
-    /// assert_eq!(r.intersect(r), Some(r));
+    /// assert_eq!(r.intersect(&r), Some(r));
     ///
     /// // Intersecting overlapping but non-equal rectangles
     /// let r = Rect{x: 0, y: 0, width:5, height:5};
     /// let s = Rect{x: 1, y: 4, width:10, height: 2};
     /// let i = Rect{x: 1, y: 4, width:4, height:1};
-    /// assert_eq!(r.intersect(s), Some(i));
+    /// assert_eq!(r.intersect(&s), Some(i));
     ///
     /// // Intersecting disjoint rectangles
     /// let r = Rect{x: 0, y: 0, width:5, height:5};
     /// let s = Rect{x: 10, y: 10, width: 100, height: 12};
-    /// assert_eq!(r.intersect(s), None);
+    /// assert_eq!(r.intersect(&s), None);
     /// ```
     fn intersect(&self, other: &Self) -> Option<Self>
     where
