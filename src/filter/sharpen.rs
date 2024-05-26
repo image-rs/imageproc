@@ -2,7 +2,7 @@ use super::{filter_clamped, gaussian_blur_f32};
 use crate::{
     definitions::{Clamp, Image},
     kernel::Kernel,
-    map::{map_colors2, map_subpixels},
+    map::{map_pixels2, map_subpixels},
 };
 use image::{GrayImage, Luma};
 
@@ -22,7 +22,7 @@ pub fn sharpen3x3(image: &GrayImage) -> GrayImage {
 pub fn sharpen_gaussian(image: &GrayImage, sigma: f32, amount: f32) -> GrayImage {
     let image = map_subpixels(image, |x| x as f32);
     let smooth: Image<Luma<f32>> = gaussian_blur_f32(&image, sigma);
-    map_colors2(&image, &smooth, |p, q| {
+    map_pixels2(&image, &smooth, |p, q| {
         let v = (1.0 + amount) * p[0] - amount * q[0];
         Luma([<u8 as Clamp<f32>>::clamp(v)])
     })

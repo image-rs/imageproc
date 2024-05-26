@@ -3,7 +3,7 @@
 use image::{open, GenericImage, GrayImage, Luma, Rgb, RgbImage};
 use imageproc::definitions::Image;
 use imageproc::drawing::draw_hollow_rect_mut;
-use imageproc::map::map_colors;
+use imageproc::map::map_pixels;
 use imageproc::rect::Rect;
 #[cfg(feature = "rayon")]
 use imageproc::template_matching::match_template_parallel;
@@ -72,7 +72,7 @@ fn convert_to_gray_image(image: &Image<Luma<f32>>) -> GrayImage {
 
     let range = hi - lo;
     let scale = |x| (255.0 * (x - lo) / range) as u8;
-    map_colors(image, |p| Luma([scale(p[0])]))
+    map_pixels(image, |p| Luma([scale(p[0])]))
 }
 
 fn copy_sub_image(image: &GrayImage, x: u32, y: u32, w: u32, h: u32) -> GrayImage {
@@ -92,7 +92,7 @@ fn copy_sub_image(image: &GrayImage, x: u32, y: u32, w: u32, h: u32) -> GrayImag
 }
 
 fn draw_green_rect(image: &GrayImage, rect: Rect) -> RgbImage {
-    let mut color_image = map_colors(image, |p| Rgb([p[0], p[0], p[0]]));
+    let mut color_image = map_pixels(image, |p| Rgb([p[0], p[0], p[0]]));
     draw_hollow_rect_mut(&mut color_image, rect, Rgb([0, 255, 0]));
     color_image
 }

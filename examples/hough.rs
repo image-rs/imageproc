@@ -6,7 +6,7 @@
 use image::{open, Rgb};
 use imageproc::edges::canny;
 use imageproc::hough::{detect_lines, draw_polar_lines, LineDetectionOptions, PolarLine};
-use imageproc::map::map_colors;
+use imageproc::map::map_pixels;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -56,7 +56,7 @@ fn main() {
     let black = Rgb::<u8>([0, 0, 0]);
 
     // Convert edge image to colour
-    let color_edges = map_colors(&edges, |p| if p[0] > 0 { white } else { black });
+    let color_edges = map_pixels(&edges, |p| if p[0] > 0 { white } else { black });
 
     // Draw lines on top of edge image
     let lines_image = draw_polar_lines(&color_edges, &lines, green);

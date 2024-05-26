@@ -1,6 +1,6 @@
-//! Functions for mapping over pixels, colors or subpixels of images.
+//! Functions for mapping pixels and subpixels of images.
 
-use image::{GenericImage, Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
+use image::{Luma, LumaA, Pixel, Primitive, Rgb, Rgba};
 
 use crate::definitions::Image;
 
@@ -74,80 +74,65 @@ where
 ///     scaled);
 /// # }
 /// ```
-pub fn map_subpixels<I, P, F, S>(image: &I, f: F) -> Image<ChannelMap<P, S>>
+pub fn map_subpixels<P, F, S>(image: &Image<P>, f: F) -> Image<ChannelMap<P, S>>
 where
-    I: GenericImage<Pixel = P>,
     P: WithChannel<S>,
     S: Primitive,
     F: Fn(P::Subpixel) -> S,
 {
-    let (width, height) = image.dimensions();
-    let mut out: Image<ChannelMap<P, S>> = Image::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            let out_channels = out.get_pixel_mut(x, y).channels_mut();
-            for c in 0..P::CHANNEL_COUNT {
-                out_channels[c as usize] = f(unsafe {
-                    *image
-                        .unsafe_get_pixel(x, y)
-                        .channels()
-                        .get_unchecked(c as usize)
-                });
-            }
-        }
-    }
-
-    out
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image.iter().map(|subpixel| f(*subpixel)).collect(),
+    )
+    .expect("of course the length is good, it's just a map")
 }
-
-/// Applies `f` to each subpixel of the input image in place.
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use imageproc::map::map_subpixels_mut;
-///
-/// let mut image = gray_image!(
-///     1, 2;
-///     3, 4);
-///
-/// let want = gray_image!(
-///     2, 4;
-///     6, 8);
-///
-/// map_subpixels_mut(&mut image, |x| 2 * x);
-///
-/// assert_pixels_eq!(
-///     image,
-///     want);
-/// # }
-/// ```
-pub fn map_subpixels_mut<I, P, F>(image: &mut I, f: F)
+#[doc=generate_mut_doc_comment!("map_subpixels")]
+pub fn map_subpixels_mut<P, F>(image: &mut Image<P>, f: F)
 where
-    I: GenericImage<Pixel = P>,
     P: Pixel,
     F: Fn(P::Subpixel) -> P::Subpixel,
 {
-    let (width, height) = image.dimensions();
+    image
+        .iter_mut()
+        .for_each(|subpixel| *subpixel = f(*subpixel));
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_subpixels")]
+pub fn map_subpixels_parallel<P, F, S>(image: &Image<P>, f: F) -> Image<ChannelMap<P, S>>
+where
+    P: WithChannel<S>,
+    P::Subpixel: Sync,
+    S: Primitive + Send,
+    F: Fn(P::Subpixel) -> S + Sync,
+{
+    use rayon::iter::IntoParallelRefIterator;
+    use rayon::iter::ParallelIterator;
 
-    for y in 0..height {
-        for x in 0..width {
-            let mut pixel = image.get_pixel(x, y);
-            let channels = pixel.channels_mut();
-            for c in 0..P::CHANNEL_COUNT as usize {
-                channels[c] =
-                    f(unsafe { *image.unsafe_get_pixel(x, y).channels().get_unchecked(c) });
-            }
-            image.put_pixel(x, y, pixel);
-        }
-    }
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image.par_iter().map(|subpixel| f(*subpixel)).collect(),
+    )
+    .expect("of course the length is good, it's just a map")
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_subpixels_mut")]
+pub fn map_subpixels_mut_parallel<P, F>(image: &mut Image<P>, f: F)
+where
+    P: Pixel,
+    P::Subpixel: Send,
+    F: Fn(P::Subpixel) -> P::Subpixel + Sync,
+{
+    use rayon::iter::IntoParallelRefMutIterator;
+    use rayon::iter::ParallelIterator;
+
+    image
+        .par_iter_mut()
+        .for_each(|subpixel| *subpixel = f(*subpixel));
 }
 
-/// Applies `f` to the color of each pixel in the input image.
+/// Applies `f` to each pixel of the input image.
 ///
 /// # Examples
 /// ```
@@ -156,7 +141,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Rgb;
-/// use imageproc::map::map_colors;
+/// use imageproc::map::map_pixels;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -167,79 +152,168 @@ where
 ///     [3, 6, 9], [4, 8, 12]);
 ///
 /// assert_pixels_eq!(
-///     map_colors(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
+///     map_pixels(&image, |p| { Rgb([p[0], (2 * p[0]), (3 * p[0])]) }),
 ///     rgb);
 /// # }
 /// ```
-pub fn map_colors<I, P, Q, F>(image: &I, f: F) -> Image<Q>
+pub fn map_pixels<P, Q, F>(image: &Image<P>, f: F) -> Image<Q>
 where
-    I: GenericImage<Pixel = P>,
     P: Pixel,
     Q: Pixel,
     F: Fn(P) -> Q,
 {
-    let (width, height) = image.dimensions();
-    let mut out: Image<Q> = Image::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(pix));
-            }
-        }
-    }
-
-    out
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image
+            .pixels()
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|pixel| f(*pixel).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
 }
-
-/// Applies `f` to the color of each pixel in the input image in place.
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use image::Luma;
-/// use imageproc::map::map_colors_mut;
-///
-/// let mut image = gray_image!(
-///     1, 2;
-///     3, 4);
-///
-/// let want = gray_image!(
-///     2, 4;
-///     6, 8);
-///
-/// map_colors_mut(&mut image, |p| Luma([2 * p[0]]));
-///
-/// assert_pixels_eq!(
-///     image,
-///     want);
-/// # }
-/// ```
-pub fn map_colors_mut<I, P, F>(image: &mut I, f: F)
+#[doc=generate_mut_doc_comment!("map_pixels")]
+pub fn map_pixels_mut<P, F>(image: &mut Image<P>, f: F)
 where
-    I: GenericImage<Pixel = P>,
     P: Pixel,
     F: Fn(P) -> P,
 {
-    let (width, height) = image.dimensions();
+    image.pixels_mut().for_each(|pixel| *pixel = f(*pixel))
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_pixels")]
+pub fn map_pixels_parallel<P, Q, F>(image: &Image<P>, f: F) -> Image<Q>
+where
+    P: Pixel + Sync,
+    P::Subpixel: Sync,
+    Q: Pixel,
+    Q::Subpixel: Send,
+    F: Fn(P) -> Q + Sync,
+{
+    use rayon::iter::ParallelIterator;
 
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                image.unsafe_put_pixel(x, y, f(pix));
-            }
-        }
-    }
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image
+            .par_pixels()
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|pixel| f(*pixel).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_pixels_mut")]
+pub fn map_pixels_mut_parallel<P, F>(image: &mut Image<P>, f: F)
+where
+    P: Pixel + Sync + Send,
+    P::Subpixel: Sync + Send,
+    F: Fn(P) -> P + Sync,
+{
+    use rayon::iter::ParallelIterator;
+
+    image.par_pixels_mut().for_each(|pixel| *pixel = f(*pixel));
 }
 
-/// Applies `f` to the colors of the pixels in the input images.
+/// Applies `f` to each enumerated pixel of the input image.
 ///
-/// Requires `image1` and `image2` to have the same dimensions.
+/// # Examples
+/// ```
+/// # extern crate image;
+/// # #[macro_use]
+/// # extern crate imageproc;
+/// # fn main() {
+/// use image::Rgb;
+/// use imageproc::map::map_enumerated_pixels;
+///
+/// let image = gray_image!(
+///     1, 2;
+///     3, 4);
+///
+/// let rgb = rgb_image!(
+///     [1, 0, 0], [2, 1, 0];
+///     [3, 0, 1], [4, 1, 1]);
+///
+/// assert_pixels_eq!(
+///     map_enumerated_pixels(&image, |x, y, p| {
+///         Rgb([p[0], x as u8, y as u8])
+///     }),
+///     rgb);
+/// # }
+/// ```
+pub fn map_enumerated_pixels<P, Q, F>(image: &Image<P>, f: F) -> Image<Q>
+where
+    P: Pixel,
+    Q: Pixel,
+    F: Fn(u32, u32, P) -> Q,
+{
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image
+            .enumerate_pixels()
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|(x, y, pixel)| f(x, y, *pixel).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
+}
+#[doc=generate_mut_doc_comment!("map_enumerated_pixels")]
+pub fn map_enumerated_pixels_mut<P, F>(image: &mut Image<P>, f: F)
+where
+    P: Pixel,
+    F: Fn(u32, u32, P) -> P,
+{
+    image
+        .enumerate_pixels_mut()
+        .for_each(|(x, y, pixel)| *pixel = f(x, y, *pixel))
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_enumerated_pixels")]
+pub fn map_enumerated_pixels_parallel<P, Q, F>(image: &Image<P>, f: F) -> Image<Q>
+where
+    P: Pixel + Sync,
+    P::Subpixel: Sync,
+    Q: Pixel,
+    Q::Subpixel: Send,
+    F: Fn(u32, u32, P) -> Q + Sync,
+{
+    use rayon::iter::ParallelIterator;
+
+    Image::from_vec(
+        image.width(),
+        image.height(),
+        image
+            .par_enumerate_pixels()
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|(x, y, pixel)| f(x, y, *pixel).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
+}
+#[cfg(feature = "rayon")]
+#[doc = generate_parallel_doc_comment!("map_enumerated_pixels_mut")]
+pub fn map_enumerated_pixels_mut_parallel<P, F>(image: &mut Image<P>, f: F)
+where
+    P: Pixel + Sync + Send,
+    P::Subpixel: Sync + Send,
+    F: Fn(u32, u32, P) -> P + Sync,
+{
+    use rayon::iter::ParallelIterator;
+
+    image
+        .par_enumerate_pixels_mut()
+        .for_each(|(x, y, pixel)| *pixel = f(x, y, *pixel));
+}
+
+/// Applies `f` to each pixel of both input images.
+///
+/// # Panics
+///
+/// Panics if `image1` and `image2` do not have the same dimensions.
+///
 /// # Examples
 /// ```
 /// # extern crate image;
@@ -247,7 +321,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::map_colors2;
+/// use imageproc::map::map_pixels2;
 ///
 /// let image1 = gray_image!(
 ///     1, 2,
@@ -265,130 +339,29 @@ where
 /// );
 ///
 /// assert_pixels_eq!(
-///     map_colors2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
+///     map_pixels2(&image1, &image2, |p, q| Luma([p[0] + q[0]])),
 ///     sum
 /// );
 /// # }
 /// ```
-pub fn map_colors2<I, J, P, Q, R, F>(image1: &I, image2: &J, f: F) -> Image<R>
+pub fn map_pixels2<P, Q, R, F>(image1: &Image<P>, image2: &Image<Q>, f: F) -> Image<R>
 where
-    I: GenericImage<Pixel = P>,
-    J: GenericImage<Pixel = Q>,
     P: Pixel,
     Q: Pixel,
     R: Pixel,
     F: Fn(P, Q) -> R,
 {
-    assert_eq!(image1.dimensions(), image2.dimensions());
-
-    let (width, height) = image1.dimensions();
-    let mut out: Image<R> = Image::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let p = image1.unsafe_get_pixel(x, y);
-                let q = image2.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(p, q));
-            }
-        }
-    }
-
-    out
-}
-
-/// Applies `f` to each pixel in the input image.
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use image::Rgb;
-/// use imageproc::map::map_pixels;
-///
-/// let image = gray_image!(
-///     1, 2;
-///     3, 4);
-///
-/// let rgb = rgb_image!(
-///     [1, 0, 0], [2, 1, 0];
-///     [3, 0, 1], [4, 1, 1]);
-///
-/// assert_pixels_eq!(
-///     map_pixels(&image, |x, y, p| {
-///         Rgb([p[0], x as u8, y as u8])
-///     }),
-///     rgb);
-/// # }
-/// ```
-pub fn map_pixels<I, P, Q, F>(image: &I, f: F) -> Image<Q>
-where
-    I: GenericImage<Pixel = P>,
-    P: Pixel,
-    Q: Pixel,
-    F: Fn(u32, u32, P) -> Q,
-{
-    let (width, height) = image.dimensions();
-    let mut out: Image<Q> = Image::new(width, height);
-
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                out.unsafe_put_pixel(x, y, f(x, y, pix));
-            }
-        }
-    }
-
-    out
-}
-
-/// Applies `f` to each pixel in the input image in place.
-///
-/// # Examples
-/// ```
-/// # extern crate image;
-/// # #[macro_use]
-/// # extern crate imageproc;
-/// # fn main() {
-/// use image::Luma;
-/// use imageproc::map::map_pixels_mut;
-///
-/// let mut image = gray_image!(
-///     1, 2;
-///     3, 4);
-///
-/// let want = gray_image!(
-///     1, 3;
-///     4, 6);
-///
-/// map_pixels_mut(&mut image, |x, y, p| {
-///     Luma([p[0] + x as u8 + y as u8])
-/// });
-///
-/// assert_pixels_eq!(
-///     image,
-///     want);
-/// # }
-/// ```
-pub fn map_pixels_mut<I, P, F>(image: &mut I, f: F)
-where
-    I: GenericImage<Pixel = P>,
-    P: Pixel,
-    F: Fn(u32, u32, P) -> P,
-{
-    let (width, height) = image.dimensions();
-
-    for y in 0..height {
-        for x in 0..width {
-            unsafe {
-                let pix = image.unsafe_get_pixel(x, y);
-                image.unsafe_put_pixel(x, y, f(x, y, pix));
-            }
-        }
-    }
+    Image::from_vec(
+        image1.width(),
+        image2.height(),
+        image1
+            .pixels()
+            .zip(image2.pixels())
+            //optimisation: remove allocation if Pixel ever gets compile-time size information
+            .flat_map(|(pixel1, pixel2)| f(*pixel1, *pixel2).channels().to_vec())
+            .collect(),
+    )
+    .expect("of course the length is good, it's just a map")
 }
 
 /// Creates a grayscale image by extracting the red channel of an RGB image.
@@ -400,7 +373,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::red_channel;
+/// use imageproc::map::into_red_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -410,17 +383,16 @@ where
 ///     1, 2;
 ///     3, 4);
 ///
-/// let actual = red_channel(&image);
+/// let actual = into_red_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn red_channel<I, C>(image: &I) -> Image<Luma<C>>
+pub fn into_red_channel<C>(image: &Image<Rgb<C>>) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[0]]))
+    map_pixels(image, |p| Luma([p[0]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its red channel.
@@ -432,7 +404,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_red_channel;
+/// use imageproc::map::from_red_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -442,21 +414,16 @@ where
 ///     [1, 0, 0], [2, 0, 0];
 ///     [3, 0, 0], [4, 0, 0]);
 ///
-/// let actual = as_red_channel(&image);
+/// let actual = from_red_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn as_red_channel<I, C>(image: &I) -> Image<Rgb<C>>
+pub fn from_red_channel<C>(image: &Image<Luma<C>>) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
-        let mut cs = [C::zero(); 3];
-        cs[0] = p[0];
-        Rgb(cs)
-    })
+    map_pixels(image, |p| Rgb([p.0[0], C::zero(), C::zero()]))
 }
 
 /// Creates a grayscale image by extracting the green channel of an RGB image.
@@ -468,7 +435,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::green_channel;
+/// use imageproc::map::into_green_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -478,17 +445,16 @@ where
 ///     2, 4;
 ///     6, 8);
 ///
-/// let actual = green_channel(&image);
+/// let actual = into_green_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn green_channel<I, C>(image: &I) -> Image<Luma<C>>
+pub fn into_green_channel<C>(image: &Image<Rgb<C>>) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[1]]))
+    map_pixels(image, |p| Luma([p[1]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its green channel.
@@ -500,7 +466,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_green_channel;
+/// use imageproc::map::from_green_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -510,21 +476,16 @@ where
 ///     [0, 1, 0], [0, 2, 0];
 ///     [0, 3, 0], [0, 4, 0]);
 ///
-/// let actual = as_green_channel(&image);
+/// let actual = from_green_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn as_green_channel<I, C>(image: &I) -> Image<Rgb<C>>
+pub fn from_green_channel<C>(image: &Image<Luma<C>>) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
-        let mut cs = [C::zero(); 3];
-        cs[1] = p[0];
-        Rgb(cs)
-    })
+    map_pixels(image, |p| Rgb([C::zero(), p.0[0], C::zero()]))
 }
 
 /// Creates a grayscale image by extracting the blue channel of an RGB image.
@@ -536,7 +497,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::blue_channel;
+/// use imageproc::map::into_blue_channel;
 ///
 /// let image = rgb_image!(
 ///     [1, 2, 3], [2, 4, 6];
@@ -546,17 +507,16 @@ where
 ///     3, 6;
 ///     9, 12);
 ///
-/// let actual = blue_channel(&image);
+/// let actual = into_blue_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn blue_channel<I, C>(image: &I) -> Image<Luma<C>>
+pub fn into_blue_channel<C>(image: &Image<Rgb<C>>) -> Image<Luma<C>>
 where
-    I: GenericImage<Pixel = Rgb<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| Luma([p[2]]))
+    map_pixels(image, |p| Luma([p[2]]))
 }
 
 /// Creates an RGB image by embedding a grayscale image in its blue channel.
@@ -568,7 +528,7 @@ where
 /// # extern crate imageproc;
 /// # fn main() {
 /// use image::Luma;
-/// use imageproc::map::as_blue_channel;
+/// use imageproc::map::from_blue_channel;
 ///
 /// let image = gray_image!(
 ///     1, 2;
@@ -578,19 +538,14 @@ where
 ///     [0, 0, 1], [0, 0, 2];
 ///     [0, 0, 3], [0, 0, 4]);
 ///
-/// let actual = as_blue_channel(&image);
+/// let actual = from_blue_channel(&image);
 /// assert_pixels_eq!(actual, expected);
 /// # }
 /// ```
-pub fn as_blue_channel<I, C>(image: &I) -> Image<Rgb<C>>
+pub fn from_blue_channel<C>(image: &Image<Luma<C>>) -> Image<Rgb<C>>
 where
-    I: GenericImage<Pixel = Luma<C>>,
     Rgb<C>: Pixel<Subpixel = C>,
     C: Primitive,
 {
-    map_colors(image, |p| {
-        let mut cs = [C::zero(); 3];
-        cs[2] = p[0];
-        Rgb(cs)
-    })
+    map_pixels(image, |p| Rgb([C::zero(), C::zero(), p.0[0]]))
 }

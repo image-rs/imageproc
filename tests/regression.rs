@@ -751,7 +751,7 @@ fn test_draw_filled_ellipse() {
 #[test]
 fn test_hough_line_detection() {
     use imageproc::hough::{detect_lines, draw_polar_lines, LineDetectionOptions, PolarLine};
-    use imageproc::map::map_colors;
+    use imageproc::map::map_pixels;
 
     let white = Rgb([255u8, 255u8, 255u8]);
     let black = Rgb([0u8, 0u8, 0u8]);
@@ -789,7 +789,7 @@ fn test_hough_line_detection() {
         suppression_radius: 8,
     };
     let lines: Vec<PolarLine> = detect_lines(&image, options);
-    let color_edges = map_colors(&image, |p| if p[0] > 0 { white } else { black });
+    let color_edges = map_pixels(&image, |p| if p[0] > 0 { white } else { black });
 
     // Draw detected lines on top of original image
     let lines_image = draw_polar_lines(&color_edges, &lines, green);

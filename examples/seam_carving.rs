@@ -2,7 +2,7 @@ use image::{open, GrayImage, Luma, Pixel};
 use imageproc::definitions::Clamp;
 use imageproc::gradients::gradients;
 use imageproc::kernel;
-use imageproc::map::map_colors;
+use imageproc::map::map_pixels;
 use imageproc::seam_carving::*;
 use std::env;
 use std::fs;
@@ -54,7 +54,7 @@ fn main() {
     }
 
     // Draw the seams on the original image.
-    let gray_image = map_colors(&input_image, |p| p.to_luma());
+    let gray_image = map_pixels(&input_image, |p| p.to_luma());
     let annotated = draw_vertical_seams(&gray_image, &seams);
     let annotated_path = output_dir.join("annotated.png");
     annotated.save(&annotated_path).unwrap();
@@ -69,7 +69,7 @@ fn main() {
             Luma([mean as u32])
         },
     );
-    let clamped_gradients: GrayImage = map_colors(&gradients, |p| Luma([Clamp::clamp(p[0])]));
+    let clamped_gradients: GrayImage = map_pixels(&gradients, |p| Luma([Clamp::clamp(p[0])]));
     let annotated_gradients = draw_vertical_seams(&clamped_gradients, &seams);
     let gradients_path = output_dir.join("gradients.png");
     clamped_gradients.save(&gradients_path).unwrap();
