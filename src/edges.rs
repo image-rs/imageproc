@@ -157,7 +157,7 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
 mod benches {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
-    use crate::rect_ext::Rect;
+    use crate::rect::Rect;
     use ::test;
     use image::{GrayImage, Luma};
 

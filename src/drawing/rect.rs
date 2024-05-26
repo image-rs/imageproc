@@ -1,7 +1,7 @@
 use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
-use crate::rect_ext::{Rect, RectExt};
+use crate::rect::{Rect, RectExt};
 use image::GenericImage;
 use std::f32;
 
@@ -73,7 +73,7 @@ where
 mod tests {
     use super::*;
     use crate::drawing::Blend;
-    use crate::rect_ext::Rect;
+    use crate::rect::Rect;
     use image::{GrayImage, Luma, Pixel, Rgba, RgbaImage};
 
     #[test]
@@ -189,7 +189,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::rect_ext::Rect;
+    use crate::rect::Rect;
     use image::{Rgb, RgbImage};
     use test::{black_box, Bencher};
 

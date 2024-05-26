@@ -82,7 +82,7 @@ impl RectExt for Rect {
 
 #[cfg(test)]
 mod tests {
-    use crate::rect_ext::RectExt;
+    use crate::rect::RectExt;
 
     use super::Rect;
 

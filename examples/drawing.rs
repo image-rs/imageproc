@@ -5,7 +5,7 @@ use imageproc::drawing::{
     draw_cross_mut, draw_filled_circle_mut, draw_filled_rect_mut, draw_hollow_circle_mut,
     draw_hollow_rect_mut, draw_line_segment_mut,
 };
-use imageproc::rect_ext::Rect;
+use imageproc::rect::Rect;
 use std::env;
 use std::path::Path;
 
