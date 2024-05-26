@@ -513,7 +513,7 @@ where
 /// The Laplacian is computed by filtering the image using the following 3x3 kernel:
 /// ```notrust
 /// 0, 1, 0,
-/// 1, -4, 1,
+/// 1,-4, 1,
 /// 0, 1, 0
 /// ```
 #[must_use = "the function does not modify the original image"]
