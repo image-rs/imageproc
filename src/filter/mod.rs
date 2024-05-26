@@ -513,7 +513,7 @@ where
 /// The Laplacian is computed by filtering the image using the following 3x3 kernel:
 /// ```notrust
 /// 0, 1, 0,
-/// 1, -4, 1,
+/// 1,-4, 1,
 /// 0, 1, 0
 /// ```
 #[must_use = "the function does not modify the original image"]
@@ -535,6 +535,25 @@ mod tests {
     use image::{GrayImage, Luma};
     use std::cmp::{max, min};
     use test::black_box;
+
+    #[test]
+    fn test_laplacian() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
+
+        #[rustfmt::skip]
+        let laplacian = Kernel::new(&[
+            0, 1, 0,
+            1, -4, 1,
+            0, 1, 0
+        ], 3, 3);
+
+        let actual = laplacian_filter(&image);
+        let expected = filter_clamped(&image, laplacian);
+        assert_eq!(actual.as_ref(), expected.as_ref());
+    }
 
     #[test]
     fn test_box_filter_handles_empty_images() {
