@@ -105,12 +105,8 @@ where
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {
-    let pass1: Image<ChannelMap<P, i16>> = filter(image, kernel1, |channel, acc| {
-        *channel = <i16 as Clamp<i32>>::clamp(acc)
-    });
-    let pass2: Image<ChannelMap<P, i16>> = filter(image, kernel2, |channel, acc| {
-        *channel = <i16 as Clamp<i32>>::clamp(acc)
-    });
+    let pass1: Image<ChannelMap<P, i16>> = filter(image, kernel1, <i16 as Clamp<i32>>::clamp);
+    let pass2: Image<ChannelMap<P, i16>> = filter(image, kernel2, <i16 as Clamp<i32>>::clamp);
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
@@ -330,6 +326,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::filter::filter_clamped;
+    #[cfg(feature = "rayon")]
+    use crate::filter::filter_clamped_parallel;
 
     use super::*;
     use image::Luma;
@@ -412,6 +410,23 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rayon")]
+    fn test_horizontal_sobel_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -4, -8, -4;
+            -4, -8, -4;
+            -4, -8, -4);
+
+        let filtered = filter_clamped_parallel(&image, kernel::SOBEL_HORIZONTAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
     fn test_vertical_sobel_gradient_image() {
         let image = gray_image!(
             3, 6, 9;
@@ -424,6 +439,23 @@ mod tests {
             -4, -4, -4);
 
         let filtered = filter_clamped(&image, kernel::SOBEL_VERTICAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_vertical_sobel_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            -4, -4, -4;
+            -8, -8, -8;
+            -4, -4, -4);
+
+        let filtered = filter_clamped_parallel(&image, kernel::SOBEL_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -444,6 +476,23 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rayon")]
+    fn test_horizontal_scharr_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -16, -32, -16;
+            -16, -32, -16;
+            -16, -32, -16);
+
+        let filtered = filter_clamped_parallel(&image, kernel::SCHARR_HORIZONTAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
     fn test_vertical_scharr_gradient_image() {
         let image = gray_image!(
             3, 6, 9;
@@ -456,6 +505,23 @@ mod tests {
             -16, -16, -16);
 
         let filtered = filter_clamped(&image, kernel::SCHARR_VERTICAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_vertical_scharr_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            -16, -16, -16;
+            -32, -32, -32;
+            -16, -16, -16);
+
+        let filtered = filter_clamped_parallel(&image, kernel::SCHARR_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -476,6 +542,24 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rayon")]
+    fn test_horizontal_prewitt_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        let expected = gray_image!(type: i16,
+            -3, -6, -3;
+            -3, -6, -3;
+            -3, -6, -3);
+
+        let filtered = filter_clamped_parallel(&image, kernel::PREWITT_HORIZONTAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
     fn test_vertical_prewitt_gradient_image() {
         let image = gray_image!(
             3, 6, 9;
@@ -488,6 +572,23 @@ mod tests {
             -3, -3, -3);
 
         let filtered = filter_clamped(&image, kernel::PREWITT_VERTICAL_3X3);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_vertical_prewitt_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            -3, -3, -3;
+            -6, -6, -6;
+            -3, -3, -3);
+
+        let filtered = filter_clamped_parallel(&image, kernel::PREWITT_VERTICAL_3X3);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -506,6 +607,24 @@ mod tests {
         let filtered = filter_clamped(&image, kernel::ROBERTS_HORIZONTAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_horizontal_roberts_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            0, -3, -3;
+            1, -2, -2;
+            1, -2, -2);
+
+        let filtered = filter_clamped_parallel(&image, kernel::ROBERTS_HORIZONTAL_2X2);
+        assert_pixels_eq!(filtered, expected);
+    }
+
     #[test]
     fn test_vertical_roberts_gradient_image() {
         let image = gray_image!(
@@ -519,6 +638,23 @@ mod tests {
             1, 4, 4);
 
         let filtered = filter_clamped(&image, kernel::ROBERTS_VERTICAL_2X2);
+        assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_vertical_roberts_gradient_image_parallel() {
+        let image = gray_image!(
+            3, 6, 9;
+            2, 5, 8;
+            1, 4, 7);
+
+        let expected = gray_image!(type: i16,
+            0, 3, 3;
+            1, 4, 4;
+            1, 4, 4);
+
+        let filtered = filter_clamped_parallel(&image, kernel::ROBERTS_VERTICAL_2X2);
         assert_pixels_eq!(filtered, expected);
     }
 }

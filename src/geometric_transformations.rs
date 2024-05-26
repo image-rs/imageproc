@@ -432,7 +432,7 @@ pub fn warp_into<P>(
 /// # Examples
 /// Applying a wave pattern.
 /// ```
-/// use image::{ImageBuffer, Luma};
+/// use image::Luma;
 /// use imageproc::utils::gray_bench_image;
 /// use imageproc::geometric_transformations::*;
 ///
