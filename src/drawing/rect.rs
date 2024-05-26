@@ -1,7 +1,7 @@
 use crate::definitions::Image;
 use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
-use crate::rect::Rect;
+use crate::rect_ext::{Rect, RectExt};
 use image::GenericImage;
 use std::f32;
 
@@ -58,7 +58,7 @@ where
         width: canvas.width(),
         height: canvas.height(),
     };
-    if let Some(intersection) = canvas_bounds.intersect(rect) {
+    if let Some(intersection) = canvas_bounds.intersect(&rect) {
         for dy in 0..intersection.height {
             for dx in 0..intersection.width {
                 let x = intersection.left_x() + dx;
@@ -73,7 +73,7 @@ where
 mod tests {
     use super::*;
     use crate::drawing::Blend;
-    use crate::rect::Rect;
+    use crate::rect_ext::Rect;
     use image::{GrayImage, Luma, Pixel, Rgba, RgbaImage};
 
     #[test]
@@ -189,7 +189,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::rect::Rect;
+    use crate::rect_ext::Rect;
     use image::{Rgb, RgbImage};
     use test::{black_box, Bencher};
 
