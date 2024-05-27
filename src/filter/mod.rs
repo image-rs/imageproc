@@ -354,6 +354,30 @@ where
     kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
 }
 
+///
+pub fn filter5x5<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+where
+    P::Subpixel: Into<K>,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
+    K: Num + Copy,
+{
+    let kernel = Kernel::new(kernel, 5, 5);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+}
+
+///
+pub fn filter7x7<P, K, S>(image: &Image<P>, kernel: &[K]) -> Image<ChannelMap<P, S>>
+where
+    P::Subpixel: Into<K>,
+    S: Clamp<K> + Primitive,
+    P: WithChannel<S>,
+    K: Num + Copy,
+{
+    let kernel = Kernel::new(kernel, 7, 7);
+    kernel.filter(image, |channel, acc| *channel = S::clamp(acc))
+}
+
 /// Returns horizontal correlations between an image and a 1d kernel.
 /// Pads by continuity. Intermediate calculations are performed at
 /// type K.
@@ -1088,6 +1112,7 @@ mod benches {
         });
     }
 
+
     #[bench]
     fn bench_filter3x3_i32_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
@@ -1101,6 +1126,46 @@ mod benches {
         b.iter(|| {
             let filtered: ImageBuffer<Luma<i16>, Vec<i16>> =
                 filter3x3::<_, _, i16>(&image, &kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_filter5x5_i32_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1, 2, 3,
+            -2, 0, 2, 3, 5,
+            -1, 0, 1, 6, 9,
+            -1, 0, 1, 6, 9,
+            -1, 0, 1, 6, 9
+        ];
+
+        b.iter(|| {
+            let filtered: image::ImageBuffer<Luma<i16>, Vec<i16>> =
+            filter5x5::<_, _, i16>(&image, &kernel);
+            black_box(filtered);
+        });
+    }
+
+    #[bench]
+    fn bench_filter7x7_i32_filter(b: &mut Bencher) {
+        let image = gray_bench_image(500, 500);
+        #[rustfmt::skip]
+        let kernel: Vec<i32> = vec![
+            -1, 0, 1, 2, 3, -2, 1,
+            -2, 0, 2, 3, 5, -2, 1,
+            -1, 0, 1, 6, 9, -2, 1,
+            -1, 0, 1, 6, 9, -2, 1,
+            -1, 0, 1, 6, 9, -2, 1,
+            -1, 0, 1, 6, 9, -2, 1,
+            -1, 0, 1, 6, 9, -2, 1
+        ];
+
+        b.iter(|| {
+            let filtered: image::ImageBuffer<Luma<i16>, Vec<i16>> =
+            filter7x7::<_, _, i16>(&image, &kernel);
             black_box(filtered);
         });
     }
