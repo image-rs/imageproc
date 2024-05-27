@@ -35,12 +35,24 @@ where
     ///
     /// # Panics
     ///
-    /// If the `x` or `y` is outside of the width or height of the kernel.
+    /// If the `y * kernel.width + x` is outside of the kernel data.
     #[inline]
-    pub(crate) fn at(&self, x: u32, y: u32) -> K {
+    pub fn get(&self, x: u32, y: u32) -> K {
         debug_assert!(x < self.width);
         debug_assert!(y < self.height);
-        self.data[(y * self.width + x) as usize]
+        let at = usize::try_from(y * self.width + x).unwrap();
+        self.data[at]
+    }
+
+    /// Get the value in the kernel at the given `x` and `y` position, without
+    /// doing bounds checking.
+    #[inline]
+    pub unsafe fn get_unchecked(&self, x: u32, y: u32) -> K {
+        debug_assert!(x < self.width);
+        debug_assert!(y < self.height);
+        let at = usize::try_from(y * self.width + x).unwrap();
+        debug_assert!(at < self.data.len());
+        self.data.get_unchecked(at).clone()
     }
 }
 

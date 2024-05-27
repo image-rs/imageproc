@@ -111,7 +111,7 @@ where
                     accumulate(
                         &mut acc,
                         unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                        kernel.at(k_x as u32, k_y as u32),
+                        unsafe { kernel.get_unchecked(k_x as u32, k_y as u32) },
                     );
                 }
             }
@@ -158,7 +158,7 @@ where
                         accumulate(
                             &mut acc,
                             unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                            kernel.at(k_x as u32, k_y as u32),
+                            unsafe { kernel.get_unchecked(k_x as u32, k_y as u32) },
                         );
                     }
                 }
@@ -167,9 +167,6 @@ where
                     *a = K::zero();
                 }
                 out_row.push(*Q::from_slice(&out_pixel));
-                out_pixel.iter_mut().for_each(|ch| {
-                    *ch = Q::Subpixel::zero();
-                });
             }
             out_row
         })
