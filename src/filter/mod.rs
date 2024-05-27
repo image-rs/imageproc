@@ -280,7 +280,7 @@ where
     K: Num + Copy + From<<P as image::Pixel>::Subpixel> + Sync,
     S: Clamp<K> + Primitive + Send,
 {
-    filter_parallel(image, kernel, |acc| S::clamp(acc))
+    filter_parallel(image, kernel, S::clamp)
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
@@ -301,6 +301,7 @@ where
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
     let k_width = kernel.len() as i32;
+    let half_k = k_width / 2;
 
     // Typically the image side will be much larger than the kernel length.
     // In that case we can remove a lot of bounds checks for most pixels.
@@ -308,7 +309,7 @@ where
         for y in 0..height {
             for x in 0..width {
                 for (i, k) in kernel.iter().enumerate() {
-                    let x_unchecked = (x as i32) + i as i32 - k_width / 2;
+                    let x_unchecked = (x as i32) + i as i32 - half_k;
                     let x_p = max(0, min(x_unchecked, width as i32 - 1)) as u32;
                     debug_assert!(image.in_bounds(x_p, y));
                     let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -316,23 +317,18 @@ where
                 }
 
                 let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                    *c = <P as Pixel>::Subpixel::clamp(*a);
-                    *a = zero;
-                }
+                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
             }
         }
 
         return out;
     }
 
-    let half_k = k_width / 2;
-
     for y in 0..height {
         // Left margin - need to check lower bound only
         for x in 0..half_k {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - half_k;
                 let x_p = max(0, x_unchecked) as u32;
                 debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -340,16 +336,13 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
 
         // Neither margin - don't need bounds check on either side
         for x in half_k..(width as i32 - half_k) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - half_k;
                 let x_p = x_unchecked as u32;
                 debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -357,16 +350,13 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
 
         // Right margin - need to check upper bound only
         for x in (width as i32 - half_k)..(width as i32) {
             for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - k_width / 2;
+                let x_unchecked = x + i as i32 - half_k;
                 let x_p = min(x_unchecked, width as i32 - 1) as u32;
                 debug_assert!(image.in_bounds(x_p, y));
                 let p = unsafe { image.unsafe_get_pixel(x_p, y) };
@@ -374,10 +364,7 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
@@ -401,6 +388,7 @@ where
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
     let k_height = kernel.len() as i32;
+    let half_k = k_height / 2;
 
     // Typically the image side will be much larger than the kernel length.
     // In that case we can remove a lot of bounds checks for most pixels.
@@ -408,7 +396,7 @@ where
         for y in 0..height {
             for x in 0..width {
                 for (i, k) in kernel.iter().enumerate() {
-                    let y_unchecked = (y as i32) + i as i32 - k_height / 2;
+                    let y_unchecked = (y as i32) + i as i32 - half_k;
                     let y_p = max(0, min(y_unchecked, height as i32 - 1)) as u32;
                     debug_assert!(image.in_bounds(x, y_p));
                     let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -416,23 +404,18 @@ where
                 }
 
                 let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                    *c = <P as Pixel>::Subpixel::clamp(*a);
-                    *a = zero;
-                }
+                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
             }
         }
 
         return out;
     }
 
-    let half_k = k_height / 2;
-
     // Top margin - need to check lower bound only
     for y in 0..half_k {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - half_k;
                 let y_p = max(0, y_unchecked) as u32;
                 debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -440,10 +423,7 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
@@ -451,7 +431,7 @@ where
     for y in half_k..(height as i32 - half_k) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - half_k;
                 let y_p = y_unchecked as u32;
                 debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -459,10 +439,7 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
@@ -470,7 +447,7 @@ where
     for y in (height as i32 - half_k)..(height as i32) {
         for x in 0..width {
             for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - k_height / 2;
+                let y_unchecked = y + i as i32 - half_k;
                 let y_p = min(y_unchecked, height as i32 - 1) as u32;
                 debug_assert!(image.in_bounds(x, y_p));
                 let p = unsafe { image.unsafe_get_pixel(x, y_p) };
@@ -478,10 +455,7 @@ where
             }
 
             let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            for (a, c) in acc.iter_mut().zip(out_channels.iter_mut()) {
-                *c = <P as Pixel>::Subpixel::clamp(*a);
-                *a = zero;
-            }
+            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
@@ -496,6 +470,19 @@ where
 {
     for i in 0..(P::CHANNEL_COUNT as usize) {
         acc[i] = acc[i] + pixel.channels()[i].into() * weight;
+    }
+}
+
+fn clamp_and_reset<P, K>(acc: &mut [K], out_channels: &mut [P::Subpixel], zero: K)
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
+    K: Num + Copy,
+{
+    for (accumulator, pixel_channel) in acc.iter_mut().zip(out_channels.iter_mut()) {
+        let clamped_pixel = P::Subpixel::clamp(*accumulator);
+        *pixel_channel = clamped_pixel;
+        *accumulator = zero;
     }
 }
 
