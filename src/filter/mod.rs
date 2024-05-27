@@ -1038,7 +1038,7 @@ mod benches {
         ($name:ident, $kernel_size:expr, $image_size:expr, $function_name:ident) => {
             #[bench]
             fn $name(b: &mut Bencher) {
-                let image = rgb_bench_image(500, 500);
+                let image = rgb_bench_image($image_size, $image_size);
 
                 let kernel: Vec<i32> = (0..$kernel_size * $kernel_size).collect();
                 let kernel = Kernel::new(&kernel, $kernel_size, $kernel_size);
