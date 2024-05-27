@@ -46,13 +46,16 @@ where
 
     /// Get the value in the kernel at the given `x` and `y` position, without
     /// doing bounds checking.
+    ///
+    /// # Safety
+    /// The caller must ensure that `y * self.width + x` is in bounds of kernel data.
     #[inline]
     pub unsafe fn get_unchecked(&self, x: u32, y: u32) -> K {
         debug_assert!(x < self.width);
         debug_assert!(y < self.height);
         let at = usize::try_from(y * self.width + x).unwrap();
         debug_assert!(at < self.data.len());
-        self.data.get_unchecked(at).clone()
+        *self.data.get_unchecked(at)
     }
 }
 
