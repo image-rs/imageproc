@@ -23,6 +23,10 @@ use std::cmp::{max, min};
 use std::f32;
 
 /// Calculates the new pixel value for a particular pixel and kernel.
+///
+/// # Panics
+///
+/// If `P::CHANNEL_COUNT != Q::CHANNEL_COUNT`
 fn filter_pixel<P, K, F, Q>(x: u32, y: u32, kernel: Kernel<K>, f: F, image: &Image<P>) -> Q
 where
     P: Pixel,
@@ -30,6 +34,8 @@ where
     F: Fn(K) -> Q::Subpixel,
     K: num::Num + Copy + From<P::Subpixel>,
 {
+    assert_eq!(P::CHANNEL_COUNT, Q::CHANNEL_COUNT);
+
     let (width, height) = (image.width() as i64, image.height() as i64);
     let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (x, y) = (i64::from(x), i64::from(y));
@@ -47,31 +53,51 @@ where
             // Safety: we clamped `window_x` and `window_y` to be in bounds.
             let window_pixel = unsafe { image.unsafe_get_pixel(window_x as u32, window_y as u32) };
 
-            //optimisation: remove allocation when `Pixel::map` allows mapping to a different
-            //type
-            #[allow(clippy::unnecessary_to_owned)]
-            let weighted_pixel = window_pixel
-                .channels()
-                .to_vec()
-                .into_iter()
-                .map(move |c| kernel_weight * K::from(c));
-
-            weighted_pixel
+            if P::CHANNEL_COUNT == 1 {
+                [
+                    kernel_weight * K::from(window_pixel.channels()[0]),
+                    K::zero(),
+                    K::zero(),
+                    K::zero(),
+                ]
+            } else if P::CHANNEL_COUNT == 2 {
+                [
+                    kernel_weight * K::from(window_pixel.channels()[0]),
+                    kernel_weight * K::from(window_pixel.channels()[1]),
+                    K::zero(),
+                    K::zero(),
+                ]
+            } else if P::CHANNEL_COUNT == 3 {
+                [
+                    kernel_weight * K::from(window_pixel.channels()[0]),
+                    kernel_weight * K::from(window_pixel.channels()[1]),
+                    kernel_weight * K::from(window_pixel.channels()[2]),
+                    K::zero(),
+                ]
+            } else if P::CHANNEL_COUNT == 4 {
+                [
+                    kernel_weight * K::from(window_pixel.channels()[0]),
+                    kernel_weight * K::from(window_pixel.channels()[1]),
+                    kernel_weight * K::from(window_pixel.channels()[2]),
+                    kernel_weight * K::from(window_pixel.channels()[3]),
+                ]
+            } else {
+                panic!("P::CHANNEL_COUNT must be smaller than or equal to 4");
+            }
         });
 
-    let final_channel_sum = weighted_pixels.fold(
-        //optimisation: do this without allocation when `Pixel` gains a method of constant initialization
-        vec![K::zero(); Q::CHANNEL_COUNT as usize],
-        |mut accumulator, weighted_pixel| {
-            for (i, weighted_subpixel) in weighted_pixel.enumerate() {
+    let final_channel_sum: [K; 4] =
+        weighted_pixels.fold([K::zero(); 4], |mut accumulator, weighted_pixel| {
+            for (i, weighted_subpixel) in weighted_pixel.into_iter().enumerate() {
                 accumulator[i] = accumulator[i] + weighted_subpixel;
             }
 
             accumulator
-        },
-    );
+        });
 
-    *Q::from_slice(&final_channel_sum.into_iter().map(f).collect_vec())
+    let mapped_final = final_channel_sum.map(f);
+
+    *Q::from_slice(&mapped_final[0..Q::CHANNEL_COUNT as usize])
 }
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
