@@ -1,6 +1,9 @@
 use image::{GenericImage, GenericImageView, GrayImage, Luma};
 
-use crate::{definitions::Image, integral_image::{column_running_sum, row_running_sum}};
+use crate::{
+    definitions::Image,
+    integral_image::{column_running_sum, row_running_sum},
+};
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
