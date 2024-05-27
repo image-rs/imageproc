@@ -7,9 +7,9 @@ use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
 
-/// A special version of `gradient()` function for grayscale images which doesn't require giving a
+/// A special version of `gradient` function for grayscale images which doesn't require giving a
 /// pixel mapping function.
-pub fn gradients_grayscale<P, F, Q>(
+pub fn gradients_grayscale(
     image: &GrayImage,
     horizontal_kernel: Kernel<i32>,
     vertical_kernel: Kernel<i32>,
@@ -193,21 +193,19 @@ pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
 pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(
+    gradients_grayscale(
         image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
-        |p| p,
     )
 }
 
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
 pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(
+    gradients_grayscale(
         image,
         kernel::PREWITT_HORIZONTAL_3X3,
         kernel::PREWITT_VERTICAL_3X3,
-        |p| p,
     )
 }
 
