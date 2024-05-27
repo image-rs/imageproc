@@ -109,8 +109,6 @@ where
     F: Fn(K) -> Q::Subpixel,
     K: num::Num + Copy + From<P::Subpixel>,
 {
-    //TODO refactor this to use the `crate::maps` functions once that lands
-
     let (width, height) = image.dimensions();
 
     let mut out = Image::<Q>::new(width, height);
@@ -134,8 +132,6 @@ where
     F: Fn(K) -> Q::Subpixel + Send + Sync,
     K: Num + Copy + From<P::Subpixel> + Sync,
 {
-    //TODO refactor this to use the `crate::maps` functions once that lands
-
     use rayon::iter::IndexedParallelIterator;
     use rayon::iter::ParallelIterator;
 
