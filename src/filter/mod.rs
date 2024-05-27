@@ -85,6 +85,9 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
 /// at type K, and the results converted to pixel Q via f. Pads by continuity.
+///
+/// # Panics
+/// If `P::CHANNEL_COUNT != Q::CHANNEL_COUNT`
 pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, mut f: F) -> Image<Q>
 where
     P: Pixel,
@@ -93,10 +96,13 @@ where
     F: FnMut(K) -> Q::Subpixel,
     K: Copy + Num,
 {
+    assert_eq!(P::CHANNEL_COUNT, Q::CHANNEL_COUNT);
+    let num_channels = P::CHANNEL_COUNT as usize;
+    let zero = K::zero();
+
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
-    let zero = K::zero();
-    let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
+    let mut acc = vec![zero; num_channels];
     let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (width as i64, height as i64);
 
@@ -138,6 +144,9 @@ where
     use num::Zero;
     use rayon::prelude::*;
 
+    assert_eq!(P::CHANNEL_COUNT, Q::CHANNEL_COUNT);
+    let num_channels = P::CHANNEL_COUNT as usize;
+
     let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (image.width() as i64, image.height() as i64);
 
@@ -145,8 +154,8 @@ where
         .into_par_iter()
         .map(|y| {
             let mut out_row = Vec::with_capacity(image.width() as usize);
-            let mut out_pixel = vec![Q::Subpixel::zero(); Q::CHANNEL_COUNT as usize];
-            let mut acc = vec![K::zero(); P::CHANNEL_COUNT as usize];
+            let mut out_pixel = vec![Q::Subpixel::zero(); num_channels];
+            let mut acc = vec![K::zero(); num_channels];
 
             for x in 0..width {
                 for k_y in 0..k_height {
@@ -462,12 +471,12 @@ where
 fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
 where
     P: Pixel,
-    <P as Pixel>::Subpixel: Into<K>,
+    P::Subpixel: Into<K>,
     K: Num + Copy,
 {
-    for i in 0..(P::CHANNEL_COUNT as usize) {
-        acc[i] = acc[i] + pixel.channels()[i].into() * weight;
-    }
+    acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
+        *a = *a + c.into() * weight;
+    });
 }
 
 fn clamp_and_reset<P, K>(acc: &mut [K], out_channels: &mut [P::Subpixel], zero: K)
