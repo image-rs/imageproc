@@ -264,7 +264,7 @@ where
     K: Num + Copy + From<<P as image::Pixel>::Subpixel>,
     S: Clamp<K> + Primitive,
 {
-    filter(image, kernel, |acc| S::clamp(acc))
+    filter(image, kernel, S::clamp)
 }
 
 #[cfg(feature = "rayon")]
