@@ -2,13 +2,19 @@
 
 /// An borrowed 2D kernel, used to filter images via convolution.
 #[derive(Debug, Copy, Clone)]
-pub struct Kernel<'a, K> {
+pub struct Kernel<'a, K>
+where
+    K: Copy,
+{
     pub(crate) data: &'a [K],
     pub(crate) width: u32,
     pub(crate) height: u32,
 }
 
-impl<'a, K> Kernel<'a, K> {
+impl<'a, K> Kernel<'a, K>
+where
+    K: Copy,
+{
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major order.
     ///
@@ -31,8 +37,10 @@ impl<'a, K> Kernel<'a, K> {
     ///
     /// If the `x` or `y` is outside of the width or height of the kernel.
     #[inline]
-    pub fn at(&self, x: u32, y: u32) -> &K {
-        &self.data[(y * self.width + x) as usize]
+    pub(crate) fn at(&self, x: u32, y: u32) -> K {
+        debug_assert!(x < self.width);
+        debug_assert!(y < self.height);
+        self.data[(y * self.width + x) as usize]
     }
 }
 
