@@ -2,19 +2,13 @@
 
 /// An borrowed 2D kernel, used to filter images via convolution.
 #[derive(Debug, Copy, Clone)]
-pub struct Kernel<'a, K>
-where
-    K: Copy,
-{
+pub struct Kernel<'a, K> {
     pub(crate) data: &'a [K],
     pub(crate) width: u32,
     pub(crate) height: u32,
 }
 
-impl<'a, K> Kernel<'a, K>
-where
-    K: Copy,
-{
+impl<'a, K> Kernel<'a, K> {
     /// Construct a kernel from a slice and its dimensions. The input slice is
     /// in row-major order.
     ///
@@ -35,28 +29,10 @@ where
     ///
     /// # Panics
     ///
-    /// If the `y * kernel.width + x` is outside of the kernel data.
+    /// If the `x` or `y` is outside of the width or height of the kernel.
     #[inline]
-    pub fn get(&self, x: u32, y: u32) -> K {
-        debug_assert!(x < self.width);
-        debug_assert!(y < self.height);
-        let at = usize::try_from(y * self.width + x).unwrap();
-        self.data[at]
-    }
-
-    /// Get the value in the kernel at the given `x` and `y` position, without
-    /// doing bounds checking.
-    ///
-    /// # Safety
-    /// The caller must ensure that `y * self.width + x` is in bounds of the
-    /// kernel data.
-    #[inline]
-    pub unsafe fn get_unchecked(&self, x: u32, y: u32) -> K {
-        debug_assert!(x < self.width);
-        debug_assert!(y < self.height);
-        let at = usize::try_from(y * self.width + x).unwrap();
-        debug_assert!(at < self.data.len());
-        *self.data.get_unchecked(at)
+    pub fn at(&self, x: u32, y: u32) -> &K {
+        &self.data[(y * self.width + x) as usize]
     }
 }
 

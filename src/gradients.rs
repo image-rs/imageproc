@@ -1,7 +1,7 @@
 //! Functions for computing gradients of image intensities.
 
-use crate::definitions::{HasBlack, Image};
-use crate::filter::filter_clamped;
+use crate::definitions::{Clamp, HasBlack, Image};
+use crate::filter::{filter, filter_clamped};
 use crate::kernel::{self, Kernel};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
@@ -95,8 +95,8 @@ pub fn gradients_greyscale<P, F, Q>(
 /// # }
 pub fn gradients<P, F, Q>(
     image: &Image<P>,
-    horizontal_kernel: Kernel<i32>,
-    vertical_kernel: Kernel<i32>,
+    kernel1: Kernel<i32>,
+    kernel2: Kernel<i32>,
     f: F,
 ) -> Image<Q>
 where
@@ -105,8 +105,8 @@ where
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {
-    let horizontal = filter_clamped::<_, _, i16>(image, horizontal_kernel);
-    let vertical = filter_clamped::<_, _, i16>(image, vertical_kernel);
+    let pass1: Image<ChannelMap<P, i16>> = filter(image, kernel1, <i16 as Clamp<i32>>::clamp);
+    let pass2: Image<ChannelMap<P, i16>> = filter(image, kernel2, <i16 as Clamp<i32>>::clamp);
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
@@ -122,12 +122,7 @@ where
             //      x and y are in bounds for image by construction,
             //      vertical and horizontal are the result of calling filter_clamped on image,
             //      and filter_clamped returns an image of the same size as its input
-            let (h, v) = unsafe {
-                (
-                    horizontal.unsafe_get_pixel(x, y),
-                    vertical.unsafe_get_pixel(x, y),
-                )
-            };
+            let (h, v) = unsafe { (pass1.unsafe_get_pixel(x, y), pass2.unsafe_get_pixel(x, y)) };
             let mut p = ChannelMap::<P, u16>::black();
 
             for (h, v, p) in multizip((h.channels(), v.channels(), p.channels_mut())) {
