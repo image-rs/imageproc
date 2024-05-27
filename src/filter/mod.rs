@@ -1025,7 +1025,7 @@ mod benches {
         for y in 0..height {
             let y_prev = std::cmp::max(1, y) - 1;
             let y_next = std::cmp::min(height - 2, y) + 1;
-   
+
             for x in 0..width {
                 let x_prev = std::cmp::max(1, x) - 1;
                 let x_next = std::cmp::min(width - 2, x) + 1;
@@ -1090,7 +1090,7 @@ mod benches {
     fn bench_filter_clamped_gray_3x3_ref(b: &mut Bencher) {
         let image = gray_bench_image(300, 300);
         let kernel: Vec<i32> = (0..9).collect();
-        let kernel = Kernel::new(&kernel, 3, 3, );
+        let kernel = Kernel::new(&kernel, 3, 3);
         b.iter(|| {
             let filtered = filter3x3_reference(&image, kernel);
             black_box(filtered);
