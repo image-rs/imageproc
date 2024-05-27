@@ -1034,10 +1034,28 @@ mod benches {
             }
         };
     }
+    macro_rules! bench_filter_clamped_rgb {
+        ($name:ident, $kernel_size:expr, $image_size:expr, $function_name:ident) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let image = rgb_bench_image($image_size, $image_size);
+
+                let kernel: Vec<i32> = (0..$kernel_size * $kernel_size).collect();
+                let kernel = Kernel::new(&kernel, $kernel_size, $kernel_size);
+                b.iter(|| {
+                    let filtered: Image<Rgb<i16>> = $function_name::<_, _, i16>(&image, kernel);
+                    black_box(filtered);
+                });
+            }
+        };
+    }
 
     bench_filter_clamped_gray!(bench_filter_clamped_gray_3x3, 3, 300, filter_clamped);
     bench_filter_clamped_gray!(bench_filter_clamped_gray_5x5, 5, 300, filter_clamped);
     bench_filter_clamped_gray!(bench_filter_clamped_gray_7x7, 7, 300, filter_clamped);
+    bench_filter_clamped_rgb!(bench_filter_clamped_rgb_3x3, 3, 300, filter_clamped);
+    bench_filter_clamped_rgb!(bench_filter_clamped_rgb_5x5, 5, 300, filter_clamped);
+    bench_filter_clamped_rgb!(bench_filter_clamped_rgb_7x7, 7, 300, filter_clamped);
 
     bench_filter_clamped_gray!(
         bench_filter_clamped_parallel_gray_3x3,
@@ -1053,6 +1071,24 @@ mod benches {
     );
     bench_filter_clamped_gray!(
         bench_filter_clamped_parallel_gray_7x7,
+        7,
+        300,
+        filter_clamped_parallel
+    );
+    bench_filter_clamped_rgb!(
+        bench_filter_clamped_parallel_rgb_3x3,
+        3,
+        300,
+        filter_clamped_parallel
+    );
+    bench_filter_clamped_rgb!(
+        bench_filter_clamped_parallel_rgb_5x5,
+        5,
+        300,
+        filter_clamped_parallel
+    );
+    bench_filter_clamped_rgb!(
+        bench_filter_clamped_parallel_rgb_7x7,
         7,
         300,
         filter_clamped_parallel
