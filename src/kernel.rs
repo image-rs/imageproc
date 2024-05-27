@@ -48,7 +48,8 @@ where
     /// doing bounds checking.
     ///
     /// # Safety
-    /// The caller must ensure that `y * self.width + x` is in bounds of kernel data.
+    /// The caller must ensure that `y * self.width + x` is in bounds of the
+    /// kernel data.
     #[inline]
     pub unsafe fn get_unchecked(&self, x: u32, y: u32) -> K {
         debug_assert!(x < self.width);
