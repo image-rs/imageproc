@@ -7,7 +7,7 @@ use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
 
-/// A special version of `gradient` function for grayscale images which doesn't require giving a
+/// A special version of [`gradients`] function for grayscale images which doesn't require giving a
 /// pixel mapping function.
 pub fn gradients_grayscale(
     image: &GrayImage,
