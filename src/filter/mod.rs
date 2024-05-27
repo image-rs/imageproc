@@ -1016,6 +1016,42 @@ mod benches {
         });
     }
 
+    // Simple reference implementation of 3x3 filtering on a grayscale image, to check that the generic filter
+    // functions we provide are at least as fast as doing the simplest thing.
+    fn filter3x3_reference(image: &GrayImage, kernel: Kernel<i32>) -> Image<Luma<i16>> {
+        let (width, height) = image.dimensions();
+        let mut out: Image<Luma<i16>> = image::ImageBuffer::new(width, height);
+
+        for y in 0..height {
+            let y_prev = std::cmp::max(1, y) - 1;
+            let y_next = std::cmp::min(height - 2, y) + 1;
+
+            for x in 0..width {
+                let x_prev = std::cmp::max(1, x) - 1;
+                let x_next = std::cmp::min(width - 2, x) + 1;
+
+                let mut acc = 0i32;
+
+                unsafe {
+                    acc += image.unsafe_get_pixel(x_prev, y_prev)[0] as i32 * kernel.data[0];
+                    acc += image.unsafe_get_pixel(x, y_prev)[0] as i32 * kernel.data[1];
+                    acc += image.unsafe_get_pixel(x_next, y_prev)[0] as i32 * kernel.data[2];
+                    acc += image.unsafe_get_pixel(x_prev, y)[0] as i32 * kernel.data[3];
+                    acc += image.unsafe_get_pixel(x, y)[0] as i32 * kernel.data[4];
+                    acc += image.unsafe_get_pixel(x_next, y)[0] as i32 * kernel.data[5];
+                    acc += image.unsafe_get_pixel(x_prev, y_next)[0] as i32 * kernel.data[6];
+                    acc += image.unsafe_get_pixel(x, y_next)[0] as i32 * kernel.data[7];
+                    acc += image.unsafe_get_pixel(x_next, y_next)[0] as i32 * kernel.data[8];
+                }
+
+                let acc = <i16 as Clamp<i32>>::clamp(acc);
+                *out.get_pixel_mut(x, y) = Luma([acc]);
+            }
+        }
+
+        out
+    }
+
     macro_rules! bench_filter_clamped_gray {
         ($name:ident, $kernel_size:expr, $image_size:expr, $function_name:ident) => {
             #[bench]
@@ -1048,6 +1084,19 @@ mod benches {
     bench_filter_clamped_gray!(bench_filter_clamped_gray_3x3, 3, 300, filter_clamped);
     bench_filter_clamped_gray!(bench_filter_clamped_gray_5x5, 5, 300, filter_clamped);
     bench_filter_clamped_gray!(bench_filter_clamped_gray_7x7, 7, 300, filter_clamped);
+
+    // Timings for reference basic implementation
+    #[bench]
+    fn bench_filter_clamped_gray_3x3_ref(b: &mut Bencher) {
+        let image = gray_bench_image(300, 300);
+        let kernel: Vec<i32> = (0..9).collect();
+        let kernel = Kernel::new(&kernel, 3, 3);
+        b.iter(|| {
+            let filtered = filter3x3_reference(&image, kernel);
+            black_box(filtered);
+        });
+    }
+
     bench_filter_clamped_rgb!(bench_filter_clamped_rgb_3x3, 3, 300, filter_clamped);
     bench_filter_clamped_rgb!(bench_filter_clamped_rgb_5x5, 5, 300, filter_clamped);
     bench_filter_clamped_rgb!(bench_filter_clamped_rgb_7x7, 7, 300, filter_clamped);
