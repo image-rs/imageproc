@@ -7,14 +7,14 @@ use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
 
-/// A special version of `gradient()` function for greyscale images which doesn't require giving a
+/// A special version of [`gradients`] function for grayscale images which doesn't require giving a
 /// pixel mapping function.
-pub fn gradients_greyscale<P, F, Q>(
+pub fn gradients_grayscale(
     image: &GrayImage,
-    kernel1: Kernel<i32>,
-    kernel2: Kernel<i32>,
+    horizontal_kernel: Kernel<i32>,
+    vertical_kernel: Kernel<i32>,
 ) -> Image<Luma<u16>> {
-    gradients(image, kernel1, kernel2, |p| p)
+    gradients(image, horizontal_kernel, vertical_kernel, |p| p)
 }
 
 // TODO: Returns directions as well as magnitudes.
@@ -157,89 +157,55 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 
 /// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
 /// kernel to detect horizontal gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::SOBEL_HORIZONTAL_3X3)` which is more flexible and explicit"
-)]
 pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::SOBEL_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
 /// kernel to detect vertical gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
-)]
 pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::SOBEL_VERTICAL_3X3)
 }
 
 /// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
 /// kernel to detect horizontal gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::SCHARR_HORIZONTAL_3X3)` which is more flexible and explicit"
-)]
 pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::SCHARR_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
 /// kernel to detect vertical gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::SCHARR_VERTICAL_3X3)` which is more flexible and explicit"
-)]
 pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::SCHARR_VERTICAL_3X3)
 }
 
 /// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
 /// kernel to detect horizontal gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::PREWITT_HORIZONTAL_3X3)` which is more flexible and explicit"
-)]
 pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::PREWITT_HORIZONTAL_3X3)
 }
 
 /// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
 /// kernel to detect vertical gradients.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `filter_clamped(image, kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
-)]
 pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
     filter_clamped(image, kernel::PREWITT_VERTICAL_3X3)
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `gradients_greyscale(image, kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3)` which is more flexible and explicit"
-)]
 pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(
+    gradients_grayscale(
         image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
-        |p| p,
     )
 }
 
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `gradients_greyscale(image, kernel::PREWITT_HORIZONTAL_3X3, Kernel::PREWITT_VERTICAL_3X3)` which is more flexible and explicit"
-)]
 pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
-    gradients(
+    gradients_grayscale(
         image,
         kernel::PREWITT_HORIZONTAL_3X3,
         kernel::PREWITT_VERTICAL_3X3,
-        |p| p,
     )
 }
 
@@ -309,10 +275,6 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 ///     max_gradient
 /// );
 /// # }
-#[deprecated(
-    since = "0.25.0",
-    note = "users should instead use `gradients(image, kernel::SOBEL_HORIZONTAL_3X3, Kernel::SOBEL_VERTICAL_3X3, f)` which is more flexible and explicit"
-)]
 pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
 where
     P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
