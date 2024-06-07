@@ -84,15 +84,17 @@ pub fn draw_text_mut<C>(
     let image_height = canvas.height() as i32;
 
     layout_glyphs(scale, font, text, |g, bb| {
+        let bbx = x + bb.min.x.round() as i32;
+        let bby = y + bb.min.y.round() as i32;
         g.draw(|gx, gy, gv| {
-            let image_x = gx as i32 + x + bb.min.x.round() as i32;
-            let image_y = gy as i32 + y + bb.min.y.round() as i32;
-            let gv = gv.clamp(0.0, 1.0);
+            let image_x = gx as i32 + bbx;
+            let image_y = gy as i32 + bby;
 
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
                 let image_x = image_x as u32;
                 let image_y = image_y as u32;
                 let pixel = canvas.get_pixel(image_x, image_y);
+                let gv = gv.clamp(0.0, 1.0);
                 let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
                 canvas.draw_pixel(image_x, image_y, weighted_color);
             }
