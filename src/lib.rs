@@ -18,6 +18,7 @@ pub mod utils;
 #[macro_use]
 pub mod doc_macros;
 pub mod binary_descriptors;
+pub mod compose;
 pub mod contours;
 pub mod contrast;
 pub mod corners;
