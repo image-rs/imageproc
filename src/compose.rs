@@ -251,7 +251,7 @@ where
     P: Pixel,
 {
     let mut bottom = bottom.clone();
-    replace_mut(&mut bottom, top, x, y);
+    overlay_mut(&mut bottom, top, x, y);
     bottom
 }
 #[doc=generate_mut_doc_comment!("overlay")]
