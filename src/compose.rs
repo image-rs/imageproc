@@ -239,8 +239,8 @@ where
 /// use imageproc::definitions::Image;
 /// use image::LumaA;
 ///
-/// let bottom = Image::from_pixel(4, 4, LumaA([0, 255]));
-/// let top = Image::from_pixel(4, 4, LumaA([0, 255]));
+/// let bottom = Image::from_pixel(4, 4, LumaA([0u8, 255]));
+/// let top = Image::from_pixel(4, 4, LumaA([255u8, 0]));
 ///
 /// let overlay = overlay(&bottom, &top, 0, 0);
 ///
