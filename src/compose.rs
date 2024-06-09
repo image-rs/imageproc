@@ -44,6 +44,7 @@ where
         *image.get_pixel(rect.x + x, rect.y + y)
     })
 }
+#[cfg(feature = "rayon")]
 #[doc = generate_parallel_doc_comment!("crop")]
 pub fn crop_parallel<P>(image: &Image<P>, rect: Rect) -> Image<P>
 where
