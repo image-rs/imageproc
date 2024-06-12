@@ -321,7 +321,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use imageproc::rotate::rotate90;
+/// use imageproc::geometric_transformations::rotate90;
 /// use imageproc::gray_image;
 ///
 /// let image = gray_image!(
@@ -359,7 +359,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use imageproc::rotate::rotate270;
+/// use imageproc::geometric_transformations::rotate270;
 /// use imageproc::gray_image;
 ///
 /// let image = gray_image!(
@@ -397,7 +397,7 @@ where
 ///
 /// # Examples
 /// ```
-/// use imageproc::rotate::rotate180;
+/// use imageproc::geometric_transformations::rotate180;
 /// use imageproc::gray_image;
 ///
 /// let image = gray_image!(
