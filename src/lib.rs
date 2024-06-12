@@ -46,6 +46,7 @@ pub mod point;
 pub mod property_testing;
 pub mod rect;
 pub mod region_labelling;
+pub mod rotate;
 pub mod seam_carving;
 pub mod stats;
 pub mod suppress;
