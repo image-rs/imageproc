@@ -1,8 +1,11 @@
 //! Geometric transformations of images. This includes rotations, translation, and general
 //! projective transformations.
 
-use crate::definitions::{Clamp, Image};
-use image::{GenericImageView, Pixel};
+use crate::{
+    compose::crop,
+    definitions::{Clamp, Image},
+};
+use image::{math::Rect, GenericImageView, Pixel};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::{cmp, ops::Mul};
@@ -99,7 +102,6 @@ impl Projection {
     /// An anisotropic scaling (sx, sy).
     ///
     /// Note that the `warp` function does not change the size of the input image.
-    /// If you want to resize an image then use the `imageops` module in the `image` crate.
     #[rustfmt::skip]
     pub fn scale(sx: f32, sy: f32) -> Projection {
         Projection {
@@ -315,6 +317,199 @@ where
     let projection =
         Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
     warp(image, &projection, interpolation, default)
+}
+
+/// Resizes an image to the exact given `new_width` and `new_height`,
+/// ignoring aspect ratio, using the given `interpolation` method.
+///
+/// # Examples
+/// ```
+/// use imageproc::geometric_transformations::{resize_exact, Interpolation};
+/// use imageproc::gray_image;
+///
+/// let image = gray_image!(
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0);
+///
+/// let resized = resize_exact(&image, 2, 3, Interpolation::Bilinear);
+///
+/// assert_eq!(resized, gray_image!(
+///     0, 0;
+///     0, 0;
+///     0, 0));
+/// ```
+pub fn resize_exact<P>(
+    image: &Image<P>,
+    new_width: u32,
+    new_height: u32,
+    interpolation: Interpolation,
+) -> Image<P>
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    if new_width == image.width() && new_height == image.height() {
+        return image.clone();
+    }
+
+    let x_ratio: f32 = image.width() as f32 / new_width as f32;
+    let y_ratio: f32 = image.height() as f32 / new_height as f32;
+
+    Image::from_fn(new_width, new_height, |x, y| {
+        interpolate(
+            image,
+            x as f32 * x_ratio,
+            y as f32 * y_ratio,
+            //TODO make this P::default() once the common `Pixel`
+            //types implement default or when `rgb` v0.9 is
+            //implemented https://github.com/image-rs/image/issues/2259
+            *P::from_slice(&vec![
+                <P::Subpixel as image::Primitive>::DEFAULT_MIN_VALUE;
+                usize::from(P::CHANNEL_COUNT)
+            ]),
+            interpolation,
+        )
+    })
+}
+/// Resizes an image to the exact given `new_width` and `new_height`
+/// while maintaining the images aspect ratio by cropping
+/// ignoring aspect ratio, using the given `interpolation` method.
+///
+/// # Examples
+/// ```
+/// use imageproc::geometric_transformations::{resize_crop_to_fill, Interpolation};
+/// use imageproc::gray_image;
+///
+/// let image = gray_image!(
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0);
+///
+/// let resized = resize_crop_to_fill(&image, 2, 3, Interpolation::Bilinear);
+///
+/// assert_eq!(resized, gray_image!(
+///     0, 0;
+///     0, 0;
+///     0, 0));
+/// ```
+pub fn resize_crop_to_fill<P>(
+    image: &Image<P>,
+    new_width: u32,
+    new_height: u32,
+    interpolation: Interpolation,
+) -> Image<P>
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (intermediate_width, intermediate_height) =
+        resize_dimensions(image.width(), image.height(), new_width, new_height, true);
+
+    let intermediate = resize_exact(
+        image,
+        intermediate_width,
+        intermediate_height,
+        interpolation,
+    );
+
+    let horizontal_ratio = u64::from(intermediate_width) * u64::from(new_height);
+    let vertical_ratio = u64::from(new_width) * u64::from(intermediate_height);
+
+    if vertical_ratio > horizontal_ratio {
+        crop(
+            &intermediate,
+            Rect {
+                x: 0,
+                y: (intermediate_height - new_height) / 2,
+                width: new_width,
+                height: new_height,
+            },
+        )
+    } else {
+        crop(
+            &intermediate,
+            Rect {
+                x: (intermediate_width - new_width) / 2,
+                y: 0,
+                width: new_width,
+                height: new_height,
+            },
+        )
+    }
+}
+/// Resizes an image to the largest dimensions smaller or equal to the
+/// given `max_width` and `max_height`, while maintaining the images
+/// aspect ratio without cropping the image, using the given
+/// interopolation method.`
+///
+/// Importantly the returned image will not necessarily have the same
+/// dimensions as the given `max_width` and `max_height`.
+///
+/// # Examples
+/// ```
+/// use imageproc::geometric_transformations::{resize_max_no_crop, Interpolation};
+/// use imageproc::gray_image;
+///
+/// let image = gray_image!(
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0;
+///     0, 0, 0, 0);
+///
+/// let resized = resize_max_no_crop(&image, 2, 3, Interpolation::Bilinear);
+///
+/// assert_eq!(resized, gray_image!(
+///     0, 0;
+///     0, 0));
+/// ```
+pub fn resize_max_no_crop<P>(
+    image: &Image<P>,
+    max_width: u32,
+    max_height: u32,
+    interpolation: Interpolation,
+) -> Image<P>
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (new_width, new_height) =
+        resize_dimensions(image.width(), image.height(), max_width, max_height, false);
+
+    resize_exact(image, new_width, new_height, interpolation)
+}
+/// used by [`resize_max_no_crop()`] and [`resize_crop_to_fill()`],
+/// see them for details.
+fn resize_dimensions(width: u32, height: u32, nwidth: u32, nheight: u32, fill: bool) -> (u32, u32) {
+    let wratio = nwidth as f64 / width as f64;
+    let hratio = nheight as f64 / height as f64;
+
+    let ratio = if fill {
+        f64::max(wratio, hratio)
+    } else {
+        f64::min(wratio, hratio)
+    };
+
+    let nw = core::cmp::max((width as f64 * ratio).round() as u64, 1);
+    let nh = core::cmp::max((height as f64 * ratio).round() as u64, 1);
+
+    if nw > u64::from(u32::MAX) {
+        let ratio = u32::MAX as f64 / width as f64;
+        (
+            u32::MAX,
+            core::cmp::max((height as f64 * ratio).round() as u32, 1),
+        )
+    } else if nh > u64::from(u32::MAX) {
+        let ratio = u32::MAX as f64 / height as f64;
+        (
+            core::cmp::max((width as f64 * ratio).round() as u32, 1),
+            u32::MAX,
+        )
+    } else {
+        (nw as u32, nh as u32)
+    }
 }
 
 /// Rotates an image 90 degrees clockwise.
@@ -877,6 +1072,28 @@ pub enum Interpolation {
     /// Bicubicly interpolate between the four pixels
     /// closest to the pre-image of the output pixel.
     Bicubic,
+}
+/// Returns an interpolated pixel from an image at the given pixel
+/// coordinates using the given `interpolation`.
+///
+/// If the pixel is out of bounds of `image` then the `default` pixel
+/// value is used.
+pub fn interpolate<P>(
+    image: &Image<P>,
+    x: f32,
+    y: f32,
+    default: P,
+    interpolation: Interpolation,
+) -> P
+where
+    P: Pixel,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    match interpolation {
+        Interpolation::Nearest => interpolate_nearest(image, x, y, default),
+        Interpolation::Bilinear => interpolate_bilinear(image, x, y, default),
+        Interpolation::Bicubic => interpolate_bicubic(image, x, y, default),
+    }
 }
 
 #[cfg(test)]
