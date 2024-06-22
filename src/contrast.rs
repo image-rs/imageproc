@@ -2,13 +2,13 @@
 
 use std::cmp::{max, min};
 
-use image::{GrayImage, Luma};
+use image::{GrayImage, Luma, Pixel};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-use crate::definitions::{HasBlack, HasWhite};
+use crate::definitions::{HasBlack, HasWhite, Image};
 use crate::integral_image::{integral_image, sum_image_pixels};
-use crate::map::map_subpixels_mut;
+use crate::map::map_pixels_mut;
 use crate::stats::{cumulative_histogram, histogram};
 
 /// Applies an adaptive threshold to an image.
@@ -276,13 +276,16 @@ pub fn equalize_histogram_mut(image: &mut GrayImage) {
 ///
 /// # Panics
 /// If `input_lower >= input_upper` or `output_lower > output_upper`.
-pub fn stretch_contrast(
-    image: &GrayImage,
+pub fn stretch_contrast<P>(
+    image: &Image<P>,
     input_lower: u8,
     input_upper: u8,
     output_lower: u8,
     output_upper: u8,
-) -> GrayImage {
+) -> Image<P>
+where
+    P: Pixel<Subpixel = u8>,
+{
     let mut out = image.clone();
     stretch_contrast_mut(
         &mut out,
@@ -294,13 +297,15 @@ pub fn stretch_contrast(
     out
 }
 #[doc=generate_mut_doc_comment!("stretch_contrast")]
-pub fn stretch_contrast_mut(
-    image: &mut GrayImage,
+pub fn stretch_contrast_mut<P>(
+    image: &mut Image<P>,
     input_min: u8,
     input_max: u8,
     output_min: u8,
     output_max: u8,
-) {
+) where
+    P: Pixel<Subpixel = u8>,
+{
     assert!(
         input_min < input_max,
         "input_min must be smaller than input_max"
@@ -318,21 +323,21 @@ pub fn stretch_contrast_mut(
     let input_width = input_max - input_min;
     let output_width = output_max - output_min;
 
-    let f = |p: u8| {
-        let p: u16 = p.into();
+    let f = |p: P| {
+        p.map_without_alpha(|c| {
+            let c = u16::from(c);
 
-        let output = if p <= input_min {
-            output_min
-        } else if p >= input_max {
-            output_max
-        } else {
-            (((p - input_min) * output_width) / input_width) + output_min
-        };
-
-        output as u8
+            if c <= input_min {
+                (output_min) as u8
+            } else if c >= input_max {
+                (output_max) as u8
+            } else {
+                ((((c - input_min) * output_width) / input_width) + output_min) as u8
+            }
+        })
     };
 
-    map_subpixels_mut(image, f);
+    map_pixels_mut(image, f);
 }
 
 /// Adjusts contrast of an 8bpp grayscale image so that its
@@ -454,12 +459,12 @@ mod tests {
         let mut image = GrayImage::from_pixel(3, 3, Luma([100u8]));
         image.put_pixel(2, 2, Luma::black());
 
-        //big delta should make the theshold for the black pixel small enough to be white
+        //big delta should make the threshold for the black pixel small enough to be white
         let binary = adaptive_threshold(&image, 1, 100);
         let expected = GrayImage::from_pixel(3, 3, Luma::white());
         assert_pixels_eq!(binary, expected);
 
-        //smaller delta should make the theshold the pixel to be black
+        //smaller delta should make the threshold the pixel to be black
         let binary = adaptive_threshold(&image, 1, 50);
         let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
         expected.put_pixel(2, 2, Luma::black());
