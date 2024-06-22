@@ -443,33 +443,11 @@ fn intersection<S: Source + ?Sized>(f: &S, p: usize, q: usize) -> f64 {
 mod tests {
     use super::*;
     use crate::definitions::Image;
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
+    use crate::proptest_utils::arbitrary_image;
     use image::{GrayImage, Luma};
-    use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
+    use proptest::prelude::*;
     use std::cmp::max;
     use std::f64;
-
-    /// Avoid generating garbage floats during certain calculations below.
-    #[derive(Debug, Clone)]
-    struct BoundedFloat(f64);
-
-    impl Arbitrary for BoundedFloat {
-        fn arbitrary(g: &mut Gen) -> Self {
-            let mut f;
-
-            loop {
-                f = f64::arbitrary(g);
-
-                if f.is_normal() {
-                    f = f.clamp(-1_000_000.0, 1_000_000.0);
-                    break;
-                }
-            }
-
-            BoundedFloat(f)
-        }
-    }
 
     #[test]
     fn test_distance_transform_saturation() {
@@ -484,6 +462,67 @@ mod tests {
 
         let distances = distance_transform(&image, Norm::LInf);
         assert_pixels_eq!(distances, expected);
+    }
+
+    proptest! {
+        #[test]
+        fn test_distance_transform_1d_matches_reference_implementation(f in proptest::collection::vec(-10_000_000.0..10_000_000.0, 0..50)) {
+            let actual = distance_transform_1d(&f);
+            let expected = distance_transform_1d_reference(&f);
+
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn test_euclidean_squared_distance_transform_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = euclidean_squared_distance_transform_reference(&image);
+            let actual = euclidean_squared_distance_transform(&image);
+
+            assert_eq!(actual, expected)
+        }
+    }
+
+    // Simple implementation of 1d distance transform which performs an
+    // exhaustive search. Used to valid the more complicated lower-envelope
+    // implementation against.
+    fn distance_transform_1d_reference(f: &[f64]) -> Vec<f64> {
+        let mut ret = vec![0.0; f.len()];
+        for q in 0..f.len() {
+            ret[q] = (0..f.len())
+                .map(|p| {
+                    let dist = p as f64 - q as f64;
+                    dist * dist + f[p]
+                })
+                .fold(f64::NAN, f64::min);
+        }
+        ret
+    }
+
+    fn euclidean_squared_distance_transform_reference(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
+        let (width, height) = image.dimensions();
+
+        let mut dists = Image::new(width, height);
+
+        for y in 0..height {
+            for x in 0..width {
+                let mut min = f64::INFINITY;
+                for yc in 0..height {
+                    for xc in 0..width {
+                        let pc = image.get_pixel(xc, yc)[0];
+                        if pc > 0 {
+                            let dx = xc as f64 - x as f64;
+                            let dy = yc as f64 - y as f64;
+
+                            min = f64::min(min, dx * dx + dy * dy);
+                        }
+                    }
+                }
+
+                dists.put_pixel(x, y, Luma([min]));
+            }
+        }
+
+        dists
     }
 
     impl Sink for Vec<f64> {
@@ -528,76 +567,6 @@ mod tests {
         let f = vec![f64::INFINITY, f64::INFINITY, 5.0, f64::INFINITY];
         let dists = distance_transform_1d(&f);
         assert_eq!(dists, &[9.0, 6.0, 5.0, 6.0]);
-    }
-
-    // Simple implementation of 1d distance transform which performs an
-    // exhaustive search. Used to valid the more complicated lower-envelope
-    // implementation against.
-    fn distance_transform_1d_reference(f: &[f64]) -> Vec<f64> {
-        let mut ret = vec![0.0; f.len()];
-        for q in 0..f.len() {
-            ret[q] = (0..f.len())
-                .map(|p| {
-                    let dist = p as f64 - q as f64;
-                    dist * dist + f[p]
-                })
-                .fold(f64::NAN, f64::min);
-        }
-        ret
-    }
-
-    #[cfg_attr(miri, ignore = "slow")]
-    #[test]
-    fn test_distance_transform_1d_matches_reference_implementation() {
-        fn prop(f: Vec<BoundedFloat>) -> bool {
-            let v: Vec<f64> = f.into_iter().map(|n| n.0).collect();
-            let expected = distance_transform_1d_reference(&v);
-            let actual = distance_transform_1d(&v);
-            expected == actual
-        }
-
-        quickcheck(prop as fn(Vec<BoundedFloat>) -> bool);
-    }
-
-    fn euclidean_squared_distance_transform_reference(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
-        let (width, height) = image.dimensions();
-
-        let mut dists = Image::new(width, height);
-
-        for y in 0..height {
-            for x in 0..width {
-                let mut min = f64::INFINITY;
-                for yc in 0..height {
-                    for xc in 0..width {
-                        let pc = image.get_pixel(xc, yc)[0];
-                        if pc > 0 {
-                            let dx = xc as f64 - x as f64;
-                            let dy = yc as f64 - y as f64;
-
-                            min = f64::min(min, dx * dx + dy * dy);
-                        }
-                    }
-                }
-
-                dists.put_pixel(x, y, Luma([min]));
-            }
-        }
-
-        dists
-    }
-
-    #[cfg_attr(miri, ignore = "slow")]
-    #[test]
-    fn test_euclidean_squared_distance_transform_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = euclidean_squared_distance_transform_reference(&image.0);
-            let actual = euclidean_squared_distance_transform(&image.0);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
-        }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
     #[test]

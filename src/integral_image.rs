@@ -464,11 +464,9 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::definitions::Image;
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
+    use crate::{definitions::Image, proptest_utils::arbitrary_image};
     use image::{GenericImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
+    use proptest::prelude::*;
 
     #[test]
     fn test_integral_image_gray() {
@@ -580,18 +578,14 @@ mod tests {
         out
     }
 
-    #[cfg_attr(miri, ignore = "slow")]
-    #[test]
-    fn test_integral_image_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = integral_image_ref(&image.0);
-            let actual = integral_image(&image.0);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
+    proptest! {
+        #[test]
+        fn test_integral_image_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = integral_image_ref(&image);
+            let actual = integral_image(&image);
+
+            assert_eq!(expected, actual);
         }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 }
 

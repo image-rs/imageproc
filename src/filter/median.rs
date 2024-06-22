@@ -417,10 +417,9 @@ mod benches {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
+    use crate::proptest_utils::arbitrary_image;
     use image::{GrayImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
+    use proptest::prelude::*;
     use std::cmp::{max, min};
 
     // Reference implementation of median filter - written to be as simple as possible,
@@ -470,20 +469,13 @@ mod tests {
         sorted[mid]
     }
 
-    #[cfg_attr(miri, ignore = "slow")]
-    #[test]
-    fn test_median_filter_matches_reference_implementation() {
-        fn prop(image: GrayTestImage, x_radius: u32, y_radius: u32) -> TestResult {
-            let x_radius = x_radius % 5;
-            let y_radius = y_radius % 5;
-            let expected = reference_median_filter(&image.0, x_radius, y_radius);
-            let actual = median_filter(&image.0, x_radius, y_radius);
+    proptest! {
+        #[test]
+        fn test_median_filter_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10), x_radius in 0_u32..5, y_radius in 0_u32..5) {
+            let expected = reference_median_filter(&image, x_radius, y_radius);
+            let actual = median_filter(&image, x_radius, y_radius);
 
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
+            assert_eq!(actual, expected);
         }
-        quickcheck(prop as fn(GrayTestImage, u32, u32) -> TestResult);
     }
 }

@@ -42,8 +42,6 @@ pub mod morphology;
 pub mod noise;
 pub mod pixelops;
 pub mod point;
-#[cfg(any(feature = "property-testing", test))]
-pub mod property_testing;
 pub mod rect;
 pub mod region_labelling;
 pub mod seam_carving;

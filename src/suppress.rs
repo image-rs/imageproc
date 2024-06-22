@@ -175,10 +175,9 @@ where
 mod tests {
     use super::{local_maxima, suppress_non_maximum};
     use crate::definitions::{Image, Position, Score};
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
+    use crate::proptest_utils::arbitrary_image;
     use image::{GenericImage, GrayImage, Luma, Primitive};
-    use quickcheck::{quickcheck, TestResult};
+    use proptest::prelude::*;
     use std::cmp;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
@@ -320,17 +319,14 @@ mod tests {
         out
     }
 
-    #[test]
-    fn test_suppress_non_maximum_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = suppress_non_maximum_reference(&image.0, 3);
-            let actual = suppress_non_maximum(&image.0, 3);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
+    proptest! {
+        #[test]
+        fn test_suppress_non_maximum_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = suppress_non_maximum_reference(&image, 3);
+            let actual = suppress_non_maximum(&image, 3);
+
+            assert_eq!(expected, actual);
         }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 
     #[test]
