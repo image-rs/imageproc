@@ -1,5 +1,7 @@
 //! Functions for composing one or more images.
 
+use std::cmp::min;
+
 use image::math::Rect;
 use image::Pixel;
 
@@ -157,6 +159,120 @@ where
 
             image.put_pixel(x, y, flipped_pixel);
             image.put_pixel(x, flipped_y, pixel);
+        }
+    }
+}
+
+/// Replaces the pixels in the `bottom` image with the pixels from the top image starting from the
+/// given `(x, y)` coordinates in the `bottom` image and starting from `(0, 0)` in the `top` image.
+///
+/// # Panics
+///
+/// - If `x >= bottom.width()`
+/// - If `y >= bottom.height()`
+///
+/// # Examples
+/// ```
+/// use imageproc::compose::replace;
+/// use imageproc::gray_image;
+///
+/// let bottom = gray_image!(
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0);
+///
+/// let top = gray_image!(
+///     1, 1;
+///     1, 1;
+///     1, 1);
+///
+/// let replaced = replace(&bottom, &top, 3, 1);
+///
+/// assert_eq!(replaced, gray_image!(
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 1, 1, 0;
+///     0, 0, 0, 1, 1, 0;
+///     0, 0, 0, 1, 1, 0;
+///     0, 0, 0, 0, 0, 0;
+///     0, 0, 0, 0, 0, 0));
+/// ```
+pub fn replace<P>(bottom: &Image<P>, top: &Image<P>, x: u32, y: u32) -> Image<P>
+where
+    P: Pixel,
+{
+    let mut bottom = bottom.clone();
+    replace_mut(&mut bottom, top, x, y);
+    bottom
+}
+#[doc=generate_mut_doc_comment!("replace")]
+pub fn replace_mut<P>(bottom: &mut Image<P>, top: &Image<P>, x: u32, y: u32)
+where
+    P: Pixel,
+{
+    assert!(x < bottom.width());
+    assert!(y < bottom.height());
+
+    let x_end = min(bottom.width() - 1, x + top.width());
+    let y_end = min(bottom.height() - 1, y + top.height());
+
+    for y_bot in y..y_end {
+        for x_bot in x..x_end {
+            bottom.put_pixel(x_bot, y_bot, *top.get_pixel(x_bot - x, y_bot - y));
+        }
+    }
+}
+
+/// Blends the pixels in the `bottom` image with the pixels from the top image starting from the
+/// given `(x, y)` coordinates in the `bottom` image and starting from `(0, 0)` in the `top` image.
+///
+/// # Panics
+///
+/// - If `x >= bottom.width()`
+/// - If `y >= bottom.height()`
+///
+/// # Examples
+/// ```
+/// use imageproc::compose::overlay;
+/// use imageproc::definitions::Image;
+/// use image::LumaA;
+///
+/// let bottom = Image::from_pixel(4, 4, LumaA([0u8, 255]));
+/// let top = Image::from_pixel(4, 4, LumaA([255u8, 0]));
+///
+/// let overlay = overlay(&bottom, &top, 0, 0);
+///
+/// assert_eq!(overlay, bottom);
+/// ```
+pub fn overlay<P>(bottom: &Image<P>, top: &Image<P>, x: u32, y: u32) -> Image<P>
+where
+    P: Pixel,
+{
+    let mut bottom = bottom.clone();
+    overlay_mut(&mut bottom, top, x, y);
+    bottom
+}
+#[doc=generate_mut_doc_comment!("overlay")]
+pub fn overlay_mut<P>(bottom: &mut Image<P>, top: &Image<P>, x: u32, y: u32)
+where
+    P: Pixel,
+{
+    assert!(x < bottom.width());
+    assert!(y < bottom.height());
+
+    let x_end = min(bottom.width() - 1, x + top.width());
+    let y_end = min(bottom.height() - 1, y + top.height());
+
+    for y_bot in y..y_end {
+        for x_bot in x..x_end {
+            let mut bottom_pixel = *bottom.get_pixel(x_bot, y_bot);
+            let top_pixel = bottom.get_pixel(x_bot - x, y_bot - y);
+
+            bottom_pixel.blend(top_pixel);
+
+            bottom.put_pixel(x_bot, y_bot, bottom_pixel);
         }
     }
 }
