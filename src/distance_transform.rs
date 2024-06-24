@@ -464,6 +464,7 @@ mod tests {
         assert_pixels_eq!(distances, expected);
     }
 
+    #[cfg(not(miri))]
     proptest! {
         #[test]
         fn test_distance_transform_1d_matches_reference_implementation(f in proptest::collection::vec(-10_000_000.0..10_000_000.0, 0..50)) {
