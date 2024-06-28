@@ -414,8 +414,9 @@ mod benches {
     bench_median_filter!(bench_median_filter_s100_rx8_ry1, side: 100, x_radius: 8,y_radius: 1);
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
-mod tests {
+mod proptests {
     use super::*;
     use crate::proptest_utils::arbitrary_image;
     use image::{GrayImage, Luma};

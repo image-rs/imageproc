@@ -443,9 +443,7 @@ fn intersection<S: Source + ?Sized>(f: &S, p: usize, q: usize) -> f64 {
 mod tests {
     use super::*;
     use crate::definitions::Image;
-    use crate::proptest_utils::arbitrary_image;
     use image::{GrayImage, Luma};
-    use proptest::prelude::*;
     use std::cmp::max;
     use std::f64;
 
@@ -464,29 +462,10 @@ mod tests {
         assert_pixels_eq!(distances, expected);
     }
 
-    #[cfg(not(miri))]
-    proptest! {
-        #[test]
-        fn test_distance_transform_1d_matches_reference_implementation(f in proptest::collection::vec(-10_000_000.0..10_000_000.0, 0..50)) {
-            let actual = distance_transform_1d(&f);
-            let expected = distance_transform_1d_reference(&f);
-
-            assert_eq!(actual, expected);
-        }
-
-        #[test]
-        fn test_euclidean_squared_distance_transform_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
-            let expected = euclidean_squared_distance_transform_reference(&image);
-            let actual = euclidean_squared_distance_transform(&image);
-
-            assert_eq!(actual, expected)
-        }
-    }
-
     // Simple implementation of 1d distance transform which performs an
     // exhaustive search. Used to valid the more complicated lower-envelope
     // implementation against.
-    fn distance_transform_1d_reference(f: &[f64]) -> Vec<f64> {
+    pub fn distance_transform_1d_reference(f: &[f64]) -> Vec<f64> {
         let mut ret = vec![0.0; f.len()];
         for q in 0..f.len() {
             ret[q] = (0..f.len())
@@ -499,7 +478,14 @@ mod tests {
         ret
     }
 
-    fn euclidean_squared_distance_transform_reference(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
+    pub fn distance_transform_1d(f: &Vec<f64>) -> Vec<f64> {
+        let mut r = vec![0.0; f.len()];
+        let mut e = LowerEnvelope::new(f.len());
+        distance_transform_1d_mut(f, &mut r, &mut e);
+        r
+    }
+
+    pub fn euclidean_squared_distance_transform_reference(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
         let (width, height) = image.dimensions();
 
         let mut dists = Image::new(width, height);
@@ -533,13 +519,6 @@ mod tests {
         fn len(&self) -> usize {
             self.len()
         }
-    }
-
-    fn distance_transform_1d(f: &Vec<f64>) -> Vec<f64> {
-        let mut r = vec![0.0; f.len()];
-        let mut e = LowerEnvelope::new(f.len());
-        distance_transform_1d_mut(f, &mut r, &mut e);
-        r
     }
 
     #[test]
@@ -590,6 +569,34 @@ mod tests {
 
         let dist = euclidean_squared_distance_transform(&image);
         assert_pixels_eq_within!(dist, expected, 1e-6);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::tests::euclidean_squared_distance_transform_reference;
+    use super::tests::{distance_transform_1d, distance_transform_1d_reference};
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_distance_transform_1d_matches_reference_implementation(f in proptest::collection::vec(-10_000_000.0..10_000_000.0, 0..50)) {
+            let actual = distance_transform_1d(&f);
+            let expected = distance_transform_1d_reference(&f);
+
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn test_euclidean_squared_distance_transform_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = euclidean_squared_distance_transform_reference(&image);
+            let actual = euclidean_squared_distance_transform(&image);
+
+            assert_eq!(actual, expected)
+        }
     }
 }
 

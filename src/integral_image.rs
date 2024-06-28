@@ -464,9 +464,8 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{definitions::Image, proptest_utils::arbitrary_image};
+    use crate::definitions::Image;
     use image::{GenericImage, Luma};
-    use proptest::prelude::*;
 
     #[test]
     fn test_integral_image_gray() {
@@ -553,7 +552,7 @@ mod tests {
     }
 
     /// Simple implementation of integral_image to validate faster versions against.
-    fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
+    pub fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
     where
         I: GenericImage<Pixel = Luma<u8>>,
     {
@@ -577,6 +576,16 @@ mod tests {
 
         out
     }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::tests::integral_image_ref;
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
