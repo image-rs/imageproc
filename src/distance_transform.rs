@@ -485,7 +485,9 @@ mod tests {
         r
     }
 
-    pub fn euclidean_squared_distance_transform_reference(image: &Image<Luma<u8>>) -> Image<Luma<f64>> {
+    pub fn euclidean_squared_distance_transform_reference(
+        image: &Image<Luma<u8>>,
+    ) -> Image<Luma<f64>> {
         let (width, height) = image.dimensions();
 
         let mut dists = Image::new(width, height);
