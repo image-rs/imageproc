@@ -39,7 +39,7 @@ from not using linear color spaces.
 This library provides both single-threaded and multi-threaded variations of several functions
 by using [rayon](https://github.com/rayon-rs/rayon).
 
-Depending on image size and the amount of work performed per pixel the parallel versions may not 
+Depending on image size and the amount of work performed per pixel the parallel versions may not
 always be faster - we recommend benchmarking for your specific use-case.
 
 ## Crate Features
@@ -52,9 +52,6 @@ always be faster - we recommend benchmarking for your specific use-case.
 
 - `katexit`: enables latex in documentation via
   [katexit](https://github.com/termoshtt/katexit)
-- `property-testing`: enables `quickcheck`
-- `quickcheck`: exposes helper types and methods to enable property testing
-  via [quickcheck](https://github.com/BurntSushi/quickcheck)
 - `display-window`: enables `sdl2`
 - `sdl2`: enables the displaying of images (using `imageproc::window`) with
   [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
@@ -62,3 +59,4 @@ always be faster - we recommend benchmarking for your specific use-case.
 ## How to contribute
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+

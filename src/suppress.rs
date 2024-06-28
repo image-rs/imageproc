@@ -175,10 +175,7 @@ where
 mod tests {
     use super::{local_maxima, suppress_non_maximum};
     use crate::definitions::{Image, Position, Score};
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
     use image::{GenericImage, GrayImage, Luma, Primitive};
-    use quickcheck::{quickcheck, TestResult};
     use std::cmp;
 
     #[derive(PartialEq, Debug, Copy, Clone)]
@@ -274,7 +271,7 @@ mod tests {
 
     /// Reference implementation of suppress_non_maximum. Used to validate
     /// the (presumably faster) actual implementation.
-    fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
+    pub fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
     where
         I: GenericImage<Pixel = Luma<C>>,
         C: Primitive + Ord,
@@ -321,23 +318,30 @@ mod tests {
     }
 
     #[test]
-    fn test_suppress_non_maximum_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = suppress_non_maximum_reference(&image.0, 3);
-            let actual = suppress_non_maximum(&image.0, 3);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
-        }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
-    }
-
-    #[test]
     fn test_step() {
         assert_eq!((0u32..5).step_by(4).collect::<Vec<u32>>(), vec![0, 4]);
         assert_eq!((0u32..4).step_by(4).collect::<Vec<u32>>(), vec![0]);
         assert_eq!((4u32..4).step_by(4).collect::<Vec<u32>>(), vec![]);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::suppress_non_maximum;
+    use super::tests::suppress_non_maximum_reference;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_suppress_non_maximum_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = suppress_non_maximum_reference(&image, 3);
+            let actual = suppress_non_maximum(&image, 3);
+
+            assert_eq!(expected, actual);
+        }
     }
 }
 

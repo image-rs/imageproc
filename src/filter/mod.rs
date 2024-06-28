@@ -582,7 +582,7 @@ mod tests {
                 // I think the interesting edge cases here are determined entirely
                 // by the relative sizes of the kernel and the image side length, so
                 // I'm just enumerating over small values instead of generating random
-                // examples via quickcheck.
+                // examples via proptesting.
                 for height in 0..5 {
                     for width in 0..5 {
                         for kernel_length in 0..15 {
