@@ -39,35 +39,35 @@ impl Rect {
     /// Reduces possibility of confusing coordinates and dimensions
     /// when specifying rects.
     ///
-    /// See the [struct-level documentation](struct.Rect.html) for examples.
+    /// See the [struct-level documentation](Rect) for examples.
     pub fn at(x: i32, y: i32) -> RectPosition {
         RectPosition { left: x, top: y }
     }
 
     /// Smallest y-coordinate reached by rect.
     ///
-    /// See the [struct-level documentation](struct.Rect.html) for examples.
+    /// See the [struct-level documentation](Rect) for examples.
     pub fn top(&self) -> i32 {
         self.top
     }
 
     /// Smallest x-coordinate reached by rect.
     ///
-    /// See the [struct-level documentation](struct.Rect.html) for examples.
+    /// See the [struct-level documentation](Rect) for examples.
     pub fn left(&self) -> i32 {
         self.left
     }
 
     /// Greatest y-coordinate reached by rect.
     ///
-    /// See the [struct-level documentation](struct.Rect.html) for examples.
+    /// See the [struct-level documentation](Rect) for examples.
     pub fn bottom(&self) -> i32 {
         self.top + (self.height as i32) - 1
     }
 
     /// Greatest x-coordinate reached by rect.
     ///
-    /// See the [struct-level documentation](struct.Rect.html) for examples.
+    /// See the [struct-level documentation](Rect) for examples.
     pub fn right(&self) -> i32 {
         self.left + (self.width as i32) - 1
     }
@@ -139,7 +139,7 @@ impl Region<f32> for Rect {
 }
 
 /// Position of the top left of a rectangle.
-/// Only used when building a [`Rect`](struct.Rect.html).
+/// Only used when building a [`Rect`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct RectPosition {
     left: i32,
@@ -150,7 +150,7 @@ impl RectPosition {
     /// Construct a rectangle from a position and size. Width and height
     /// are required to be strictly positive.
     ///
-    /// See the [`Rect`](struct.Rect.html) documentation for examples.
+    /// See the [`Rect`] documentation for examples.
     pub fn of_size(self, width: u32, height: u32) -> Rect {
         assert!(width > 0, "width must be strictly positive");
         assert!(height > 0, "height must be strictly positive");

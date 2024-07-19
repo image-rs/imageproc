@@ -58,7 +58,7 @@ where
 /// Computes the 2d running sum of the squares of the intensities in an image. Channels are summed
 /// independently.
 ///
-/// See the [`integral_image`](fn.integral_image.html) documentation for more information on integral images.
+/// See the [`integral_image()`] documentation for more information on integral images.
 ///
 /// # Examples
 /// ```
@@ -246,7 +246,7 @@ where
 /// implements `Primitive`. In that case, this function returns `[T; 1]` for an image
 /// whose pixels are of type `Luma`, `[T; 3]` for `Rgb` pixels and `[T; 4]` for `Rgba` pixels.
 ///
-/// See the [`integral_image`](fn.integral_image.html) documentation for examples.
+/// See the [`integral_image()`] documentation for examples.
 pub fn sum_image_pixels<P>(
     integral_image: &Image<P>,
     left: u32,
@@ -272,7 +272,7 @@ where
 /// integral image of F and `integral_squared_image` is the integral image of the squares of the
 /// pixels in F.
 ///
-/// See the [`integral_image`](fn.integral_image.html) documentation for more information on integral images.
+/// See the [`integral_image()`] documentation for more information on integral images.
 ///
 ///# Examples
 /// ```

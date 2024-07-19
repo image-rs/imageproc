@@ -31,7 +31,7 @@ where
 /// An implicit edge is added from the last to the first point in the slice.
 ///
 /// The parameters of blend are (line color, original color, line weight).
-/// Consider using [`interpolate`](fn.interpolate.html) for blend.
+/// Consider using [`interpolate()`](crate::pixelops::interpolate) for blend.
 pub fn draw_antialiased_polygon<I, B>(
     image: &I,
     poly: &[Point<i32>],
