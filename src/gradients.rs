@@ -2,7 +2,10 @@
 
 use crate::definitions::{HasBlack, Image};
 use crate::filter::filter_clamped;
-use crate::kernel::{self, Kernel, PREWITT_HORIZONTAL_3X3, PREWITT_VERTICAL_3X3, SCHARR_HORIZONTAL_3X3, SCHARR_VERTICAL_3X3, SOBEL_HORIZONTAL_3X3, SOBEL_VERTICAL_3X3};
+use crate::kernel::{
+    self, Kernel, PREWITT_HORIZONTAL_3X3, PREWITT_VERTICAL_3X3, SCHARR_HORIZONTAL_3X3,
+    SCHARR_VERTICAL_3X3, SOBEL_HORIZONTAL_3X3, SOBEL_VERTICAL_3X3,
+};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
