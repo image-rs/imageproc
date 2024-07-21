@@ -2,7 +2,10 @@
 
 use crate::definitions::{HasBlack, Image};
 use crate::filter::filter_clamped;
-use crate::kernel::{self, Kernel};
+use crate::kernel::{
+    self, Kernel, PREWITT_HORIZONTAL_3X3, PREWITT_VERTICAL_3X3, SCHARR_HORIZONTAL_3X3,
+    SCHARR_VERTICAL_3X3, SOBEL_HORIZONTAL_3X3, SOBEL_VERTICAL_3X3,
+};
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImage, GenericImageView, GrayImage, Luma, Pixel};
 use itertools::multizip;
@@ -155,40 +158,40 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
     (dx.powi(2) + dy.powi(2)).sqrt() as u16
 }
 
-/// Convolves an image with the [`HORIZONTAL_SOBEL`](static.HORIZONTAL_SOBEL.html)
+/// Convolves an image with the [`SOBEL_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
 pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::SOBEL_HORIZONTAL_3X3)
+    filter_clamped(image, SOBEL_HORIZONTAL_3X3)
 }
 
-/// Convolves an image with the [`VERTICAL_SOBEL`](static.VERTICAL_SOBEL.html)
+/// Convolves an image with the [`SOBEL_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
 pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::SOBEL_VERTICAL_3X3)
+    filter_clamped(image, SOBEL_VERTICAL_3X3)
 }
 
-/// Convolves an image with the [`HORIZONTAL_SCHARR`](static.HORIZONTAL_SCHARR.html)
+/// Convolves an image with the [`SCHARR_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
 pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::SCHARR_HORIZONTAL_3X3)
+    filter_clamped(image, SCHARR_HORIZONTAL_3X3)
 }
 
-/// Convolves an image with the [`VERTICAL_SCHARR`](static.VERTICAL_SCHARR.html)
+/// Convolves an image with the [`SCHARR_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
 pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::SCHARR_VERTICAL_3X3)
+    filter_clamped(image, SCHARR_VERTICAL_3X3)
 }
 
-/// Convolves an image with the [`HORIZONTAL_PREWITT`](static.HORIZONTAL_PREWITT.html)
+/// Convolves an image with the [`PREWITT_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
 pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::PREWITT_HORIZONTAL_3X3)
+    filter_clamped(image, PREWITT_HORIZONTAL_3X3)
 }
 
-/// Convolves an image with the [`VERTICAL_PREWITT`](static.VERTICAL_PREWITT.html)
+/// Convolves an image with the [`PREWITT_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
 pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::PREWITT_VERTICAL_3X3)
+    filter_clamped(image, PREWITT_VERTICAL_3X3)
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.

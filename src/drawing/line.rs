@@ -17,7 +17,7 @@ pub struct BresenhamLineIter {
 }
 
 impl BresenhamLineIter {
-    /// Creates a [`BresenhamLineIter`](struct.BresenhamLineIter.html) which will iterate over the integer coordinates
+    /// Creates a [`BresenhamLineIter`] which will iterate over the integer coordinates
     /// between `start` and `end`.
     pub fn new(start: (f32, f32), end: (f32, f32)) -> BresenhamLineIter {
         let (mut x0, mut y0) = (start.0, start.1);
@@ -92,7 +92,7 @@ pub struct BresenhamLinePixelIter<'a, P: Pixel> {
 }
 
 impl<'a, P: Pixel> BresenhamLinePixelIter<'a, P> {
-    /// Creates a [`BresenhamLinePixelIter`](struct.BresenhamLinePixelIter.html) which will iterate over
+    /// Creates a [`BresenhamLinePixelIter`] which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
         image: &Image<P>,
@@ -126,7 +126,7 @@ pub struct BresenhamLinePixelIterMut<'a, P: Pixel> {
 }
 
 impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
-    /// Creates a [`BresenhamLinePixelIterMut`](struct.BresenhamLinePixelIterMut.html) which will iterate over
+    /// Creates a [`BresenhamLinePixelIterMut`] which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
         image: &mut Image<P>,
@@ -204,7 +204,7 @@ where
 /// Draws as much of the line segment between `start` and `end` as lies inside the image bounds.
 ///
 /// The parameters of blend are (line color, original color, line weight).
-/// Consider using [`interpolate`](fn.interpolate.html) for blend.
+/// Consider using [`interpolate()`](crate::pixelops::interpolate) for blend.
 ///
 /// Uses [Xu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm).
 #[must_use = "the function does not modify the original image"]

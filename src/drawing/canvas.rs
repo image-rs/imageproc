@@ -8,7 +8,7 @@ use image::{GenericImage, GenericImageView, Pixel};
 /// the behaviour of `draw_pixel` being equivalent to calling
 /// `set_pixel` with the same arguments.
 ///
-/// See [`Blend`](struct.Blend.html) for another example implementation
+/// See [`Blend`] for another example implementation
 /// of this trait - its implementation of `draw_pixel` alpha-blends
 /// the input value with the pixel's current value.
 ///
@@ -94,7 +94,7 @@ where
 
 /// A canvas that blends pixels when drawing.
 ///
-/// See the documentation for [`Canvas`](trait.Canvas.html)
+/// See the documentation for [`Canvas`]
 /// for an example using this type.
 pub struct Blend<I>(pub I);
 

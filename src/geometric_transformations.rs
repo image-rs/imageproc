@@ -532,7 +532,7 @@ where
 
 /// Applies a projective transformation to an image, writing to a provided output.
 ///
-/// See the [`warp`](fn.warp.html) documentation for more information.
+/// See the [`warp()`] documentation for more information.
 pub fn warp_into<P>(
     image: &Image<P>,
     projection: &Projection,
@@ -605,7 +605,7 @@ where
 /// Warps an image using the provided function to define the pre-image of each output pixel,
 /// writing into a preallocated output.
 ///
-/// See the [`warp_with`](fn.warp_with.html) documentation for more information.
+/// See the [`warp_with()`] documentation for more information.
 pub fn warp_into_with<P, F>(
     image: &Image<P>,
     mapping: F,

@@ -174,7 +174,7 @@ pub fn erode_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 
 /// Erosion followed by dilation.
 ///
-/// See the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// See the [`erode()`] and [`dilate()`]
 /// documentation for definitions of dilation and erosion.
 ///
 /// # Examples
@@ -236,7 +236,7 @@ pub fn open_mut(image: &mut GrayImage, norm: Norm, k: u8) {
 
 /// Dilation followed by erosion.
 ///
-/// See the [`erode`](fn.erode.html) and [`dilate`](fn.dilate.html)
+/// See the [`erode()`] and [`dilate()`]
 /// documentation for definitions of dilation and erosion.
 ///
 /// # Examples
@@ -720,8 +720,8 @@ pub fn grayscale_erode(image: &GrayImage, mask: &Mask) -> GrayImage {
 
 /// Grayscale erosion followed by grayscale dilation.
 ///
-/// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
-/// and [`grayscale_erode`](fn.grayscale_erode.html)
+/// See the [`grayscale_dilate()`]
+/// and [`grayscale_erode()`]
 /// documentation for definitions of dilation and erosion.
 ///
 ////// # Examples
@@ -762,8 +762,8 @@ pub fn grayscale_open(image: &GrayImage, mask: &Mask) -> GrayImage {
 
 /// Grayscale dilation followed by grayscale erosion.
 ///
-/// See the [`grayscale_dilate`](fn.grayscale_dilate.html)
-/// and [`grayscale_erode`](fn.grayscale_erode.html)
+/// See the [`grayscale_dilate()`]
+/// and [`grayscale_erode()`]
 /// documentation for definitions of dilation and erosion.
 ///
 ////// # Examples
