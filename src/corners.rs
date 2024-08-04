@@ -312,8 +312,8 @@ fn is_corner_fast9(image: &GrayImage, threshold: u8, x: u32, y: u32) -> bool {
     let (p0, p4, p8, p12) = unsafe {
         (
             image.unsafe_get_pixel(x, y - 3)[0] as i16,
-            image.unsafe_get_pixel(x, y + 3)[0] as i16,
             image.unsafe_get_pixel(x + 3, y)[0] as i16,
+            image.unsafe_get_pixel(x, y + 3)[0] as i16,
             image.unsafe_get_pixel(x - 3, y)[0] as i16,
         )
     };
