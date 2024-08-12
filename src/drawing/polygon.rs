@@ -102,17 +102,7 @@ where
         return;
     }
     if poly.len() < 2 {
-        panic!(
-            "Polygon only has {} points, but at least two are needed.",
-            poly.len(),
-        );
-    }
-    if poly[0] == poly[poly.len() - 1] {
-        panic!(
-            "First point {:?} == last point {:?}",
-            poly[0],
-            poly[poly.len() - 1]
-        );
+        panic!("Polygon only has 1 point, but at least two are needed.");
     }
     for window in poly.windows(2) {
         crate::drawing::draw_line_segment_mut(
@@ -123,8 +113,10 @@ where
         );
     }
     let first = poly[0];
-    let last = poly.iter().last().unwrap();
-    crate::drawing::draw_line_segment_mut(canvas, (first.x, first.y), (last.x, last.y), color);
+    let last = poly[poly.len() - 1];
+    if first != last {
+        crate::drawing::draw_line_segment_mut(canvas, (first.x, first.y), (last.x, last.y), color);
+    }
 }
 
 #[must_use = "the function does not modify the original image"]
@@ -152,13 +144,6 @@ where
     if poly.is_empty() {
         return;
     }
-    if poly[0] == poly[poly.len() - 1] {
-        panic!(
-            "First point {:?} == last point {:?}",
-            poly[0],
-            poly[poly.len() - 1]
-        );
-    }
 
     let mut y_min = i32::MAX;
     let mut y_max = i32::MIN;
@@ -174,7 +159,9 @@ where
     y_max = max(0, min(y_max, height as i32 - 1));
 
     let mut closed: Vec<Point<i32>> = poly.to_vec();
-    closed.push(poly[0]);
+    if poly[0] != poly[poly.len() - 1] {
+        closed.push(poly[0]);
+    }
 
     let edges: Vec<&[Point<i32>]> = closed.windows(2).collect();
     let mut intersections = Vec::new();
