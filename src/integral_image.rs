@@ -465,10 +465,7 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
 mod tests {
     use super::*;
     use crate::definitions::Image;
-    use crate::property_testing::GrayTestImage;
-    use crate::utils::pixel_diff_summary;
     use image::{GenericImage, Luma};
-    use quickcheck::{quickcheck, TestResult};
 
     #[test]
     fn test_integral_image_gray() {
@@ -555,7 +552,7 @@ mod tests {
     }
 
     /// Simple implementation of integral_image to validate faster versions against.
-    fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
+    pub fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
     where
         I: GenericImage<Pixel = Luma<u8>>,
     {
@@ -579,19 +576,25 @@ mod tests {
 
         out
     }
+}
 
-    #[cfg_attr(miri, ignore = "slow")]
-    #[test]
-    fn test_integral_image_matches_reference_implementation() {
-        fn prop(image: GrayTestImage) -> TestResult {
-            let expected = integral_image_ref(&image.0);
-            let actual = integral_image(&image.0);
-            match pixel_diff_summary(&actual, &expected) {
-                None => TestResult::passed(),
-                Some(err) => TestResult::error(err),
-            }
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::tests::integral_image_ref;
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_integral_image_matches_reference_implementation(image in arbitrary_image::<Luma<u8>>(0..10, 0..10)) {
+            let expected = integral_image_ref(&image);
+            let actual = integral_image(&image);
+
+            assert_eq!(expected, actual);
         }
-        quickcheck(prop as fn(GrayTestImage) -> TestResult);
     }
 }
 
