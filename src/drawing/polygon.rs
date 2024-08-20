@@ -8,8 +8,9 @@ use std::cmp::{max, min};
 /// Draws a polygon and its contents on an image.
 ///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
+/// list of points can be an open or closed path, i.e. if the first and last points are
+/// not equal, the path will be closed anyway.
+/// An implicit edge will be added from the last to the first point if they are not equal.
 pub fn draw_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
@@ -27,8 +28,9 @@ where
 /// Draws an anti-aliased polygon polygon and its contents on an image.
 ///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
+/// list of points can be an open or closed path, i.e. if the first and last points are
+/// not equal, the path will be closed anyway.
+/// An implicit edge will be added from the last to the first point if they are not equal.
 ///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate()`](crate::pixelops::interpolate) for blend.
@@ -76,10 +78,10 @@ pub fn draw_antialiased_polygon_mut<I, B>(
 /// Draws the outline of a polygon on an image in place.
 ///
 /// Draws as much of the outline of the polygon as lies within image bounds. The provided
-/// list of points should be in polygon order and be an open path, i.e. the first
-/// and last points must not be equal. The edges of the polygon will be drawn in the order
-/// that they are provided, and an implicit edge will be added from the last to the first
-/// point in the slice.
+/// list of points should be in polygon order and can be an open or closed path, i.e. if
+/// the first and last points are not equal, the path will be closed anyway.
+/// The edges of the polygon will be drawn in the order that they are provided, and an
+/// implicit edge will be added from the last to the first point if they are not equal.
 pub fn draw_hollow_polygon<I>(
     image: &mut I,
     poly: &[Point<f32>],
@@ -159,8 +161,10 @@ where
     y_max = max(0, min(y_max, height as i32 - 1));
 
     let mut closed: Vec<Point<i32>> = poly.to_vec();
-    if poly[0] != poly[poly.len() - 1] {
-        closed.push(poly[0]);
+    let first = poly[0];
+    let last = poly[poly.len() - 1];
+    if first != last {
+        closed.push(first);
     }
 
     let edges: Vec<&[Point<i32>]> = closed.windows(2).collect();
