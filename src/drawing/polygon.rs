@@ -8,8 +8,9 @@ use std::cmp::{max, min};
 /// Draws a polygon and its contents on an image.
 ///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
+/// list of points can be an open or closed path, i.e. if the first and last points are
+/// not equal, the path will be closed anyway.
+/// An implicit edge will be added from the last to the first point if they are not equal.
 pub fn draw_polygon<I>(image: &I, poly: &[Point<i32>], color: I::Pixel) -> Image<I::Pixel>
 where
     I: GenericImage,
@@ -27,8 +28,9 @@ where
 /// Draws an anti-aliased polygon polygon and its contents on an image.
 ///
 /// Draws as much of a filled polygon as lies within image bounds. The provided
-/// list of points should be an open path, i.e. the first and last points must not be equal.
-/// An implicit edge is added from the last to the first point in the slice.
+/// list of points can be an open or closed path, i.e. if the first and last points are
+/// not equal, the path will be closed anyway.
+/// An implicit edge will be added from the last to the first point if they are not equal.
 ///
 /// The parameters of blend are (line color, original color, line weight).
 /// Consider using [`interpolate()`](crate::pixelops::interpolate) for blend.
@@ -76,10 +78,10 @@ pub fn draw_antialiased_polygon_mut<I, B>(
 /// Draws the outline of a polygon on an image in place.
 ///
 /// Draws as much of the outline of the polygon as lies within image bounds. The provided
-/// list of points should be in polygon order and be an open path, i.e. the first
-/// and last points must not be equal. The edges of the polygon will be drawn in the order
-/// that they are provided, and an implicit edge will be added from the last to the first
-/// point in the slice.
+/// list of points should be in polygon order and can be an open or closed path, i.e. if
+/// the first and last points are not equal, the path will be closed anyway.
+/// The edges of the polygon will be drawn in the order that they are provided, and an
+/// implicit edge will be added from the last to the first point if they are not equal.
 pub fn draw_hollow_polygon<I>(
     image: &mut I,
     poly: &[Point<f32>],
@@ -102,17 +104,7 @@ where
         return;
     }
     if poly.len() < 2 {
-        panic!(
-            "Polygon only has {} points, but at least two are needed.",
-            poly.len(),
-        );
-    }
-    if poly[0] == poly[poly.len() - 1] {
-        panic!(
-            "First point {:?} == last point {:?}",
-            poly[0],
-            poly[poly.len() - 1]
-        );
+        panic!("Polygon only has 1 point, but at least two are needed.");
     }
     for window in poly.windows(2) {
         crate::drawing::draw_line_segment_mut(
@@ -123,8 +115,10 @@ where
         );
     }
     let first = poly[0];
-    let last = poly.iter().last().unwrap();
-    crate::drawing::draw_line_segment_mut(canvas, (first.x, first.y), (last.x, last.y), color);
+    let last = poly[poly.len() - 1];
+    if first != last {
+        crate::drawing::draw_line_segment_mut(canvas, (first.x, first.y), (last.x, last.y), color);
+    }
 }
 
 #[must_use = "the function does not modify the original image"]
@@ -152,13 +146,6 @@ where
     if poly.is_empty() {
         return;
     }
-    if poly[0] == poly[poly.len() - 1] {
-        panic!(
-            "First point {:?} == last point {:?}",
-            poly[0],
-            poly[poly.len() - 1]
-        );
-    }
 
     let mut y_min = i32::MAX;
     let mut y_max = i32::MIN;
@@ -174,7 +161,11 @@ where
     y_max = max(0, min(y_max, height as i32 - 1));
 
     let mut closed: Vec<Point<i32>> = poly.to_vec();
-    closed.push(poly[0]);
+    let first = poly[0];
+    let last = poly[poly.len() - 1];
+    if first != last {
+        closed.push(first);
+    }
 
     let edges: Vec<&[Point<i32>]> = closed.windows(2).collect();
     let mut intersections = Vec::new();
