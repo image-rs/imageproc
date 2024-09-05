@@ -23,6 +23,7 @@ use image::{
 
 use imageproc::contrast::ThresholdType;
 use imageproc::definitions::Image;
+use imageproc::drawing::flood_fill;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
 use imageproc::kernel::{self};
@@ -746,6 +747,25 @@ fn test_draw_filled_ellipse() {
     draw_filled_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
     compare_to_truth_image(&image, "filled_ellipse.png");
+}
+
+#[test]
+fn test_draw_flood_filled_shape() {
+    use imageproc::drawing::{draw_hollow_ellipse_mut, flood_fill};
+
+    let red = Rgb([255, 0, 0]);
+    let green = Rgb([0, 255, 0]);
+    let blue = Rgb([0, 0, 255]);
+    let mut image = RgbImage::from_pixel(200, 200, Rgb([255, 255, 255]));
+
+    draw_hollow_ellipse_mut(&mut image, (100, 100), 50, 50, red);
+    draw_hollow_ellipse_mut(&mut image, (50, 100), 40, 90, blue);
+    draw_hollow_ellipse_mut(&mut image, (100, 150), 80, 30, green);
+    draw_hollow_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
+
+    flood_fill(&mut image, 120, 120, red);
+
+    compare_to_truth_image(&image, "flood_filled_shape.png");
 }
 
 #[test]
