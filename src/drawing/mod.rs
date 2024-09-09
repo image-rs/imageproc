@@ -36,7 +36,7 @@ mod text;
 pub use self::text::{draw_text, draw_text_mut, text_size};
 
 mod fill;
-pub use self::fill::flood_fill;
+pub use self::fill::{flood_fill, flood_fill_mut};
 
 // Set pixel at (x, y) to color if this point lies within image bounds,
 // otherwise do nothing.

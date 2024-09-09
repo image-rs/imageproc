@@ -1,12 +1,23 @@
-use image::{GenericImage, Pixel};
+use crate::definitions::Image;
+use image::Pixel;
 
 /// Equivalent to bucket tool in MS-PAINT
 /// Performs 4-way flood-fill based on this algorithm: https://en.wikipedia.org/wiki/Flood_fill#Span_filling
-pub fn flood_fill<I>(image: &mut I, x: u32, y: u32, fill_with: I::Pixel)
+pub fn flood_fill<P>(image: &Image<P>, x: u32, y: u32, fill_with: P) -> Image<P>
 where
-    I: GenericImage,
+    P: Pixel + PartialEq,
 {
-    let target = image.get_pixel(x, y);
+    let mut filled_image = image.clone();
+    flood_fill_mut(&mut filled_image, x, y, fill_with);
+    filled_image
+}
+
+#[doc=generate_mut_doc_comment!("draw_line_segment")]
+pub fn flood_fill_mut<P>(image: &mut Image<P>, x: u32, y: u32, fill_with: P)
+where
+    P: Pixel + PartialEq,
+{
+    let target = image.get_pixel(x, y).clone();
 
     let mut stack = Vec::new();
 
@@ -47,9 +58,9 @@ where
 }
 
 /// Determines whether (x,y) is within the image bounds and if the pixel there is equal to target_color
-fn inside<I>(image: &I, x: i32, y: i32, target_color: I::Pixel) -> bool
+fn inside<P>(image: &Image<P>, x: i32, y: i32, target_pixel: P) -> bool
 where
-    I: GenericImage,
+    P: Pixel + PartialEq,
 {
     if x < 0 || y < 0 {
         return false;
@@ -58,5 +69,5 @@ where
     let y = y as u32;
     let (width, height) = image.dimensions();
     //TODO: Compare pixel equality without conversion to rgba
-    x < width && y < height && image.get_pixel(x, y).to_rgba() == target_color.to_rgba()
+    x < width && y < height && *image.get_pixel(x, y) == target_pixel
 }
