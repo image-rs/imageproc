@@ -2,6 +2,7 @@
 # removed. Runs:
 # - address sanitizer - detects memory errors
 # - leak sanitizer - detects memory leaks
+# - miri - detects undefined behavior and memory leaks
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
   contents: read
