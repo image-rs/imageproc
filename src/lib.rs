@@ -2,7 +2,11 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, feature(test))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![allow(clippy::zero_prefixed_literal, clippy::needless_range_loop)]
+#![allow(
+    clippy::too_long_first_doc_paragraph,
+    clippy::zero_prefixed_literal,
+    clippy::needless_range_loop
+)]
 
 #[cfg(test)]
 extern crate test;
