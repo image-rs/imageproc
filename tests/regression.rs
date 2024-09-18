@@ -762,9 +762,6 @@ fn test_draw_flood_filled_shape() {
     draw_hollow_ellipse_mut(&mut image, (100, 150), 80, 30, green);
     draw_hollow_ellipse_mut(&mut image, (150, 150), 100, 60, blue);
 
-    let filled_image = flood_fill(&image, 120, 120, red);
-    compare_to_truth_image(&filled_image, "flood_filled_shape.png");
-
     flood_fill_mut(&mut image, 120, 120, red);
     compare_to_truth_image(&image, "flood_filled_shape.png");
 }

@@ -12,7 +12,7 @@ where
     filled_image
 }
 
-#[doc=generate_mut_doc_comment!("draw_line_segment")]
+#[doc=generate_mut_doc_comment!("flood_fill")]
 pub fn flood_fill_mut<P>(image: &mut Image<P>, x: u32, y: u32, fill_with: P)
 where
     P: Pixel + PartialEq,
@@ -68,6 +68,5 @@ where
     let x = x as u32;
     let y = y as u32;
     let (width, height) = image.dimensions();
-    //TODO: Compare pixel equality without conversion to rgba
     x < width && y < height && *image.get_pixel(x, y) == target_pixel
 }
