@@ -1,8 +1,10 @@
 //! Functions for filtering images.
 
 pub mod bilateral;
+mod fast_blur;
 mod median;
 pub use self::bilateral::bilateral_filter;
+pub use self::fast_blur::fast_blur;
 pub use self::median::median_filter;
 
 mod sharpen;
