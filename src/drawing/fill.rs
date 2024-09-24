@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use image::Pixel;
 
 /// Equivalent to bucket tool in MS-PAINT
-/// Performs 4-way flood-fill based on this algorithm: https://en.wikipedia.org/wiki/Flood_fill#Span_filling
+/// Performs 4-way flood-fill based on this algorithm: <https://en.wikipedia.org/wiki/Flood_fill#Span_filling>
 pub fn flood_fill<P>(image: &Image<P>, x: u32, y: u32, fill_with: P) -> Image<P>
 where
     P: Pixel + PartialEq,
