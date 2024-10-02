@@ -317,6 +317,56 @@ where
     warp(image, &projection, interpolation, default)
 }
 
+/// Rotates an image clockwise about its center, writing to a provided output.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+pub fn rotate_about_center_into<P>(
+    image: &Image<P>,
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>,
+) where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (w, h) = image.dimensions();
+    let (ow, oh) = out.dimensions();
+    rotate_into(
+        image,
+        (w as f32 / 2.0, h as f32 / 2.0),
+        (ow as f32 / 2.0, oh as f32 / 2.0),
+        theta,
+        interpolation,
+        default,
+        out,
+    )
+}
+
+/// Rotates an image clockwise about the provided center by theta radians, writing to a provided output.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+pub fn rotate_into<P>(
+    image: &Image<P>,
+    center: (f32, f32),
+    out_center: (f32, f32),
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>,
+) where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (cx, cy) = center;
+    let (ocx, ocy) = out_center;
+    let projection = Projection::translate(ocx, ocy)
+        * Projection::rotate(theta)
+        * Projection::translate(-cx, -cy);
+
+    warp_into(image, &projection, interpolation, default, out);
+}
+
 /// Rotates an image 90 degrees clockwise.
 ///
 /// # Examples
