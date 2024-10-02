@@ -325,7 +325,7 @@ pub fn rotate_about_center_no_crop<P>(
     theta: f32,
     interpolation: Interpolation,
     default: P,
-) -> Image<P> 
+) -> Image<P>
 where
     P: Pixel + Send + Sync,
     <P as Pixel>::Subpixel: Send + Sync,
@@ -341,13 +341,7 @@ where
 
     let mut out_img = Image::new(new_width, new_height);
 
-    rotate_about_center_into(
-        image,
-        theta,
-        interpolation,
-        default,
-        &mut out_img,
-    );
+    rotate_about_center_into(image, theta, interpolation, default, &mut out_img);
 
     out_img
 }
