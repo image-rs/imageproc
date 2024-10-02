@@ -317,6 +317,41 @@ where
     warp(image, &projection, interpolation, default)
 }
 
+/// Rotates an image clockwise about its center without cropping.
+/// The output image has dimensions calculated to fit the entire rotated image.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+pub fn rotate_about_center_no_crop<P>(
+    image: &Image<P>,
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+) -> Image<P> 
+where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (width, height) = image.dimensions();
+
+    let cos = theta.cos();
+    let sin = theta.sin();
+
+    let new_width = (height as f32 * sin.abs() + width as f32 * cos.abs()).ceil() as u32;
+    let new_height = (height as f32 * cos.abs() + width as f32 * sin.abs()).ceil() as u32;
+
+    let mut out_img = Image::new(new_width, new_height);
+
+    rotate_about_center_into(
+        image,
+        theta,
+        interpolation,
+        default,
+        &mut out_img,
+    );
+
+    out_img
+}
+
 /// Rotates an image clockwise about its center, writing to a provided output.
 /// Output pixels whose pre-image lies outside the input image are set to `default`.
 pub fn rotate_about_center_into<P>(
