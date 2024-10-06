@@ -981,7 +981,7 @@ mod tests {
     }
 
     #[test]
-    fn text_rotate_nearest_quarter_turn_clockwise() {
+    fn test_rotate_nearest_quarter_turn_clockwise() {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
@@ -997,7 +997,7 @@ mod tests {
     }
 
     #[test]
-    fn text_rotate_nearest_half_turn_anticlockwise() {
+    fn test_rotate_nearest_half_turn_anticlockwise() {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
