@@ -1027,14 +1027,14 @@ mod tests {
         )
         .unwrap();
 
-        let expected_proportion =
-            image.iter().map(|&x| x as u32).sum::<u32>() as f32 / (pixel_val as u32 * image_area) as f32;
+        let expected_proportion = image.iter().map(|&x| x as u32).sum::<u32>() as f32
+            / (pixel_val as u32 * image_area) as f32;
 
         let rotated_image =
             rotate_about_center_no_crop(&image, PI * 0.25, Interpolation::Nearest, Luma([0]));
 
-        let rotated_proportion =
-            rotated_image.iter().map(|&x| x as u32).sum::<u32>() as f32 / (pixel_val as u32 * image_area) as f32;
+        let rotated_proportion = rotated_image.iter().map(|&x| x as u32).sum::<u32>() as f32
+            / (pixel_val as u32 * image_area) as f32;
 
         assert_approx_eq!(rotated_proportion, expected_proportion, 0.01)
     }
