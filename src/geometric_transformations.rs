@@ -960,8 +960,10 @@ pub enum Interpolation {
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::PI;
+
     use super::*;
-    use image::Luma;
+    use image::{open, GrayImage, Luma};
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -1010,6 +1012,32 @@ mod tests {
 
         let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([99u8]));
         assert_pixels_eq!(rotated, expected);
+    }
+
+    #[test]
+    fn test_rotate_about_center_no_crop() {
+        let pixel_val = 255;
+        let square_size = 512;
+
+        let image_area = square_size * square_size;
+
+        let image = GrayImage::from_vec(
+            square_size,
+            square_size,
+            vec![pixel_val; image_area as usize],
+        )
+        .unwrap();
+
+        let expected_proportion =
+            image.iter().map(|&x| x as u32).sum::<u32>() as f32 / (pixel_val as u32 * image_area) as f32;
+
+        let rotated_image =
+            rotate_about_center_no_crop(&image, PI * 0.25, Interpolation::Nearest, Luma([0]));
+
+        let rotated_proportion =
+            rotated_image.iter().map(|&x| x as u32).sum::<u32>() as f32 / (pixel_val as u32 * image_area) as f32;
+
+        assert_approx_eq!(rotated_proportion, expected_proportion, 0.01)
     }
 
     #[test]
