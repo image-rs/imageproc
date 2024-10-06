@@ -1036,7 +1036,7 @@ mod tests {
         let rotated_proportion = rotated_image.iter().map(|&x| x as u32).sum::<u32>() as f32
             / (pixel_val as u32 * image_area) as f32;
 
-        assert_approx_eq!(rotated_proportion, expected_proportion, 0.01)
+        assert_approx_eq!(rotated_proportion, expected_proportion, 0.01);
     }
 
     #[test]
