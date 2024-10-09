@@ -2,6 +2,7 @@
 # removed. Runs:
 # - address sanitizer - detects memory errors
 # - leak sanitizer - detects memory leaks
+# - miri - detects undefined behavior and memory leaks
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
   contents: read
@@ -61,7 +62,7 @@ jobs:
         with:
           submodules: true
       - run: |
-          echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> $GITHUB_ENV
+          echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> "$GITHUB_ENV"
       - name: Install ${{ env.NIGHTLY }}
         uses: dtolnay/rust-toolchain@master
         with:
