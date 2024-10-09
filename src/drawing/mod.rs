@@ -35,6 +35,9 @@ pub use self::rect::{
 mod text;
 pub use self::text::{draw_text, draw_text_mut, text_size};
 
+mod fill;
+pub use self::fill::{flood_fill, flood_fill_mut};
+
 // Set pixel at (x, y) to color if this point lies within image bounds,
 // otherwise do nothing.
 fn draw_if_in_bounds<C>(canvas: &mut C, x: i32, y: i32, color: C::Pixel)
