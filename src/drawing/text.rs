@@ -28,7 +28,7 @@ fn layout_glyphs(
             }
             last = Some(glyph_id);
             let bb = g.px_bounds();
-            h = h.max(bb.height());
+            h = h.max(bb.min.y + bb.height());
             f(g, bb);
         }
     }
