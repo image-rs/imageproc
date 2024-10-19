@@ -39,7 +39,7 @@ fn layout_glyphs(
     let h = font.height().ceil();
     assert!(w >= 0.0);
     assert!(h >= 0.0);
-    (w as u32, h as u32)
+    (1 + w as u32, 1 + h as u32)
 }
 
 /// Get the width and height of the given text, rendered with the given font and scale.
@@ -136,22 +136,19 @@ mod proptests {
 
             let img = draw_text(&img, text_color, x, y, scale, &font, text);
 
+            if text.is_empty() {
+                return Ok(());
+            }
             let (text_w, text_h) = text_size(scale, &font, text);
-            // TODO: fix Rect::contains by making Rect a "closed set"
-            let (text_w, text_h) = (text_w + 1, text_h + 1);
 
-            let rect = if text.is_empty() {
-                Rect::at(x, y).of_size(text_w, text_h)
+            let first_char = text.chars().next().unwrap();
+            let first_x_bearing =
+                font.as_scaled(scale).h_side_bearing(font.glyph_id(first_char));
+            let rect = if first_x_bearing < 0.0 {
+                let x_shift = first_x_bearing.abs().ceil() as i32;
+                Rect::at(x - x_shift, y).of_size(text_w + x_shift as u32, text_h)
             } else {
-                let first_char = text.chars().next().unwrap();
-                let first_x_bearing =
-                    font.as_scaled(scale).h_side_bearing(font.glyph_id(first_char));
-                if first_x_bearing < 0.0 {
-                    let x_shift = first_x_bearing.abs().ceil() as i32;
-                    Rect::at(x - x_shift, y).of_size(text_w + x_shift as u32, text_h)
-                } else {
-                    Rect::at(x, y).of_size(text_w, text_h)
-                }
+                Rect::at(x, y).of_size(text_w, text_h)
             };
             for (px, py, &p) in img.enumerate_pixels() {
                 if !rect.contains(px as i32, py as i32) {
