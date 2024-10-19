@@ -148,7 +148,7 @@ mod proptests {
                     font.as_scaled(scale).h_side_bearing(font.glyph_id(first_char));
                 if first_x_bearing < 0.0 {
                     let x_shift = first_x_bearing.abs().ceil() as i32;
-                    Rect::at(x - x_shift, y).of_size(text_w, text_h)
+                    Rect::at(x - x_shift, y).of_size(text_w + x_shift as u32, text_h)
                 } else {
                     Rect::at(x, y).of_size(text_w, text_h)
                 }
