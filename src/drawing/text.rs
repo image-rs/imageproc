@@ -111,7 +111,7 @@ pub fn draw_text_mut<C>(
     });
 }
 
-//#[cfg(not(miri))]
+#[cfg(not(miri))]
 #[cfg(test)]
 mod proptests {
     use super::*;
