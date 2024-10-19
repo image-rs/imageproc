@@ -23,9 +23,11 @@ use image::{
 
 use imageproc::contrast::ThresholdType;
 use imageproc::definitions::Image;
+use imageproc::drawing::text_size;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
 use imageproc::kernel::{self};
+use imageproc::rect::{Rect, Region};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -826,19 +828,23 @@ fn test_bilateral_filter() {
 
 #[test]
 fn test_draw_text() {
-    let mut image = GrayImage::from_pixel(300, 300, Luma::black());
     let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
     let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
 
-    imageproc::drawing::draw_text_mut(
-        &mut image,
-        Luma::white(),
-        50,
-        100,
-        30.0f32,
-        &font,
-        "Hello world!",
-    );
+    let background = Luma::black();
+    let mut img = GrayImage::from_pixel(300, 300, background);
 
-    compare_to_truth_image(&image, "text.png");
+    let text = "Hello world!";
+    let scale = 30.0;
+    let (x, y) = (50, 100);
+    imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y, scale, &font, text);
+    compare_to_truth_image(&img, "text.png");
+
+    let (text_w, text_h) = text_size(scale, &font, text);
+    let rect = Rect::at(x, y).of_size(text_w, text_h);
+    for (px, py, &p) in img.enumerate_pixels() {
+        if !rect.contains(px as i32, py as i32) {
+            assert_eq!(p, background);
+        }
+    }
 }
