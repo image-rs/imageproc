@@ -243,7 +243,7 @@ impl Mul<Projection> for Projection {
     }
 }
 
-impl<'a, 'b> Mul<&'b Projection> for &'a Projection {
+impl Mul<&Projection> for &Projection {
     type Output = Projection;
 
     fn mul(self, rhs: &Projection) -> Projection {
@@ -264,7 +264,7 @@ impl Mul<(f32, f32)> for Projection {
     }
 }
 
-impl<'a, 'b> Mul<&'b (f32, f32)> for &'a Projection {
+impl Mul<&(f32, f32)> for &Projection {
     type Output = (f32, f32);
 
     fn mul(self, rhs: &(f32, f32)) -> (f32, f32) {

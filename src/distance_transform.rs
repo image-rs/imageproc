@@ -286,7 +286,7 @@ struct Row<'a> {
     row: u32,
 }
 
-impl<'a> Sink for Row<'a> {
+impl Sink for Row<'_> {
     fn put(&mut self, idx: usize, value: f64) {
         unsafe {
             self.image
@@ -303,7 +303,7 @@ struct ColumnMut<'a> {
     column: u32,
 }
 
-impl<'a> Sink for ColumnMut<'a> {
+impl Sink for ColumnMut<'_> {
     fn put(&mut self, idx: usize, value: f64) {
         unsafe {
             self.image
@@ -338,7 +338,7 @@ struct Column<'a> {
     column: u32,
 }
 
-impl<'a> Source for Column<'a> {
+impl Source for Column<'_> {
     fn get(&self, idx: usize) -> f64 {
         let pixel = unsafe { self.image.unsafe_get_pixel(self.column, idx as u32)[0] as f64 };
         if pixel > 0f64 {

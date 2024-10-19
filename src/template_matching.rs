@@ -432,7 +432,7 @@ impl<'a> ImageTemplate<'a> {
         }
     }
 }
-impl<'a> OutputDims for ImageTemplate<'a> {
+impl OutputDims for ImageTemplate<'_> {
     fn output_dims(&self) -> (u32, u32) {
         let width = self.image.width() - self.template.width() + 1;
         let height = self.image.height() - self.template.height() + 1;
@@ -470,7 +470,7 @@ impl<'a> ImageTemplateMask<'a> {
         }
     }
 }
-impl<'a> OutputDims for ImageTemplateMask<'a> {
+impl OutputDims for ImageTemplateMask<'_> {
     fn output_dims(&self) -> (u32, u32) {
         self.inner.output_dims()
     }

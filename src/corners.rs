@@ -119,8 +119,8 @@ fn intensity_centroid(image: &GrayImage, x: u32, y: u32, radius: u32) -> f32 {
     let mut x_centroid: i32 = 0;
 
     let (width, height) = image.dimensions();
-    let x_min = if x < radius { 0 } else { x - radius };
-    let y_min = if y < radius { 0 } else { y - radius };
+    let x_min = x.saturating_sub(radius);
+    let y_min = y.saturating_sub(radius);
     let y_max = u32::min(y + radius + 1, height);
     let x_max = u32::min(x + radius + 1, width);
 

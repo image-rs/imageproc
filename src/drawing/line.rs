@@ -91,7 +91,7 @@ pub struct BresenhamLinePixelIter<'a, P: Pixel> {
     image: &'a Image<P>,
 }
 
-impl<'a, P: Pixel> BresenhamLinePixelIter<'a, P> {
+impl<P: Pixel> BresenhamLinePixelIter<'_, P> {
     /// Creates a [`BresenhamLinePixelIter`] which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
@@ -125,7 +125,7 @@ pub struct BresenhamLinePixelIterMut<'a, P: Pixel> {
     image: &'a mut Image<P>,
 }
 
-impl<'a, P: Pixel> BresenhamLinePixelIterMut<'a, P> {
+impl<P: Pixel> BresenhamLinePixelIterMut<'_, P> {
     /// Creates a [`BresenhamLinePixelIterMut`] which will iterate over
     /// the image pixels with coordinates between `start` and `end`.
     pub fn new(
@@ -302,7 +302,7 @@ where
     blend: B,
 }
 
-impl<'a, I, T, B> Plotter<'a, I, T, B>
+impl<I, T, B> Plotter<'_, I, T, B>
 where
     I: GenericImage,
 

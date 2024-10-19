@@ -17,21 +17,20 @@ pub fn flood_fill_mut<P>(image: &mut Image<P>, x: u32, y: u32, fill_with: P)
 where
     P: Pixel + PartialEq,
 {
-    let target = image.get_pixel(x, y).clone();
+    let target = *image.get_pixel(x, y);
 
     let mut stack = Vec::new();
 
-    stack.push((x as i32, x as i32, y as i32, 1 as i32));
-    stack.push((x as i32, x as i32, y as i32 - 1, -1 as i32));
+    stack.push((x as i32, x as i32, y as i32, 1_i32));
+    stack.push((x as i32, x as i32, y as i32 - 1, -1_i32));
 
-    while !stack.is_empty() {
-        let (x1, x2, y, dy) = stack.pop().unwrap();
+    while let Some((x1, x2, y, dy)) = stack.pop() {
         let mut x1 = x1;
         let mut x = x1;
         if inside(image, x, y, target) {
             while inside(image, x - 1, y, target) {
                 image.put_pixel(x as u32 - 1, y as u32, fill_with);
-                x = x - 1;
+                x -= 1;
             }
             if x < x1 {
                 stack.push((x, x1 - 1, y - dy, -dy))
@@ -40,7 +39,7 @@ where
         while x1 <= x2 {
             while inside(image, x1, y, target) {
                 image.put_pixel(x1 as u32, y as u32, fill_with);
-                x1 = x1 + 1;
+                x1 += 1;
             }
             if x1 > x {
                 stack.push((x, x1 - 1, y + dy, dy))
@@ -48,9 +47,9 @@ where
             if x1 - 1 > x2 {
                 stack.push((x2 + 1, x1 - 1, y - dy, -dy))
             }
-            x1 = x1 + 1;
+            x1 += 1;
             while x1 < x2 && !inside(image, x1, y, target) {
-                x1 = x1 + 1
+                x1 += 1
             }
             x = x1
         }
