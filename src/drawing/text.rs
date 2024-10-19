@@ -136,10 +136,10 @@ mod proptests {
 
             let img = draw_text(&img, text_color, x, y, scale, &font, text);
 
+            let (text_w, text_h) = text_size(scale, &font, text);
             if text.is_empty() {
                 return Ok(());
             }
-            let (text_w, text_h) = text_size(scale, &font, text);
 
             let first_char = text.chars().next().unwrap();
             let first_x_bearing =
