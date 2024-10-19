@@ -25,7 +25,6 @@ where
     stack.push((x as i32, x as i32, y as i32 - 1, -1_i32));
 
     while let Some((x1, x2, y, dy)) = stack.pop() {
-        
         let mut x1 = x1;
         let mut x = x1;
         if inside(image, x, y, target) {
