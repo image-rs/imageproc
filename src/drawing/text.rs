@@ -5,22 +5,20 @@ use crate::definitions::{Clamp, Image};
 use crate::drawing::Canvas;
 use crate::pixelops::weighted_sum;
 
-use ab_glyph::{point, Font, GlyphId, OutlinedGlyph, PxScale, ScaleFont};
+use ab_glyph::{point, Font, GlyphId, OutlinedGlyph, PxScale, Rect, ScaleFont};
 
 fn layout_glyphs(
     scale: impl Into<PxScale> + Copy,
     font: &impl Font,
     text: &str,
-    mut f: impl FnMut(OutlinedGlyph, (i32, i32)),
+    mut f: impl FnMut(OutlinedGlyph, Rect),
 ) -> (u32, u32) {
     if text.is_empty() {
         return (0, 0);
     }
     let font = font.as_scaled(scale);
 
-    let first_char = text.chars().next().unwrap();
-    let first_glyph = font.glyph_id(first_char);
-    let mut w = font.h_side_bearing(first_glyph).abs();
+    let mut w = 0.0;
     let mut prev: Option<GlyphId> = None;
 
     for c in text.chars() {
@@ -33,9 +31,7 @@ fn layout_glyphs(
             }
             prev = Some(glyph_id);
             let bb = g.px_bounds();
-            let bbx = bb.min.x as i32;
-            let bby = bb.min.y as i32;
-            f(g, (bbx, bby));
+            f(g, bb);
         }
     }
 
@@ -92,9 +88,9 @@ pub fn draw_text_mut<C>(
     let image_width = canvas.width() as i32;
     let image_height = canvas.height() as i32;
 
-    layout_glyphs(scale, font, text, |g, (bbx, bby)| {
-        let x_shift = x + bbx;
-        let y_shift = y + bby;
+    layout_glyphs(scale, font, text, |g, bb| {
+        let x_shift = x + bb.min.x.round() as i32;
+        let y_shift = y + bb.min.y.round() as i32;
         g.draw(|gx, gy, gv| {
             let image_x = gx as i32 + x_shift;
             let image_y = gy as i32 + y_shift;
@@ -128,11 +124,11 @@ mod proptests {
     proptest! {
         #[test]
         fn proptest_text_size(
+            img in arbitrary_image_with::<Luma<u8>>(Just(0), 0..=100, 0..=100),
             x in 0..100,
             y in 0..100,
             scale in 0.0..100f32,
             ref text in "[0-9a-zA-Z]*",
-            img in arbitrary_image_with::<Luma<u8>>(Just(0), 0..=100, 0..=100),
         ) {
             let font = FontRef::try_from_slice(FONT_BYTES).unwrap();
             let background = Luma([0]);
@@ -141,7 +137,22 @@ mod proptests {
             let img = draw_text(&img, text_color, x, y, scale, &font, text);
 
             let (text_w, text_h) = text_size(scale, &font, text);
-            let rect = Rect::at(x, y).of_size(1 + text_w, 1 + text_h);  // TODO: fix Rect::contains
+            // TODO: fix Rect::contains by making Rect a "closed set"
+            let (text_w, text_h) = (text_w + 1, text_h + 1);
+
+            let rect = if text.is_empty() {
+                Rect::at(x, y).of_size(text_w, text_h)
+            } else {
+                let first_char = text.chars().next().unwrap();
+                let first_x_bearing =
+                    font.as_scaled(scale).h_side_bearing(font.glyph_id(first_char));
+                if first_x_bearing < 0.0 {
+                    let x_shift = first_x_bearing.abs().ceil() as i32;
+                    Rect::at(x - x_shift, y).of_size(text_w, text_h)
+                } else {
+                    Rect::at(x, y).of_size(text_w, text_h)
+                }
+            };
             for (px, py, &p) in img.enumerate_pixels() {
                 if !rect.contains(px as i32, py as i32) {
                     assert_eq!(p, background, "pixel_position: {:?}, rect: {:?}", (px, py), rect);
