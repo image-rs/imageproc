@@ -26,6 +26,7 @@ use imageproc::definitions::Image;
 use imageproc::drawing::text_size;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
+use imageproc::geometric_transformations::rotate_about_center_no_crop;
 use imageproc::kernel::{self};
 use imageproc::rect::{Rect, Region};
 use imageproc::{
@@ -144,6 +145,30 @@ fn test_rotate_nearest_rgb() {
     );
 }
 
+/*
+    let input = Image::<Rgb<u8>>::from_dynamic(&load_image_or_panic(
+        Path::new(INPUT_DIR).join("elephant.png"),
+    ));
+    println!("{:?}", rotate_bicubic_about_center_no_crop(&input).save(Path::new(TRUTH_DIR).join("elephant_rotate_no_crop_bicubic.png")));
+*/
+
+#[test]
+fn test_rotate_no_crop_nearest_rgb() {
+    fn rotate_nearest_about_center_no_crop(image: &RgbImage) -> RgbImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Nearest,
+            Rgb::black(),
+        )
+    }
+    compare_to_truth(
+        "elephant.png",
+        "elephant_rotate_no_crop_nearest.png",
+        rotate_nearest_about_center_no_crop,
+    );
+}
+
 #[test]
 fn test_rotate_nearest_rgba() {
     fn rotate_nearest_about_center(image: &RgbaImage) -> RgbaImage {
@@ -158,6 +183,23 @@ fn test_rotate_nearest_rgba() {
         "elephant_rgba.png",
         "elephant_rotate_nearest_rgba.png",
         rotate_nearest_about_center,
+    );
+}
+
+#[test]
+fn test_rotate_no_crop_nearest_rgba() {
+    fn rotate_nearest_about_center_no_crop(image: &RgbaImage) -> RgbaImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Nearest,
+            Rgba::black(),
+        )
+    }
+    compare_to_truth(
+        "elephant_rgba.png",
+        "elephant_rotate_no_crop_nearest_rgba.png",
+        rotate_nearest_about_center_no_crop,
     );
 }
 
@@ -186,6 +228,24 @@ fn test_rotate_bilinear_rgb() {
 }
 
 #[test]
+fn test_rotate_bilinear_no_crop_rgb() {
+    fn rotate_bilinear_about_center_no_crop(image: &RgbImage) -> RgbImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bilinear,
+            Rgb::black(),
+        )
+    }
+    compare_to_truth_with_tolerance(
+        "elephant.png",
+        "elephant_rotate_no_crop_bilinear.png",
+        rotate_bilinear_about_center_no_crop,
+        2,
+    );
+}
+
+#[test]
 fn test_rotate_bilinear_rgba() {
     fn rotate_bilinear_about_center(image: &RgbaImage) -> RgbaImage {
         rotate_about_center(
@@ -199,6 +259,24 @@ fn test_rotate_bilinear_rgba() {
         "elephant_rgba.png",
         "elephant_rotate_bilinear_rgba.png",
         rotate_bilinear_about_center,
+        2,
+    );
+}
+
+#[test]
+fn test_rotate_no_crop_bilinear_rgba() {
+    fn rotate_bilinear_about_center_no_crop(image: &RgbaImage) -> RgbaImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bilinear,
+            Rgba::black(),
+        )
+    }
+    compare_to_truth_with_tolerance(
+        "elephant_rgba.png",
+        "elephant_rotate_no_crop_bilinear_rgba.png",
+        rotate_bilinear_about_center_no_crop,
         2,
     );
 }
@@ -222,6 +300,24 @@ fn test_rotate_bicubic_rgb() {
 }
 
 #[test]
+fn test_rotate_no_crop_bicubic_rgb() {
+    fn rotate_bicubic_about_center_no_crop(image: &RgbImage) -> RgbImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bicubic,
+            Rgb::black(),
+        )
+    }
+    compare_to_truth_with_tolerance(
+        "elephant.png",
+        "elephant_rotate_no_crop_bicubic.png",
+        rotate_bicubic_about_center_no_crop,
+        2,
+    );
+}
+
+#[test]
 fn test_rotate_bicubic_rgba() {
     fn rotate_bicubic_about_center(image: &RgbaImage) -> RgbaImage {
         rotate_about_center(
@@ -235,6 +331,24 @@ fn test_rotate_bicubic_rgba() {
         "elephant_rgba.png",
         "elephant_rotate_bicubic_rgba.png",
         rotate_bicubic_about_center,
+        2,
+    );
+}
+
+#[test]
+fn test_rotate_no_crop_bicubic_rgba() {
+    fn rotate_bicubic_about_center_no_crop(image: &RgbaImage) -> RgbaImage {
+        rotate_about_center(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Bicubic,
+            Rgba::black(),
+        )
+    }
+    compare_to_truth_with_tolerance(
+        "elephant_rgba.png",
+        "elephant_rotate_no_crop_bicubic_rgba.png",
+        rotate_bicubic_about_center_no_crop,
         2,
     );
 }
