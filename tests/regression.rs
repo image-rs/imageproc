@@ -10,7 +10,7 @@
 //!
 //! [caltech256 dataset]: https://authors.library.caltech.edu/7694/
 
-#![cfg(not(miri))]
+//#![cfg(not(miri))]
 
 #[macro_use]
 extern crate imageproc;
@@ -752,7 +752,7 @@ fn test_draw_filled_ellipse() {
 
 #[test]
 fn test_draw_flood_filled_shape() {
-    use imageproc::drawing::{draw_hollow_ellipse_mut, flood_fill, flood_fill_mut};
+    use imageproc::drawing::{draw_hollow_ellipse_mut, flood_fill_mut};
 
     let red = Rgb([255, 0, 0]);
     let green = Rgb([0, 255, 0]);
