@@ -39,7 +39,7 @@ fn layout_glyphs(
     let h = font.height().ceil();
     assert!(w >= 0.0);
     assert!(h >= 0.0);
-    (1 + w as u32, 1 + h as u32)
+    (1 + w as u32, h as u32)
 }
 
 /// Get the width and height of the given text, rendered with the given font and scale.
