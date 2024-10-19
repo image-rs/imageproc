@@ -13,32 +13,29 @@ fn layout_glyphs(
     text: &str,
     mut f: impl FnMut(OutlinedGlyph, Rect),
 ) -> (u32, u32) {
-    let (mut w, mut h) = (0f32, 0f32);
-
     let font = font.as_scaled(scale);
-    let mut last: Option<GlyphId> = None;
+
+    let mut w = 0f32;
+    let mut prev: Option<GlyphId> = None;
 
     for c in text.chars() {
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
         w += font.h_advance(glyph_id);
         if let Some(g) = font.outline_glyph(glyph) {
-            if let Some(last) = last {
-                w += font.kern(glyph_id, last);
+            if let Some(prev) = prev {
+                w += font.kern(glyph_id, prev);
             }
-            last = Some(glyph_id);
+            prev = Some(glyph_id);
             let bb = g.px_bounds();
-            h = h.max(bb.min.y + bb.height());
             f(g, bb);
         }
     }
 
-    (w as u32, h as u32)
+    (w as u32, font.height() as u32)
 }
 
 /// Get the width and height of the given text, rendered with the given font and scale.
-///
-/// Note that this function *does not* support newlines, you must do this manually.
 pub fn text_size(scale: impl Into<PxScale> + Copy, font: &impl Font, text: &str) -> (u32, u32) {
     layout_glyphs(scale, font, text, |_, _| {})
 }
