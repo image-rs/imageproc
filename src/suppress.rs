@@ -46,12 +46,12 @@ where
                 }
             }
 
-            let x0 = if radius >= best_x { 0 } else { best_x - radius };
+            let x0 = best_x.saturating_sub(radius);
             let x1 = x;
             let x2 = cmp::min(width, x + radius + 1);
             let x3 = cmp::min(width, best_x + radius + 1);
 
-            let y0 = if radius >= best_y { 0 } else { best_y - radius };
+            let y0 = best_y.saturating_sub(radius);
             let y1 = y;
             let y2 = cmp::min(height, y + radius + 1);
             let y3 = cmp::min(height, best_y + radius + 1);
@@ -131,7 +131,7 @@ where
         let cs = t.score();
 
         let mut is_max = true;
-        let row_lower = if radius > cy { 0 } else { cy - radius };
+        let row_lower = cy.saturating_sub(radius);
         let row_upper = if cy + radius + 1 > height {
             height
         } else {

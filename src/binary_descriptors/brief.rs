@@ -71,8 +71,8 @@ fn local_pixel_average(integral_image: &Image<Luma<u32>>, x: u32, y: u32, radius
     if radius == 0 {
         return 0;
     }
-    let y_min = if y < radius { 0 } else { y - radius };
-    let x_min = if x < radius { 0 } else { x - radius };
+    let y_min = y.saturating_sub(radius);
+    let x_min = x.saturating_sub(radius);
     let y_max = u32::min(y + radius + 1, integral_image.height() - 1);
     let x_max = u32::min(x + radius + 1, integral_image.width() - 1);
 
