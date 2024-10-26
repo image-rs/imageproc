@@ -143,13 +143,6 @@ fn test_rotate_nearest_rgb() {
     );
 }
 
-/*
-    let input = Image::<Rgb<u8>>::from_dynamic(&load_image_or_panic(
-        Path::new(INPUT_DIR).join("elephant.png"),
-    ));
-    println!("{:?}", rotate_bicubic_about_center_no_crop(&input).save(Path::new(TRUTH_DIR).join("elephant_rotate_no_crop_bicubic.png")));
-*/
-
 #[test]
 fn test_rotate_no_crop_nearest_rgb() {
     fn rotate_nearest_about_center_no_crop(image: &RgbImage) -> RgbImage {
@@ -336,7 +329,7 @@ fn test_rotate_bicubic_rgba() {
 #[test]
 fn test_rotate_no_crop_bicubic_rgba() {
     fn rotate_bicubic_about_center_no_crop(image: &RgbaImage) -> RgbaImage {
-        rotate_about_center(
+        rotate_about_center_no_crop(
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bicubic,
