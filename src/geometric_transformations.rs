@@ -348,7 +348,7 @@ where
 
 /// Rotates an image clockwise about its center, writing to a provided output.
 /// Output pixels whose pre-image lies outside the input image are set to `default`.
-pub fn rotate_about_center_into<P>(
+fn rotate_about_center_into<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
@@ -374,7 +374,7 @@ pub fn rotate_about_center_into<P>(
 
 /// Rotates an image clockwise about the provided center by theta radians, writing to a provided output.
 /// Output pixels whose pre-image lies outside the input image are set to `default`.
-pub fn rotate_into<P>(
+fn rotate_into<P>(
     image: &Image<P>,
     center: (f32, f32),
     out_center: (f32, f32),
