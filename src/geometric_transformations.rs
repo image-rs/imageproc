@@ -317,7 +317,7 @@ where
     warp(image, &projection, interpolation, default)
 }
 
-/// Rotates an image clockwise about its center without cropping.
+/// Rotates an image clockwise about its center by theta radians without cropping.
 /// The output image has dimensions calculated to fit the entire rotated image.
 /// Output pixels whose pre-image lies outside the input image are set to `default`.
 pub fn rotate_about_center_no_crop<P>(
@@ -346,7 +346,7 @@ where
     out_img
 }
 
-/// Rotates an image clockwise about its center, writing to a provided output.
+/// Rotates an image clockwise about its center by theta radians, writing to a provided output.
 /// Output pixels whose pre-image lies outside the input image are set to `default`.
 fn rotate_about_center_into<P>(
     image: &Image<P>,
