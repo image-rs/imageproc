@@ -345,6 +345,24 @@ fn test_rotate_no_crop_bicubic_rgba() {
 }
 
 #[test]
+fn test_rotate_no_crop_default_color() {
+    fn rotate_nearest_about_center_no_crop_default_red(image: &RgbaImage) -> RgbaImage {
+        rotate_about_center_no_crop(
+            image,
+            std::f32::consts::PI / 4f32,
+            Interpolation::Nearest,
+            Rgba([255, 0, 0, 255]),
+        )
+    }
+    compare_to_truth_with_tolerance(
+        "elephant_rgba.png",
+        "elephant_rotate_no_crop_nearest_default_red_rgba.png",
+        rotate_nearest_about_center_no_crop_default_red,
+        2,
+    )
+}
+
+#[test]
 fn test_affine_nearest_rgb() {
     fn affine_nearest(image: &RgbImage) -> RgbImage {
         let root_two_inv = 1f32 / 2f32.sqrt() * 2.0;
