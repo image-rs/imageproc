@@ -102,6 +102,60 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
     best_threshold
 }
 
+/// Returns the [Kapur threshold level] of an 8bpp image. This threshold
+/// maximizes the entropy of the background and foreground.
+///
+/// [Kapur threshold level]: https://doi.org/10.1016/0734-189X(85)90125-2
+pub fn kapur_level(img: &GrayImage) -> u8 {
+    let hist = histogram(img);
+    let histogram = &hist.channels[0]; // GrayImage has only one channel
+
+    let total_pixels = (img.width() * img.height()) as f64;
+
+    let mut cumulative_sum = [0.0f64; 257];
+    let mut cumulative_entropy = [0.0f64; 257];
+
+    for i in 0..256 {
+        let p = histogram[i] as f64 / total_pixels;
+        let entropy = if p > 0.0 { -p * p.ln() } else { 0.0 };
+        cumulative_sum[i + 1] = cumulative_sum[i] + p;
+        cumulative_entropy[i + 1] = cumulative_entropy[i] + entropy;
+    }
+
+    let mut max_entropy = f64::NEG_INFINITY;
+    let mut best_threshold = 0;
+
+    for threshold in 1..255 {
+        let background_sum = cumulative_sum[threshold + 1];
+        let foreground_sum = cumulative_sum[256] - background_sum;
+
+        if background_sum < f64::EPSILON || foreground_sum < f64::EPSILON {
+            continue;
+        }
+
+        let background_entropy = if background_sum > 0.0 {
+            cumulative_entropy[threshold + 1] / background_sum
+        } else {
+            0.0
+        };
+
+        let foreground_entropy = if foreground_sum > 0.0 {
+            (cumulative_entropy[256] - cumulative_entropy[threshold + 1]) / foreground_sum
+        } else {
+            0.0
+        };
+
+        let total_entropy = background_entropy + foreground_entropy;
+
+        if total_entropy > max_entropy {
+            max_entropy = total_entropy;
+            best_threshold = threshold;
+        }
+    }
+
+    best_threshold as u8
+}
+
 /// Options for how to treat the threshold value in [`threshold`] and [`threshold_mut`].
 pub enum ThresholdType {
     /// `dst(x,y) = if src(x,y) > threshold { 255 } else { 0 }`
@@ -526,6 +580,13 @@ mod tests {
     }
 
     #[test]
+    fn test_kapur_constant() {
+        assert_eq!(kapur_level(&constant_image(10, 10, 0)), 0);
+        assert_eq!(kapur_level(&constant_image(10, 10, 128)), 0);
+        assert_eq!(kapur_level(&constant_image(10, 10, 255)), 0);
+    }
+
+    #[test]
     fn test_otsu_constant() {
         // Variance is 0 at any threshold, and we
         // only increase the current threshold if we
@@ -663,6 +724,15 @@ mod benches {
         let image = gray_bench_image(200, 200);
         b.iter(|| {
             let level = otsu_level(&image);
+            black_box(level);
+        });
+    }
+
+    #[bench]
+    fn bench_kapur_level(b: &mut Bencher) {
+        let image = gray_bench_image(200, 200);
+        b.iter(|| {
+            let level = kapur_level(&image);
             black_box(level);
         });
     }
