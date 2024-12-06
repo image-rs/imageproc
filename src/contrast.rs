@@ -107,49 +107,61 @@ pub fn otsu_level(image: &GrayImage) -> u8 {
 ///
 /// [Kapur threshold level]: https://doi.org/10.1016/0734-189X(85)90125-2
 pub fn kapur_level(img: &GrayImage) -> u8 {
+    // The implementation looks different to the one you can for example find in
+    // ImageMagick, because we are using the simplification of equation (18) in
+    // the original article, which allows the computation of the total entropy
+    // without having to use nested loops. The names of the variables are taken
+    // straight from the article.
     let hist = histogram(img);
-    let histogram = &hist.channels[0]; // GrayImage has only one channel
+    let histogram = &hist.channels[0];
 
     let total_pixels = (img.width() * img.height()) as f64;
 
-    let mut cumulative_sum = [0.0f64; 257];
-    let mut cumulative_entropy = [0.0f64; 257];
-
-    for i in 0..256 {
-        let p = histogram[i] as f64 / total_pixels;
-        let entropy = if p > 0.0 { -p * p.ln() } else { 0.0 };
-        cumulative_sum[i + 1] = cumulative_sum[i] + p;
-        cumulative_entropy[i + 1] = cumulative_entropy[i] + entropy;
+    // The p_i in the article. They describe the probability of encountering
+    // gray-level i.
+    let mut p = [0.0f64; 256];
+    for i in 0..=255 {
+        p[i] = histogram[i] as f64 / total_pixels;
     }
 
-    let mut max_entropy = f64::NEG_INFINITY;
-    let mut best_threshold = 0;
+    // The P_s in the article, which is the probability of encountering
+    // gray-level <= s.
+    let mut cum_p = [0.0f64; 256];
+    cum_p[0] = p[0];
+    for i in 1..=255 {
+        cum_p[i] = cum_p[i - 1] + p[i];
+    }
 
-    for threshold in 1..255 {
-        let background_sum = cumulative_sum[threshold + 1];
-        let foreground_sum = cumulative_sum[256] - background_sum;
-
-        if background_sum < f64::EPSILON || foreground_sum < f64::EPSILON {
-            continue;
+    // The H_s in the article. These are the entropies attached to the
+    // distributions p[0],...,p[s].
+    let mut h = [0.0f64; 256];
+    if p[0] > f64::EPSILON {
+        h[0] = -p[0] * p[0].ln();
+    }
+    for s in 1..=255 {
+        if p[s] > f64::EPSILON {
+            h[s] = h[s - 1] - p[s] * p[s].ln();
+        } else {
+            h[s] = h[s - 1];
         }
+    }
 
-        let background_entropy = if background_sum > 0.0 {
-            cumulative_entropy[threshold + 1] / background_sum
-        } else {
-            0.0
-        };
+    let mut max_entropy = f64::MIN;
+    let mut best_threshold = usize::MIN;
 
-        let foreground_entropy = if foreground_sum > 0.0 {
-            (cumulative_entropy[256] - cumulative_entropy[threshold + 1]) / foreground_sum
-        } else {
-            0.0
-        };
+    for s in 0..=255 {
+        // psi_s is the total entropy of foreground and background at threshold
+        // level s. Instead of computing them separately, equation (18) in the
+        // article, which simplifies this to this:
+        if cum_p[s] > f64::EPSILON && 1.0 - cum_p[s] > f64::EPSILON {
+            let psi_s = (cum_p[s] * (1.0 - cum_p[s])).ln()
+                + h[s] / cum_p[s]
+                + (h[255] - h[s]) / (1.0 - cum_p[s]);
 
-        let total_entropy = background_entropy + foreground_entropy;
-
-        if total_entropy > max_entropy {
-            max_entropy = total_entropy;
-            best_threshold = threshold;
+            if psi_s > max_entropy {
+                max_entropy = psi_s;
+                best_threshold = s;
+            }
         }
     }
 
