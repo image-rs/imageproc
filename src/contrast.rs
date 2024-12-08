@@ -114,54 +114,56 @@ pub fn kapur_level(img: &GrayImage) -> u8 {
     // straight from the article.
     let hist = histogram(img);
     let histogram = &hist.channels[0];
+    const N: usize = 256;
 
     let total_pixels = (img.width() * img.height()) as f64;
 
     // The p_i in the article. They describe the probability of encountering
     // gray-level i.
-    let mut p = [0.0f64; 256];
-    for i in 0..=255 {
+    let mut p = [0.0f64; N];
+    for i in 0..N {
         p[i] = histogram[i] as f64 / total_pixels;
     }
 
     // The P_s in the article, which is the probability of encountering
     // gray-level <= s.
-    let mut cum_p = [0.0f64; 256];
+    let mut cum_p = [0.0f64; N];
     cum_p[0] = p[0];
-    for i in 1..=255 {
+    for i in 1..N {
         cum_p[i] = cum_p[i - 1] + p[i];
     }
 
     // The H_s in the article. These are the entropies attached to the
     // distributions p[0],...,p[s].
-    let mut h = [0.0f64; 256];
-    if p[0] > f64::EPSILON {
+    let mut h = [0.0f64; N];
+    if p[0] > 0.0 {
         h[0] = -p[0] * p[0].ln();
     }
-    for s in 1..=255 {
-        if p[s] > f64::EPSILON {
-            h[s] = h[s - 1] - p[s] * p[s].ln();
+    for s in 1..N {
+        h[s] = if p[s] > 0.0 {
+            h[s - 1] - p[s] * p[s].ln()
         } else {
-            h[s] = h[s - 1];
-        }
+            h[s - 1]
+        };
     }
 
     let mut max_entropy = f64::MIN;
-    let mut best_threshold = usize::MIN;
+    let mut best_threshold = 0;
 
-    for s in 0..=255 {
-        // psi_s is the total entropy of foreground and background at threshold
-        // level s. Instead of computing them separately, equation (18) in the
-        // article, which simplifies this to this:
-        if cum_p[s] > f64::EPSILON && 1.0 - cum_p[s] > f64::EPSILON {
-            let psi_s = (cum_p[s] * (1.0 - cum_p[s])).ln()
-                + h[s] / cum_p[s]
-                + (h[255] - h[s]) / (1.0 - cum_p[s]);
+    for s in 0..N {
+        let pq = cum_p[s] * (1.0 - cum_p[s]);
+        if pq <= 0.0 {
+            continue;
+        }
 
-            if psi_s > max_entropy {
-                max_entropy = psi_s;
-                best_threshold = s;
-            }
+        // psi_s is the sum of the total entropy of foreground and
+        // background at threshold level s. Instead of computing them
+        // separately, we use equation (18) of the original article, which
+        // simplifies it to this:
+        let psi_s = pq.ln() + h[s] / cum_p[s] + (h[255] - h[s]) / (1.0 - cum_p[s]);
+        if psi_s > max_entropy {
+            max_entropy = psi_s;
+            best_threshold = s;
         }
     }
 
