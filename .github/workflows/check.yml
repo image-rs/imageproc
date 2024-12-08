@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [nightly]
+        toolchain: [nightly-2024-11-15]
     steps:
       - uses: actions/checkout@v4
         with:
