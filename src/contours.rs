@@ -147,8 +147,10 @@ where
                     let mut pos3 = curr;
 
                     loop {
-                        contour_points
-                            .push(Point::new(cast(pos3.x).unwrap(), cast(pos3.y).unwrap()));
+                        contour_points.push(Point::new(
+                            cast(pos3.x).expect("Generic Type Parameter T should be bigger than width."),
+                            cast(pos3.y).expect("Generic Type Parameter T should be bigger than height."),
+                        ));
                         rotate_to_value(&mut diffs, pos2.to_i32() - pos3.to_i32());
                         let pos4 = diffs
                             .iter()
