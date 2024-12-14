@@ -121,6 +121,64 @@ impl Rect {
             height: (bottom - top) as u32 + 1,
         })
     }
+
+    /// Returns the union of self and other, which is the smallest rectangle that contains both.
+    ///
+    /// # Examples
+    /// ```
+    /// use imageproc::rect::Rect;
+    ///
+    /// // Unioning a rectangle with itself
+    /// let r = Rect::at(4, 5).of_size(6, 7);
+    /// assert_eq!(r.union(r), r);
+    ///
+    /// // Unioning overlapping but non-equal rectangles
+    /// let r = Rect::at(0, 0).of_size(5, 5);
+    /// let s = Rect::at(1, 4).of_size(10, 12);
+    /// let i = Rect::at(0, 0).of_size(11, 16);
+    /// assert_eq!(r.union(s), i);
+    ///
+    /// // Unioning disjoint rectangles
+    /// let r = Rect::at(0, 0).of_size(5, 5);
+    /// let s = Rect::at(10, 10).of_size(100, 12);
+    /// let i = Rect::at(0, 0).of_size(110, 22);
+    /// assert_eq!(r.union(s), i);
+    /// ```
+    pub fn union(&self, other: Rect) -> Rect {
+        let left = cmp::min(self.left, other.left);
+        let top = cmp::min(self.top, other.top);
+        let right = cmp::max(self.right(), other.right());
+        let bottom = cmp::max(self.bottom(), other.bottom());
+
+        Rect {
+            left,
+            top,
+            width: (right - left) as u32 + 1,
+            height: (bottom - top) as u32 + 1,
+        }
+    }
+
+    /// Translate a rectangle by the given amount.
+    ///
+    /// # Examples
+    /// ```
+    /// use imageproc::rect::Rect;
+    ///
+    /// let r = Rect::at(4, 5).of_size(6, 7);
+    /// assert_eq!(r.translate(0, 0), r);
+    ///
+    /// let r = Rect::at(4, 5).of_size(6, 7);
+    /// let expected = Rect::at(6, 8).of_size(6, 7);
+    /// assert_eq!(r.translate(2, 3), expected);
+    /// ```
+    pub fn translate(&self, dx: i32, dy: i32) -> Rect {
+        Rect {
+            left: self.left + dx,
+            top: self.top + dy,
+            width: self.width,
+            height: self.height,
+        }
+    }
 }
 
 impl Region<i32> for Rect {
@@ -135,6 +193,13 @@ impl Region<f32> for Rect {
             && x <= self.right() as f32
             && self.top as f32 <= y
             && y <= self.bottom() as f32
+    }
+}
+
+impl From<ab_glyph::Rect> for Rect {
+    fn from(value: ab_glyph::Rect) -> Self {
+        Rect::at(value.min.x.floor() as i32, value.min.y.floor() as i32)
+            .of_size(value.width().ceil() as u32, value.height().ceil() as u32)
     }
 }
 
