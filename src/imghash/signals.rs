@@ -1,68 +1,8 @@
-//! [Perceptual hashing] algorithms for images.
-//!
-//! [Perceptual hashing]: https://en.wikipedia.org/wiki/Perceptual_hashing
 use crate::definitions::Image;
-use image::{imageops, math::Rect, Luma};
+use image::Luma;
 use std::borrow::Cow;
 
-/// Stores the result of the [`phash`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PHash(Bits64);
-
-impl PHash {
-    /// Compute the [hamming distance] between hashes.
-    ///
-    /// [hamming distance]: https://en.wikipedia.org/wiki/Hamming_distance
-    pub fn hamming_distance(self, PHash(other): PHash) -> u32 {
-        self.0.hamming_distance(other)
-    }
-}
-
-/// Compute the [pHash] using [DCT].
-///
-/// # Example
-///
-/// ```
-/// use imageproc::imghash;
-///
-/// # fn main() {
-/// let img1 = image::open("first.png").to_luma32f();
-/// let img2 = image::open("second.png").to_luma32f();
-/// let hash1 = imghash::phash(&img1);
-/// let hash2 = imghash::phash(&img2);
-/// let dist = hash1.hamming_distance(hash2);
-/// dbg!(dist);
-/// # }
-/// ```
-///
-/// [pHash]: phash.org/docs/pubs/thesis_zauner.pdf
-/// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
-pub fn phash(img: &Image<Luma<f32>>) -> PHash {
-    const N: u32 = 8;
-    const HASH_FACTOR: u32 = 4;
-    let img = imageops::resize(
-        img,
-        HASH_FACTOR * N,
-        HASH_FACTOR * N,
-        imageops::FilterType::Lanczos3,
-    );
-    let dct = dct(Cow::Owned(img));
-    let topleft = Rect {
-        x: 1,
-        y: 1,
-        width: N,
-        height: N,
-    };
-    let topleft_dct = crate::compose::crop(&dct, topleft);
-    debug_assert_eq!(topleft_dct.dimensions(), (N, N));
-    assert_eq!(topleft_dct.len(), (N * N) as usize);
-    let mean =
-        topleft_dct.iter().copied().reduce(|a, b| a + b).unwrap() / (topleft_dct.len() as f32);
-    let bits = topleft_dct.iter().map(|&x| x > mean);
-    PHash(Bits64::new(bits))
-}
-
-fn dct(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
+pub(super) fn dct(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     #[allow(non_snake_case)]
     let T = |img: Cow<Image<_>>| -> Image<_> {
         let (w, h) = img.as_ref().dimensions();
@@ -86,6 +26,7 @@ fn dct(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     dct_of_rows(&T(Cow::Owned(dct)), rows_ctx.as_ref(), &mut arena)
 }
 
+// TODO: compute inplace
 fn dct_of_rows(
     img: &Image<Luma<f32>>,
     ctx: &dyn rustdct::TransformType2And3<f32>,
@@ -148,109 +89,9 @@ fn transpose(img: &Image<Luma<f32>>) -> Image<Luma<f32>> {
     Image::from_fn(nwidth, nheight, |x, y| *img.get_pixel(y, x))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Bits64(u64);
-
-impl Bits64 {
-    fn new(v: impl IntoIterator<Item = bool>) -> Self {
-        const N: usize = 64;
-        let mut bits = Self::zero();
-        let mut n = 0;
-        for bit in v {
-            if bit {
-                bits.set_nth_bit(n);
-            } else {
-                bits.clear_nth_bit(n);
-            };
-            n += 1;
-        }
-        assert_eq!(n, N);
-        bits
-    }
-    fn zero() -> Self {
-        Self(0)
-    }
-    fn hamming_distance(self, other: Bits64) -> u32 {
-        self.xor(other).0.count_ones()
-    }
-    fn set_nth_bit(&mut self, n: usize) {
-        debug_assert!(n < 64);
-        self.0 |= 1 << n;
-    }
-    fn clear_nth_bit(&mut self, n: usize) {
-        debug_assert!(n < 64);
-        self.0 &= !(1 << n);
-    }
-    fn xor(self, other: Self) -> Self {
-        Self(self.0 ^ other.0)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_bits64_ops() {
-        let mut bits = Bits64::zero();
-        bits.set_nth_bit(0);
-        assert_eq!(bits, Bits64(1));
-        bits.set_nth_bit(1);
-        assert_eq!(bits, Bits64(1 + 2));
-        bits.clear_nth_bit(0);
-        assert_eq!(bits, Bits64(2));
-        bits.clear_nth_bit(1);
-        assert_eq!(bits, Bits64::zero());
-        bits.set_nth_bit(2);
-        assert_eq!(bits, Bits64(4));
-    }
-    #[test]
-    fn test_bits64_new() {
-        const N: usize = 64;
-
-        let mut v = [false; N];
-        v[0] = true;
-        let it = v.iter().copied();
-        assert_eq!(Bits64::new(it), Bits64(1));
-        v[1] = true;
-        let it = v.iter().copied();
-        assert_eq!(Bits64::new(it), Bits64(1 + 2));
-    }
-    #[test]
-    #[should_panic]
-    fn test_bits64_new_fail() {
-        const N: usize = 64;
-        let it = (1..N).map(|x| x % 2 == 0);
-        let _bits = Bits64::new(it);
-    }
-
-    #[test]
-    fn test_phash() {
-        let img1 = gray_image!(type: f32,
-            1., 2., 3.;
-            4., 5., 6.
-        );
-        let mut img2 = img1.clone();
-        *img2.get_pixel_mut(0, 0) = Luma([0f32]);
-        let mut img3 = img2.clone();
-        *img3.get_pixel_mut(0, 1) = Luma([0f32]);
-
-        let hash1 = phash(&img1);
-        let hash2 = phash(&img2);
-        let hash3 = phash(&img3);
-
-        assert_eq!(0, hash1.hamming_distance(hash1));
-        assert_eq!(0, hash2.hamming_distance(hash2));
-        assert_eq!(0, hash3.hamming_distance(hash3));
-
-        assert_eq!(hash1.hamming_distance(hash2), hash2.hamming_distance(hash1));
-
-        assert!(hash1.hamming_distance(hash2) > 0);
-        assert!(hash1.hamming_distance(hash3) > 0);
-        assert!(hash2.hamming_distance(hash3) > 0);
-
-        assert!(hash1.hamming_distance(hash2) < hash1.hamming_distance(hash3));
-    }
 
     #[test]
     fn test_transpose_inplace() {
@@ -260,7 +101,6 @@ mod tests {
             transpose_inplace(&mut img);
             img
         };
-
         let img = gray_image!(type: f32, 1.);
         assert_eq!(T(&img), img);
 
@@ -340,11 +180,6 @@ mod proptests {
             let dct = dct(Cow::Borrowed(&img));
             assert_eq!(dct.dimensions(), img.dimensions());
         }
-        #[test]
-        fn proptest_phash(img in arbitrary_image(0..N, 0..N)) {
-            let hash = phash(&img);
-            assert_eq!(0, hash.hamming_distance(hash));
-        }
     }
 }
 
@@ -390,15 +225,6 @@ mod benches {
         b.iter(|| {
             let dct = dct(Cow::Borrowed(&img));
             black_box(dct);
-        });
-    }
-
-    #[bench]
-    fn bench_phash(b: &mut Bencher) {
-        let img = luma32f_bench_image(N, N);
-        b.iter(|| {
-            let img = black_box(&img);
-            black_box(phash(img));
         });
     }
 }
