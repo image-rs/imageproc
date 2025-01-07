@@ -1,15 +1,16 @@
 //! Utils for testing and debugging.
 
+use crate::definitions::Image;
 use image::{
     open, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Pixel, Rgb, RgbImage,
 };
-
 use itertools::Itertools;
+
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use std::fmt;
-use std::fmt::Write;
+use std::hint::black_box;
 use std::path::Path;
+use std::{fmt, fmt::Write};
 
 /// Helper for defining greyscale images.
 ///
@@ -675,7 +676,14 @@ pub fn gray_bench_image(width: u32, height: u32) -> GrayImage {
             image.put_pixel(x, y, Luma([intensity]));
         }
     }
-    image
+    black_box(image)
+}
+
+/// Luma<f32> image to use in benchmarks. See comment on `gray_bench_image`.
+pub fn luma32f_bench_image(width: u32, height: u32) -> Image<Luma<f32>> {
+    use image::DynamicImage;
+    let img = gray_bench_image(width, height);
+    DynamicImage::ImageLuma8(img).to_luma32f()
 }
 
 /// RGB image to use in benchmarks. See comment on `gray_bench_image`.
@@ -690,7 +698,7 @@ pub fn rgb_bench_image(width: u32, height: u32) -> RgbImage {
             image.put_pixel(x, y, Rgb([r, g, b]));
         }
     }
-    image
+    black_box(image)
 }
 
 #[cfg(test)]

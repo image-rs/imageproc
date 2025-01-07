@@ -55,6 +55,9 @@ features = ["property-testing", "katexit"]
 opt-level = 3
 debug = true
 
+[profile.dev]
+opt-level = 2
+
 [profile.bench]
 opt-level = 3
 debug = true
