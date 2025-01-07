@@ -37,6 +37,7 @@ pub mod gradients;
 pub mod haar;
 pub mod hog;
 pub mod hough;
+pub mod imghash;
 pub mod integral_image;
 pub mod kernel;
 pub mod local_binary_patterns;
