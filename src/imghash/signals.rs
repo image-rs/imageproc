@@ -32,6 +32,7 @@ pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
 }
 
 /// Computes the 1 dimensional [DCT] for each row.
+/// The required `arena.len()` is equal to `ctx.len() + ctx.get_scratch_len()`.
 ///
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 // TODO: compute inplace
