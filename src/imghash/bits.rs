@@ -38,11 +38,7 @@ impl Bits64 {
     fn bit_at(self, n: usize) -> bool {
         assert!(n < Self::N);
         let bit = self.0 & (1 << n);
-        if bit == 0 {
-            false
-        } else {
-            true
-        }
+        bit != 0
     }
     fn set_bit_at(&mut self, n: usize) {
         assert!(n < Self::N);

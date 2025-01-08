@@ -197,7 +197,7 @@ mod tests {
             4., 5., 6.
         );
         let expected = gray_image!(type: f32,
-            21.0, -3.4641016151377544, 0.0;
+            21.0, -3.464_101_6, 0.0;
             -6.3639607, 0.0, 0.0
         );
         assert_pixels_eq!(DCT(&img), expected);
@@ -208,8 +208,8 @@ mod tests {
             7., 8., 9.
         );
         let expected = gray_image!(type: f32,
-            45.0, -5.196152422706632, 0.0;
-            -15.588457268119896, 0.0, 0.0;
+            45.0, -5.196_152, 0.0;
+            -15.588_457, 0.0, 0.0;
             0.0, 0.0, 0.0
         );
         assert_pixels_eq!(DCT(&img), expected);
