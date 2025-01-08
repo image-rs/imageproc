@@ -2,7 +2,10 @@ use crate::definitions::Image;
 use image::Luma;
 use std::borrow::Cow;
 
-pub(super) fn dct(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
+/// Computes 2d [DCT].
+///
+/// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
+pub(super) fn dct2(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     #[allow(non_snake_case)]
     let T = |img: Cow<Image<_>>| -> Image<_> {
         let (w, h) = img.as_ref().dimensions();
@@ -22,12 +25,15 @@ pub(super) fn dct(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     let cap = scratch_len + rows_ctx.len().max(cols_ctx.len());
     let mut arena = vec![0f32; cap];
 
-    let dct = dct_of_rows(&T(img), cols_ctx.as_ref(), &mut arena);
-    dct_of_rows(&T(Cow::Owned(dct)), rows_ctx.as_ref(), &mut arena)
+    let dct = dct1(&T(img), cols_ctx.as_ref(), &mut arena);
+    dct1(&T(Cow::Owned(dct)), rows_ctx.as_ref(), &mut arena)
 }
 
+/// Computes 1d [DCT] for each row.
+///
+/// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 // TODO: compute inplace
-fn dct_of_rows(
+fn dct1(
     img: &Image<Luma<f32>>,
     ctx: &dyn rustdct::TransformType2And3<f32>,
     arena: &mut [f32],
@@ -117,7 +123,6 @@ mod tests {
         assert_pixels_eq!(T(&img), img_t);
         assert_pixels_eq!(T(&T(&img)), img);
     }
-
     #[test]
     fn test_transpose() {
         #[allow(non_snake_case)]
@@ -134,6 +139,80 @@ mod tests {
         );
         assert_pixels_eq!(T(&img), img_t);
         assert_pixels_eq!(T(&T(&img)), img);
+    }
+    #[test]
+    fn test_dct1() {
+        let mut arena = vec![0f32; 1_000];
+        let mut planner = rustdct::DctPlanner::new();
+        #[allow(non_snake_case)]
+        let mut DCT = |img: &Image<_>| -> Image<_> {
+            let ctx = planner.plan_dct2(img.width() as usize);
+            dct1(img, ctx.as_ref(), arena.as_mut())
+        };
+        let img = gray_image!(type: f32,
+            1., 2., 3.
+        );
+        let expected = gray_image!(type: f32,
+            6.0, -1.7320508, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
+
+        let img = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.
+        );
+        let expected = gray_image!(type: f32,
+            6.0, -1.7320508, 0.0;
+            15.0, -1.7320508, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
+
+        let img = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.;
+            7., 8., 9.
+        );
+        let expected = gray_image!(type: f32,
+            6.0, -1.7320508, 0.0;
+            15.0, -1.7320508, 0.0;
+            24.0, -1.7320508, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
+    }
+    #[test]
+    fn test_dct2() {
+        #[allow(non_snake_case)]
+        let DCT = |img: &Image<_>| dct2(Cow::Borrowed(img));
+
+        let img = gray_image!(type: f32,
+            1., 2., 3.
+        );
+        let expected = gray_image!(type: f32,
+            6.0, -1.7320508, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
+
+        let img = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.
+        );
+        let expected = gray_image!(type: f32,
+            21.0, -3.4641016151377544, 0.0;
+            -6.3639607, 0.0, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
+
+        let img = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.;
+            7., 8., 9.
+        );
+        let expected = gray_image!(type: f32,
+            45.0, -5.196152422706632, 0.0;
+            -15.588457268119896, 0.0, 0.0;
+            0.0, 0.0, 0.0
+        );
+        assert_pixels_eq!(DCT(&img), expected);
     }
 }
 
@@ -169,15 +248,15 @@ mod proptests {
             assert_pixels_eq!(T(&T(&img)), img);
         }
         #[test]
-        fn proptest_dct_of_rows(img in arbitrary_image(0..N, 0..N)) {
+        fn proptest_dct1(img in arbitrary_image(0..N, 0..N)) {
             let ctx = rustdct::DctPlanner::new().plan_dct2(img.width() as usize);
             let mut arena = vec![0f32; ctx.len() + ctx.get_scratch_len()];
-            let dct = dct_of_rows(&img, ctx.as_ref(), arena.as_mut());
+            let dct = dct1(&img, ctx.as_ref(), arena.as_mut());
             assert_eq!(dct.dimensions(), img.dimensions());
         }
         #[test]
-        fn proptest_dct(img in arbitrary_image(0..N, 0..N)) {
-            let dct = dct(Cow::Borrowed(&img));
+        fn proptest_dct2(img in arbitrary_image(0..N, 0..N)) {
+            let dct = dct2(Cow::Borrowed(&img));
             assert_eq!(dct.dimensions(), img.dimensions());
         }
     }
@@ -209,21 +288,21 @@ mod benches {
     }
 
     #[bench]
-    fn bench_dct_of_rows(b: &mut Bencher) {
+    fn bench_dct1(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         let ctx = rustdct::DctPlanner::new().plan_dct2(img.width() as usize);
         let mut arena = vec![0f32; ctx.len() + ctx.get_scratch_len()];
         b.iter(|| {
-            let dct = dct_of_rows(black_box(&img), ctx.as_ref(), &mut arena);
+            let dct = dct1(black_box(&img), ctx.as_ref(), &mut arena);
             black_box(dct);
         });
     }
 
     #[bench]
-    fn bench_dct(b: &mut Bencher) {
+    fn bench_dct2(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         b.iter(|| {
-            let dct = dct(Cow::Borrowed(&img));
+            let dct = dct2(Cow::Borrowed(&img));
             black_box(dct);
         });
     }
