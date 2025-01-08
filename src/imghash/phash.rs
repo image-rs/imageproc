@@ -21,6 +21,7 @@ impl PHash {
     /// let hash2 = imghash::phash(&img2);
     /// dbg!(hash1.hamming_distance(hash2));
     /// # }
+    /// ```
     ///
     /// [hamming distance]: https://en.wikipedia.org/wiki/Hamming_distance
     pub fn hamming_distance(self, PHash(other): PHash) -> u32 {
