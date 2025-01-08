@@ -20,9 +20,11 @@ pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     let mut planner = rustdct::DctPlanner::new();
     let rows_ctx = planner.plan_dct2(img.width() as usize);
     let cols_ctx = planner.plan_dct2(img.height() as usize);
-
-    let scratch_len = rows_ctx.get_scratch_len().max(cols_ctx.get_scratch_len());
-    let cap = scratch_len + rows_ctx.len().max(cols_ctx.len());
+    let cap = {
+        let rows_cap = rows_ctx.len() + rows_ctx.get_scratch_len();
+        let cols_cap = cols_ctx.len() + cols_ctx.get_scratch_len();
+        rows_cap.max(cols_cap)
+    };
     let mut arena = vec![0f32; cap];
 
     let dct = dct1d(&T(img), cols_ctx.as_ref(), &mut arena);
@@ -303,7 +305,7 @@ mod benches {
     fn bench_dct2d(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         b.iter(|| {
-            let dct = dct2d(Cow::Borrowed(&img));
+            let dct = dct2d(black_box(Cow::Borrowed(&img)));
             black_box(dct);
         });
     }
