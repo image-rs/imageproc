@@ -33,7 +33,7 @@ impl PHash {
 /// # }
 /// ```
 ///
-/// [pHash]: phash.org/docs/pubs/thesis_zauner.pdf
+/// [pHash]: https://phash.org/docs/pubs/thesis_zauner.pdf
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 pub fn phash(img: &Image<Luma<f32>>) -> PHash {
     const N: u32 = 8;
