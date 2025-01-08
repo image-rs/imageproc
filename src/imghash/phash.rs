@@ -5,6 +5,9 @@ use std::borrow::Cow;
 
 /// Stores the result of the [`phash`].
 /// Implements [`Hash`] trait.
+///
+/// # Note
+/// The hash value may vary between versions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PHash(Bits64);
 
