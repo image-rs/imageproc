@@ -44,7 +44,7 @@ pub fn phash(img: &Image<Luma<f32>>) -> PHash {
         HASH_FACTOR * N,
         imageops::FilterType::Lanczos3,
     );
-    let dct = signals::dct2(Cow::Owned(img));
+    let dct = signals::dct2d(Cow::Owned(img));
     let topleft = Rect {
         x: 1,
         y: 1,
