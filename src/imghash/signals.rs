@@ -2,7 +2,7 @@ use crate::definitions::Image;
 use image::Luma;
 use std::borrow::Cow;
 
-/// Computes 2d [DCT].
+/// Computes the 2 dimensional [DCT].
 ///
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
@@ -29,7 +29,7 @@ pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     dct1d(&T(Cow::Owned(dct)), rows_ctx.as_ref(), &mut arena)
 }
 
-/// Computes 1d [DCT] for each row.
+/// Computes the 1 dimensional [DCT] for each row.
 ///
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 // TODO: compute inplace
