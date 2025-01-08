@@ -679,7 +679,7 @@ pub fn gray_bench_image(width: u32, height: u32) -> GrayImage {
     black_box(image)
 }
 
-/// Luma<f32> image to use in benchmarks. See comment on `gray_bench_image`.
+/// `Luma<f32>` image to use in benchmarks. See comment on `gray_bench_image`.
 pub fn luma32f_bench_image(width: u32, height: u32) -> Image<Luma<f32>> {
     use image::DynamicImage;
     let img = gray_bench_image(width, height);
