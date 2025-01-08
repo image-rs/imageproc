@@ -4,6 +4,8 @@ use image::{imageops, math::Rect, Luma};
 use std::borrow::Cow;
 
 /// Stores the result of the [`phash`].
+///
+/// Implements [`Hash`] trait.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PHash(Bits64);
 
