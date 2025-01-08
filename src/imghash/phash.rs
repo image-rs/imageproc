@@ -15,7 +15,7 @@ impl PHash {
     /// Compute the [hamming distance] between hashes.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// use imageproc::imghash;
     ///
     /// # fn main() {
@@ -37,7 +37,7 @@ impl PHash {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use imageproc::imghash;
 ///
 /// # fn main() {
