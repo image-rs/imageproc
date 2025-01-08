@@ -10,6 +10,18 @@ pub struct PHash(Bits64);
 impl PHash {
     /// Compute the [hamming distance] between hashes.
     ///
+    /// # Example
+    /// ```
+    /// use imageproc::imghash;
+    ///
+    /// # fn main() {
+    /// # let img1 = image::open("first.png").to_luma32f();
+    /// # let img2 = image::open("second.png").to_luma32f();
+    /// let hash1 = imghash::phash(&img1);
+    /// let hash2 = imghash::phash(&img2);
+    /// dbg!(hash1.hamming_distance(hash2));
+    /// # }
+    ///
     /// [hamming distance]: https://en.wikipedia.org/wiki/Hamming_distance
     pub fn hamming_distance(self, PHash(other): PHash) -> u32 {
         self.0.hamming_distance(other)
@@ -28,8 +40,7 @@ impl PHash {
 /// let img2 = image::open("second.png").to_luma32f();
 /// let hash1 = imghash::phash(&img1);
 /// let hash2 = imghash::phash(&img2);
-/// let dist = hash1.hamming_distance(hash2);
-/// dbg!(dist);
+/// dbg!(hash1.hamming_distance(hash2));
 /// # }
 /// ```
 ///
