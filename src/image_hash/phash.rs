@@ -16,13 +16,13 @@ impl PHash {
     ///
     /// # Example
     /// ```no_run
-    /// use imageproc::imghash;
+    /// use imageproc::image_hash;
     ///
     /// # fn main() {
     /// # let img1 = image::open("first.png").unwrap().to_luma32f();
     /// # let img2 = image::open("second.png").unwrap().to_luma32f();
-    /// let hash1 = imghash::phash(&img1);
-    /// let hash2 = imghash::phash(&img2);
+    /// let hash1 = image_hash::phash(&img1);
+    /// let hash2 = image_hash::phash(&img2);
     /// dbg!(hash1.hamming_distance(hash2));
     /// # }
     /// ```
@@ -38,13 +38,13 @@ impl PHash {
 /// # Example
 ///
 /// ```no_run
-/// use imageproc::imghash;
+/// use imageproc::image_hash;
 ///
 /// # fn main() {
 /// let img1 = image::open("first.png").unwrap().to_luma32f();
 /// let img2 = image::open("second.png").unwrap().to_luma32f();
-/// let hash1 = imghash::phash(&img1);
-/// let hash2 = imghash::phash(&img2);
+/// let hash1 = image_hash::phash(&img1);
+/// let hash2 = image_hash::phash(&img2);
 /// dbg!(hash1.hamming_distance(hash2));
 /// # }
 /// ```
