@@ -3,7 +3,7 @@ name = "imageproc"
 version = "0.26.0"
 authors = ["theotherphil"]
 # note: when changed, also update `msrv` in `.github/workflows/check.yml`
-rust-version = "1.79.0"
+rust-version = "1.80.1"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
@@ -22,20 +22,21 @@ ab_glyph = { version = "0.2.23", default-features = false, features = ["std"] }
 approx = { version = "0.5", default-features = false }
 image = { version = "0.25.0", default-features = false }
 itertools = { version = "0.13.0", default-features = false, features = [
-	"use_std",
+    "use_std",
 ] }
 nalgebra = { version = "0.32", default-features = false, features = ["std"] }
 num = { version = "0.4.1", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = [
-	"std",
-	"std_rng",
+    "std",
+    "std_rng",
 ] }
 rand_distr = { version = "0.4.3", default-features = false }
 rayon = { version = "1.8.0", optional = true, default-features = false }
 sdl2 = { version = "0.36", optional = true, default-features = false, features = [
-	"bundled",
+    "bundled",
 ] }
 katexit = { version = "0.1.4", optional = true, default-features = false }
+rustdct = "0.7.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", default-features = false, features = ["js"] }
@@ -53,6 +54,9 @@ features = ["property-testing", "katexit"]
 [profile.release]
 opt-level = 3
 debug = true
+
+[profile.dev]
+opt-level = 1
 
 [profile.bench]
 opt-level = 3
