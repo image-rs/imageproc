@@ -3,7 +3,7 @@ name = "imageproc"
 version = "0.26.0"
 authors = ["theotherphil"]
 # note: when changed, also update `msrv` in `.github/workflows/check.yml`
-rust-version = "1.79.0"
+rust-version = "1.80.1"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
