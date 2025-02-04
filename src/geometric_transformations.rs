@@ -317,6 +317,85 @@ where
     warp(image, &projection, interpolation, default)
 }
 
+/// Rotates an image clockwise about its center by theta radians without cropping.
+/// The output image has dimensions calculated to fit the entire rotated image.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+pub fn rotate_about_center_no_crop<P>(
+    image: &Image<P>,
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+) -> Image<P>
+where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (width, height) = image.dimensions();
+
+    let cos = theta.cos();
+    let sin = theta.sin();
+
+    let new_width = (height as f32 * sin.abs() + width as f32 * cos.abs()).ceil() as u32;
+    let new_height = (height as f32 * cos.abs() + width as f32 * sin.abs()).ceil() as u32;
+
+    let mut out_img = Image::new(new_width, new_height);
+
+    rotate_about_center_into(image, theta, interpolation, default, &mut out_img);
+
+    out_img
+}
+
+/// Rotates an image clockwise about its center by theta radians, writing to a provided output.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+fn rotate_about_center_into<P>(
+    image: &Image<P>,
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>,
+) where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (w, h) = image.dimensions();
+    let (ow, oh) = out.dimensions();
+    rotate_into(
+        image,
+        (w as f32 / 2.0, h as f32 / 2.0),
+        (ow as f32 / 2.0, oh as f32 / 2.0),
+        theta,
+        interpolation,
+        default,
+        out,
+    )
+}
+
+/// Rotates an image clockwise about the provided center by theta radians, writing to a provided output.
+/// Output pixels whose pre-image lies outside the input image are set to `default`.
+fn rotate_into<P>(
+    image: &Image<P>,
+    center: (f32, f32),
+    out_center: (f32, f32),
+    theta: f32,
+    interpolation: Interpolation,
+    default: P,
+    out: &mut Image<P>,
+) where
+    P: Pixel + Send + Sync,
+    <P as Pixel>::Subpixel: Send + Sync,
+    <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
+{
+    let (cx, cy) = center;
+    let (ocx, ocy) = out_center;
+    let projection = Projection::translate(ocx, ocy)
+        * Projection::rotate(theta)
+        * Projection::translate(-cx, -cy);
+
+    warp_into(image, &projection, interpolation, default, out);
+}
+
 /// Rotates an image 90 degrees clockwise.
 ///
 /// # Examples
@@ -882,7 +961,8 @@ pub enum Interpolation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::Luma;
+    use image::{GrayImage, Luma};
+    use std::f32::consts::PI;
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
@@ -901,7 +981,7 @@ mod tests {
     }
 
     #[test]
-    fn text_rotate_nearest_quarter_turn_clockwise() {
+    fn test_rotate_nearest_quarter_turn_clockwise() {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
@@ -917,7 +997,7 @@ mod tests {
     }
 
     #[test]
-    fn text_rotate_nearest_half_turn_anticlockwise() {
+    fn test_rotate_nearest_half_turn_anticlockwise() {
         let image = gray_image!(
             00, 01, 02;
             10, 11, 12);
