@@ -200,10 +200,10 @@ mod proptests {
             (x2, y2) in (-50..50, -50..50),
             (w2, h2) in (1..50u32, 1..50u32),
         ) {
-            let left = Rect::at(x1, y1).of_size(w1, h1);
-            let right = Rect::at(x2, y2).of_size(w2, h2);
+            let rect1 = Rect::at(x1, y1).of_size(w1, h1);
+            let rect2 = Rect::at(x2, y2).of_size(w2, h2);
 
-            if let Some(intersect) = left.intersect(right) {
+            if let Some(intersect) = rect1.intersect(rect2) {
                 assert!(intersect.width() > 0);
                 assert!(intersect.height() > 0);
             };
