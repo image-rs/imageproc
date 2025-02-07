@@ -52,12 +52,17 @@ pub fn draw_filled_rect_mut<C>(canvas: &mut C, rect: Rect, color: C::Pixel)
 where
     C: Canvas,
 {
+    if canvas.width() == 0 || canvas.height() == 0 {
+        return;
+    }
     let canvas_bounds = Rect::at(0, 0).of_size(canvas.width(), canvas.height());
     if let Some(intersection) = canvas_bounds.intersect(rect) {
         for dy in 0..intersection.height() {
             for dx in 0..intersection.width() {
                 let x = intersection.left() as u32 + dx;
                 let y = intersection.top() as u32 + dy;
+                debug_assert!(x < canvas.width());
+                debug_assert!(y < canvas.height());
                 canvas.draw_pixel(x, y, color);
             }
         }
@@ -136,6 +141,31 @@ mod tests {
         // we're blending in the correct direction only.
         draw_filled_rect_mut(&mut image, Rect::at(2, 2).of_size(1, 1), blue);
         assert_eq!(*image.0.get_pixel(2, 2), blue);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::{proptest_utils::arbitrary_image, rect::Rect};
+    use image::Luma;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_draw_filled_rect_luma(
+            image in arbitrary_image::<Luma<u8>>(0..50, 0..50),
+            (x, y) in (-50..50, -50..50),
+            (w, h) in (1..50u32, 1..50u32),
+            color in 0..255u8,
+        ) {
+            let rect = Rect::at(x, y).of_size(w, h);
+            let color = Luma([color]);
+
+            let out = draw_filled_rect(&image, rect, color);
+            assert_eq!(out.dimensions(), image.dimensions());
+        }
     }
 }
 

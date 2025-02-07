@@ -1,7 +1,5 @@
 //! Basic manipulation of rectangles.
 
-use std::cmp;
-
 /// A rectangular region of non-zero width and height.
 /// # Examples
 /// ```
@@ -62,14 +60,14 @@ impl Rect {
     ///
     /// See the [struct-level documentation](Rect) for examples.
     pub fn bottom(&self) -> i32 {
-        self.top + (self.height as i32) - 1
+        self.top + i32::try_from(self.height).unwrap() - 1
     }
 
     /// Greatest x-coordinate reached by rect.
     ///
     /// See the [struct-level documentation](Rect) for examples.
     pub fn right(&self) -> i32 {
-        self.left + (self.width as i32) - 1
+        self.left + i32::try_from(self.width).unwrap() - 1
     }
 
     /// Width of rect.
@@ -105,21 +103,18 @@ impl Rect {
     /// assert_eq!(r.intersect(s), None);
     /// ```
     pub fn intersect(&self, other: Rect) -> Option<Rect> {
-        let left = cmp::max(self.left, other.left);
-        let top = cmp::max(self.top, other.top);
-        let right = cmp::min(self.right(), other.right());
-        let bottom = cmp::min(self.bottom(), other.bottom());
+        let left = self.left.max(other.left);
+        let top = self.top.max(other.top);
+        let right = self.right().min(other.right());
+        let bottom = self.bottom().min(other.bottom());
 
         if right < left || bottom < top {
             return None;
         }
 
-        Some(Rect {
-            left,
-            top,
-            width: (right - left) as u32 + 1,
-            height: (bottom - top) as u32 + 1,
-        })
+        let width = u32::try_from(right - left).unwrap() + 1;
+        let height = u32::try_from(bottom - top).unwrap() + 1;
+        Some(Rect::at(left, top).of_size(width, height))
     }
 }
 
@@ -187,5 +182,31 @@ mod tests {
         let r = Rect::at(5, 5).of_size(6, 6);
         assert!(r.contains(5f32, 5f32));
         assert!(!r.contains(10.1f32, 10f32));
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_intersect(
+            (x1, y1) in (-50..50, -50..50),
+            (w1, h1) in (1..50u32, 1..50u32),
+
+            (x2, y2) in (-50..50, -50..50),
+            (w2, h2) in (1..50u32, 1..50u32),
+        ) {
+            let left = Rect::at(x1, y1).of_size(w1, h1);
+            let right = Rect::at(x2, y2).of_size(w2, h2);
+
+            if let Some(intersect) = left.intersect(right) {
+                assert!(intersect.width() > 0);
+                assert!(intersect.height() > 0);
+            };
+        }
     }
 }
