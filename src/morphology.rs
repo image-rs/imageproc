@@ -624,7 +624,7 @@ fn mask_reduce<F: Fn(u8, u8) -> u8>(
 ///       255;
 ///       255;
 ///       255
-///     ),  
+///     ),
 ///     0,  1
 /// );
 /// let column_dilated = gray_image!(
@@ -701,7 +701,7 @@ pub fn grayscale_dilate(image: &GrayImage, mask: &Mask) -> GrayImage {
 ///       255;
 ///       255;
 ///       255
-///     ),  
+///     ),
 ///     0,  1
 /// );
 /// let column_eroded = gray_image!(

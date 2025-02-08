@@ -23,11 +23,10 @@ use image::{
 
 use imageproc::contrast::ThresholdType;
 use imageproc::definitions::Image;
-use imageproc::drawing::text_size;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
 use imageproc::kernel::{self};
-use imageproc::rect::{Rect, Region};
+use imageproc::rect::Region;
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
@@ -837,11 +836,11 @@ fn test_draw_text() {
     let text = "Hello world!";
     let scale = 30.0;
     let (x, y) = (50, 100);
-    imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y, scale, &font, text);
+    let size_info =
+        imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y, scale, &font, text);
     compare_to_truth_image(&img, "text.png");
 
-    let (text_w, text_h) = text_size(scale, &font, text);
-    let rect = Rect::at(x, y).of_size(text_w, text_h);
+    let rect = size_info.px_bounds.expect("Text should have a size");
     for (px, py, &p) in img.enumerate_pixels() {
         if !rect.contains(px as i32, py as i32) {
             assert_eq!(p, background);
