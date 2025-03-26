@@ -71,6 +71,9 @@ pub trait Canvas {
     /// should be within `dimensions` - if not then panicking
     /// is a valid implementation behaviour.
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel);
+
+    /// Consumes the canvas and returns the underlying image.
+    fn into_image(self) -> impl GenericImage;
 }
 
 impl<I> Canvas for I
@@ -89,6 +92,10 @@ where
 
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
         self.put_pixel(x, y, color)
+    }
+    
+    fn into_image(self) -> impl GenericImage {
+        self
     }
 }
 
@@ -114,13 +121,17 @@ impl<I: Canvas> Canvas for Blend<I> {
         pix.blend(&color);
         self.0.draw_pixel(x, y, pix);
     }
+    
+    fn into_image(self) -> impl GenericImage {
+        self.0.into_image()
+    }
 }
 
-///
+/// A canvas that only draws pixels where a mask is non-zero.
 pub struct Masked<I, M>{
-    ///
+    /// A canvas to draw on.
     pub inner: I,
-    /// 
+    /// A mask image where non-zero pixels allow drawing.
     pub mask: M,
 }
 
@@ -139,5 +150,9 @@ impl<I: Canvas, M: GenericImage<Pixel = Luma<u8>>> Canvas for Masked<I, M> {
         if self.mask.get_pixel(x, y).0[0] != 0 {
             self.inner.draw_pixel(x, y, color);
         }
+    }
+    
+    fn into_image(self) -> impl GenericImage {
+        self.inner.into_image()
     }
 }

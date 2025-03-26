@@ -1,5 +1,5 @@
-use image::{ImageBuffer, Rgb};
-use imageproc::{drawing::{draw_filled_circle, draw_filled_rect_mut}, rect::Rect};
+use image::{GenericImage, ImageBuffer, Rgb};
+use imageproc::{drawing::{draw_filled_circle, draw_filled_rect_mut, Canvas}, rect::Rect};
 
 fn main() {
     // Load the image
