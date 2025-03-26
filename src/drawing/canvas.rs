@@ -93,7 +93,7 @@ where
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
         self.put_pixel(x, y, color)
     }
-    
+
     fn into_image(self) -> impl GenericImage {
         self
     }
@@ -121,14 +121,14 @@ impl<I: Canvas> Canvas for Blend<I> {
         pix.blend(&color);
         self.0.draw_pixel(x, y, pix);
     }
-    
+
     fn into_image(self) -> impl GenericImage {
         self.0.into_image()
     }
 }
 
 /// A canvas that only draws pixels where a mask is non-zero.
-pub struct Masked<I, M>{
+pub struct Masked<I, M> {
     /// A canvas to draw on.
     pub inner: I,
     /// A mask image where non-zero pixels allow drawing.
@@ -137,7 +137,7 @@ pub struct Masked<I, M>{
 
 impl<I: Canvas, M: Canvas> Masked<I, M> {
     /// Create a new masked canvas.
-    /// 
+    ///
     /// # Panics
     /// If the dimensions of the inner canvas and mask do not match.
     pub fn new(inner: I, mask: M) -> Self {
@@ -162,7 +162,7 @@ impl<I: Canvas, M: GenericImage<Pixel = Luma<u8>>> Canvas for Masked<I, M> {
             self.inner.draw_pixel(x, y, color);
         }
     }
-    
+
     fn into_image(self) -> impl GenericImage {
         self.inner.into_image()
     }
