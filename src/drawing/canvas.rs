@@ -1,4 +1,4 @@
-use image::{GenericImage, GenericImageView, Pixel};
+use image::{GenericImage, GenericImageView, Luma, Pixel};
 
 /// A surface for drawing on - many drawing functions in this
 /// library are generic over a `Canvas` to allow the user to
@@ -98,7 +98,7 @@ where
 /// for an example using this type.
 pub struct Blend<I>(pub I);
 
-impl<I: GenericImage> Canvas for Blend<I> {
+impl<I: Canvas> Canvas for Blend<I> {
     type Pixel = I::Pixel;
 
     fn dimensions(&self) -> (u32, u32) {
@@ -112,6 +112,32 @@ impl<I: GenericImage> Canvas for Blend<I> {
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
         let mut pix = self.0.get_pixel(x, y);
         pix.blend(&color);
-        self.0.put_pixel(x, y, pix);
+        self.0.draw_pixel(x, y, pix);
+    }
+}
+
+///
+pub struct Masked<I, M>{
+    ///
+    pub inner: I,
+    /// 
+    pub mask: M,
+}
+
+impl<I: Canvas, M: GenericImage<Pixel = Luma<u8>>> Canvas for Masked<I, M> {
+    type Pixel = I::Pixel;
+
+    fn dimensions(&self) -> (u32, u32) {
+        self.inner.dimensions()
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        self.inner.get_pixel(x, y)
+    }
+
+    fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
+        if self.mask.get_pixel(x, y).0[0] != 0 {
+            self.inner.draw_pixel(x, y, color);
+        }
     }
 }

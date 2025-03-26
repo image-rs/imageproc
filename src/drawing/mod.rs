@@ -4,7 +4,7 @@ mod bezier;
 pub use self::bezier::{draw_cubic_bezier_curve, draw_cubic_bezier_curve_mut};
 
 mod canvas;
-pub use self::canvas::{Blend, Canvas};
+pub use self::canvas::{Blend, Canvas, Masked};
 
 mod conics;
 pub use self::conics::{
