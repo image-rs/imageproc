@@ -132,7 +132,18 @@ pub struct Masked<I, M>{
     /// A canvas to draw on.
     pub inner: I,
     /// A mask image where non-zero pixels allow drawing.
-    pub mask: M,
+    mask: M,
+}
+
+impl<I: Canvas, M: Canvas> Masked<I, M> {
+    /// Create a new masked canvas.
+    /// 
+    /// # Panics
+    /// If the dimensions of the inner canvas and mask do not match.
+    pub fn new(inner: I, mask: M) -> Self {
+        assert_eq!(inner.dimensions(), mask.dimensions());
+        Masked { inner, mask }
+    }
 }
 
 impl<I: Canvas, M: GenericImage<Pixel = Luma<u8>>> Canvas for Masked<I, M> {
