@@ -132,7 +132,7 @@ pub struct Masked<I, M> {
     /// A canvas to draw on.
     pub inner: I,
     /// A mask image where non-zero pixels allow drawing.
-    mask: M,
+    pub mask: M,
 }
 
 impl<I: Canvas, M: Canvas> Masked<I, M> {
