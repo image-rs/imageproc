@@ -15,7 +15,7 @@ pub struct TextSizeInfo {
     /// whitespace.
     ///
     /// As some fonts have glyphs that extend above or below the line, this is not the same as the `outline_bounds`.
-    /// Coordinates might be negative or exceed the [`outline_bounds`].
+    /// Coordinates might be negative or exceed the [`TextSizeInfo::outline_bounds`].
     pub px_bounds: Option<Rect>,
 
     /// The logical bounding box of the text. Might be [`None`] if the text is empty.
