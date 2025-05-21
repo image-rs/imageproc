@@ -33,7 +33,7 @@ pub use self::rect::{
 };
 
 mod text;
-pub use self::text::{draw_text, draw_text_mut, text_size};
+pub use self::text::{draw_text, draw_text_mut, text_size, text_size_info, TextSizeInfo};
 
 mod fill;
 pub use self::fill::{flood_fill, flood_fill_mut};
