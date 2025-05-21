@@ -45,7 +45,7 @@ If the optional boolean argument parallel is given, match_template will be calle
         let template_y = args[4].parse().unwrap();
         let template_w = args[5].parse().unwrap();
         let template_h = args[6].parse().unwrap();
-        let parallel = args.get(7).map_or(false, |s| s.parse().unwrap());
+        let parallel = args.get(7).is_some_and(|s| s.parse().unwrap());
 
         TemplateMatchingArgs {
             input_path,
