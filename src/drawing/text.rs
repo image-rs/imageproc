@@ -88,6 +88,11 @@ pub fn draw_text_mut<C>(
     let image_width = canvas.width() as i32;
     let image_height = canvas.height() as i32;
 
+    let has_alpha = match C::Pixel::COLOR_MODEL {
+        "RGBA" | "YA" => true,
+        _ => false,
+    };
+
     layout_glyphs(scale, font, text, |g, bb| {
         let x_shift = x + bb.min.x.round() as i32;
         let y_shift = y + bb.min.y.round() as i32;
@@ -98,10 +103,19 @@ pub fn draw_text_mut<C>(
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
                 let image_x = image_x as u32;
                 let image_y = image_y as u32;
-                let pixel = canvas.get_pixel(image_x, image_y);
+                let mut pixel = canvas.get_pixel(image_x, image_y);
                 let gv = gv.clamp(0.0, 1.0);
-                let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
-                canvas.draw_pixel(image_x, image_y, weighted_color);
+
+                if has_alpha {
+                    let mut color = color;
+                    color.apply_with_alpha(|f| f, |g| Clamp::clamp(g.into() * gv));
+
+                    pixel.blend(&color);
+                } else {
+                    pixel = weighted_sum(pixel, color, 1.0 - gv, gv);
+                }
+
+                canvas.draw_pixel(image_x, image_y, pixel);
             }
         })
     });
