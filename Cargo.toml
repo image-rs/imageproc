@@ -13,9 +13,9 @@ homepage = "https://github.com/image-rs/imageproc"
 exclude = [".github/*", "examples/*", "tests/*"]
 
 [features]
-default = ["rayon"]
+default = ["rayon", "image/default"]
 display-window = ["sdl2"]
-rayon = ["dep:rayon"]
+rayon = ["dep:rayon", "image/rayon"]
 
 [dependencies]
 ab_glyph = { version = "0.2.23", default-features = false, features = ["std"] }
