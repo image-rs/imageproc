@@ -98,7 +98,7 @@ jobs:
     # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["1.80.1"] # Don't forget to update the `rust-version` in Cargo.toml as well
+        msrv: ["1.81.0"] # Don't forget to update the `rust-version` in Cargo.toml as well
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4

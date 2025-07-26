@@ -392,7 +392,7 @@ mod methods {
     }
 
     fn square_sum(input: &GrayImage) -> f32 {
-        input.iter().map(|&x| (x as f32 * x as f32)).sum()
+        input.iter().map(|&x| x as f32 * x as f32).sum()
     }
     fn mult_square_sum(a: &GrayImage, b: &GrayImage) -> f32 {
         a.iter()
