@@ -20,7 +20,7 @@ rayon = ["dep:rayon", "image/rayon"]
 [dependencies]
 ab_glyph = { version = "0.2.23", default-features = false, features = ["std"] }
 approx = { version = "0.5", default-features = false }
-image = { version = "0.25.0", default-features = false }
+image = { version = "0.25.6", default-features = false }
 itertools = { version = "0.13.0", default-features = false, features = [
     "use_std",
 ] }
