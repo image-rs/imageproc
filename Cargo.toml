@@ -20,6 +20,7 @@ rayon = ["dep:rayon"]
 [dependencies]
 ab_glyph = { version = "0.2.23", default-features = false, features = ["std"] }
 approx = { version = "0.5", default-features = false }
+image = { version = "0.25.0", default-features = false }
 itertools = { version = "0.13.0", default-features = false, features = [
     "use_std",
 ] }
@@ -36,7 +37,6 @@ sdl2 = { version = "0.36", optional = true, default-features = false, features =
 ] }
 katexit = { version = "0.1.4", optional = true, default-features = false }
 rustdct = "0.7.1"
-image = "0.25.6"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", default-features = false, features = ["js"] }
