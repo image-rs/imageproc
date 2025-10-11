@@ -434,6 +434,15 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
         "image is empty"
     );
 
+    assert!(
+        // assertion 4
+        (padding as usize) <= (usize::MAX / 2) &&
+        (height as usize) <= (usize::MAX - 2 * (padding as usize)),
+        "overflow when calculating required buffer length for height {} and padding {}",
+        height,
+        padding
+    );
+
     let first = image.get_pixel(column, 0)[0] as u32;
     let last = image.get_pixel(column, height - 1)[0] as u32;
 
@@ -448,7 +457,7 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
     //      Using checked indexing here makes this function take 1.8x longer, as measured by bench_column_running_sum
     //  Correctness
     //      column is in bounds due to assertion 2.
-    //      height + padding - 1 < buffer.len() due to assertions 1 and 3.
+    //      height + padding - 1 < buffer.len() due to assertions 1, 3 and 4.
     unsafe {
         for y in 0..height {
             sum += image.unsafe_get_pixel(column, y)[0] as u32;
