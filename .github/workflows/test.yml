@@ -76,7 +76,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
-        toolchain: ["${{ vars.needs.outputs.nightly }}"]
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       # if your project needs OpenSSL, uncomment this to fix Windows builds.
       # it's commented out by default as the install command takes 5-10m.
