@@ -30,6 +30,7 @@ jobs:
       nightly_clippy: nightly-2024-11-15
       msrv: ${{ steps.variables.outputs.msrv }}
     steps:
+      - uses: actions/checkout@v4
       - id: variables
         run: |
           pip install toml-cli==0.8.2
