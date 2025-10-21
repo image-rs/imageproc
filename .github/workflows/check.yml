@@ -30,9 +30,9 @@ jobs:
       nightly_clippy: nightly-2024-11-15
       msrv: ${{ steps.variables.outputs.msrv }}
     steps:
-      - run: pip install toml-cli
       - id: variables
         run: |
+          pip install toml-cli
           echo "msrv=$(toml-cli get Cargo.toml package.rust-version)" >> "$GITHUB_OUTPUT"
   fmt:
     needs: vars
