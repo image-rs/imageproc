@@ -5,7 +5,7 @@ permissions:
   contents: read
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
   schedule:
     - cron:  '7 7 * * *'
@@ -14,10 +14,21 @@ concurrency:
   cancel-in-progress: true
 name: rolling
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    # https://rust-lang.github.io/rustup-components-history/
+    outputs:
+      nightly: nightly-2025-10-21
+    steps:
+      - run: echo "dummy job"
   # https://twitter.com/mycoliza/status/1571295690063753218
   nightly:
+    needs: vars
     runs-on: ubuntu-latest
-    name: ubuntu / nightly
+    name: ubuntu / ${{ matrix.toolchain }}
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,8 +47,12 @@ jobs:
     # of this crate will generally use the latest available crates. This is subject to the standard
     # Cargo semver rules (i.e cargo does not update to a new major version unless explicitly told
     # to).
+    needs: vars
     runs-on: ubuntu-latest
-    name: ubuntu / nightly / updated
+    name: ubuntu / ${{ matrix.toolchain }} / updated
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     # There's no point running this if no Cargo.lock was checked in in the first place, since we'd
     # just redo what happened in the regular test job. Unfortunately, hashFiles only works in if on
     # steps, so we repeat it.
@@ -47,7 +62,9 @@ jobs:
           submodules: true
       - name: Install nightly
         if: hashFiles('Cargo.lock') != ''
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo update
         if: hashFiles('Cargo.lock') != ''
         run: cargo update

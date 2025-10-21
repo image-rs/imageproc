@@ -9,19 +9,27 @@ permissions:
   contents: read
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 name: test
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    # https://rust-lang.github.io/rustup-components-history/
+    outputs:
+      nightly: nightly-2025-10-21
+    steps:
+      - run: echo "dummy job"
   required:
+    needs: vars
     runs-on: ubuntu-latest
     name: ubuntu / ${{ matrix.toolchain }}
     strategy:
       matrix:
-        toolchain: [nightly]
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,26 +49,34 @@ jobs:
       - name: cargo test --doc
         run: cargo test --locked --all-features --doc
   direct-minimal:
+    needs: vars
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     runs-on: ubuntu-latest
-    name: ubuntu / nightly / direct-minimal-versions
+    name: ubuntu / ${{ matrix.toolchain }} / direct-minimal-versions
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo update -Zdirect-minimal-versions
         run: cargo update -Zdirect-minimal-versions
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
   os-check:
     # run cargo test on mac and windows
+    needs: vars
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / nightly
+    name: ${{ matrix.os }} / ${{ matrix.toolchain }}
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       # if your project needs OpenSSL, uncomment this to fix Windows builds.
       # it's commented out by default as the install command takes 5-10m.
@@ -71,8 +87,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Setup cmake
+        if: matrix.os == 'macos-latest'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.6.0'
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo generate-lockfile
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile

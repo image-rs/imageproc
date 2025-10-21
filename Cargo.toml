@@ -2,8 +2,7 @@
 name = "imageproc"
 version = "0.26.0"
 authors = ["theotherphil"]
-# note: when changed, also update `msrv` in `.github/workflows/check.yml`
-rust-version = "1.80.1"
+rust-version = "1.81.0"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
@@ -32,7 +31,7 @@ rand = { version = "0.8.5", default-features = false, features = [
 ] }
 rand_distr = { version = "0.4.3", default-features = false }
 rayon = { version = "1.8.0", optional = true, default-features = false }
-sdl2 = { version = "0.36", optional = true, default-features = false, features = [
+sdl2 = { version = "0.38.0", optional = true, default-features = false, features = [
     "bundled",
 ] }
 katexit = { version = "0.1.4", optional = true, default-features = false }
@@ -49,7 +48,7 @@ wasm-bindgen-test = "0.3.38"
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358
 # all-features = true
-features = ["property-testing", "katexit"]
+features = ["katexit"]
 
 [profile.release]
 opt-level = 3

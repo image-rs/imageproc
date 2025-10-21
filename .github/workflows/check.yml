@@ -5,7 +5,8 @@
 # - doc: checks that the code can be documented without errors
 # - hack: check combinations of feature flags
 # - msrv: check that the msrv specified in the crate is correct
-# - semver: check API changes for semver violations.
+# - wasm: check wasm target
+# - semver: check API changes for semver violations
 permissions:
   contents: read
 # This configuration allows maintainers of this repo to create a branch and pull request based on
@@ -13,7 +14,7 @@ permissions:
 # built once.
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
 # If new code is pushed to a PR branch, then cancel in progress workflows for that PR. Ensures that
 # we don't waste CI time, and returns results quicker https://github.com/jonhoo/rust-ci-conf/pull/5
@@ -22,20 +23,41 @@ concurrency:
   cancel-in-progress: true
 name: check
 jobs:
-  fmt:
+  vars:
     runs-on: ubuntu-latest
-    name: stable / fmt
+    # https://rust-lang.github.io/rustup-components-history/
+    outputs:
+      nightly: nightly-2025-10-21
+      stable: 1.90.0
+      msrv: ${{ steps.variables.outputs.msrv }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: variables
+        run: |
+          pip install toml-cli==0.8.2
+          msrv=$(toml get --toml-path=Cargo.toml package.rust-version)
+          echo "msrv=${msrv}"
+          echo "msrv=${msrv}" >> "$GITHUB_OUTPUT"
+  fmt:
+    needs: vars
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.stable }}"]
+    name: ${{ matrix.toolchain }} / fmt
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ matrix.toolchain }}
           components: rustfmt
       - name: cargo fmt --check
         run: cargo fmt --check
   clippy:
+    needs: vars
     runs-on: ubuntu-latest
     name: ${{ matrix.toolchain }} / clippy
     permissions:
@@ -44,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [nightly-2024-11-15]
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,14 +84,20 @@ jobs:
     # run docs generation on nightly rather than stable. This enables features like
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
+    needs: vars
     runs-on: ubuntu-latest
-    name: nightly / doc
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
+    name: ${{ matrix.toolchain }} / doc
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo doc
         run: cargo doc --no-deps --all-features
         env:
@@ -77,14 +105,20 @@ jobs:
   hack:
     # cargo-hack checks combinations of feature flags to ensure that features are all additive
     # which is required for feature unification
+    needs: vars
     runs-on: ubuntu-latest
-    name: ubuntu / stable / features
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.stable }}"]
+    name: ubuntu / ${{ matrix.toolchain }} / features
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
@@ -92,24 +126,41 @@ jobs:
       - name: cargo hack
         run: cargo hack --feature-powerset check
   msrv:
-    # check that we can build using the minimal rust version that is specified by this crate
+    needs: vars
     runs-on: ubuntu-latest
-    # we use a matrix here just because env can't be used in job names
-    # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["1.80.1"] # Don't forget to update the `rust-version` in Cargo.toml as well
+        msrv: ["${{ needs.vars.outputs.msrv }}"]
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Install ${{ needs.vars.outputs.nightly }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ needs.vars.outputs.nightly }}
+      # Generate Cargo.lock with minimal versions
+      - name: Update dependencies to minimal versions
+        run: cargo +nightly update -Zdirect-minimal-versions
       - name: Install ${{ matrix.msrv }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.msrv }}
-      - name: cargo +${{ matrix.msrv }} check
-        run: cargo check
+      - run: cargo +${{ matrix.msrv }} check --locked
+        env:
+          RUSTFLAGS: -D warnings
+  wasm:
+    needs: vars
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ needs.vars.outputs.stable }}
+          targets: wasm32-unknown-unknown
+      - name: cargo check
+        run: cargo check --target wasm32-unknown-unknown
         env:
           RUSTFLAGS: -D warnings
   semver:
