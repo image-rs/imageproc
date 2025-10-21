@@ -32,7 +32,7 @@ rand = { version = "0.8.5", default-features = false, features = [
 ] }
 rand_distr = { version = "0.4.3", default-features = false }
 rayon = { version = "1.8.0", optional = true, default-features = false }
-sdl2 = { version = "0.36", optional = true, default-features = false, features = [
+sdl2 = { version = "0.38.0", optional = true, default-features = false, features = [
     "bundled",
 ] }
 katexit = { version = "0.1.4", optional = true, default-features = false }
