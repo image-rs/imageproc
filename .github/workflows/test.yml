@@ -88,6 +88,7 @@ jobs:
         with:
           submodules: true
       - name: Setup cmake
+        if: matrix.os == 'macos-latest'
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.6.0'
