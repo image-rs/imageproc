@@ -38,7 +38,7 @@ katexit = { version = "0.1.4", optional = true, default-features = false }
 rustdct = "0.7.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.0", default-features = false, features = ["js"]}
+getrandom = { version = "0.2.0", default-features = false, features = ["js"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
