@@ -49,7 +49,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
+      - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: ["${{ needs.vars.outputs.stable }}"]
+        toolchain: ["${{ needs.vars.outputs.msrv }}"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,7 +136,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install Rust nightly
+      - name: Install ${{ needs.vars.outputs.nightly }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ needs.vars.outputs.nightly }}
