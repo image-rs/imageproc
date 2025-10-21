@@ -90,7 +90,7 @@ jobs:
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
-          toolhain: ${{ matrix.toolchain }}
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo generate-lockfile
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
