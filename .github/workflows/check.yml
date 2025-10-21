@@ -27,7 +27,7 @@ jobs:
     outputs:
       nightly: nightly
       stable: 1.90.0
-      nightly_clippy: nightly-2024-11-15
+      clippy_channel: nightly-2024-11-15
       msrv: ${{ steps.variables.outputs.msrv }}
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
         run: |
           pip install toml-cli==0.8.2
           msrv=$(toml get --toml-path=Cargo.toml package.rust-version)
-          echo "${msrv}"
+          echo "msrv=${msrv}"
           echo "msrv=${msrv}" >> "$GITHUB_OUTPUT"
   fmt:
     needs: vars
@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: ["${{ needs.vars.outputs.nightly_clippy }}"]
+        toolchain: ["${{ needs.vars.outputs.clippy_channel }}"]
     steps:
       - uses: actions/checkout@v4
         with:
