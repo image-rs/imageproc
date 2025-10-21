@@ -24,6 +24,7 @@ name: check
 jobs:
   vars:
     runs-on: ubuntu-latest
+    # https://rust-lang.github.io/rustup-components-history/
     outputs:
       nightly: nightly-2025-10-21
       stable: 1.90.0
