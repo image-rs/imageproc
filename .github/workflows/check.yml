@@ -28,7 +28,7 @@ jobs:
       nightly: nightly
       stable: stable
       nightly_clippy: nightly-2024-11-15
-      msrv: 1.80.1
+      msrv: 1.80.1 # Don't forget to update the `rust-version` in Cargo.toml as well
     steps:
       - name: Dummy job
         run: echo "running dummy job"
@@ -123,22 +123,26 @@ jobs:
     # check that we can build using the minimal rust version that is specified by this crate
     needs: vars
     runs-on: ubuntu-latest
-    # we use a matrix here just because env can't be used in job names
-    # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["${{ needs.vars.outputs.msrv }}"] # Don't forget to update the `rust-version` in Cargo.toml as well
+        msrv: ["${{ needs.vars.outputs.msrv }}"]
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ needs.vars.outputs.nightly }}
+      # Generate Cargo.lock with minimal versions
+      - name: Update dependencies to minimal versions
+        run: cargo +nightly update -Zdirect-minimal-versions
       - name: Install ${{ matrix.msrv }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.msrv }}
-      - name: cargo +${{ matrix.msrv }} check
-        run: cargo check
+      - run: cargo +${{ matrix.msrv }} check --locked
         env:
           RUSTFLAGS: -D warnings
   semver:
