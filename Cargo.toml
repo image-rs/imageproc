@@ -48,7 +48,7 @@ wasm-bindgen-test = "0.3.38"
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358
 # all-features = true
-features = ["property-testing", "katexit"]
+features = ["katexit"]
 
 [profile.release]
 opt-level = 3
