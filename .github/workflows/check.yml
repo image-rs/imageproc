@@ -28,10 +28,12 @@ jobs:
       nightly: nightly
       stable: stable
       nightly_clippy: nightly-2024-11-15
+      msrv: ${{ steps.variables.outputs.msrv }}
     steps:
       - run: pip install toml-cli
-      - name: Extract rust-version from Cargo.toml
-        run: echo "msrv=$(toml-cli get Cargo.toml package.rust-version)" >> $GITHUB_OUTPUT
+      - id: variables
+        run: |
+          echo "msrv=$(toml-cli get Cargo.toml package.rust-version)" >> $GITHUB_OUTPUT
   fmt:
     needs: vars
     runs-on: ubuntu-latest
