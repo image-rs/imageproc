@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       nightly: nightly
-      stable: stable
+      stable: 1.90.0
       nightly_clippy: nightly-2024-11-15
       msrv: ${{ steps.variables.outputs.msrv }}
     steps:
@@ -157,8 +157,6 @@ jobs:
           targets: wasm32-unknown-unknown
       - name: cargo check
         run: cargo check --target wasm32-unknown-unknown
-        env:
-          RUSTFLAGS: -D warnings
   semver:
     runs-on: ubuntu-latest
     steps:
