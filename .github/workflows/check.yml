@@ -22,20 +22,33 @@ concurrency:
   cancel-in-progress: true
 name: check
 jobs:
-  fmt:
+  vars:
     runs-on: ubuntu-latest
-    name: stable / fmt
+    outputs:
+      nightly: nightly
+      stable: stable
+      nightly_clippy: nightly-2024-11-15
+      msrv: 1.80.1
+  fmt:
+    needs: vars
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.stable }}"]
+    name: ${{ matrix.toolchain }} / fmt
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ matrix.toolchain }}
           components: rustfmt
       - name: cargo fmt --check
         run: cargo fmt --check
   clippy:
+    needs: vars
     runs-on: ubuntu-latest
     name: ${{ matrix.toolchain }} / clippy
     permissions:
@@ -44,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [nightly-2024-11-15]
+        toolchain: ["${{ needs.vars.outputs.nightly_clippy }}"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,14 +75,20 @@ jobs:
     # run docs generation on nightly rather than stable. This enables features like
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
+    needs: vars
     runs-on: ubuntu-latest
-    name: nightly / doc
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
+    name: ${{ matrix.toolchain }} / doc
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo doc
         run: cargo doc --no-deps --all-features
         env:
@@ -77,14 +96,20 @@ jobs:
   hack:
     # cargo-hack checks combinations of feature flags to ensure that features are all additive
     # which is required for feature unification
+    needs: vars
     runs-on: ubuntu-latest
-    name: ubuntu / stable / features
+    strategy:
+      matrix:
+        toolchain: ["${{ needs.vars.outputs.stable }}"]
+    name: ubuntu / ${{ matrix.toolchain }} / features
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
@@ -93,12 +118,13 @@ jobs:
         run: cargo hack --feature-powerset check
   msrv:
     # check that we can build using the minimal rust version that is specified by this crate
+    needs: vars
     runs-on: ubuntu-latest
     # we use a matrix here just because env can't be used in job names
     # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["1.80.1"] # Don't forget to update the `rust-version` in Cargo.toml as well
+        msrv: ["${{ needs.vars.outputs.msrv }}"] # Don't forget to update the `rust-version` in Cargo.toml as well
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4
