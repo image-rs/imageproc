@@ -29,6 +29,9 @@ jobs:
       stable: stable
       nightly_clippy: nightly-2024-11-15
       msrv: 1.80.1
+    steps:
+      - name: Dummy job
+        run: echo "running dummy job"
   fmt:
     needs: vars
     runs-on: ubuntu-latest
