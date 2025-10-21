@@ -25,9 +25,8 @@ jobs:
   vars:
     runs-on: ubuntu-latest
     outputs:
-      nightly: nightly
+      nightly: nightly-2025-10-21
       stable: 1.90.0
-      clippy_channel: nightly-2024-11-15
       msrv: ${{ steps.variables.outputs.msrv }}
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: ["${{ needs.vars.outputs.clippy_channel }}"]
+        toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       - uses: actions/checkout@v4
         with:
