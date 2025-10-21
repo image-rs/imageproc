@@ -5,7 +5,8 @@
 # - doc: checks that the code can be documented without errors
 # - hack: check combinations of feature flags
 # - msrv: check that the msrv specified in the crate is correct
-# - semver: check API changes for semver violations.
+# - wasm: check wasm target
+# - semver: check API changes for semver violations
 permissions:
   contents: read
 # This configuration allows maintainers of this repo to create a branch and pull request based on
@@ -65,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: ["${{ needs.vars.outputs.nightly }}"]
+        toolchain: ["${{ needs.vars.outputs.stable }}"]
     steps:
       - uses: actions/checkout@v4
         with:
