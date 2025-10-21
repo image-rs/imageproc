@@ -33,7 +33,7 @@ jobs:
       - id: variables
         run: |
           pip install toml-cli
-          msrv=$(toml-cli get Cargo.toml package.rust-version)
+          msrv=$(toml get Cargo.toml package.rust-version)
           echo "${msrv}"
           echo "msrv=${msrv}" >> "$GITHUB_OUTPUT"
   fmt:
