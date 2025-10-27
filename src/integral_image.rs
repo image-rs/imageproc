@@ -412,50 +412,51 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// ```
 pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
     // TODO: faster, more formats
-    let (width, height) = image.dimensions();
+
+    assert!(image.height() > 0, "image is empty");
     assert!(
-        // assertion 1
-        buffer.len() >= height as usize + 2 * padding as usize,
+        // assertion `a`
+        column < image.width(),
+        "column out of bounds: {} >= {}",
+        column,
+        image.width()
+    );
+
+    let height = usize::try_from(image.height()).unwrap();
+    let padding = usize::try_from(padding).unwrap();
+    assert!(
+        buffer.len() >= height + 2 * padding,
         "Buffer length {} is less than {} + 2 * {}",
         buffer.len(),
         height,
         padding
     );
-    assert!(
-        // assertion 2
-        column < width,
-        "column out of bounds: {} >= {}",
-        column,
-        width
-    );
-    assert!(
-        // assertion 3
-        height > 0,
-        "image is empty"
-    );
+    let buffer = &mut buffer[..height + 2 * padding];
+    let (head, rest) = buffer.split_at_mut(padding);
+    let (middle, tail) = rest.split_at_mut(height);
+    debug_assert_eq!(padding, head.len());
+    debug_assert_eq!(height, middle.len(),);
+    debug_assert_eq!(padding, tail.len());
 
     let first = image.get_pixel(column, 0)[0] as u32;
-    let last = image.get_pixel(column, height - 1)[0] as u32;
+    let last = image.get_pixel(column, image.height() - 1)[0] as u32;
 
     let mut sum = 0;
-
-    for b in &mut buffer[..padding as usize] {
+    for b in head {
         sum += first;
         *b = sum;
     }
-    // JUSTIFICATION:
-    //  Benefit
-    //      Using checked indexing here makes this function take 1.8x longer, as measured by bench_column_running_sum
-    //  Correctness
-    //      column is in bounds due to assertion 2.
-    //      height + padding - 1 < buffer.len() due to assertions 1 and 3.
-    unsafe {
-        for y in 0..height {
-            sum += image.unsafe_get_pixel(column, y)[0] as u32;
-            *buffer.get_unchecked_mut(y as usize + padding as usize) = sum;
-        }
+    for (y, b) in (0..image.height()).zip(middle) {
+        // JUSTIFICATION:
+        //  Benefit
+        //      Using checked indexing here makes this function take 1.53x longer, as measured by bench_column_running_sum
+        //  Correctness
+        //      column is in bounds due to assertion `a`.
+        //      y is in bounds by construction.
+        sum += unsafe { image.unsafe_get_pixel(column, y) }[0] as u32;
+        *b = sum;
     }
-    for b in &mut buffer[padding as usize + height as usize..] {
+    for b in tail {
         sum += last;
         *b = sum;
     }
@@ -551,6 +552,28 @@ mod tests {
         assert_eq!(sum_image_pixels(&integral, 1, 1, 1, 1), [10, 11, 12]);
     }
 
+    #[test]
+    fn test_column_running_sum() {
+        let get_column_running_sum = |image: &GrayImage, column, padding| -> Vec<u32> {
+            let mut buffer = vec![0u32; (image.height() + 2 * padding) as usize];
+            column_running_sum(image, column, &mut buffer, padding);
+            buffer
+        };
+
+        let padding = 0;
+        let img = gray_image!(type: u8,
+            1, 2;
+            3, 4;
+            5, 6
+        );
+        assert_eq!(get_column_running_sum(&img, 0, padding), [1, 4, 9,]);
+        assert_eq!(get_column_running_sum(&img, 1, padding), [2, 6, 12,]);
+
+        let padding = 1;
+        assert_eq!(get_column_running_sum(&img, 0, padding), [1, 2, 5, 10, 15]);
+        assert_eq!(get_column_running_sum(&img, 1, padding), [2, 4, 8, 14, 20]);
+    }
+
     /// Simple implementation of integral_image to validate faster versions against.
     pub fn integral_image_ref<I>(image: &I) -> Image<Luma<u32>>
     where
@@ -594,6 +617,65 @@ mod proptests {
             let actual = integral_image(&image);
 
             assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn proptest_column_running_sum(
+            image in arbitrary_image::<Luma<u8>>(0..10, 1..10),
+            padding in 0..10u32,
+        ) {
+            assert!(image.height() > 0);
+            let mut actual = vec![0u32; (image.height() + 2 * padding) as usize];
+            let mut expected = actual.clone();
+
+            for col in 0..image.width() {
+                actual.fill(0);
+                expected.fill(0);
+
+                column_running_sum(&image, col, &mut actual, padding);
+                column_running_sum_reference(&image, col, &mut expected, padding);
+                assert_eq!(actual, expected);
+            }
+        }
+    }
+
+    pub fn column_running_sum_reference(
+        image: &GrayImage,
+        column: u32,
+        buffer: &mut [u32],
+        padding: u32,
+    ) {
+        let (width, height) = image.dimensions();
+        assert!(
+            buffer.len() >= height as usize + 2 * padding as usize,
+            "Buffer length {} is less than {} + 2 * {}",
+            buffer.len(),
+            height,
+            padding
+        );
+        assert!(
+            column < width,
+            "column out of bounds: {} >= {}",
+            column,
+            width
+        );
+        assert!(height > 0, "image is empty");
+
+        let first = image.get_pixel(column, 0)[0] as u32;
+        let last = image.get_pixel(column, height - 1)[0] as u32;
+
+        let mut sum = 0;
+        for b in &mut buffer[..padding as usize] {
+            sum += first;
+            *b = sum;
+        }
+        for y in 0..height {
+            sum += image.get_pixel(column, y)[0] as u32;
+            buffer[y as usize + padding as usize] = sum;
+        }
+        for b in &mut buffer[padding as usize + height as usize..] {
+            sum += last;
+            *b = sum;
         }
     }
 }
