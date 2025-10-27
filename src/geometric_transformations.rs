@@ -961,8 +961,7 @@ pub enum Interpolation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GrayImage, Luma};
-    use std::f32::consts::PI;
+    use image::Luma;
 
     #[test]
     fn test_rotate_nearest_zero_radians() {
