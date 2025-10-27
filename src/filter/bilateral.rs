@@ -90,6 +90,7 @@ where
 /// let filtered = bilateral_filter(&image, 2, 3., GaussianEuclideanColorDistance::new(10.0));
 /// ```
 #[must_use = "the function does not modify the original image"]
+#[allow(clippy::doc_overindented_list_items)]
 pub fn bilateral_filter<I, P, C>(
     image: &I,
     radius: u8,
