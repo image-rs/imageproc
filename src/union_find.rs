@@ -189,7 +189,7 @@ mod benches {
         let num_edges = 20 * num_nodes;
 
         let mut rng: StdRng = SeedableRng::seed_from_u64(1);
-        let uniform = Uniform::new(0, num_nodes);
+        let uniform = Uniform::new(0, num_nodes).unwrap();
 
         let mut forest = DisjointSetForest::new(num_nodes);
         b.iter(|| {
