@@ -2,7 +2,7 @@
 
 use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
 use image::Pixel;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{SeedableRng, rngs::{StdRng}};
 use rand_distr::{Distribution, Normal, Uniform};
 
 /// Adds independent additive Gaussian noise to all channels
@@ -49,7 +49,7 @@ where
     P: Pixel + HasBlack + HasWhite,
 {
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
-    let uniform = Uniform::new(0.0, 1.0);
+    let uniform = Uniform::new(0.0, 1.0).unwrap();
 
     for p in image.pixels_mut() {
         if uniform.sample(&mut rng) > rate {
