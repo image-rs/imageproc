@@ -5,7 +5,7 @@ use crate::{
     point::Point,
 };
 use image::{GenericImageView, GrayImage};
-use rand::{SeedableRng, distr::Distribution, rngs::StdRng};
+use rand::{distr::Distribution, rngs::StdRng, SeedableRng};
 
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different

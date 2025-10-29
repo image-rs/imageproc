@@ -2,7 +2,7 @@
 
 use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
 use image::Pixel;
-use rand::{SeedableRng, rngs::{StdRng}};
+use rand::{rngs::StdRng, SeedableRng};
 use rand_distr::{Distribution, Normal, Uniform};
 
 /// Adds independent additive Gaussian noise to all channels
