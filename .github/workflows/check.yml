@@ -140,12 +140,12 @@ jobs:
           declared_msrv="${{ needs.vars.outputs.msrv }}"
 
           if [ "$computed_msrv" != "$declared_msrv" ]; then
-            echo "The MSRV computed by 'cargo msrv' ('$computed_msrv') does not match the version declared in Cargo.toml ('$declared_msrv')."
-            echo "Please update the 'rust-version' in Cargo.toml to '$computed_msrv'."
+            echo "The MSRV computed by cargo msrv (\"$computed_msrv\") does not match the version declared in Cargo.toml (\"$declared_msrv\")."
+            echo "Please update the \"rust-version\" in Cargo.toml to \"$computed_msrv\"."
             exit 1
           else
             echo "MSRV consistency check passed."
-            echo "Computed MSRV '$computed_msrv' matches declared MSRV '$declared_msrv'."
+            echo "Computed MSRV \"$computed_msrv\" matches declared MSRV \"$declared_msrv\"."
           fi
   wasm:
     needs: vars
