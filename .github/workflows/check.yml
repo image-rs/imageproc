@@ -4,7 +4,7 @@
 # - clippy: checks that the code does not contain any clippy warnings
 # - doc: checks that the code can be documented without errors
 # - hack: check combinations of feature flags
-# - msrv: check that the msrv specified in the crate is correct
+# - msrv: check that the msrv specified in the crate is correct and minimal
 # - wasm: check wasm target
 # - semver: check API changes for semver violations
 permissions:
@@ -47,8 +47,6 @@ jobs:
     name: ${{ matrix.toolchain }} / fmt
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -69,8 +67,6 @@ jobs:
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -92,8 +88,6 @@ jobs:
     name: ${{ matrix.toolchain }} / doc
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -113,8 +107,6 @@ jobs:
     name: ubuntu / ${{ matrix.toolchain }} / features
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -128,28 +120,33 @@ jobs:
   msrv:
     needs: vars
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        msrv: ["${{ needs.vars.outputs.msrv }}"]
-    name: ubuntu / ${{ matrix.msrv }}
+    name: ubuntu / msrv / ${{ needs.vars.outputs.msrv }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: Install ${{ needs.vars.outputs.nightly }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ needs.vars.outputs.nightly }}
-      # Generate Cargo.lock with minimal versions
-      - name: Update dependencies to minimal versions
+      - name: Generate Cargo.lock with minimal versions
         run: cargo +nightly update -Zdirect-minimal-versions
-      - name: Install ${{ matrix.msrv }}
-        uses: dtolnay/rust-toolchain@master
+      - uses: taiki-e/install-action@v2.62.41
         with:
-          toolchain: ${{ matrix.msrv }}
-      - run: cargo +${{ matrix.msrv }} check --locked
-        env:
-          RUSTFLAGS: -D warnings
+          tool: cargo-msrv@0.18.4
+      - name: Verify MSRV
+        run: |
+          computed_msrv=$(cargo msrv find --output-format minimal -- cargo check --ignore-rust-version)
+
+          # The MSRV explicitly declared in Cargo.toml
+          declared_msrv="${{ needs.vars.outputs.msrv }}"
+
+          if [ "$computed_msrv" != "$declared_msrv" ]; then
+            echo "The MSRV computed by cargo msrv (\"$computed_msrv\") does not match the version declared in Cargo.toml (\"$declared_msrv\")."
+            echo "Please update the \"rust-version\" in Cargo.toml to \"$computed_msrv\"."
+            exit 1
+          else
+            echo "MSRV consistency check passed."
+            echo "Computed MSRV \"$computed_msrv\" matches declared MSRV \"$declared_msrv\"."
+          fi
   wasm:
     needs: vars
     runs-on: ubuntu-latest

@@ -2,7 +2,7 @@
 name = "imageproc"
 version = "0.26.0"
 authors = ["theotherphil"]
-rust-version = "1.85.0"
+rust-version = "1.82.0"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
