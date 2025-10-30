@@ -49,7 +49,7 @@ where
     P: Pixel + HasBlack + HasWhite,
 {
     let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
-    let uniform = Uniform::new(0.0, 1.0);
+    let uniform = Uniform::new(0.0, 1.0).unwrap();
 
     for p in image.pixels_mut() {
         if uniform.sample(&mut rng) > rate {

@@ -55,10 +55,10 @@ where
         for (i, c) in pix.channels().iter().enumerate() {
             let (current_min, current_max) = &mut ranges[i];
 
-            if current_min.map_or(true, |x| c < x) {
+            if current_min.is_none_or(|x| c < x) {
                 *current_min = Some(c);
             }
-            if current_max.map_or(true, |x| c > x) {
+            if current_max.is_none_or(|x| c > x) {
                 *current_max = Some(c);
             }
         }

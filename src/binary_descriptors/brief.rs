@@ -231,7 +231,7 @@ pub fn brief(
     } else {
         // generate a set of test pairs within a 31x31 grid with a Gaussian bias (sigma = 6.6)
         let test_pair_distribution = Normal::new(BRIEF_PATCH_RADIUS as f32 + 1.0, 6.6).unwrap();
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut test_pairs: Vec<TestPair> = Vec::with_capacity(length);
         while test_pairs.len() < length {
             let (x0, y0, x1, y1) = (
@@ -330,12 +330,12 @@ mod benches {
     #[ignore]
     fn bench_brief_random_test_pairs_1000_keypoints(b: &mut Bencher) {
         let image = gray_bench_image(640, 480);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let keypoints = (0..1000)
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24..image.width() - 24),
-                    rng.gen_range(24..image.height() - 24),
+                    rng.random_range(24..image.width() - 24),
+                    rng.random_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();
@@ -348,12 +348,12 @@ mod benches {
     #[ignore]
     fn bench_brief_fixed_test_pairs_1000_keypoints(b: &mut Bencher) {
         let image = gray_bench_image(640, 480);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let keypoints = (0..1000)
             .map(|_| {
                 Point::new(
-                    rng.gen_range(24..image.width() - 24),
-                    rng.gen_range(24..image.height() - 24),
+                    rng.random_range(24..image.width() - 24),
+                    rng.random_range(24..image.height() - 24),
                 )
             })
             .collect::<Vec<Point<u32>>>();
