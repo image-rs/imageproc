@@ -21,7 +21,7 @@ use image::{
     DynamicImage, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage,
 };
 
-use imageproc::contrast::ThresholdType;
+use imageproc::contrast::{AdaptiveThresholdType, ThresholdType};
 use imageproc::definitions::Image;
 use imageproc::drawing::text_size;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
@@ -493,7 +493,7 @@ fn test_gaussian_blur_stdev_10() {
 fn test_adaptive_threshold() {
     use imageproc::contrast::adaptive_threshold;
     compare_to_truth("zebra.png", "zebra_adaptive_threshold.png", |image| {
-        adaptive_threshold(image, 41, 0)
+        adaptive_threshold(image, 41, 0, AdaptiveThresholdType::Mean)
     });
 }
 
