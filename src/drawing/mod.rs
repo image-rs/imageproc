@@ -32,7 +32,10 @@ pub use self::rect::{
     draw_filled_rect, draw_filled_rect_mut, draw_hollow_rect, draw_hollow_rect_mut,
 };
 
+#[cfg(feature = "ab_glyph")]
 mod text;
+
+#[cfg(feature = "ab_glyph")]
 pub use self::text::{draw_text, draw_text_mut, text_size};
 
 mod fill;
