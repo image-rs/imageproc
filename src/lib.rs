@@ -37,7 +37,7 @@ pub mod gradients;
 pub mod haar;
 pub mod hog;
 pub mod hough;
-#[cfg(feature = "rustdct")]
+#[cfg(feature = "image_hash")]
 pub mod image_hash;
 pub mod integral_image;
 pub mod kernel;
