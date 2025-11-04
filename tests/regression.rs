@@ -952,7 +952,7 @@ fn test_bilateral_filter() {
 }
 
 #[test]
-#[cfg(feature = "ab_glyph")]
+#[cfg(feature = "text")]
 fn test_draw_text() {
     let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
     let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
