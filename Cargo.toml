@@ -46,6 +46,10 @@ assert_approx_eq = "1.1.0"
 proptest = "1.4.0"
 wasm-bindgen-test = "0.3.38"
 
+[build-dependencies]
+cargo_metadata = "0.23"
+semver = "1.0.27"
+
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358
 # all-features = true
