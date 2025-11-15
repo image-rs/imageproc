@@ -46,55 +46,94 @@ pub fn adaptive_threshold(image: &GrayImage, block_radius: u32, delta: i32) -> G
     out
 }
 
-/// Returns the [Otsu threshold level] of an 8bpp image.
+/// Returns the Otsu threshold level for an 8bpp grayscale image.
 ///
-/// [Otsu threshold level]: https://en.wikipedia.org/wiki/Otsu%27s_method
+/// This implementation uses a numerically stable algorithm to ensure consistent
+/// results across different floating-point environments, such as `cargo test` vs `cargo miri test`.
+///
+/// See: [Otsu's method on Wikipedia](https://en.wikipedia.org/wiki/Otsu%27s_method)
+///
+/// # Note on Numerical Stability
+///
+/// The standard formula for inter-class variance is:
+///
+/// $$ \sigma_B^2(t) = w_b(t) w_f(t)[\mu_b(t) - \mu_f(t)]^2 $$
+///
+/// where $w$ are the weights (pixel counts) and $\mu$ are the means of the background ($b$)
+/// and foreground ($f$) classes. This formula is susceptible to "[catastrophic cancellation](https://en.wikipedia.org/wiki/Catastrophic_cancellation)"
+/// when the means $\mu_b$ and $\mu_f$ are very close, leading to a significant loss of precision.
+///
+/// This implementation uses an algebraically equivalent, but more stable formula.
+///
+/// ## Derivation
+///
+/// Let:
+/// - $W_T$ be the total number of pixels (total weight).
+/// - $S_T$ be the sum of all pixel intensity levels.
+/// - $w_b(t)$ be the background weight at threshold $t$.
+/// - $S_b(t)$ be the background sum of intensities at threshold $t$.
+///
+/// We can express the means as $\mu_b(t) = S_b(t) / w_b(t)$ and $\mu_f(t) = S_f(t) / w_f(t)$.
+/// By substituting $w_f = W_T - w_b$ and $S_f = S_T - S_b$, the term inside the square of the
+/// original formula can be rewritten:
+///
+/// $$
+/// \begin{aligned}
+/// \mu_b - \mu_f &= \frac{S_b}{w_b} - \frac{S_f}{w_f} \\
+///              &= \frac{S_b(W_T - w_b) - (S_T - S_b)w_b}{w_b w_f} \\
+///              &= \frac{S_b W_T - S_b w_b - S_T w_b + S_b w_b}{w_b w_f} \\
+///              &= \frac{S_b W_T - S_T w_b}{w_b w_f}
+/// \end{aligned}
+/// $$
+///
+/// Substituting this back into the variance formula yields:
+///
+/// $$ \sigma_B^2(t) = w_b w_f \left( \frac{S_b W_T - S_T w_b}{w_b w_f} \right)^2 = \frac{[S_b(t) W_T - S_T w_b(t)]^2}{w_b(t) w_f(t)} $$
+///
+/// This final formula avoids the direct subtraction of means and is therefore much more robust
+/// against floating-point rounding errors.
+///
+#[cfg_attr(feature = "katexit", katexit::katexit)]
 pub fn otsu_level(image: &GrayImage) -> u8 {
     let hist = histogram(image);
     let (width, height) = image.dimensions();
     let total_weight = width * height;
 
-    // Sum of all pixel intensities, to use when calculating means.
     let total_pixel_sum = hist.channels[0]
         .iter()
         .enumerate()
         .fold(0f64, |sum, (t, h)| sum + (t as u32 * h) as f64);
 
-    // Sum of all pixel intensities in the background class.
-    let mut background_pixel_sum = 0f64;
-
-    // The weight of a class (background or foreground) is
-    // the number of pixels which belong to that class at
-    // the current threshold.
+    let mut background_pixel_sum = 0u64;
     let mut background_weight = 0u32;
-    let mut foreground_weight;
 
     let mut largest_variance = 0f64;
     let mut best_threshold = 0u8;
 
     for (threshold, hist_count) in hist.channels[0].iter().enumerate() {
-        background_weight += hist_count;
-        if background_weight == 0 {
+        let hist_count = *hist_count;
+        if hist_count == 0 {
             continue;
-        };
+        }
 
-        foreground_weight = total_weight - background_weight;
+        background_weight += hist_count;
+        background_pixel_sum += (threshold as u64) * (hist_count as u64);
+
+        let foreground_weight = total_weight - background_weight;
         if foreground_weight == 0 {
             break;
-        };
+        }
 
-        background_pixel_sum += (threshold as u32 * hist_count) as f64;
-        let foreground_pixel_sum = total_pixel_sum - background_pixel_sum;
+        let background_weight_f = background_weight as f64;
 
-        let background_mean = background_pixel_sum / (background_weight as f64);
-        let foreground_mean = foreground_pixel_sum / (foreground_weight as f64);
+        let inter_class_variance = (background_pixel_sum as f64 * total_weight as f64
+            - total_pixel_sum * background_weight_f)
+            .powi(2)
+            / background_weight_f
+            / foreground_weight as f64;
 
-        let mean_diff_squared = (background_mean - foreground_mean).powi(2);
-        let intra_class_variance =
-            (background_weight as f64) * (foreground_weight as f64) * mean_diff_squared;
-
-        if intra_class_variance > largest_variance {
-            largest_variance = intra_class_variance;
+        if inter_class_variance > largest_variance {
+            largest_variance = inter_class_variance;
             best_threshold = threshold as u8;
         }
     }
