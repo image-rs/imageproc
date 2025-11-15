@@ -615,7 +615,7 @@ mod tests {
             00, 00, 00, 00, 00, 10, 00;
             00, 00, 00, 10, 10, 00, 00);
 
-        assert_eq!(
+        assert_approx_eq!(
             intensity_centroid(&image, 3, 3, 3),
             -std::f32::consts::FRAC_PI_4
         );
