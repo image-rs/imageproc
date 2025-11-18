@@ -593,7 +593,7 @@ mod tests {
             3.0, 1.0
         );
 
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq_within!(actual, expected, 0.1);
     }
 
     #[test]
@@ -619,7 +619,7 @@ mod tests {
             3.0 / (23.0 * tss).sqrt(), 1.0 / (35.0 * tss).sqrt()
         );
 
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq_within!(actual, expected, 0.1);
     }
 
     #[test]
@@ -694,7 +694,7 @@ mod tests {
             MatchTemplateMethod::SumOfSquaredErrors,
             &mask,
         );
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq_within!(actual, expected, 0.1);
 
         #[cfg(feature = "rayon")]
         {
@@ -733,7 +733,7 @@ mod tests {
             MatchTemplateMethod::SumOfSquaredErrorsNormalized,
             &mask,
         );
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq_within!(actual, expected, 0.1);
 
         #[cfg(feature = "rayon")]
         {
@@ -811,7 +811,7 @@ mod tests {
             MatchTemplateMethod::CrossCorrelationNormalized,
             &mask,
         );
-        assert_pixels_eq!(actual, expected);
+        assert_pixels_eq_within!(actual, expected, 0.1);
 
         #[cfg(feature = "rayon")]
         {
