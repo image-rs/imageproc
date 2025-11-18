@@ -100,7 +100,7 @@ where
 /// The returned points are the [top left, top right, bottom right, bottom left] points of this rectangle.
 pub fn min_area_rect<T>(points: &[Point<T>]) -> [Point<T>; 4]
 where
-    T: NumCast + Copy + Ord,
+    T: NumCast + Copy + PartialOrd,
 {
     let hull = convex_hull(points);
     match hull.len() {
@@ -187,7 +187,7 @@ where
 /// [Graham scan algorithm]: https://en.wikipedia.org/wiki/Graham_scan
 pub fn convex_hull<T>(points: impl Into<Vec<Point<T>>>) -> Vec<Point<T>>
 where
-    T: NumCast + Copy + Ord,
+    T: NumCast + Copy + PartialOrd,
 {
     let mut points = points.into();
     if points.is_empty() {
@@ -381,6 +381,25 @@ mod tests {
                 Point::new(141, 24),
                 Point::new(137, 61),
                 Point::new(57, 53)
+            ]
+        )
+    }
+
+    #[test]
+    fn test_min_area_f32() {
+        assert_eq!(
+            min_area_rect(&[
+                Point::new(100., 20.),
+                Point::new(140., 30.),
+                Point::new(130., 60.),
+                Point::new(80., 55.),
+                Point::new(60., 25.)
+            ]),
+            [
+                Point::new(60., 16.),
+                Point::new(141., 24.),
+                Point::new(137., 61.),
+                Point::new(57., 53.)
             ]
         )
     }
