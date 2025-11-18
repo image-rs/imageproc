@@ -147,9 +147,10 @@ where
 
                 let spatial_distance = spatial_distance_lookup
                     [(window_len * (w_y + radius) + (w_x + radius)) as usize];
-                
+
                 // Assuming color_distance now returns f64. You may need to adjust its implementation.
-                let color_distance_val = color_distance.color_distance(&center_pixel, &window_pixel);
+                let color_distance_val =
+                    color_distance.color_distance(&center_pixel, &window_pixel);
                 let weight = spatial_distance * color_distance_val;
 
                 (weight, window_pixel)
@@ -161,7 +162,8 @@ where
     Image::from_fn(width, height, bilateral_pixel_filter)
 }
 
-fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f64, P)>) -> P // changed f32 to f64
+fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f64, P)>) -> P
+// changed f32 to f64
 where
     P: Pixel,
     <P as image::Pixel>::Subpixel: 'static,
