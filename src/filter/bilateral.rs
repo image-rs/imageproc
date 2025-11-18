@@ -11,20 +11,20 @@ use crate::definitions::Image;
 /// This trait is used with the `bilateral_filter()` function.
 pub trait ColorDistance<P> {
     /// Returns a distance measure between the two pixels based on their colors
-    fn color_distance(&self, pixel1: &P, pixel2: &P) -> f32;
+    fn color_distance(&self, pixel1: &P, pixel2: &P) -> f64;
 }
 
 /// A gaussian function of the euclidean distance between two pixel's colors.
 ///
 /// This implements [`ColorDistance`].
 pub struct GaussianEuclideanColorDistance {
-    sigma_squared: f32,
+    sigma_squared: f64,
 }
 impl GaussianEuclideanColorDistance {
     /// Creates a new [`GaussianEuclideanColorDistance`] using a given sigma value.
     ///
     /// Internally, this is stored as sigma squared for performance.
-    pub fn new(sigma: f32) -> Self {
+    pub fn new(sigma: f64) -> Self {
         GaussianEuclideanColorDistance {
             sigma_squared: sigma.powi(2),
         }
@@ -36,13 +36,13 @@ where
     P: Pixel,
     f32: From<P::Subpixel>,
 {
-    fn color_distance(&self, pixel1: &P, pixel2: &P) -> f32 {
+    fn color_distance(&self, pixel1: &P, pixel2: &P) -> f64 {
         let euclidean_distance_squared = pixel1
             .channels()
             .iter()
             .zip(pixel2.channels().iter())
-            .map(|(c1, c2)| (f32::from(*c1) - f32::from(*c2)).powi(2))
-            .sum::<f32>();
+            .map(|(c1, c2)| (f32::from(*c1) as f64 - f32::from(*c2) as f64).powi(2))
+            .sum::<f64>();
 
         gaussian_weight(euclidean_distance_squared, self.sigma_squared)
     }
@@ -94,15 +94,16 @@ where
 pub fn bilateral_filter<I, P, C>(
     image: &I,
     radius: u8,
-    spatial_sigma: f32,
+    spatial_sigma: f64, // changed f32 to f64
     color_distance: C,
 ) -> Image<P>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
-    C: ColorDistance<P>,
+    C: ColorDistance<P>, // Assume ColorDistance also returns f64
     <P as image::Pixel>::Subpixel: 'static,
-    f32: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
+    // changed generic bounds to use f64
+    f64: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
 {
     assert!(!image.width() > i32::MAX as u32);
     assert!(!image.height() > i32::MAX as u32);
@@ -118,7 +119,8 @@ where
         .map(|(w_y, w_x)| {
             //The gaussian of the euclidean spatial distance
             gaussian_weight(
-                <f32 as From<i16>>::from(w_x).powi(2) + <f32 as From<i16>>::from(w_y).powi(2),
+                // All calculations now use f64
+                <f64 as From<i16>>::from(w_x).powi(2) + <f64 as From<i16>>::from(w_y).powi(2),
                 spatial_sigma.powi(2),
             )
         })
@@ -135,23 +137,20 @@ where
             .clone()
             .cartesian_product(window_range.clone())
             .map(|(w_y, w_x)| {
-                // these casts will always be correct due to asserts made at the beginning of the
-                // function about the image width/height
-                //
-                // the subtraction will also never overflow due to the `is_empty()` assert
                 let window_y = (i32::from(w_y) + (y as i32)).clamp(0, (height as i32) - 1);
                 let window_x = (i32::from(w_x) + (x as i32)).clamp(0, (width as i32) - 1);
 
                 let (window_y, window_x) = (window_y as u32, window_x as u32);
 
                 debug_assert!(image.in_bounds(window_x, window_y));
-                // Safety: we clamped `window_x` and `window_y` to be in bounds.
                 let window_pixel = unsafe { image.unsafe_get_pixel(window_x, window_y) };
 
                 let spatial_distance = spatial_distance_lookup
                     [(window_len * (w_y + radius) + (w_x + radius)) as usize];
-                let color_distance = color_distance.color_distance(&center_pixel, &window_pixel);
-                let weight = spatial_distance * color_distance;
+                
+                // Assuming color_distance now returns f64. You may need to adjust its implementation.
+                let color_distance_val = color_distance.color_distance(&center_pixel, &window_pixel);
+                let weight = spatial_distance * color_distance_val;
 
                 (weight, window_pixel)
             });
@@ -162,17 +161,18 @@ where
     Image::from_fn(width, height, bilateral_pixel_filter)
 }
 
-fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f32, P)>) -> P
+fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f64, P)>) -> P // changed f32 to f64
 where
     P: Pixel,
     <P as image::Pixel>::Subpixel: 'static,
-    f32: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
+    // changed generic bounds to use f64
+    f64: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
 {
     let (weights_sum, weighted_channel_sums) = weights_and_values
         .map(|(w, v)| {
             (
                 w,
-                v.channels().iter().map(|s| w * f32::from(*s)).collect_vec(),
+                v.channels().iter().map(|s| w * f64::from(*s)).collect_vec(), // changed f32 to f64
             )
         })
         .reduce(|(w1, channels1), (w2, channels2)| {
@@ -187,17 +187,22 @@ where
         })
         .expect("cannot find a weighted average given no weights and values");
 
+    // Handle the case where all weights are zero to avoid division by zero
+    // if weights_sum == 0.0 {
+    //     return *P::from_slice(&[0.as_(); P::CHANNEL_COUNT]);
+    // }
+
     let channel_averages = weighted_channel_sums.iter().map(|x| x / weights_sum);
 
     *P::from_slice(
         &channel_averages
-            .map(<f32 as AsPrimitive<P::Subpixel>>::as_)
+            .map(<f64 as AsPrimitive<P::Subpixel>>::as_) // changed f32 to f64
             .collect_vec(),
     )
 }
 
 /// Un-normalized Gaussian Weight
-fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
+fn gaussian_weight(x_squared: f64, sigma_squared: f64) -> f64 {
     (-0.5 * x_squared / sigma_squared).exp()
 }
 
@@ -236,8 +241,8 @@ mod proptests {
         fn proptest_bilateral_filter_greyscale(
             img in arbitrary_image::<Luma<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            color_sigma in any::<f32>(),
-            spatial_sigma in any::<f32>(),
+            color_sigma in any::<f64>(),
+            spatial_sigma in any::<f64>(),
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             assert_eq!(out.dimensions(), img.dimensions());
@@ -247,8 +252,8 @@ mod proptests {
         fn proptest_bilateral_filter_rgb(
             img in arbitrary_image::<Rgb<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            color_sigma in any::<f32>(),
-            spatial_sigma in any::<f32>(),
+            color_sigma in any::<f64>(),
+            spatial_sigma in any::<f64>(),
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             assert_eq!(out.dimensions(), img.dimensions());
