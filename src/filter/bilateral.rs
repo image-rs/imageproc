@@ -34,14 +34,14 @@ impl GaussianEuclideanColorDistance {
 impl<P> ColorDistance<P> for GaussianEuclideanColorDistance
 where
     P: Pixel,
-    f32: From<P::Subpixel>,
+    P::Subpixel: Into<f64>,
 {
     fn color_distance(&self, pixel1: &P, pixel2: &P) -> f64 {
         let euclidean_distance_squared = pixel1
             .channels()
             .iter()
             .zip(pixel2.channels().iter())
-            .map(|(c1, c2)| (f32::from(*c1) as f64 - f32::from(*c2) as f64).powi(2))
+            .map(|(c1, c2)| ((*c1).into() - (*c2).into()).powi(2))
             .sum::<f64>();
 
         gaussian_weight(euclidean_distance_squared, self.sigma_squared)
@@ -94,15 +94,14 @@ where
 pub fn bilateral_filter<I, P, C>(
     image: &I,
     radius: u8,
-    spatial_sigma: f64, // changed f32 to f64
+    spatial_sigma: f64,
     color_distance: C,
 ) -> Image<P>
 where
     I: GenericImage<Pixel = P>,
     P: Pixel,
-    C: ColorDistance<P>, // Assume ColorDistance also returns f64
+    C: ColorDistance<P>,
     <P as image::Pixel>::Subpixel: 'static,
-    // changed generic bounds to use f64
     f64: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
 {
     assert!(!image.width() > i32::MAX as u32);
@@ -119,7 +118,6 @@ where
         .map(|(w_y, w_x)| {
             //The gaussian of the euclidean spatial distance
             gaussian_weight(
-                // All calculations now use f64
                 <f64 as From<i16>>::from(w_x).powi(2) + <f64 as From<i16>>::from(w_y).powi(2),
                 spatial_sigma.powi(2),
             )
@@ -137,6 +135,10 @@ where
             .clone()
             .cartesian_product(window_range.clone())
             .map(|(w_y, w_x)| {
+                // these casts will always be correct due to asserts made at the beginning of the
+                // function about the image width/height
+                //
+                // the subtraction will also never overflow due to the `is_empty()` assert
                 let window_y = (i32::from(w_y) + (y as i32)).clamp(0, (height as i32) - 1);
                 let window_x = (i32::from(w_x) + (x as i32)).clamp(0, (width as i32) - 1);
 
@@ -148,7 +150,6 @@ where
                 let spatial_distance = spatial_distance_lookup
                     [(window_len * (w_y + radius) + (w_x + radius)) as usize];
 
-                // Assuming color_distance now returns f64. You may need to adjust its implementation.
                 let color_distance_val =
                     color_distance.color_distance(&center_pixel, &window_pixel);
                 let weight = spatial_distance * color_distance_val;
@@ -163,18 +164,16 @@ where
 }
 
 fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f64, P)>) -> P
-// changed f32 to f64
 where
     P: Pixel,
     <P as image::Pixel>::Subpixel: 'static,
-    // changed generic bounds to use f64
     f64: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
 {
     let (weights_sum, weighted_channel_sums) = weights_and_values
         .map(|(w, v)| {
             (
                 w,
-                v.channels().iter().map(|s| w * f64::from(*s)).collect_vec(), // changed f32 to f64
+                v.channels().iter().map(|s| w * f64::from(*s)).collect_vec(),
             )
         })
         .reduce(|(w1, channels1), (w2, channels2)| {
@@ -189,16 +188,11 @@ where
         })
         .expect("cannot find a weighted average given no weights and values");
 
-    // Handle the case where all weights are zero to avoid division by zero
-    // if weights_sum == 0.0 {
-    //     return *P::from_slice(&[0.as_(); P::CHANNEL_COUNT]);
-    // }
-
     let channel_averages = weighted_channel_sums.iter().map(|x| x / weights_sum);
 
     *P::from_slice(
         &channel_averages
-            .map(<f64 as AsPrimitive<P::Subpixel>>::as_) // changed f32 to f64
+            .map(<f64 as AsPrimitive<P::Subpixel>>::as_)
             .collect_vec(),
     )
 }
