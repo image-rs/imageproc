@@ -17,6 +17,12 @@ Testing this crate requires the `nightly` toolchain due to using the unstable
 cargo +nightly test
 ```
 
+Furthermore, one should also call [Miri](https://github.com/rust-lang/miri) to check for undefined behavior:
+
+```sh
+cargo +nightly miri nextest run --no-default-features --features=image/default
+```
+
 ## Reporting issues
 
 Before reporting an issue on the [issue
