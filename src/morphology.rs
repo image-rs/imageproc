@@ -75,7 +75,7 @@ pub fn dilate(image: &GrayImage, norm: Norm, k: u8) -> GrayImage {
 }
 #[doc=generate_mut_doc_comment!("dilate")]
 pub fn dilate_mut(image: &mut GrayImage, norm: Norm, k: u8) {
-    distance_transform_mut(image, norm);
+    distance_transform_mut(image, norm, DistanceFrom::Foreground);
     for p in image.iter_mut() {
         *p = if *p <= k { 255 } else { 0 };
     }
