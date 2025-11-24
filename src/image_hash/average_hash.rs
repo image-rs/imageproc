@@ -19,12 +19,7 @@ impl AverageHash {
 /// Compute the [average hash] of a grayscale image.
 pub fn average_hash(img: &Image<Luma<f32>>) -> AverageHash {
     const HASH_SIZE: u32 = 8;
-    let resized = imageops::resize(
-        img,
-        HASH_SIZE,
-        HASH_SIZE,
-        imageops::FilterType::Lanczos3,
-    );
+    let resized = imageops::resize(img, HASH_SIZE, HASH_SIZE, imageops::FilterType::Lanczos3);
     let num_pixels = (HASH_SIZE * HASH_SIZE) as usize;
     debug_assert_eq!(num_pixels, resized.len() as usize);
 
@@ -66,4 +61,3 @@ mod tests {
         assert!(hash1.hamming_distance(hash2) > 0);
     }
 }
-
