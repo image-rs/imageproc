@@ -440,14 +440,14 @@ where
 /// ```
 #[must_use = "the function does not modify the original image"]
 pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::FOUR_LAPLACIAN_3X3)
+    filter_clamped(image, kernel::LAPLACIAN_3X3)
 }
 
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
 #[doc = generate_parallel_doc_comment!("laplacian_filter")]
 pub fn laplacian_filter_parallel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped_parallel(image, kernel::FOUR_LAPLACIAN_3X3)
+    filter_clamped_parallel(image, kernel::LAPLACIAN_3X3)
 }
 
 #[cfg(test)]
