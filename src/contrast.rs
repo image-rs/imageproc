@@ -254,29 +254,29 @@ pub fn threshold(image: &GrayImage, threshold: u8, threshold_type: ThresholdType
 pub fn threshold_mut(image: &mut GrayImage, threshold: u8, threshold_type: ThresholdType) {
     match threshold_type {
         ThresholdType::Binary => {
-            for p in image.iter_mut() {
+            image.par_iter_mut().for_each(|p| {
                 *p = if *p > threshold { 255 } else { 0 };
-            }
+            });
         }
         ThresholdType::BinaryInverted => {
-            for p in image.iter_mut() {
+            image.par_iter_mut().for_each(|p| {
                 *p = if *p > threshold { 0 } else { 255 };
-            }
+            });
         }
         ThresholdType::Truncate => {
-            for p in image.iter_mut() {
+            image.par_iter_mut().for_each(|p| {
                 *p = if *p > threshold { threshold } else { *p };
-            }
+            });
         }
         ThresholdType::ToZero => {
-            for p in image.iter_mut() {
+            image.par_iter_mut().for_each(|p| {
                 *p = if *p > threshold { 0 } else { *p };
-            }
+            });
         }
         ThresholdType::ToZeroInverted => {
-            for p in image.iter_mut() {
+            image.par_iter_mut().for_each(|p| {
                 *p = if *p > threshold { *p } else { 0 };
-            }
+            });
         }
     }
 }
