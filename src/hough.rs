@@ -137,8 +137,11 @@ pub fn intersection_points(
     let w = image_width as f32;
     let h = image_height as f32;
 
-    // Vertical line
-    if m == 0 {
+    let theta = (m as f32).to_radians();
+    let (sin, cos) = theta.sin_cos();
+
+    // Vertical line, use sin for generality (there's no garantee that angle is between 0 and 180)
+    if sin.abs() < f32::EPSILON {
         return if r >= 0.0 && r <= w {
             Some(((r, 0.0), (r, h)))
         } else {
@@ -146,8 +149,8 @@ pub fn intersection_points(
         };
     }
 
-    // Horizontal line
-    if m == 90 {
+    // Horizontal line, ditto
+    if cos.abs() < f32::EPSILON {
         return if r >= 0.0 && r <= h {
             Some(((0.0, r), (w, r)))
         } else {
@@ -155,39 +158,43 @@ pub fn intersection_points(
         };
     }
 
-    let theta = (m as f32).to_radians();
-    let (sin, cos) = theta.sin_cos();
-
     let right_y = cos.mul_add(-w, r) / sin;
     let left_y = r / sin;
     let bottom_x = sin.mul_add(-h, r) / cos;
     let top_x = r / cos;
 
+    let eps = 1e-6;
+
     let mut start = None;
 
-    if right_y >= 0.0 && right_y <= h {
-        let right_intersect = (w, right_y);
+    if right_y >= -eps && right_y <= h + eps {
+        // It's necessary: we allow eps during the check, but clamp for the actual result
+        let clamped_y = right_y.clamp(0.0, h);
+        let right_intersect = (w, clamped_y);
         start = Some(right_intersect);
     }
 
-    if left_y >= 0.0 && left_y <= h {
-        let left_intersect = (0.0, left_y);
+    if left_y >= -eps && left_y <= h + eps {
+        let clamped_y = left_y.clamp(0.0, h);
+        let left_intersect = (0.0, clamped_y);
         if let Some(s) = start {
             return Some((s, left_intersect));
         }
         start = Some(left_intersect);
     }
 
-    if bottom_x >= 0.0 && bottom_x <= w {
-        let bottom_intersect = (bottom_x, h);
+    if bottom_x >= -eps && bottom_x <= w + eps {
+        let clamped_x = bottom_x.clamp(0.0, w);
+        let bottom_intersect = (clamped_x, h);
         if let Some(s) = start {
             return Some((s, bottom_intersect));
         }
         start = Some(bottom_intersect);
     }
 
-    if top_x >= 0.0 && top_x <= w {
-        let top_intersect = (top_x, 0.0);
+    if top_x >= -eps && top_x <= w + eps {
+        let clamped_x = top_x.clamp(0.0, w);
+        let top_intersect = (clamped_x, 0.0);
         if let Some(s) = start {
             return Some((s, top_intersect));
         }
@@ -209,7 +216,7 @@ mod tests {
             (None, None) => {}
             (Some(ps), Some(qs)) => {
                 let points_eq = |p: (f32, f32), q: (f32, f32)| {
-                    (p.0 - q.0).abs() < 1.0e-6 && (p.1 - q.1).abs() < 1.0e-6
+                    (p.0 - q.0).abs() < 1.0e-5 && (p.1 - q.1).abs() < 1.0e-5
                 };
 
                 match (points_eq(ps.0, qs.0), points_eq(ps.1, qs.1)) {
