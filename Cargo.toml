@@ -2,7 +2,7 @@
 name = "imageproc"
 version = "0.26.0"
 authors = ["theotherphil"]
-rust-version = "1.82.0"
+rust-version = "1.85.1"
 edition = "2021"
 license = "MIT"
 description = "Image processing operations"
@@ -45,6 +45,10 @@ getrandom = { version = "0.3.0", default-features = false, features = ["wasm_js"
 assert_approx_eq = "1.1.0"
 proptest = "1.9.0"
 wasm-bindgen-test = "0.3.38"
+
+[build-dependencies]
+cargo_metadata = "0.23"
+semver = "1.0.27"
 
 [package.metadata.docs.rs]
 # See https://github.com/image-rs/imageproc/issues/358

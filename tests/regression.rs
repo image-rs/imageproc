@@ -42,7 +42,11 @@ use imageproc::{
 const INPUT_DIR: &str = "./tests/data";
 
 /// The directory containing the truth images to compare against test outputs.
-const TRUTH_DIR: &str = "./tests/data/truth";
+const TRUTH_DIR: &str = if cfg!(lagacy_image) {
+    "./tests/data/legacy"
+} else {
+    "./tests/data/truth"
+};
 
 // If the REGENERATE environment variable is set then running tests will update the truth files
 // to match the output of the current code.
