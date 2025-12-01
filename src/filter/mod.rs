@@ -823,7 +823,6 @@ mod tests {
         *image.get_pixel_mut(9, 0) = Luma([255u8]);
         _ = crate::edges::canny(&image, 0.0, 100.0);
     }
-
 }
 
 #[cfg(not(miri))]
