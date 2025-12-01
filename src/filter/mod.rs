@@ -810,6 +810,20 @@ mod tests {
         let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 1e-6);
     }
+
+    #[test]
+    fn test_canny_zero_threshold_panic() {
+        let image = image::GrayImage::new(10, 10);
+        _ = crate::edges::canny(&image, 0.0, 0.0);
+    }
+
+    #[test]
+    fn test_canny_one_border_pixel_panic() {
+        let mut image = image::GrayImage::new(10, 10);
+        *image.get_pixel_mut(9, 0) = Luma([255u8]);
+        _ = crate::edges::canny(&image, 0.0, 100.0);
+    }
+
 }
 
 #[cfg(not(miri))]
