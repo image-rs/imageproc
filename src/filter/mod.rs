@@ -474,7 +474,7 @@ mod tests {
         ], 3, 3);
 
         let actual = laplacian_filter(&image);
-        let expected = filter_clamped(&image, laplacian);
+        let expected = filter_clamped::<_, _, i16>(&image, laplacian);
         assert_eq!(actual.as_ref(), expected.as_ref());
     }
 
