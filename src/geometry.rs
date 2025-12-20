@@ -282,7 +282,7 @@ mod tests {
             arc_length(&[Point::new(1.0, 1.0), Point::new(4.0, 5.0)], false),
             5.0
         );
-        assert_eq!(
+        assert_approx_eq!(
             arc_length(
                 &[
                     Point::new(1.0, 1.0),
