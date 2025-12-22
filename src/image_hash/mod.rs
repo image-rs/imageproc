@@ -3,7 +3,7 @@
 //! [Perceptual hashing]: https://en.wikipedia.org/wiki/Perceptual_hashing
 
 mod average_hash;
-#[cfg(feature = "fft")]
+
 mod bits;
 #[cfg(feature = "fft")]
 mod phash;
