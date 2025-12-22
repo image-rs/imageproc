@@ -13,4 +13,3 @@ pub use average_hash::{average_hash, AverageHash};
 #[cfg(feature = "fft")]
 pub use phash::phash;
 pub use phash::PHash;
-
