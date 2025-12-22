@@ -4,6 +4,7 @@ pub(super) struct Bits64(u64);
 impl Bits64 {
     const N: usize = 64;
 
+    #[allow(dead_code)]
     pub fn new(v: impl IntoIterator<Item = bool>) -> Self {
         let mut bits = Self::zeros();
         let mut n = 0;
@@ -40,10 +41,12 @@ impl Bits64 {
         let bit = self.0 & (1 << n);
         bit != 0
     }
+    #[allow(dead_code)]
     fn set_bit_at(&mut self, n: usize) {
         assert!(n < Self::N);
         self.0 |= 1 << n;
     }
+    #[allow(dead_code)]
     fn unset_bit_at(&mut self, n: usize) {
         assert!(n < Self::N);
         self.0 &= !(1 << n);

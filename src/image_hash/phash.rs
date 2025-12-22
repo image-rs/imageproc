@@ -1,6 +1,10 @@
+#[allow(unused_imports)]
 use super::{signals, Bits64};
+#[allow(unused_imports)]
 use crate::definitions::Image;
+#[allow(unused_imports)]
 use image::{imageops, math::Rect, Luma};
+#[allow(unused_imports)]
 use std::borrow::Cow;
 
 /// Stores the result of the [`phash`].
@@ -51,6 +55,7 @@ impl PHash {
 ///
 /// [pHash]: https://phash.org/docs/pubs/thesis_zauner.pdf
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
+#[cfg(feature = "fft")]
 pub fn phash(img: &Image<Luma<f32>>) -> PHash {
     const N: u32 = 8;
     const HASH_FACTOR: u32 = 4;
@@ -78,8 +83,10 @@ pub fn phash(img: &Image<Luma<f32>>) -> PHash {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
     #[test]
+    #[cfg(feature = "fft")]
     fn test_phash() {
         let img1 = gray_image!(type: f32,
             1., 2., 3.;
@@ -111,12 +118,16 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod proptests {
+    #[allow(unused_imports)]
     use super::*;
+    #[allow(unused_imports)]
     use crate::proptest_utils::arbitrary_image;
+    #[allow(unused_imports)]
     use proptest::prelude::*;
 
     const N: usize = 100;
 
+    #[cfg(feature = "fft")]
     proptest! {
         #[test]
         fn proptest_phash(img in arbitrary_image(0..N, 0..N)) {
@@ -129,13 +140,17 @@ mod proptests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
+    #[allow(unused_imports)]
     use super::*;
+    #[allow(unused_imports)]
     use crate::utils::luma32f_bench_image;
+    #[allow(unused_imports)]
     use test::{black_box, Bencher};
 
     const N: u32 = 600;
 
     #[bench]
+    #[cfg(feature = "fft")]
     fn bench_phash(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         b.iter(|| {

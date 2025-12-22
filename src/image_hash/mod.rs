@@ -8,4 +8,6 @@ mod signals;
 
 use bits::Bits64;
 
-pub use phash::{phash, PHash};
+#[cfg(feature = "fft")]
+pub use phash::phash;
+pub use phash::PHash;

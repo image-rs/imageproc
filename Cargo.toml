@@ -12,12 +12,12 @@ homepage = "https://github.com/image-rs/imageproc"
 exclude = [".github/*", "examples/*", "tests/*"]
 
 [features]
-default = ["rayon", "image/default", "text", "image_hash"]
+default = ["rayon", "image/default", "text","fft"]
 display-window = ["sdl2"]
 rayon = ["dep:rayon", "image/rayon"]
 
-# Option: enable image_hash
-image_hash = ["dep:rustdct"]
+# Option: enable phash
+fft = ["dep:rustdct"]
 
 # Option: enable drawing::text
 text = ["dep:ab_glyph"]
