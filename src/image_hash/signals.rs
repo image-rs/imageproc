@@ -68,7 +68,6 @@ fn dct1d(
     debug_assert_eq!(img_buf.len(), width * height);
     Image::from_vec(img.width(), img.height(), img_buf).unwrap()
 }
-
 fn transpose_inplace(img: &mut Image<Luma<f32>>) {
     assert_eq!(
         img.width(),
@@ -92,7 +91,6 @@ fn transpose_inplace(img: &mut Image<Luma<f32>>) {
         }
     }
 }
-
 fn transpose(img: &Image<Luma<f32>>) -> Image<Luma<f32>> {
     let nwidth = img.height();
     let nheight = img.width();
