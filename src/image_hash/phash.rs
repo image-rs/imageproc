@@ -1,10 +1,6 @@
-#[allow(unused_imports)]
 use super::{signals, Bits64};
-#[allow(unused_imports)]
 use crate::definitions::Image;
-#[allow(unused_imports)]
 use image::{imageops, math::Rect, Luma};
-#[allow(unused_imports)]
 use std::borrow::Cow;
 
 /// Stores the result of the [`phash`].
@@ -55,7 +51,6 @@ impl PHash {
 ///
 /// [pHash]: https://phash.org/docs/pubs/thesis_zauner.pdf
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
-#[cfg(feature = "fft")]
 pub fn phash(img: &Image<Luma<f32>>) -> PHash {
     const N: u32 = 8;
     const HASH_FACTOR: u32 = 4;
@@ -86,7 +81,6 @@ mod tests {
     #[allow(unused_imports)]
     use super::*;
     #[test]
-    #[cfg(feature = "fft")]
     fn test_phash() {
         let img1 = gray_image!(type: f32,
             1., 2., 3.;
@@ -127,7 +121,6 @@ mod proptests {
 
     const N: usize = 100;
 
-    #[cfg(feature = "fft")]
     proptest! {
         #[test]
         fn proptest_phash(img in arbitrary_image(0..N, 0..N)) {
@@ -150,7 +143,6 @@ mod benches {
     const N: u32 = 600;
 
     #[bench]
-    #[cfg(feature = "fft")]
     fn bench_phash(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         b.iter(|| {

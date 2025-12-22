@@ -1,12 +1,10 @@
 use crate::definitions::Image;
 use image::Luma;
-#[cfg(feature = "fft")]
 use std::borrow::Cow;
 
 /// Computes the 2 dimensional [DCT].
 ///
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
-#[cfg(feature = "fft")]
 pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
     #[allow(non_snake_case)]
     let T = |img: Cow<Image<_>>| -> Image<_> {
@@ -38,7 +36,6 @@ pub(super) fn dct2d(img: Cow<Image<Luma<f32>>>) -> Image<Luma<f32>> {
 ///
 /// [DCT]: https://en.wikipedia.org/wiki/Discrete_cosine_transform
 // TODO: compute inplace
-#[cfg(feature = "fft")]
 fn dct1d(
     img: &Image<Luma<f32>>,
     ctx: &dyn rustdct::TransformType2And3<f32>,
@@ -148,7 +145,6 @@ mod tests {
         assert_pixels_eq!(T(&T(&img)), img);
     }
     #[test]
-    #[cfg(feature = "fft")]
     fn test_dct1d() {
         let mut arena = vec![0f32; 1_000];
         let mut planner = rustdct::DctPlanner::new();
@@ -188,7 +184,6 @@ mod tests {
         assert_pixels_eq!(DCT(&img), expected);
     }
     #[test]
-    #[cfg(feature = "fft")]
     fn test_dct2d() {
         #[allow(non_snake_case)]
         let DCT = |img: &Image<_>| dct2d(Cow::Borrowed(img));
@@ -257,7 +252,6 @@ mod proptests {
             assert_pixels_eq!(T(&T(&img)), img);
         }
         #[test]
-        #[cfg(feature = "fft")]
         fn proptest_dct1d(img in arbitrary_image(0..N, 0..N)) {
             let ctx = rustdct::DctPlanner::new().plan_dct2(img.width() as usize);
             let mut arena = vec![0f32; ctx.len() + ctx.get_scratch_len()];
@@ -265,7 +259,6 @@ mod proptests {
             assert_eq!(dct.dimensions(), img.dimensions());
         }
         #[test]
-        #[cfg(feature = "fft")]
         fn proptest_dct2d(img in arbitrary_image(0..N, 0..N)) {
             let dct = dct2d(Cow::Borrowed(&img));
             assert_eq!(dct.dimensions(), img.dimensions());
@@ -299,7 +292,6 @@ mod benches {
     }
 
     #[bench]
-    #[cfg(feature = "fft")]
     fn bench_dct1d(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         let ctx = rustdct::DctPlanner::new().plan_dct2(img.width() as usize);
@@ -311,7 +303,6 @@ mod benches {
     }
 
     #[bench]
-    #[cfg(feature = "fft")]
     fn bench_dct2d(b: &mut Bencher) {
         let img = luma32f_bench_image(N, N);
         b.iter(|| {

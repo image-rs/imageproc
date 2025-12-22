@@ -12,7 +12,7 @@ homepage = "https://github.com/image-rs/imageproc"
 exclude = [".github/*", "examples/*", "tests/*"]
 
 [features]
-default = ["rayon", "image/default", "text","fft"]
+default = ["rayon", "image/default", "text", "fft"]
 display-window = ["sdl2"]
 rayon = ["dep:rayon", "image/rayon"]
 
