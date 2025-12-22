@@ -78,7 +78,6 @@ pub fn phash(img: &Image<Luma<f32>>) -> PHash {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
     #[test]
     fn test_phash() {
@@ -112,11 +111,8 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod proptests {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
     use crate::proptest_utils::arbitrary_image;
-    #[allow(unused_imports)]
     use proptest::prelude::*;
 
     const N: usize = 100;
@@ -133,11 +129,8 @@ mod proptests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
-    #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
     use crate::utils::luma32f_bench_image;
-    #[allow(unused_imports)]
     use test::{black_box, Bencher};
 
     const N: u32 = 600;
