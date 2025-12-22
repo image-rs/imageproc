@@ -18,7 +18,8 @@ extern crate imageproc;
 use std::{env, f32, path::Path};
 
 use image::{
-    DynamicImage, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage, Rgba, RgbaImage,
+    DynamicImage, GenericImageView, GrayImage, Luma, Pixel, PixelWithColorType, Rgb, RgbImage,
+    Rgba, RgbaImage,
 };
 
 use imageproc::contrast::ThresholdType;
@@ -55,8 +56,32 @@ trait FromDynamic {
 }
 
 impl FromDynamic for GrayImage {
+    /// According to Rec. 709
+    /// https://en.wikipedia.org/wiki/Rec._709#The_Y'C'BC'R_color_space
+    /// For RGBA, just ignore the Alpha channel
     fn from_dynamic(image: &DynamicImage) -> Self {
-        image.to_luma8()
+        match image {
+            DynamicImage::ImageRgb8(_) | DynamicImage::ImageRgba8(_) => {
+                let (width, height) = image.dimensions();
+                let mut gray = GrayImage::new(width, height);
+
+                // For RGB8 format, it automatically fills the Alpha channel, which does not affect the RGB component values
+                for (x, y, pixel) in image.pixels() {
+                    let r = pixel[0] as u32;
+                    let g = pixel[1] as u32;
+                    let b = pixel[2] as u32;
+
+                    let l = (r * 2126 + g * 7152 + b * 722) / 10000;
+
+                    gray.put_pixel(x, y, Luma([l as u8]));
+                }
+                gray
+            }
+
+            DynamicImage::ImageLuma8(gray) => gray.clone(),
+
+            _ => image.to_luma8(),
+        }
     }
 }
 
@@ -458,7 +483,8 @@ fn test_sharpen_gaussian() {
 #[test]
 fn test_match_histograms() {
     fn match_to_zebra_histogram(image: &GrayImage) -> GrayImage {
-        let zebra = load_image_or_panic(Path::new(INPUT_DIR).join("zebra.png")).to_luma8();
+        let zebra =
+            GrayImage::from_dynamic(&load_image_or_panic(Path::new(INPUT_DIR).join("zebra.png")));
         imageproc::contrast::match_histogram(image, &zebra)
     }
     compare_to_truth(

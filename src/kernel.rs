@@ -86,9 +86,5 @@ pub const ROBERTS_HORIZONTAL_2X2: Kernel<'static, i32> = Kernel::new(&[1, 0, 0, 
 /// The roberts vertical 3x3 kernel.
 pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel::new(&[0, 1, -1, -0], 2, 2);
 
-/// The 4-connectivity laplacian 3x3 kernel.
-pub const FOUR_LAPLACIAN_3X3: Kernel<'static, i16> =
-    Kernel::new(&[0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
-/// The 8-connectivity laplacian 3x3 kernel.
-pub const EIGHT_LAPLACIAN_3X3: Kernel<'static, i16> =
-    Kernel::new(&[1, 1, 1, 1, -8, 1, 1, 1, 1], 3, 3);
+/// The laplacian 3x3 kernel.
+pub const LAPLACIAN_3X3: Kernel<'static, i16> = Kernel::new(&[0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
