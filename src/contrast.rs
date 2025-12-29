@@ -609,7 +609,7 @@ mod tests {
         assert_eq!(otsu_level(&constant_image(10, 10, 128)), 0);
         assert_eq!(otsu_level(&constant_image(10, 10, 255)), 0);
     }
-
+    #[cfg_attr(miri, ignore = "assert_eq fails")]
     #[test]
     fn test_otsu_level_gradient() {
         let contents = (0u8..26u8).map(|x| x * 10u8).collect();
