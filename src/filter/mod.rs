@@ -577,6 +577,8 @@ mod tests {
 
     macro_rules! test_against_reference_implementation {
         ($test_name:ident, $under_test:ident, $reference_impl:ident) => {
+
+            #[cfg_attr(miri, ignore = "slow")]
             #[test]
             fn $test_name() {
                 // I think the interesting edge cases here are determined entirely
