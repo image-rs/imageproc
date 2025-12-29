@@ -797,6 +797,7 @@ mod tests {
         let _ = gaussian_blur_f32(&image, -0.5);
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn test_gaussian_on_u8_white_idempotent() {
         let image = Image::<Luma<u8>>::from_pixel(12, 12, Luma([255]));

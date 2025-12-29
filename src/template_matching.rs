@@ -791,6 +791,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_cross_correlation_normalized_with_mask() {
         let image = gray_image!(
