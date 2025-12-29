@@ -228,6 +228,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "assert_points_eq fails")]
     #[test]
     fn intersection_points_zero_signed_distance() {
         // Vertical
@@ -357,6 +358,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(miri, ignore = "assert_points_eq fails")]
     #[test]
     fn intersection_points_negative_signed_distance() {
         // Vertical

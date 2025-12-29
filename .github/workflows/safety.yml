@@ -61,12 +61,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - run: |
-          echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> "$GITHUB_ENV"
-      - name: Install ${{ env.NIGHTLY }}
+      - name: Install nightly
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY }}
+          toolchain: nightly-2025-10-21
           components: miri
       - name: Install cargo-nextest
         uses: baptiste0928/cargo-install@v1

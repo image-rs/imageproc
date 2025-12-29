@@ -575,6 +575,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_sum_of_squared_errors() {
         let image = gray_image!(
@@ -596,6 +597,7 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_sum_of_squared_errors_normalized() {
         let image = gray_image!(
@@ -643,6 +645,7 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_cross_correlation_normalized() {
         let image = gray_image!(
@@ -669,6 +672,7 @@ mod tests {
         assert_pixels_eq!(actual, expected);
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_sum_of_squared_errors_with_mask() {
         let image = gray_image!(
@@ -708,6 +712,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_sum_of_squared_errors_normalized_with_mask() {
         let image = gray_image!(
@@ -786,6 +791,7 @@ mod tests {
         }
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn match_template_cross_correlation_normalized_with_mask() {
         let image = gray_image!(

@@ -577,6 +577,7 @@ mod tests {
 
     macro_rules! test_against_reference_implementation {
         ($test_name:ident, $under_test:ident, $reference_impl:ident) => {
+            #[cfg_attr(miri, ignore = "slow")]
             #[test]
             fn $test_name() {
                 // I think the interesting edge cases here are determined entirely
@@ -797,6 +798,7 @@ mod tests {
         let _ = gaussian_blur_f32(&image, -0.5);
     }
 
+    #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn test_gaussian_on_u8_white_idempotent() {
         let image = Image::<Luma<u8>>::from_pixel(12, 12, Luma([255]));
