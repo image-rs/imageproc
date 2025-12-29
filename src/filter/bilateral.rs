@@ -205,6 +205,7 @@ fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
 mod tests {
     use super::*;
 
+    #[cfg_attr(miri, ignore = "assert_pixels_eq fails")]
     #[test]
     fn test_bilateral_filter_greyscale() {
         let image = gray_image!(

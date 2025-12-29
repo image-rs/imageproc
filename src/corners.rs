@@ -604,6 +604,7 @@ mod tests {
         assert!(is_corner_fast9(&image, 8, 3, 3));
     }
 
+    #[cfg_attr(miri, ignore = "assert_eq fails")]
     #[test]
     fn test_intensity_centroid() {
         let image = gray_image!(

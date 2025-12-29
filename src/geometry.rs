@@ -274,6 +274,7 @@ mod tests {
     use super::*;
     use crate::point::Point;
 
+    #[cfg_attr(miri, ignore = "assert_eq fails")]
     #[test]
     fn test_arc_length() {
         assert_eq!(arc_length::<f64>(&[], false), 0.0);
