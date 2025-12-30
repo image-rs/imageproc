@@ -129,7 +129,7 @@ impl Projection {
     /// Calculates a projection from a set of four control point pairs.
     pub fn from_control_points(from: [(f32, f32); 4], to: [(f32, f32); 4]) -> Option<Projection> {
         use approx::AbsDiffEq;
-        use nalgebra::{linalg::SVD, OMatrix, OVector, U8};
+        use nalgebra::{OMatrix, OVector, U8, linalg::SVD};
 
         let (xf1, yf1, xf2, yf2, xf3, yf3, xf4, yf4) = (
             from[0].0 as f64,
@@ -1328,7 +1328,7 @@ mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_rotate_nearest(b: &mut Bencher) {

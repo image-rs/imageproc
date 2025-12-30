@@ -2,7 +2,7 @@
 
 use crate::definitions::Image;
 use image::{
-    open, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Pixel, Rgb, RgbImage,
+    DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Pixel, Rgb, RgbImage, open,
 };
 use itertools::Itertools;
 

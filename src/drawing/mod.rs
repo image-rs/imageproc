@@ -17,8 +17,9 @@ pub use self::cross::{draw_cross, draw_cross_mut};
 
 mod line;
 pub use self::line::{
+    BresenhamLineIter, BresenhamLinePixelIter, BresenhamLinePixelIterMut,
     draw_antialiased_line_segment, draw_antialiased_line_segment_mut, draw_line_segment,
-    draw_line_segment_mut, BresenhamLineIter, BresenhamLinePixelIter, BresenhamLinePixelIterMut,
+    draw_line_segment_mut,
 };
 
 mod polygon;

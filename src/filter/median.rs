@@ -334,12 +334,14 @@ impl HistSet {
     where
         P: Pixel<Subpixel = u8>,
     {
-        let pixel = image.unsafe_get_pixel(x, y);
-        let channels = pixel.channels();
-        for c in 0..channels.len() {
-            let p = *channels.get_unchecked(c) as usize;
-            let hist = self.data.get_unchecked_mut(c);
-            *hist.get_unchecked_mut(p) += 1;
+        unsafe {
+            let pixel = image.unsafe_get_pixel(x, y);
+            let channels = pixel.channels();
+            for c in 0..channels.len() {
+                let p = *channels.get_unchecked(c) as usize;
+                let hist = self.data.get_unchecked_mut(c);
+                *hist.get_unchecked_mut(p) += 1;
+            }
         }
     }
 
@@ -348,12 +350,14 @@ impl HistSet {
     where
         P: Pixel<Subpixel = u8>,
     {
-        let pixel = image.unsafe_get_pixel(x, y);
-        let channels = pixel.channels();
-        for c in 0..channels.len() {
-            let p = *channels.get_unchecked(c) as usize;
-            let hist = self.data.get_unchecked_mut(c);
-            *hist.get_unchecked_mut(p) -= 1;
+        unsafe {
+            let pixel = image.unsafe_get_pixel(x, y);
+            let channels = pixel.channels();
+            for c in 0..channels.len() {
+                let p = *channels.get_unchecked(c) as usize;
+                let hist = self.data.get_unchecked_mut(c);
+                *hist.get_unchecked_mut(p) -= 1;
+            }
         }
     }
 
@@ -362,24 +366,28 @@ impl HistSet {
     where
         P: Pixel<Subpixel = u8>,
     {
-        let target = image.get_pixel_mut(x, y);
-        let channels = target.channels_mut();
-        for c in 0..channels.len() {
-            *channels.get_unchecked_mut(c) = self.channel_median(c as u8);
+        unsafe {
+            let target = image.get_pixel_mut(x, y);
+            let channels = target.channels_mut();
+            for c in 0..channels.len() {
+                *channels.get_unchecked_mut(c) = self.channel_median(c as u8);
+            }
         }
     }
 
     /// Safety: requires c < self.data.len()
     unsafe fn channel_median(&self, c: u8) -> u8 {
-        let hist = self.data.get_unchecked(c as usize);
-        let mut count = 0;
-        for i in 0..256 {
-            count += *hist.get_unchecked(i);
-            if 2 * count >= self.expected_count {
-                return i as u8;
+        unsafe {
+            let hist = self.data.get_unchecked(c as usize);
+            let mut count = 0;
+            for i in 0..256 {
+                count += *hist.get_unchecked(i);
+                if 2 * count >= self.expected_count {
+                    return i as u8;
+                }
             }
+            255
         }
-        255
     }
 }
 
@@ -388,7 +396,7 @@ impl HistSet {
 mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     macro_rules! bench_median_filter {
         ($name:ident, side: $s:expr, x_radius: $rx:expr, y_radius: $ry:expr) => {

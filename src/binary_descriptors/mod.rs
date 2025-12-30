@@ -1,6 +1,6 @@
 //! Functions for generating and comparing compact binary patch descriptors.
 
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 use std::collections::HashMap;
 
 use crate::point::Point;
@@ -138,7 +138,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
 mod benches {
     use super::*;
     use crate::{binary_descriptors::brief::brief, utils::gray_bench_image};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     #[ignore]

@@ -81,7 +81,7 @@ mod tests {
 mod benches {
     use super::*;
     use image::{Luma, Rgb};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_weighted_sum_rgb(b: &mut Bencher) {

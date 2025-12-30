@@ -12,10 +12,10 @@
 //!
 //! `cargo run --release --example brief -- <first-image> <second-image> <output-image>`
 
-use image::{open, GenericImage, ImageResult, Rgb};
+use image::{GenericImage, ImageResult, Rgb, open};
 use imageproc::{
-    binary_descriptors::{brief::brief, match_binary_descriptors, BinaryDescriptor},
-    corners::{corners_fast9, Corner},
+    binary_descriptors::{BinaryDescriptor, brief::brief, match_binary_descriptors},
+    corners::{Corner, corners_fast9},
     definitions::Image,
     drawing::draw_line_segment_mut,
     point::Point,

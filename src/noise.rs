@@ -2,7 +2,7 @@
 
 use crate::definitions::{Clamp, HasBlack, HasWhite, Image};
 use image::Pixel;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, Normal, Uniform};
 
 /// Adds independent additive Gaussian noise to all channels
@@ -65,7 +65,7 @@ where
 mod benches {
     use super::*;
     use image::GrayImage;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_gaussian_noise_mut(b: &mut Bencher) {

@@ -667,7 +667,7 @@ mod tests {
 mod benches {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_local_binary_pattern(b: &mut Bencher) {

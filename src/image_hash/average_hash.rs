@@ -1,6 +1,6 @@
 use super::Bits64;
 use crate::definitions::Image;
-use image::{imageops, Luma};
+use image::{Luma, imageops};
 
 /// Stores the result of [`average_hash`].
 /// Implements [`Hash`] trait.

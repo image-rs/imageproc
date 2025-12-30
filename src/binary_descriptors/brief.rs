@@ -8,8 +8,8 @@ use rand_distr::{Distribution, Normal};
 use crate::{corners::Corner, definitions::Image, integral_image::integral_image, point::Point};
 
 use super::{
-    constants::{BRIEF_PATCH_DIAMETER, BRIEF_PATCH_RADIUS},
     BinaryDescriptor,
+    constants::{BRIEF_PATCH_DIAMETER, BRIEF_PATCH_RADIUS},
 };
 
 /// BRIEF descriptor as described in [Calonder, et. al. (2010)].
@@ -324,7 +324,7 @@ mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
     use rand::Rng;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     #[ignore]

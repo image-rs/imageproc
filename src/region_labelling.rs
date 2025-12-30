@@ -253,8 +253,8 @@ mod tests {
 
     use crate::definitions::{HasBlack, HasWhite};
 
-    use super::connected_components;
     use super::Connectivity::{Eight, Four};
+    use super::connected_components;
 
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
@@ -309,9 +309,9 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
+    use super::Connectivity::{Eight, Four};
     use super::connected_components;
     use super::tests::chessboard;
-    use super::Connectivity::{Eight, Four};
     use crate::definitions::HasBlack;
     use ::test;
     use image::Luma;

@@ -5,8 +5,8 @@
 //!
 //! `cargo run --release --example projection ./examples/empire-state-building.jpg ./tmp
 
-use image::{error::ImageResult, open, Rgb};
-use imageproc::geometric_transformations::{warp, Interpolation, Projection};
+use image::{Rgb, error::ImageResult, open};
+use imageproc::geometric_transformations::{Interpolation, Projection, warp};
 use std::{env, fs, path::Path};
 
 fn main() -> ImageResult<()> {

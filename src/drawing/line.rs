@@ -217,7 +217,6 @@ pub fn draw_antialiased_line_segment<I, B>(
 ) -> Image<I::Pixel>
 where
     I: GenericImage,
-
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
     let mut out = Image::new(image.width(), image.height());
@@ -234,7 +233,6 @@ pub fn draw_antialiased_line_segment_mut<I, B>(
     blend: B,
 ) where
     I: GenericImage,
-
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
     let (mut x0, mut y0) = (start.0, start.1);
@@ -274,7 +272,6 @@ fn plot_wu_line<I, T, B>(
     color: I::Pixel,
 ) where
     I: GenericImage,
-
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
@@ -293,7 +290,6 @@ fn plot_wu_line<I, T, B>(
 struct Plotter<'a, I, T, B>
 where
     I: GenericImage,
-
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {
@@ -305,7 +301,6 @@ where
 impl<I, T, B> Plotter<'_, I, T, B>
 where
     I: GenericImage,
-
     T: Fn(i32, i32) -> (i32, i32),
     B: Fn(I::Pixel, I::Pixel, f32) -> I::Pixel,
 {

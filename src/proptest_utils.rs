@@ -1,7 +1,7 @@
 use crate::definitions::Image;
 use image::Pixel;
 use proptest::{
-    arbitrary::{any, Arbitrary},
+    arbitrary::{Arbitrary, any},
     sample::SizeRange,
     strategy::{BoxedStrategy, Strategy},
 };

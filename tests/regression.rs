@@ -34,7 +34,7 @@ use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
     filter::{gaussian_blur_f32, sharpen3x3},
-    geometric_transformations::{rotate_about_center, warp, Interpolation, Projection},
+    geometric_transformations::{Interpolation, Projection, rotate_about_center, warp},
     gradients,
     utils::load_image_or_panic,
 };
@@ -921,7 +921,7 @@ fn test_draw_flood_filled_shape() {
 
 #[test]
 fn test_hough_line_detection() {
-    use imageproc::hough::{detect_lines, draw_polar_lines, LineDetectionOptions, PolarLine};
+    use imageproc::hough::{LineDetectionOptions, PolarLine, detect_lines, draw_polar_lines};
     use imageproc::map::map_pixels;
 
     let white = Rgb([255u8, 255u8, 255u8]);

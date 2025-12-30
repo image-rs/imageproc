@@ -52,11 +52,10 @@ where
                     let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
 
                     debug_assert!(image.in_bounds(x_p, y_p));
-                    accumulate(
-                        &mut acc,
-                        unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                        unsafe { kernel.get_unchecked(k_x as u32, k_y as u32) },
-                    );
+                    let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
+                    accumulate(&mut acc, &pixel, unsafe {
+                        kernel.get_unchecked(k_x as u32, k_y as u32)
+                    });
                 }
             }
             let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
@@ -102,11 +101,10 @@ where
                         let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
 
                         debug_assert!(image.in_bounds(x_p, y_p));
-                        accumulate(
-                            &mut acc,
-                            unsafe { &image.unsafe_get_pixel(x_p, y_p) },
-                            unsafe { kernel.get_unchecked(k_x as u32, k_y as u32) },
-                        );
+                        let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
+                        accumulate(&mut acc, &pixel, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
                     }
                 }
                 for (a, c) in acc.iter_mut().zip(out_pixel.iter_mut()) {
@@ -879,7 +877,7 @@ mod benches {
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::imageops::blur;
     use image::{GenericImage, Luma, Rgb};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_separable_filter(b: &mut Bencher) {

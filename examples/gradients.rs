@@ -4,7 +4,7 @@
 //!
 //! `cargo run --example gradients ./examples/empire-state-building.jpg ./tmp`
 
-use image::{open, GrayImage};
+use image::{GrayImage, open};
 use imageproc::{
     filter::filter_clamped,
     kernel::{self, Kernel},
