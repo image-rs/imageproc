@@ -29,7 +29,7 @@ image = { version = "0.25.0", default-features = false }
 itertools = { version = "0.14.0", default-features = false, features = [
     "use_std",
 ] }
-nalgebra = { version = "0.33.0", default-features = false, features = ["std"] }
+nalgebra = { version = "0.34.0", default-features = false, features = ["std"] }
 num = { version = "0.4.0", default-features = false }
 rand = { version = "0.9.0", default-features = false, features = [
     "thread_rng"
