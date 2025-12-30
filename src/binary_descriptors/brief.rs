@@ -114,7 +114,7 @@ pub(crate) fn brief_impl(
     test_pairs: &[TestPair],
     length: usize,
 ) -> Result<Vec<BriefDescriptor>, String> {
-    if length % 128 != 0 {
+    if !length.is_multiple_of(128) {
         return Err(format!(
             "BRIEF descriptor length must be a multiple of 128 bits (found {})",
             length
