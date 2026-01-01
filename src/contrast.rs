@@ -667,7 +667,7 @@ mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_adaptive_threshold(b: &mut Bencher) {

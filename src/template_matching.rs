@@ -247,11 +247,7 @@ mod methods {
                 })
             };
             let norm = (ii * self.template_squared_sum).sqrt();
-            if norm > 0.0 {
-                score / norm
-            } else {
-                score
-            }
+            if norm > 0.0 { score / norm } else { score }
         }
     }
 
@@ -292,11 +288,7 @@ mod methods {
                 })
             };
             let norm = (ii * self.template_squared_sum).sqrt();
-            if norm > 0.0 {
-                score / norm
-            } else {
-                score
-            }
+            if norm > 0.0 { score / norm } else { score }
         }
     }
 
@@ -338,11 +330,7 @@ mod methods {
                 })
             };
             let norm = (self.template_mask_squared_sum * im_im).sqrt();
-            if norm > 0.0 {
-                score / norm
-            } else {
-                score
-            }
+            if norm > 0.0 { score / norm } else { score }
         }
     }
     pub struct CcorrWithMask;
@@ -383,11 +371,7 @@ mod methods {
                 })
             };
             let norm = (self.template_mask_squared_sum * im_im).sqrt();
-            if norm > 0.0 {
-                score / norm
-            } else {
-                score
-            }
+            if norm > 0.0 { score / norm } else { score }
         }
     }
 
@@ -854,7 +838,7 @@ mod tests {
 mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     macro_rules! bench_match_template {
         ($name:ident, image_size: $s:expr, template_size: $t:expr, method: $m:expr) => {

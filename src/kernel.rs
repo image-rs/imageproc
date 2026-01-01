@@ -52,11 +52,13 @@ where
     /// kernel data.
     #[inline]
     pub unsafe fn get_unchecked(&self, x: u32, y: u32) -> K {
-        debug_assert!(x < self.width);
-        debug_assert!(y < self.height);
-        let at = usize::try_from(y * self.width + x).unwrap();
-        debug_assert!(at < self.data.len());
-        *self.data.get_unchecked(at)
+        unsafe {
+            debug_assert!(x < self.width);
+            debug_assert!(y < self.height);
+            let at = usize::try_from(y * self.width + x).unwrap();
+            debug_assert!(at < self.data.len());
+            *self.data.get_unchecked(at)
+        }
     }
 }
 

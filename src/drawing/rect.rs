@@ -1,6 +1,6 @@
 use crate::definitions::Image;
-use crate::drawing::line::draw_line_segment_mut;
 use crate::drawing::Canvas;
+use crate::drawing::line::draw_line_segment_mut;
 use crate::rect::Rect;
 use image::GenericImage;
 use std::f32;
@@ -175,7 +175,7 @@ mod benches {
     use super::*;
     use crate::rect::Rect;
     use image::{Rgb, RgbImage};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_draw_filled_rect_mut_rgb(b: &mut Bencher) {

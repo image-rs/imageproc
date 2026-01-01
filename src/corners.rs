@@ -5,7 +5,7 @@ use crate::{
     point::Point,
 };
 use image::{GenericImageView, GrayImage};
-use rand::{distr::Distribution, rngs::StdRng, SeedableRng};
+use rand::{SeedableRng, distr::Distribution, rngs::StdRng};
 
 /// A location and score for a detected corner.
 /// The scores need not be comparable between different
@@ -422,24 +422,26 @@ unsafe fn get_circle(
     p8: i16,
     p12: i16,
 ) -> [i16; 16] {
-    [
-        p0,
-        image.unsafe_get_pixel(x + 1, y - 3)[0] as i16,
-        image.unsafe_get_pixel(x + 2, y - 2)[0] as i16,
-        image.unsafe_get_pixel(x + 3, y - 1)[0] as i16,
-        p4,
-        image.unsafe_get_pixel(x + 3, y + 1)[0] as i16,
-        image.unsafe_get_pixel(x + 2, y + 2)[0] as i16,
-        image.unsafe_get_pixel(x + 1, y + 3)[0] as i16,
-        p8,
-        image.unsafe_get_pixel(x - 1, y + 3)[0] as i16,
-        image.unsafe_get_pixel(x - 2, y + 2)[0] as i16,
-        image.unsafe_get_pixel(x - 3, y + 1)[0] as i16,
-        p12,
-        image.unsafe_get_pixel(x - 3, y - 1)[0] as i16,
-        image.unsafe_get_pixel(x - 2, y - 2)[0] as i16,
-        image.unsafe_get_pixel(x - 1, y - 3)[0] as i16,
-    ]
+    unsafe {
+        [
+            p0,
+            image.unsafe_get_pixel(x + 1, y - 3)[0] as i16,
+            image.unsafe_get_pixel(x + 2, y - 2)[0] as i16,
+            image.unsafe_get_pixel(x + 3, y - 1)[0] as i16,
+            p4,
+            image.unsafe_get_pixel(x + 3, y + 1)[0] as i16,
+            image.unsafe_get_pixel(x + 2, y + 2)[0] as i16,
+            image.unsafe_get_pixel(x + 1, y + 3)[0] as i16,
+            p8,
+            image.unsafe_get_pixel(x - 1, y + 3)[0] as i16,
+            image.unsafe_get_pixel(x - 2, y + 2)[0] as i16,
+            image.unsafe_get_pixel(x - 3, y + 1)[0] as i16,
+            p12,
+            image.unsafe_get_pixel(x - 3, y - 1)[0] as i16,
+            image.unsafe_get_pixel(x - 2, y - 2)[0] as i16,
+            image.unsafe_get_pixel(x - 1, y - 3)[0] as i16,
+        ]
+    }
 }
 
 /// True if the circle has a contiguous section of at least the given length, all
@@ -660,7 +662,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     #[bench]
     fn bench_is_corner_fast12_12_noncontiguous(b: &mut Bencher) {

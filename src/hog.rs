@@ -87,13 +87,13 @@ impl HogSpec {
         options: HogOptions,
     ) -> Result<(usize, usize), String> {
         let mut errors: Vec<String> = vec![];
-        if width % options.cell_side != 0 {
+        if !width.is_multiple_of(options.cell_side) {
             errors.push(format!(
                 "cell side {} does not evenly divide width {}",
                 options.cell_side, width
             ));
         }
-        if height % options.cell_side != 0 {
+        if !height.is_multiple_of(options.cell_side) {
             errors.push(format!(
                 "cell side {} does not evenly divide height {}",
                 options.cell_side, height
@@ -113,13 +113,13 @@ impl HogSpec {
         options: HogOptions,
     ) -> Result<(usize, usize), String> {
         let mut errors: Vec<String> = vec![];
-        if (cells_wide - options.block_side) % options.block_stride != 0 {
+        if !(cells_wide - options.block_side).is_multiple_of(options.block_stride) {
             errors.push(format!(
                 "block stride {} does not evenly divide (cells wide {} - block side {})",
                 options.block_stride, cells_wide, options.block_side
             ));
         }
-        if (cells_high - options.block_side) % options.block_stride != 0 {
+        if !(cells_high - options.block_side).is_multiple_of(options.block_stride) {
             errors.push(format!(
                 "block stride {} does not evenly divide (cells high {} - block side {})",
                 options.block_stride, cells_high, options.block_side

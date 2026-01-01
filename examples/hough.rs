@@ -3,9 +3,9 @@
 //! wrench image in /examples by running
 //! `cargo run --example hough ./examples/wrench.jpg ./tmp`
 
-use image::{open, Rgb};
+use image::{Rgb, open};
 use imageproc::edges::canny;
-use imageproc::hough::{detect_lines, draw_polar_lines, LineDetectionOptions, PolarLine};
+use imageproc::hough::{LineDetectionOptions, PolarLine, detect_lines, draw_polar_lines};
 use imageproc::map::map_pixels;
 use std::env;
 use std::fs;

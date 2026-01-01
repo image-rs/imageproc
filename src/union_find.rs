@@ -180,7 +180,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::{SeedableRng, rngs::StdRng};
     use rand_distr::{Distribution, Uniform};
 
     #[bench]

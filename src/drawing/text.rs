@@ -5,7 +5,7 @@ use crate::definitions::{Clamp, Image};
 use crate::drawing::Canvas;
 use crate::pixelops::weighted_sum;
 
-use ab_glyph::{point, Font, GlyphId, OutlinedGlyph, PxScale, Rect, ScaleFont};
+use ab_glyph::{Font, GlyphId, OutlinedGlyph, PxScale, Rect, ScaleFont, point};
 
 fn layout_glyphs(
     scale: impl Into<PxScale> + Copy,

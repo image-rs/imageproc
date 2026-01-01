@@ -1,13 +1,13 @@
 //! An example of template matching in a greyscale image.
 
-use image::{open, GenericImage, GrayImage, Luma, Rgb, RgbImage};
+use image::{GenericImage, GrayImage, Luma, Rgb, RgbImage, open};
 use imageproc::definitions::Image;
 use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::map::map_pixels;
 use imageproc::rect::Rect;
 #[cfg(feature = "rayon")]
 use imageproc::template_matching::match_template_parallel;
-use imageproc::template_matching::{match_template, MatchTemplateMethod};
+use imageproc::template_matching::{MatchTemplateMethod, match_template};
 use std::env;
 use std::f32;
 use std::fs;

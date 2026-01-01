@@ -1,4 +1,4 @@
-use image::{open, GrayImage, Luma, Pixel};
+use image::{GrayImage, Luma, Pixel, open};
 use imageproc::definitions::Clamp;
 use imageproc::gradients::gradients;
 use imageproc::kernel;

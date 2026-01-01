@@ -269,7 +269,7 @@ mod proptests {
 mod benches {
     use super::*;
     use crate::utils::luma32f_bench_image;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     const N: u32 = 600;
 

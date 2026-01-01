@@ -2,8 +2,8 @@
 
 use std::cmp::min;
 
-use image::math::Rect;
 use image::Pixel;
+use image::math::Rect;
 
 use crate::definitions::Image;
 

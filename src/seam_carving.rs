@@ -6,7 +6,7 @@
 use crate::definitions::{HasBlack, Image};
 use crate::gradients::gradients;
 use crate::kernel::{self};
-use crate::map::{map_pixels, WithChannel};
+use crate::map::{WithChannel, map_pixels};
 use image::{GrayImage, Luma, Pixel, Rgb};
 use std::cmp::min;
 
@@ -192,7 +192,7 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
 mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     macro_rules! bench_shrink_width {
         ($name:ident, side: $s:expr, shrink_by: $m:expr) => {

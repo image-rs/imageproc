@@ -2,7 +2,7 @@
 
 use crate::point::Point;
 use image::GrayImage;
-use num::{cast, Num, NumCast};
+use num::{Num, NumCast, cast};
 use std::collections::VecDeque;
 
 /// Whether a border of a foreground region borders an enclosing background region or a contained background region.

@@ -1,6 +1,6 @@
 //! Demonstrates adding a color tint and applying a color gradient to a grayscale image.
 
-use image::{open, Luma, Rgb};
+use image::{Luma, Rgb, open};
 use imageproc::map::map_pixels;
 use imageproc::pixelops::weighted_sum;
 use std::env;

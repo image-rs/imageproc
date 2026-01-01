@@ -541,7 +541,7 @@ mod tests {
 mod benches {
     use super::*;
     use image::{GrayImage, Luma};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
     macro_rules! bench_detect_lines {
         ($name:ident, $r:expr, $angle:expr) => {

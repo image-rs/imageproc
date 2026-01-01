@@ -3,7 +3,7 @@
 //! [morphological operators]: https://homepages.inf.ed.ac.uk/rbf/HIPR2/morops.htm
 
 use crate::{
-    distance_transform::{distance_transform_impl, distance_transform_mut, DistanceFrom, Norm},
+    distance_transform::{DistanceFrom, Norm, distance_transform_impl, distance_transform_mut},
     point::Point,
 };
 use image::{GrayImage, Luma};
@@ -375,7 +375,7 @@ impl Mask {
         let center = Point::new(center_x, center_y).to_i16();
         let elements = image
             .enumerate_pixels()
-            .filter(|(_, _, &p)| p[0] != 0)
+            .filter(|&(_, _, &p)| p[0] != 0)
             .map(|(x, y, _)| Point::new(x, y).to_i16())
             .map(|p| p - center)
             .collect();
@@ -384,13 +384,12 @@ impl Mask {
 
     fn new(elements: Vec<Point<i16>>) -> Self {
         assert!(elements.len() <= (511 * 511) as usize);
-        debug_assert!(elements.iter().tuple_windows().all(|(a, b)| {
-            if a.y == b.y {
-                a.x < b.x
-            } else {
-                a.y < b.y
-            }
-        }));
+        debug_assert!(
+            elements
+                .iter()
+                .tuple_windows()
+                .all(|(a, b)| { if a.y == b.y { a.x < b.x } else { a.y < b.y } })
+        );
         Self { elements }
     }
 
