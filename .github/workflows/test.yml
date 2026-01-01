@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, windows-latest]
+        os: [macos-15, windows-2025]
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       # if your project needs OpenSSL, uncomment this to fix Windows builds.
