@@ -16,7 +16,7 @@ concurrency:
 name: safety
 jobs:
   sanitizers:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,7 +58,7 @@ jobs:
           LSAN_OPTIONS: "suppressions=lsan-suppressions.txt"
           RUSTFLAGS: "-Z sanitizer=leak"
   miri:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,10 +69,9 @@ jobs:
           toolchain: nightly-2025-10-21
           components: miri
       - name: Install cargo-nextest
-        uses: baptiste0928/cargo-install@v1
+        uses: baptiste0928/cargo-install@v3.3.2
         with:
           crate: cargo-nextest
-          locked: true
       - name: cargo miri test
         timeout-minutes: 120
         run: cargo miri nextest run --no-default-features --features=image/default

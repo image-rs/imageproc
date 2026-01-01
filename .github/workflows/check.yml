@@ -24,7 +24,7 @@ concurrency:
 name: check
 jobs:
   vars:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # https://rust-lang.github.io/rustup-components-history/
     outputs:
       nightly: nightly-2025-10-21
@@ -40,7 +40,7 @@ jobs:
           echo "msrv=${msrv}" >> "$GITHUB_OUTPUT"
   fmt:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         toolchain: ["${{ needs.vars.outputs.stable }}"]
@@ -56,7 +56,7 @@ jobs:
         run: cargo fmt --check
   clippy:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ${{ matrix.toolchain }} / clippy
     permissions:
       contents: read
@@ -81,7 +81,7 @@ jobs:
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
@@ -100,7 +100,7 @@ jobs:
     # cargo-hack checks combinations of feature flags to ensure that features are all additive
     # which is required for feature unification
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         toolchain: ["${{ needs.vars.outputs.stable }}"]
@@ -111,15 +111,17 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-      - name: cargo install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v3.3.2
+        with:
+          crate: cargo-hack
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
       # --feature-powerset runs for every combination of features
       - name: cargo hack
         run: cargo hack --feature-powerset check
   msrv:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / msrv / ${{ needs.vars.outputs.msrv }}
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +151,7 @@ jobs:
           fi
   wasm:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -161,7 +163,7 @@ jobs:
         env:
           RUSTFLAGS: -D warnings
   semver:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4

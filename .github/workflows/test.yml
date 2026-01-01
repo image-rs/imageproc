@@ -17,7 +17,7 @@ concurrency:
 name: test
 jobs:
   vars:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # https://rust-lang.github.io/rustup-components-history/
     outputs:
       nightly: nightly-2025-10-21
@@ -25,7 +25,7 @@ jobs:
       - run: echo "dummy job"
   required:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }}
     strategy:
       matrix:
@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }} / direct-minimal-versions
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-15, windows-2025]
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       # if your project needs OpenSSL, uncomment this to fix Windows builds.
@@ -88,7 +88,7 @@ jobs:
         with:
           submodules: true
       - name: Setup cmake
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-15'
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.6.0'
