@@ -6,7 +6,8 @@
 
 New features:
 
-* add `pHash` by @cospectrum in https://github.com/image-rs/imageproc/pull/709
+* Add `AverageHash` by @cospectrum
+* Add `PHash` by @cospectrum in https://github.com/image-rs/imageproc/pull/709
 * Make `hough::intersection_points` public by @theotherphil in https://github.com/image-rs/imageproc/pull/613
 * Color Bilateral Filter by @ripytide in https://github.com/image-rs/imageproc/pull/606
 * Parallel Pixel Maps by @ripytide in https://github.com/image-rs/imageproc/pull/602
@@ -21,7 +22,7 @@ New features:
 
 Performance improvements:
 
-* improved `draw_text_mut` performance by @Icekey in https://github.com/image-rs/imageproc/pull/663
+* Improved `draw_text_mut` performance by @Icekey in https://github.com/image-rs/imageproc/pull/663
 
 Breaking changes:
 
