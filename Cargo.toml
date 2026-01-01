@@ -15,11 +15,7 @@ exclude = [".github/*", "examples/*", "tests/*"]
 default = ["rayon", "image/default", "text", "fft"]
 display-window = ["sdl2"]
 rayon = ["dep:rayon", "image/rayon"]
-
-# Option: enable phash
 fft = ["dep:rustdct"]
-
-# Option: enable drawing::text
 text = ["dep:ab_glyph"]
 
 [dependencies]

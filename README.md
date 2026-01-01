@@ -47,11 +47,11 @@ always be faster - we recommend benchmarking for your specific use-case.
 ### Default Features
 
 - `rayon`: enables multi-threaded versions of several functions
+- `text`: enables text drawing
+- `fft`: enables `phash` and other functions that depends on `fft` crate
 
 ### Optional Features
 
-- `katexit`: enables latex in documentation via
-  [katexit](https://github.com/termoshtt/katexit)
 - `display-window`: enables `sdl2`
 - `sdl2`: enables the displaying of images (using `imageproc::window`) with
   [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
