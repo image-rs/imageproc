@@ -25,7 +25,7 @@ Performance improvements:
 
 Breaking changes:
 
-* Removed `filter3x3`, use `Kernel` + `filter` instead
+* Removed `filter3x3`, use `Kernel` + `filter_clamped` instead
 * Add `delta` parameter to `adaptive_threshold` by @Dantsz in https://github.com/image-rs/imageproc/pull/637
 * Make external dependencies optional by @OrangeHoopla in https://github.com/image-rs/imageproc/pull/736
 * MSRV v1.87 / 2024 Edition / `nalgebra` v0.34 by @paolobarbolini in https://github.com/image-rs/imageproc/pull/748
