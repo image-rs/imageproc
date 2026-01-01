@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-15, windows-latest]
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
     steps:
       # if your project needs OpenSSL, uncomment this to fix Windows builds.
@@ -88,7 +88,7 @@ jobs:
         with:
           submodules: true
       - name: Setup cmake
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-15'
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.6.0'
