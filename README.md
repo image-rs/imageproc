@@ -48,7 +48,7 @@ always be faster - we recommend benchmarking for your specific use-case.
 
 - `rayon`: enables multi-threaded versions of several functions
 - `text`: enables text drawing
-- `fft`: enables `phash` and other functions that depends on `fft` crate
+- `fft`: enables `phash` and other functions that depends on the `rustfft` crate
 
 ### Optional Features
 
