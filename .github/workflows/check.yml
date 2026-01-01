@@ -111,8 +111,10 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-      - name: cargo install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
+      - name: Install cargo-hack
+        uses: baptiste0928/cargo-install@v3.3.2
+        with:
+          crate: cargo-hack
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
       # --feature-powerset runs for every combination of features
       - name: cargo hack
