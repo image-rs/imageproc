@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.26.0] - 2025-01-01
+## [0.26.0] - 2026-01-01
 
 [0.26.0]: https://github.com/image-rs/imageproc/releases/tag/v0.25.0
 
