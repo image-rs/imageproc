@@ -17,7 +17,7 @@ concurrency:
 name: test
 jobs:
   vars:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # https://rust-lang.github.io/rustup-components-history/
     outputs:
       nightly: nightly-2025-10-21
@@ -25,7 +25,7 @@ jobs:
       - run: echo "dummy job"
   required:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }}
     strategy:
       matrix:
@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         toolchain: ["${{ needs.vars.outputs.nightly }}"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }} / direct-minimal-versions
     steps:
       - uses: actions/checkout@v4

@@ -15,7 +15,7 @@ concurrency:
 name: rolling
 jobs:
   vars:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # https://rust-lang.github.io/rustup-components-history/
     outputs:
       nightly: nightly-2025-10-21
@@ -24,7 +24,7 @@ jobs:
   # https://twitter.com/mycoliza/status/1571295690063753218
   nightly:
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }}
     strategy:
       matrix:
@@ -48,7 +48,7 @@ jobs:
     # Cargo semver rules (i.e cargo does not update to a new major version unless explicitly told
     # to).
     needs: vars
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: ubuntu / ${{ matrix.toolchain }} / updated
     strategy:
       matrix:
