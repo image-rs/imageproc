@@ -1,5 +1,46 @@
 # Change Log
 
+## [0.26.0] - 2026-01-01
+
+[0.26.0]: https://github.com/image-rs/imageproc/releases/tag/v0.26.0
+
+New features:
+
+* Add `AverageHash` by @cospectrum
+* Add `PHash` by @cospectrum in https://github.com/image-rs/imageproc/pull/709
+* Make `hough::intersection_points` public by @theotherphil in https://github.com/image-rs/imageproc/pull/613
+* Color Bilateral Filter by @ripytide in https://github.com/image-rs/imageproc/pull/606
+* Parallel Pixel Maps by @ripytide in https://github.com/image-rs/imageproc/pull/602
+* Add `filter_map_parallel` by @ripytide in https://github.com/image-rs/imageproc/pull/642
+* Add compose module and functions by @ripytide in https://github.com/image-rs/imageproc/pull/662
+* Add rotation module and functions by @ripytide in https://github.com/image-rs/imageproc/pull/669
+* Add `replace()` and `overlay()` functions by @ripytide in https://github.com/image-rs/imageproc/pull/666
+* Expand `stetch_contrast()` to color images also using `u8` by @ripytide in https://github.com/image-rs/imageproc/pull/670
+* Flood-fill by @tkallady in https://github.com/image-rs/imageproc/pull/684
+* Implement Kapur's algorithm for binary thresholding (#696) by @o-tho in https://github.com/image-rs/imageproc/pull/699
+* Add `rotate_about_center_no_crop` to prevent pixel loss during image rotations by @Tikitikitikidesuka in https://github.com/image-rs/imageproc/pull/688
+
+Performance improvements:
+
+* Improved `draw_text_mut` performance by @Icekey in https://github.com/image-rs/imageproc/pull/663
+
+Breaking changes:
+
+* Removed `filter3x3`, use `Kernel` + `filter_clamped` instead
+* Add `delta` parameter to `adaptive_threshold` by @Dantsz in https://github.com/image-rs/imageproc/pull/637
+* Make external dependencies optional by @OrangeHoopla in https://github.com/image-rs/imageproc/pull/736
+* MSRV v1.87 / 2024 Edition / `nalgebra` v0.34 by @paolobarbolini in https://github.com/image-rs/imageproc/pull/748
+
+Bug fixes:
+
+* fix `draw_filled_rect` panic for empty image by @cospectrum in https://github.com/image-rs/imageproc/pull/711
+* fix `text_size` by @cospectrum in https://github.com/image-rs/imageproc/pull/689
+* rewrite `column_running_sum` with better safety by @cospectrum in https://github.com/image-rs/imageproc/pull/731
+* Fix fast corner 9 algorithm by @LMJW in https://github.com/image-rs/imageproc/pull/680
+* handle polygon draw case where start point equals end point by @fs-99 in https://github.com/image-rs/imageproc/pull/682
+* Detailed error message for generic type parameter of find_contours_with_threshold (#694) by @sakird in https://github.com/image-rs/imageproc/pull/695
+* fix integration tests by @bioinformatist in https://github.com/image-rs/imageproc/pull/739
+
 ## [0.25.0] - 2024-05-19
 
 [0.25.0]: https://github.com/image-rs/imageproc/releases/tag/v0.25.0
