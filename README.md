@@ -48,12 +48,11 @@ always be faster - we recommend benchmarking for your specific use-case.
 
 - `rayon`: enables multi-threaded versions of several functions
 - `text`: enables text drawing
-- `fft`: enables `phash` and other functions that depends on the `rustfft` crate
+- `fft`: enables `phash` and other functions that depend on the `rustfft` crate
 
 ### Optional Features
 
-- `display-window`: enables `sdl2`
-- `sdl2`: enables the displaying of images (using `imageproc::window`) with
+- `display-window`: enables the displaying of images (using `imageproc::window`) with
   [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
 
 ## How to contribute
