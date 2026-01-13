@@ -88,7 +88,6 @@ pub fn draw_text_mut<C>(
     let image_width = canvas.width() as i32;
     let image_height = canvas.height() as i32;
 
-
     layout_glyphs(scale, font, text, |g, bb| {
         let x_shift = x + bb.min.x.round() as i32;
         let y_shift = y + bb.min.y.round() as i32;
