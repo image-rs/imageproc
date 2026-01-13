@@ -102,8 +102,7 @@ pub fn draw_text_mut<C>(
                 let gv = gv.clamp(0.0, 1.0);
 
                 if C::Pixel::HAS_ALPHA {
-                    let mut color = color;
-                    color.apply_with_alpha(|f| f, |g| Clamp::clamp(g.into() * gv));
+                    let color = color.map_with_alpha(|f| f, |g| Clamp::clamp(g.into() * gv));
 
                     pixel.blend(&color);
                 } else {
