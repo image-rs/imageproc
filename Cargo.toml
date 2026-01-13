@@ -21,7 +21,7 @@ text = ["dep:ab_glyph"]
 [dependencies]
 ab_glyph = { version = "0.2.23", default-features = false, features = ["std"], optional = true}
 approx = { version = "0.5", default-features = false }
-image = { version = "0.25.9", default-features = false }
+image = { version = "0.25.8", default-features = false }
 itertools = { version = "0.14.0", default-features = false, features = [
     "use_std",
 ] }
