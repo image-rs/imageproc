@@ -1019,9 +1019,5 @@ fn test_draw_text_with_alpha() {
         img
     }
 
-    compare_to_truth(
-        "elephant.png",
-        "text_alpha.png",
-        draw_text_with_alpha,
-    );
+    compare_to_truth("elephant.png", "text_alpha.png", draw_text_with_alpha);
 }
