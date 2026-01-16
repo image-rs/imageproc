@@ -98,10 +98,18 @@ pub fn draw_text_mut<C>(
             if (0..image_width).contains(&image_x) && (0..image_height).contains(&image_y) {
                 let image_x = image_x as u32;
                 let image_y = image_y as u32;
-                let pixel = canvas.get_pixel(image_x, image_y);
+                let mut pixel = canvas.get_pixel(image_x, image_y);
                 let gv = gv.clamp(0.0, 1.0);
-                let weighted_color = weighted_sum(pixel, color, 1.0 - gv, gv);
-                canvas.draw_pixel(image_x, image_y, weighted_color);
+
+                if C::Pixel::HAS_ALPHA {
+                    let color = color.map_with_alpha(|f| f, |g| Clamp::clamp(g.into() * gv));
+
+                    pixel.blend(&color);
+                } else {
+                    pixel = weighted_sum(pixel, color, 1.0 - gv, gv);
+                }
+
+                canvas.draw_pixel(image_x, image_y, pixel);
             }
         })
     });
