@@ -1000,3 +1000,28 @@ fn test_draw_text() {
         }
     }
 }
+
+#[test]
+#[cfg(feature = "text")]
+fn test_draw_text_with_alpha() {
+    fn draw_text_with_alpha(img: &RgbaImage) -> RgbaImage {
+        let mut img = img.clone();
+
+        let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
+        let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
+
+        let text = "Hello world!";
+        let scale = 30.0;
+        let (x, y) = (50, 100);
+        let color_text = Rgba([255, 255, 255, 85]);
+        imageproc::drawing::draw_text_mut(&mut img, color_text, x, y, scale, &font, text);
+
+        img
+    }
+
+    compare_to_truth(
+        "elephant.png",
+        "text_alpha.png",
+        draw_text_with_alpha,
+    );
+}
