@@ -129,9 +129,11 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
                 // Track neighbors until no neighbor is >= low_thresh.
                 while let Some((nx, ny)) = edges.pop() {
                     let neighbor_indices = [
+                        (nx + 1, ny - 1),
                         (nx + 1, ny),
                         (nx + 1, ny + 1),
                         (nx, ny + 1),
+                        (nx, ny - 1),
                         (nx - 1, ny - 1),
                         (nx - 1, ny),
                         (nx - 1, ny + 1),
@@ -142,6 +144,13 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
                         let out_neighbor = *out.get_pixel(neighbor_idx.0, neighbor_idx.1);
                         if in_neighbor[0] >= low_thresh && out_neighbor[0] == 0 {
                             out.put_pixel(neighbor_idx.0, neighbor_idx.1, max_brightness);
+                            if neighbor_idx.0 == 0
+                                || neighbor_idx.0 >= input.width() - 1
+                                || neighbor_idx.1 == 0
+                                || neighbor_idx.1 >= input.height() - 1
+                            {
+                                continue;
+                            }
                             edges.push((neighbor_idx.0, neighbor_idx.1));
                         }
                     }
