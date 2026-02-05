@@ -163,6 +163,32 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
 
 #[cfg(not(miri))]
 #[cfg(test)]
+mod proptests {
+    use super::canny;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::{prop, *};
+
+    proptest! {
+        #[test]
+        fn proptest_hysteresis_thresholds(
+            img in arbitrary_image::<Luma<u8>>(0..100, 0..100),
+            low in 0f32..1000f32,
+            high in 0f32..1000f32,
+        ) {
+            let (low_thresh, high_thresh) = if low <= high {
+                (low, high)
+            } else {
+                (high, low)
+            };
+            let out = canny(&img, low_thresh, high_thresh);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+    
+    }
+}
+#[cfg(not(miri))]
+#[cfg(test)]
 mod benches {
     use super::canny;
     use crate::drawing::draw_filled_rect_mut;
