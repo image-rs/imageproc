@@ -7,4 +7,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: actionlint
-        uses: raven-actions/actionlint@v2.0.0
+        uses: rhysd/actionlint@v1.7.11
