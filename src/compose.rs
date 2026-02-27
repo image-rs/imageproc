@@ -439,3 +439,120 @@ mod tests {
         overlay_mut(&mut bottom, &top, 0, 2);
     }
 }
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_flip_horizontal_matches_coordinate_mapping(
+            image in arbitrary_image::<Luma<u8>>(1..16, 1..16)
+        ) {
+            let out = flip_horizontal(&image);
+            let (w, h) = image.dimensions();
+
+            for y in 0..h {
+                for x in 0..w {
+                    prop_assert_eq!(
+                        out.get_pixel(x, y),
+                        image.get_pixel(w - x - 1, y)
+                    );
+                }
+            }
+
+            let mut image_mut = image.clone();
+            flip_horizontal_mut(&mut image_mut);
+            assert_pixels_eq!(image_mut, out);
+        }
+
+        #[test]
+        fn proptest_flip_vertical_matches_coordinate_mapping(
+            image in arbitrary_image::<Luma<u8>>(1..16, 1..16)
+        ) {
+            let out = flip_vertical(&image);
+            let (w, h) = image.dimensions();
+
+            for y in 0..h {
+                for x in 0..w {
+                    prop_assert_eq!(
+                        out.get_pixel(x, y),
+                        image.get_pixel(x, h - y - 1)
+                    );
+                }
+            }
+
+            let mut image_mut = image.clone();
+            flip_vertical_mut(&mut image_mut);
+            assert_pixels_eq!(image_mut, out);
+        }
+
+        #[test]
+        fn proptest_crop_returns_requested_pixels(
+            image in arbitrary_image::<Luma<u8>>(1..16, 1..16),
+            x in 0..16u32,
+            y in 0..16u32,
+            crop_w in 1..16u32,
+            crop_h in 1..16u32,
+        ) {
+            let (w, h) = image.dimensions();
+            let x = x % w;
+            let y = y % h;
+            let crop_w = crop_w.min(w - x);
+            let crop_h = crop_h.min(h - y);
+
+            let rect = Rect {
+                x,
+                y,
+                width: crop_w,
+                height: crop_h,
+            };
+            let out = crop(&image, rect);
+
+            prop_assert_eq!(out.dimensions(), (crop_w, crop_h));
+            for yy in 0..crop_h {
+                for xx in 0..crop_w {
+                    prop_assert_eq!(out.get_pixel(xx, yy), image.get_pixel(x + xx, y + yy));
+                }
+            }
+        }
+
+        #[test]
+        fn proptest_replace_mut_matches_non_mut_variant(
+            bottom in arbitrary_image::<Luma<u8>>(1..16, 1..16),
+            top in arbitrary_image::<Luma<u8>>(1..16, 1..16),
+            x in 0..16u32,
+            y in 0..16u32,
+        ) {
+            let (bw, bh) = bottom.dimensions();
+            let x = x % bw;
+            let y = y % bh;
+
+            let replaced = replace(&bottom, &top, x, y);
+            let mut replaced_mut = bottom.clone();
+            replace_mut(&mut replaced_mut, &top, x, y);
+            assert_pixels_eq!(replaced_mut, replaced);
+        }
+
+        #[test]
+        fn proptest_overlay_mut_matches_non_mut_variant(
+            bottom in arbitrary_image::<Luma<u8>>(1..16, 1..16),
+            top in arbitrary_image::<Luma<u8>>(1..16, 1..16),
+            x in 0..16u32,
+            y in 0..16u32,
+        ) {
+            let (bw, bh) = bottom.dimensions();
+            let x = x % bw;
+            let y = y % bh;
+
+            let overlaid = overlay(&bottom, &top, x, y);
+            let mut overlaid_mut = bottom.clone();
+            overlay_mut(&mut overlaid_mut, &top, x, y);
+            assert_pixels_eq!(overlaid_mut, overlaid);
+        }
+    }
+}
