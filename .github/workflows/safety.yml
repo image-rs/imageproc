@@ -72,6 +72,7 @@ jobs:
         uses: baptiste0928/cargo-install@v3.3.2
         with:
           crate: cargo-nextest
+          version: "0.9.122"
       - name: cargo miri test
         timeout-minutes: 120
         run: cargo miri nextest run --no-default-features --features=image/default
