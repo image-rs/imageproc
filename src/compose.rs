@@ -215,8 +215,8 @@ where
     assert!(x < bottom.width());
     assert!(y < bottom.height());
 
-    let x_end = min(bottom.width() - 1, x + top.width());
-    let y_end = min(bottom.height() - 1, y + top.height());
+    let x_end = min(bottom.width(), x.saturating_add(top.width()));
+    let y_end = min(bottom.height(), y.saturating_add(top.height()));
 
     for y_bot in y..y_end {
         for x_bot in x..x_end {
@@ -262,17 +262,180 @@ where
     assert!(x < bottom.width());
     assert!(y < bottom.height());
 
-    let x_end = min(bottom.width() - 1, x + top.width());
-    let y_end = min(bottom.height() - 1, y + top.height());
+    let x_end = min(bottom.width(), x.saturating_add(top.width()));
+    let y_end = min(bottom.height(), y.saturating_add(top.height()));
 
     for y_bot in y..y_end {
         for x_bot in x..x_end {
             let mut bottom_pixel = *bottom.get_pixel(x_bot, y_bot);
-            let top_pixel = bottom.get_pixel(x_bot - x, y_bot - y);
+            let top_pixel = top.get_pixel(x_bot - x, y_bot - y);
 
             bottom_pixel.blend(top_pixel);
 
             bottom.put_pixel(x_bot, y_bot, bottom_pixel);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crop_extracts_requested_rectangle() {
+        let image = gray_image!(
+            0, 1, 2, 3;
+            4, 5, 6, 7;
+            8, 9, 10, 11
+        );
+        let out = crop(
+            &image,
+            Rect {
+                x: 1,
+                y: 1,
+                width: 2,
+                height: 2,
+            },
+        );
+
+        assert_pixels_eq!(out, gray_image!(5, 6; 9, 10));
+    }
+
+    #[test]
+    #[should_panic]
+    fn crop_panics_when_rectangle_is_outside_image() {
+        let image = gray_image!(0, 1; 2, 3);
+        let _ = crop(
+            &image,
+            Rect {
+                x: 1,
+                y: 1,
+                width: 2,
+                height: 2,
+            },
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn crop_parallel_matches_crop() {
+        let image = gray_image!(
+            0, 1, 2, 3;
+            4, 5, 6, 7;
+            8, 9, 10, 11
+        );
+        let rect = Rect {
+            x: 1,
+            y: 0,
+            width: 2,
+            height: 3,
+        };
+
+        assert_pixels_eq!(crop_parallel(&image, rect), crop(&image, rect));
+    }
+
+    #[test]
+    fn flip_horizontal_matches_expected() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6
+        );
+        let expected = gray_image!(
+            3, 2, 1;
+            6, 5, 4
+        );
+
+        assert_pixels_eq!(flip_horizontal(&image), expected);
+
+        let mut image_mut = image.clone();
+        flip_horizontal_mut(&mut image_mut);
+        assert_pixels_eq!(image_mut, expected);
+    }
+
+    #[test]
+    fn flip_vertical_matches_expected() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let expected = gray_image!(
+            7, 8, 9;
+            4, 5, 6;
+            1, 2, 3
+        );
+
+        assert_pixels_eq!(flip_vertical(&image), expected);
+
+        let mut image_mut = image.clone();
+        flip_vertical_mut(&mut image_mut);
+        assert_pixels_eq!(image_mut, expected);
+    }
+
+    #[test]
+    fn replace_copies_top_with_clipping() {
+        let bottom = gray_image!(
+            0, 0, 0;
+            0, 0, 0;
+            0, 0, 0
+        );
+        let top = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let expected = gray_image!(
+            0, 0, 0;
+            0, 0, 0;
+            0, 0, 1
+        );
+
+        assert_pixels_eq!(replace(&bottom, &top, 2, 2), expected);
+
+        let mut bottom_mut = bottom.clone();
+        replace_mut(&mut bottom_mut, &top, 2, 2);
+        assert_pixels_eq!(bottom_mut, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn replace_panics_when_start_x_is_outside_bottom() {
+        let mut bottom = gray_image!(0, 0; 0, 0);
+        let top = gray_image!(1);
+        replace_mut(&mut bottom, &top, 2, 0);
+    }
+
+    #[test]
+    fn overlay_blends_top_over_bottom() {
+        let bottom = gray_image!(
+            0, 0, 0;
+            0, 0, 0;
+            0, 0, 0
+        );
+        let top = gray_image!(
+            200, 200;
+            200, 200
+        );
+        let expected = gray_image!(
+            0, 0, 0;
+            0, 0, 0;
+            0, 0, 200
+        );
+
+        assert_pixels_eq!(overlay(&bottom, &top, 2, 2), expected);
+
+        let mut bottom_mut = bottom.clone();
+        overlay_mut(&mut bottom_mut, &top, 2, 2);
+        assert_pixels_eq!(bottom_mut, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn overlay_panics_when_start_y_is_outside_bottom() {
+        let mut bottom = gray_image!(
+            0, 0;
+            0, 0
+        );
+        let top = gray_image!(1);
+        overlay_mut(&mut bottom, &top, 0, 2);
     }
 }
