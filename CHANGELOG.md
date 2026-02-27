@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.26.1] - 2026-02-28
+
+[0.26.1]: https://github.com/image-rs/imageproc/releases/tag/v0.26.1
+
+Bug fixes:
+* fix `compose::overlay` pixel blending by @cospectrum in https://github.com/image-rs/imageproc/pull/754
+* fix `compose::overlay` boundary calculations by @cospectrum in https://github.com/image-rs/imageproc/pull/754
+* fix `compose::replace` boundary calculations by @cospectrum in https://github.com/image-rs/imageproc/pull/754
+
 ## [0.26.0] - 2026-01-01
 
 [0.26.0]: https://github.com/image-rs/imageproc/releases/tag/v0.26.0
