@@ -497,9 +497,8 @@ mod tests {
         );
     }
 
-    // `find_contours_with_threshold` documents a strict foreground rule:
-    // pixel intensity must be `> threshold` (not `>= threshold`).
-    // This test protects that boundary behavior.
+    // Contract under test:
+    // A pixel is foreground iff pixel_intensity > threshold (strict comparison).
     #[test]
     fn find_contours_with_threshold_respects_strict_threshold() {
         let image = gray_image!(1, 2, 0);
@@ -515,5 +514,54 @@ mod tests {
 
         let all_filtered = find_contours_with_threshold::<u32>(&image, 2);
         assert!(all_filtered.is_empty());
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_find_contours_matches_threshold_zero(
+            image in arbitrary_image::<Luma<u8>>(0..16, 0..16)
+        ) {
+            let via_default = find_contours::<u32>(&image);
+            let via_threshold = find_contours_with_threshold::<u32>(&image, 0);
+            prop_assert_eq!(via_default.len(), via_threshold.len());
+
+            for (left, right) in via_default.iter().zip(via_threshold.iter()) {
+                prop_assert_eq!(left.border_type, right.border_type);
+                prop_assert_eq!(left.parent, right.parent);
+                prop_assert_eq!(&left.points, &right.points);
+            }
+        }
+
+        #[test]
+        fn proptest_threshold_255_produces_no_contours(
+            image in arbitrary_image::<Luma<u8>>(0..16, 0..16)
+        ) {
+            let contours = find_contours_with_threshold::<u32>(&image, 255);
+            prop_assert!(contours.is_empty());
+        }
+
+        #[test]
+        fn proptest_contour_points_are_in_bounds_and_belong_to_foreground(
+            image in arbitrary_image::<Luma<u8>>(0..16, 0..16),
+            threshold in any::<u8>(),
+        ) {
+            let contours = find_contours_with_threshold::<u32>(&image, threshold);
+            for contour in contours {
+                for p in contour.points {
+                    prop_assert!(p.x < image.width());
+                    prop_assert!(p.y < image.height());
+                    prop_assert!(image.get_pixel(p.x, p.y).0[0] > threshold);
+                }
+            }
+        }
     }
 }
