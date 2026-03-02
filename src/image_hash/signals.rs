@@ -231,8 +231,8 @@ mod proptests {
         #[test]
         fn proptest_transpose(img in arbitrary_image(0..N, 0..N)) {
             let img_t = transpose(&img);
-            assert_eq!(img.width(), img_t.height());
-            assert_eq!(img.height(), img_t.width());
+            prop_assert_eq!(img.width(), img_t.height());
+            prop_assert_eq!(img.height(), img_t.width());
             assert_pixels_eq!(img, transpose(&img_t));
         }
         #[test]
@@ -254,12 +254,12 @@ mod proptests {
             let ctx = rustdct::DctPlanner::new().plan_dct2(img.width() as usize);
             let mut arena = vec![0f32; ctx.len() + ctx.get_scratch_len()];
             let dct = dct1d(&img, ctx.as_ref(), arena.as_mut());
-            assert_eq!(dct.dimensions(), img.dimensions());
+            prop_assert_eq!(dct.dimensions(), img.dimensions());
         }
         #[test]
         fn proptest_dct2d(img in arbitrary_image(0..N, 0..N)) {
             let dct = dct2d(Cow::Borrowed(&img));
-            assert_eq!(dct.dimensions(), img.dimensions());
+            prop_assert_eq!(dct.dimensions(), img.dimensions());
         }
     }
 }

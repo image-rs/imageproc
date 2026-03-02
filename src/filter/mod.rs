@@ -826,7 +826,7 @@ mod proptests {
             sigma in (0.0..150f32).prop_filter("contract", |&x| x > 0.0),
         ) {
             let out = gaussian_blur_f32(&img, sigma);
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
         #[test]
@@ -838,7 +838,7 @@ mod proptests {
             let out: Image<Luma<f32>> = filter(&img, kernel, |x| {
                 x
             });
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
         #[test]
@@ -847,7 +847,7 @@ mod proptests {
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = horizontal_filter(&img, &ker);
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
         #[test]
@@ -856,7 +856,7 @@ mod proptests {
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
             let out = vertical_filter(&img, &ker);
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
         #[test]
@@ -864,7 +864,7 @@ mod proptests {
             img in arbitrary_image::<Luma<u8>>(0..120, 0..120),
         ) {
             let out = laplacian_filter(&img);
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
 }

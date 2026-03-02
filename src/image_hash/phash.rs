@@ -121,7 +121,7 @@ mod proptests {
         #[test]
         fn proptest_phash(img in arbitrary_image(0..N, 0..N)) {
             let hash = phash(&img);
-            assert_eq!(0, hash.hamming_distance(hash));
+            prop_assert_eq!(0, hash.hamming_distance(hash));
         }
     }
 }

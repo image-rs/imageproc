@@ -204,8 +204,8 @@ mod proptests {
             let rect2 = Rect::at(x2, y2).of_size(w2, h2);
 
             if let Some(intersect) = rect1.intersect(rect2) {
-                assert!(intersect.width() > 0);
-                assert!(intersect.height() > 0);
+                prop_assert!(intersect.width() > 0);
+                prop_assert!(intersect.height() > 0);
             };
         }
     }

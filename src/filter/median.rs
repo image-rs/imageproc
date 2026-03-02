@@ -484,7 +484,7 @@ mod proptests {
             let expected = reference_median_filter(&image, x_radius, y_radius);
             let actual = median_filter(&image, x_radius, y_radius);
 
-            assert_eq!(actual, expected);
+            prop_assert_eq!(actual, expected);
         }
     }
 }
