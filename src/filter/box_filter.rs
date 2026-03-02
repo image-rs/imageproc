@@ -116,7 +116,7 @@ mod proptests {
             y_radius in 0..100u32,
         ) {
             let out = box_filter(&img, x_radius, y_radius);
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
 }

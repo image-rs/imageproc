@@ -343,7 +343,7 @@ mod proptests {
             let expected = suppress_non_maximum_reference(&image, 3);
             let actual = suppress_non_maximum(&image, 3);
 
-            assert_eq!(expected, actual);
+            prop_assert_eq!(expected, actual);
         }
     }
 }

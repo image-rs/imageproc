@@ -241,7 +241,7 @@ mod proptests {
             spatial_sigma in any::<f32>(),
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
         #[test]
@@ -252,7 +252,7 @@ mod proptests {
             spatial_sigma in any::<f32>(),
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
-            assert_eq!(out.dimensions(), img.dimensions());
+            prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
 }

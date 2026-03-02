@@ -164,7 +164,7 @@ mod proptests {
             let color = Luma([color]);
 
             let out = draw_filled_rect(&image, rect, color);
-            assert_eq!(out.dimensions(), image.dimensions());
+            prop_assert_eq!(out.dimensions(), image.dimensions());
         }
     }
 }

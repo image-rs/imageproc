@@ -616,7 +616,7 @@ mod proptests {
             let expected = integral_image_ref(&image);
             let actual = integral_image(&image);
 
-            assert_eq!(expected, actual);
+            prop_assert_eq!(expected, actual);
         }
 
         #[test]
@@ -624,7 +624,7 @@ mod proptests {
             image in arbitrary_image::<Luma<u8>>(0..10, 1..10),
             padding in 0..10u32,
         ) {
-            assert!(image.height() > 0);
+            prop_assert!(image.height() > 0);
             let mut actual = vec![0u32; (image.height() + 2 * padding) as usize];
             let mut expected = actual.clone();
 
@@ -634,7 +634,7 @@ mod proptests {
 
                 column_running_sum(&image, col, &mut actual, padding);
                 column_running_sum_reference(&image, col, &mut expected, padding);
-                assert_eq!(actual, expected);
+                prop_assert_eq!(&actual, &expected);
             }
         }
     }

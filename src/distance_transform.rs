@@ -587,7 +587,7 @@ mod proptests {
             let actual = distance_transform_1d(&f);
             let expected = distance_transform_1d_reference(&f);
 
-            assert_eq!(actual, expected);
+            prop_assert_eq!(actual, expected);
         }
 
         #[test]
@@ -595,7 +595,7 @@ mod proptests {
             let expected = euclidean_squared_distance_transform_reference(&image);
             let actual = euclidean_squared_distance_transform(&image);
 
-            assert_eq!(actual, expected)
+            prop_assert_eq!(actual, expected)
         }
     }
 }

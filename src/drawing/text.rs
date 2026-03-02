@@ -160,7 +160,7 @@ mod proptests {
             };
             for (px, py, &p) in img.enumerate_pixels() {
                 if !rect.contains(px as i32, py as i32) {
-                    assert_eq!(p, background, "pixel_position: {:?}, rect: {:?}", (px, py), rect);
+                    prop_assert_eq!(p, background, "pixel_position: {:?}, rect: {:?}", (px, py), rect);
                 }
             }
         }
