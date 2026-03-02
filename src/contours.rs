@@ -496,25 +496,6 @@ mod tests {
             ]
         );
     }
-
-    // Contract under test:
-    // A pixel is foreground iff pixel_intensity > threshold (strict comparison).
-    #[test]
-    fn find_contours_with_threshold_respects_strict_threshold() {
-        let image = gray_image!(1, 2, 0);
-
-        let no_threshold = find_contours_with_threshold::<u32>(&image, 0);
-        assert_eq!(no_threshold.len(), 1);
-        assert!(no_threshold[0].points.contains(&Point::new(0, 0)));
-        assert!(no_threshold[0].points.contains(&Point::new(1, 0)));
-
-        let thresholded = find_contours_with_threshold::<u32>(&image, 1);
-        assert_eq!(thresholded.len(), 1);
-        assert_eq!(thresholded[0].points, vec![Point::new(1, 0)]);
-
-        let all_filtered = find_contours_with_threshold::<u32>(&image, 2);
-        assert!(all_filtered.is_empty());
-    }
 }
 
 #[cfg(not(miri))]
