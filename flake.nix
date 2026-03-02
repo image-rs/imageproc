@@ -39,6 +39,9 @@
             "rustfmt"
             "rust-src"
           ];
+          targets = [
+            "wasm32-unknown-unknown"
+          ];
         };
       in {
         devShells = {
