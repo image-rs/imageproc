@@ -1,44 +1,106 @@
 //! Functions for manipulating the contrast of images.
 
-use std::cmp::{max, min};
+use std::cmp::min;
 
 use image::{GrayImage, Luma, Pixel};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
 use crate::definitions::{HasBlack, HasWhite, Image};
+use crate::filter::gaussian_blur_f32;
 use crate::integral_image::{integral_image, sum_image_pixels};
-use crate::map::map_pixels_mut;
+use crate::map::{map_pixels, map_pixels_mut};
 use crate::stats::{cumulative_histogram, histogram};
 
-/// Applies an adaptive threshold to an image.
+/// Specifies the adaptive thresholding algorithm to use.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AdaptiveThresholdType {
+    /// The threshold value is the mean of the neighborhood area minus delta.
+    Mean,
+    /// The threshold value is a Gaussian-weighted sum of the neighborhood values minus delta.
+    Gaussian,
+}
+
+/// Applies an adaptive threshold to a grayscale image.
 ///
-/// This algorithm compares each pixel's brightness with the average brightness of the pixels
-/// in the (2 * `block_radius` + 1) square block centered on it minus delta. If the pixel is at least as bright
-/// as the threshold then it will have a value of 255 in the output image, otherwise 0.
-pub fn adaptive_threshold(image: &GrayImage, block_radius: u32, delta: i32) -> GrayImage {
-    assert!(block_radius > 0);
+/// For each pixel, a threshold is calculated based on the surrounding pixels in a `(2 * block_radius + 1)`
+/// square block. The thresholding algorithm is determined by `adaptive_type`.
+///
+/// If the pixel's brightness is greater than or equal to `threshold - delta`, it is set to 255 (white),
+/// otherwise it is set to 0 (black).
+///
+/// * `Mean`: The threshold is the mean of the pixel values in the block.
+/// * `Gaussian`: The threshold is a Gaussian-weighted sum of the pixel values in the block.
+///
+/// # Panics
+///
+/// If `block_radius` is zero.
+pub fn adaptive_threshold(
+    image: &GrayImage,
+    block_radius: u32,
+    delta: i32,
+    adaptive_type: AdaptiveThresholdType,
+) -> GrayImage {
+    assert!(block_radius > 0, "block_radius must be positive");
+    let ksize = 2 * block_radius + 1;
+
+    match adaptive_type {
+        AdaptiveThresholdType::Mean => adaptive_threshold_mean(image, block_radius, delta),
+        AdaptiveThresholdType::Gaussian => adaptive_threshold_gaussian(image, ksize, delta),
+    }
+}
+
+/// Applies mean adaptive thresholding using an integral image for high performance.
+///
+/// The threshold for a pixel is the mean of the pixel values within the
+/// `(2 * block_radius + 1) x (2 * block_radius + 1)` neighborhood. A pixel is set to 255
+/// if its value is `>= mean - delta`, and 0 otherwise. The local mean is calculated
+/// efficiently by using a pre-computed integral image.
+fn adaptive_threshold_mean(image: &GrayImage, block_radius: u32, delta: i32) -> GrayImage {
     let integral = integral_image::<_, u32>(image);
     let mut out = GrayImage::from_pixel(image.width(), image.height(), Luma::black());
 
     for y in 0..image.height() {
         for x in 0..image.width() {
-            let current_pixel = image.get_pixel(x, y);
             // Traverse all neighbors in (2 * block_radius + 1) x (2 * block_radius + 1)
-            let (y_low, y_high) = (
-                max(0, y as i32 - (block_radius as i32)) as u32,
-                min(image.height() - 1, y + block_radius),
-            );
-            let (x_low, x_high) = (
-                max(0, x as i32 - (block_radius as i32)) as u32,
-                min(image.width() - 1, x + block_radius),
-            );
+            let y_low = y.saturating_sub(block_radius);
+            let y_high = min(image.height() - 1, y + block_radius);
+            let x_low = x.saturating_sub(block_radius);
+            let x_high = min(image.width() - 1, x + block_radius);
 
             // Number of pixels in the block, adjusted for edge cases.
             let w = (y_high - y_low + 1) * (x_high - x_low + 1);
             let mean = sum_image_pixels(&integral, x_low, y_low, x_high, y_high)[0] / w;
 
-            if current_pixel[0] as i32 >= mean as i32 - delta {
+            if image.get_pixel(x, y)[0] as i32 >= mean as i32 - delta {
+                out.put_pixel(x, y, Luma::white());
+            }
+        }
+    }
+    out
+}
+
+/// Applies Gaussian adaptive thresholding by blurring the image.
+///
+/// The threshold for a pixel is the Gaussian-weighted sum of the pixel values
+/// in a `ksize x ksize` neighborhood. This is calculated by applying a Gaussian
+/// blur. A pixel is set to 255 if its value is `>= weighted_sum - delta`, and 0
+/// otherwise. The sigma for the Gaussian kernel is derived from `ksize` to
+/// match the behavior of libraries like OpenCV.
+fn adaptive_threshold_gaussian(image: &GrayImage, ksize: u32, delta: i32) -> GrayImage {
+    // The formula for sigma is derived from OpenCV's [`getGaussianKernel()`](https://github.com/opencv/opencv/blob/dac243bd265e79af2315ce04fac2a0a5bdf47efe/modules/imgproc/include/opencv2/imgproc.hpp#L1453-L1454).
+    // sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8
+    let sigma = 0.3 * ((ksize as f32 - 1.0) * 0.5 - 1.0) + 0.8;
+
+    let float_image = map_pixels(image, |p| Luma([p[0] as f32]));
+    let blurred = gaussian_blur_f32(&float_image, sigma);
+
+    let mut out = GrayImage::from_pixel(image.width(), image.height(), Luma::black());
+
+    for y in 0..image.height() {
+        for x in 0..image.width() {
+            let threshold = blurred.get_pixel(x, y)[0] as i32;
+            if image.get_pixel(x, y)[0] as i32 >= threshold - delta {
                 out.put_pixel(x, y, Luma::white());
             }
         }
@@ -469,20 +531,28 @@ mod tests {
     use image::{GrayImage, Luma};
 
     #[test]
-    fn adaptive_threshold_constant() {
+    fn adaptive_threshold_mean_constant() {
         let image = GrayImage::from_pixel(3, 3, Luma([100u8]));
-        let binary = adaptive_threshold(&image, 1, 0);
+        let binary = adaptive_threshold(&image, 1, 0, AdaptiveThresholdType::Mean);
         let expected = GrayImage::from_pixel(3, 3, Luma::white());
         assert_pixels_eq!(binary, expected);
     }
 
     #[test]
-    fn adaptive_threshold_one_darker_pixel() {
+    fn adaptive_threshold_gaussian_constant() {
+        let image = GrayImage::from_pixel(3, 3, Luma([100u8]));
+        let binary = adaptive_threshold(&image, 1, 0, AdaptiveThresholdType::Gaussian);
+        let expected = GrayImage::from_pixel(3, 3, Luma::white());
+        assert_pixels_eq!(binary, expected);
+    }
+
+    #[test]
+    fn adaptive_threshold_mean_one_darker_pixel() {
         for y in 0..3 {
             for x in 0..3 {
                 let mut image = GrayImage::from_pixel(3, 3, Luma([200u8]));
                 image.put_pixel(x, y, Luma([100u8]));
-                let binary = adaptive_threshold(&image, 1, 0);
+                let binary = adaptive_threshold(&image, 1, 0, AdaptiveThresholdType::Mean);
                 // All except the dark pixel have brightness >= their local mean
                 let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
                 expected.put_pixel(x, y, Luma::black());
@@ -492,20 +562,48 @@ mod tests {
     }
 
     #[test]
-    fn adaptive_threshold_one_lighter_pixel() {
+    fn adaptive_threshold_gaussian_specific_case() {
+        let image = gray_image!(
+            10,  20,  30;
+            150, 160, 170;
+            230, 240, 250
+        );
+
+        let binary = adaptive_threshold(&image, 1, 10, AdaptiveThresholdType::Gaussian);
+
+        // Expected output verified with OpenCV python:
+        // ```python
+        // import cv2
+        // import numpy as np
+        // img = np.array([[10, 20, 30], [150, 160, 170], [230, 240, 250]], dtype=np.uint8)
+        // th = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 3, 10)
+        // print(th)
+        // [[  0   0   0]
+        //  [255 255 255]
+        //  [255 255 255]]
+        // ```
+        let expected = gray_image!(
+            0,   0,   0;
+            255, 255, 255;
+            255, 255, 255
+        );
+
+        assert_pixels_eq!(binary, expected);
+    }
+
+    #[test]
+    fn adaptive_threshold_mean_one_lighter_pixel() {
         for y in 0..5 {
             for x in 0..5 {
                 let mut image = GrayImage::from_pixel(5, 5, Luma([100u8]));
                 image.put_pixel(x, y, Luma([200u8]));
 
-                let binary = adaptive_threshold(&image, 1, 0);
+                let binary = adaptive_threshold(&image, 1, 0, AdaptiveThresholdType::Mean);
 
                 for yb in 0..5 {
                     for xb in 0..5 {
                         let output_intensity = binary.get_pixel(xb, yb)[0];
-
                         let is_light_pixel = xb == x && yb == y;
-
                         let local_mean_includes_light_pixel =
                             (yb as i32 - y as i32).abs() <= 1 && (xb as i32 - x as i32).abs() <= 1;
 
@@ -527,16 +625,25 @@ mod tests {
         let mut image = GrayImage::from_pixel(3, 3, Luma([100u8]));
         image.put_pixel(2, 2, Luma::black());
 
-        //big delta should make the threshold for the black pixel small enough to be white
-        let binary = adaptive_threshold(&image, 1, 100);
-        let expected = GrayImage::from_pixel(3, 3, Luma::white());
-        assert_pixels_eq!(binary, expected);
+        // Test for Mean
+        // big delta should make the threshold for the black pixel small enough to be white
+        let binary_mean_1 = adaptive_threshold(&image, 1, 100, AdaptiveThresholdType::Mean);
+        let expected_white = GrayImage::from_pixel(3, 3, Luma::white());
+        assert_pixels_eq!(binary_mean_1, expected_white);
 
-        //smaller delta should make the threshold the pixel to be black
-        let binary = adaptive_threshold(&image, 1, 50);
-        let mut expected = GrayImage::from_pixel(3, 3, Luma::white());
-        expected.put_pixel(2, 2, Luma::black());
-        assert_pixels_eq!(binary, expected);
+        // smaller delta should make the threshold for the pixel to be black
+        let binary_mean_2 = adaptive_threshold(&image, 1, 50, AdaptiveThresholdType::Mean);
+        let mut expected_black_corner = GrayImage::from_pixel(3, 3, Luma::white());
+        expected_black_corner.put_pixel(2, 2, Luma::black());
+        assert_pixels_eq!(binary_mean_2, expected_black_corner);
+
+        // Test for Gaussian
+        // as ditto
+        let binary_gaussian_1 = adaptive_threshold(&image, 1, 100, AdaptiveThresholdType::Gaussian);
+        assert_pixels_eq!(binary_gaussian_1, expected_white);
+
+        let binary_gaussian_2 = adaptive_threshold(&image, 1, 20, AdaptiveThresholdType::Gaussian);
+        assert_pixels_eq!(binary_gaussian_2, expected_black_corner);
     }
 
     #[test]
@@ -674,7 +781,8 @@ mod benches {
         let image = gray_bench_image(200, 200);
         let block_radius = 10;
         b.iter(|| {
-            let thresholded = adaptive_threshold(&image, block_radius, 0);
+            let thresholded =
+                adaptive_threshold(&image, block_radius, 0, AdaptiveThresholdType::Mean);
             black_box(thresholded);
         });
     }
