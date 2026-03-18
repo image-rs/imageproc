@@ -1004,8 +1004,6 @@ fn test_draw_text() {
 #[test]
 #[cfg(feature = "text")]
 fn test_draw_text_outside_bounds() {
-    use proptest::char::range;
-
     let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
     let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
 
