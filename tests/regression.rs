@@ -1003,6 +1003,27 @@ fn test_draw_text() {
 
 #[test]
 #[cfg(feature = "text")]
+fn test_draw_text_outside_bounds() {
+    use proptest::char::range;
+
+    let font_bytes = include_bytes!("data/fonts/DejaVuSans.ttf");
+    let font = ab_glyph::FontRef::try_from_slice(font_bytes).unwrap();
+
+    let background = Luma::black();
+    let mut img = GrayImage::from_pixel(300, 300, background);
+
+    let text = "Hello world!";
+    let scale = 12.4;
+    let newline_offset = scale * 1.2;
+    let (x, y) = (50, 100);
+    for i in 0..16 {
+        let y_with_offset = y + (i as f32 * newline_offset) as i32;
+        imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y_with_offset, scale, &font, text);
+    }
+}
+
+#[test]
+#[cfg(feature = "text")]
 fn test_draw_text_with_alpha() {
     fn draw_text_with_alpha(img: &RgbaImage) -> RgbaImage {
         let mut img = img.clone();
