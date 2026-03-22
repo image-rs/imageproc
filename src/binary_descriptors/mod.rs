@@ -1,6 +1,6 @@
 //! Functions for generating and comparing compact binary patch descriptors.
 
-use rand::{Rng, SeedableRng, rngs::StdRng};
+use rand::{RngExt, SeedableRng, rngs::StdRng};
 use std::collections::HashMap;
 
 use crate::point::Point;
@@ -59,7 +59,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
     let mut rng = if let Some(s) = seed {
         StdRng::seed_from_u64(s)
     } else {
-        SeedableRng::from_os_rng()
+        rand::make_rng()
     };
 
     // locality-sensitive hashing (LSH)
