@@ -323,7 +323,7 @@ mod tests {
 mod benches {
     use super::*;
     use crate::utils::gray_bench_image;
-    use rand::Rng;
+    use rand::RngExt;
     use test::{Bencher, black_box};
 
     #[bench]
