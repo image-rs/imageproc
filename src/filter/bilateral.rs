@@ -43,7 +43,7 @@ where
             .map(|(c1, c2)| (f32::from(*c1) - f32::from(*c2)).powi(2))
             .sum::<f32>();
 
-        gaussian_weight(euclidean_distance_squared, self.sigma_squared)
+        fast_exp_negative(-0.5 * euclidean_distance_squared / self.sigma_squared)
     }
 }
 
@@ -175,6 +175,29 @@ where
 /// Un-normalized Gaussian Weight
 fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
     (-0.5 * x_squared / sigma_squared).exp()
+}
+
+/// Fast approximation of `exp(x)` for negative `x` using Schraudolph's method.
+///
+/// Based on: N. Schraudolph, "A Fast, Compact Approximation of the Exponential Function",
+/// Neural Computation 11(4), 1999.
+///
+/// Exploits the IEEE 754 float layout: reinterprets `a * x + b` as the bit pattern of an f32,
+/// where `a` and `b` are chosen so the exponent and mantissa fields approximate `exp(x)`.
+///
+/// Valid for `x` in roughly `[-87, 0]`. Returns 0 for `x < -87` (where true exp underflows).
+/// Maximum relative error is ~4% in the range used by the bilateral filter.
+#[inline]
+fn fast_exp_negative(x: f32) -> f32 {
+    if x < -87.0 {
+        return 0.0;
+    }
+    // 2^23 / ln(2) ≈ 12102203.0
+    const A: f32 = 12102203.0;
+    // 2^23 * 127 (IEEE 754 exponent bias), with Schraudolph's adjustment for reduced avg error
+    const B: f32 = 1065353216.0 - 486411.0;
+    let bits = ((A * x + B) as i32).max(0) as u32;
+    f32::from_bits(bits)
 }
 
 #[cfg(test)]
