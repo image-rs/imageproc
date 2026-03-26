@@ -1,11 +1,23 @@
 //! Geometric transformations of images. This includes rotations, translation, and general
 //! projective transformations.
 
-use crate::definitions::{Clamp, Image};
-use image::{GenericImageView, Pixel};
+use crate::definitions::{Clamp, Image, ImageExtend};
+use image::Pixel;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-use std::{cmp, ops::Mul};
+use std::{cmp, mem::MaybeUninit, ops::Mul};
+
+/// Image sampling behaviour used when the coordinate is out of image boundaries.
+///
+/// This only applies to integer coordinates.
+#[non_exhaustive]
+#[derive(Copy, Clone, Debug)]
+pub enum Extension<P: Pixel> {
+    /// Extends the image with the provided default pixel.
+    Fill(P),
+    /// Extends the image by repeating it.
+    Repeat,
+}
 
 #[derive(Copy, Clone, Debug)]
 enum TransformationClass {
@@ -279,7 +291,7 @@ pub fn rotate_about_center<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -292,7 +304,7 @@ where
         (w as f32 / 2.0, h as f32 / 2.0),
         theta,
         interpolation,
-        default,
+        extend
     )
 }
 
@@ -304,7 +316,7 @@ pub fn rotate<P>(
     center: (f32, f32),
     theta: f32,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -314,7 +326,7 @@ where
     let (cx, cy) = center;
     let projection =
         Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
-    warp(image, &projection, interpolation, default)
+    warp(image, &projection, interpolation, extend)
 }
 
 /// Rotates an image clockwise about its center by theta radians without cropping.
@@ -324,7 +336,7 @@ pub fn rotate_about_center_no_crop<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -341,7 +353,7 @@ where
 
     let mut out_img = Image::new(new_width, new_height);
 
-    rotate_about_center_into(image, theta, interpolation, default, &mut out_img);
+    rotate_about_center_into(image, theta, interpolation, extend, &mut out_img);
 
     out_img
 }
@@ -352,7 +364,7 @@ fn rotate_about_center_into<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -367,7 +379,7 @@ fn rotate_about_center_into<P>(
         (ow as f32 / 2.0, oh as f32 / 2.0),
         theta,
         interpolation,
-        default,
+        extend,
         out,
     )
 }
@@ -380,7 +392,7 @@ fn rotate_into<P>(
     out_center: (f32, f32),
     theta: f32,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -393,7 +405,7 @@ fn rotate_into<P>(
         * Projection::rotate(theta)
         * Projection::translate(-cx, -cy);
 
-    warp_into(image, &projection, interpolation, default, out);
+    warp_into(image, &projection, interpolation, extend, out);
 }
 
 /// Rotates an image 90 degrees clockwise.
@@ -596,7 +608,7 @@ pub fn warp<P>(
     image: &Image<P>,
     projection: &Projection,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -605,7 +617,7 @@ where
 {
     let (width, height) = image.dimensions();
     let mut out = Image::new(width, height);
-    warp_into(image, projection, interpolation, default, &mut out);
+    warp_into(image, projection, interpolation, extend, &mut out);
     out
 }
 
@@ -616,7 +628,7 @@ pub fn warp_into<P>(
     image: &Image<P>,
     projection: &Projection,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -624,9 +636,9 @@ pub fn warp_into<P>(
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32> + Sync,
 {
     let projection = projection.invert();
-    let nn = |x, y| interpolate_nearest(image, x, y, default);
-    let bl = |x, y| interpolate_bilinear(image, x, y, default);
-    let bc = |x, y| interpolate_bicubic(image, x, y, default);
+    let nn = |x, y| interpolate_nearest(image, x, y, extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
     let wp = |x, y| projection.map_projective(x, y);
     let wa = |x, y| projection.map_affine(x, y);
     let wt = |x, y| projection.map_translation(x, y);
@@ -660,14 +672,14 @@ pub fn warp_into<P>(
 ///     &image,
 ///     |x, y| (x, y + (x / 30.0).sin()),
 ///     Interpolation::Nearest,
-///     Luma([0u8])
+///     Extension::Fill(Luma([0u8]))
 /// );
 /// ```
 pub fn warp_with<P, F>(
     image: &Image<P>,
     mapping: F,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>
 ) -> Image<P>
 where
     F: Fn(f32, f32) -> (f32, f32) + Sync + Send,
@@ -677,7 +689,7 @@ where
 {
     let (width, height) = image.dimensions();
     let mut out = Image::new(width, height);
-    warp_into_with(image, mapping, interpolation, default, &mut out);
+    warp_into_with(image, mapping, interpolation, extend, &mut out);
     out
 }
 
@@ -689,7 +701,7 @@ pub fn warp_into_with<P, F>(
     image: &Image<P>,
     mapping: F,
     interpolation: Interpolation,
-    default: P,
+    extend: Extension<P>,
     out: &mut Image<P>,
 ) where
     F: Fn(f32, f32) -> (f32, f32) + Send + Sync,
@@ -697,9 +709,9 @@ pub fn warp_into_with<P, F>(
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let nn = |x, y| interpolate_nearest(image, x, y, default);
-    let bl = |x, y| interpolate_bilinear(image, x, y, default);
-    let bc = |x, y| interpolate_bicubic(image, x, y, default);
+    let nn = |x, y| interpolate_nearest(image, x, y, extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
     use Interpolation as I;
 
     match interpolation {
@@ -834,41 +846,34 @@ where
     outp
 }
 
-fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
+fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let left = x.floor() - 1f32;
-    let right = left + 4f32;
-    let top = y.floor() - 1f32;
-    let bottom = top + 4f32;
+    let left = x.floor() as i64 - 1;
+    // let right = left + 4;
+    let top = y.floor() as i64 - 1;
+    let bottom = top + 4;
 
-    let x_weight = x - (left + 1f32);
-    let y_weight = y - (top + 1f32);
+    let x_weight = x - (left as f32 + 1f32);
+    let y_weight = y - (top as f32 + 1f32);
 
-    let mut col: [P; 4] = [default, default, default, default];
+    let mut col: [MaybeUninit<P>; 4] = [MaybeUninit::zeroed(); 4];
 
-    let (width, height) = image.dimensions();
-    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
-        default
-    } else {
-        for row in top as u32..bottom as u32 {
-            let (p0, p1, p2, p3): (P, P, P, P) = unsafe {
-                (
-                    image.unsafe_get_pixel(left as u32, row),
-                    image.unsafe_get_pixel(left as u32 + 1, row),
-                    image.unsafe_get_pixel(left as u32 + 2, row),
-                    image.unsafe_get_pixel(left as u32 + 3, row),
-                )
-            };
+    for row in top..bottom {
+        let (p0, p1, p2, p3): (P, P, P, P) = (
+            image.get_pixel_or(left, row, extend),
+            image.get_pixel_or(left + 1, row, extend),
+            image.get_pixel_or(left + 2, row, extend),
+            image.get_pixel_or(left + 3, row, extend),
+        );
 
-            let c = blend_cubic(&p0, &p1, &p2, &p3, x_weight);
-            col[row as usize - top as usize] = c;
-        }
-
-        blend_cubic(&col[0], &col[1], &col[2], &col[3], y_weight)
+        let c = blend_cubic(&p0, &p1, &p2, &p3, x_weight);
+        col[(row - top) as usize] = MaybeUninit::new(c);
     }
+
+    unsafe { blend_cubic(col[0].assume_init_ref(), col[1].assume_init_ref(), col[2].assume_init_ref(), col[3].assume_init_ref(), y_weight) }
 }
 
 fn blend_bilinear<P>(
@@ -896,52 +901,34 @@ where
     })
 }
 
-fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, default: P) -> P
+fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let left = x.floor();
-    let right = left + 1f32;
-    let top = y.floor();
-    let bottom = top + 1f32;
+    let left = x.floor() as i64;
+    let right = left + 1;
+    let top = y.floor() as i64;
+    let bottom = top + 1;
 
-    let right_weight = x - left;
-    let bottom_weight = y - top;
+    let right_weight = x - left as f32;
+    let bottom_weight = y - top as f32;
 
-    // default if out of bound
-    let (width, height) = image.dimensions();
-    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
-        default
-    } else {
-        let (tl, tr, bl, br) = unsafe {
-            (
-                image.unsafe_get_pixel(left as u32, top as u32),
-                image.unsafe_get_pixel(right as u32, top as u32),
-                image.unsafe_get_pixel(left as u32, bottom as u32),
-                image.unsafe_get_pixel(right as u32, bottom as u32),
-            )
-        };
-        blend_bilinear(tl, tr, bl, br, right_weight, bottom_weight)
-    }
+    let (tl, tr, bl, br) = (
+        image.get_pixel_or(left, top, extend),
+        image.get_pixel_or(right, top, extend),
+        image.get_pixel_or(left, bottom, extend),
+        image.get_pixel_or(right, bottom, extend),
+    );
+    blend_bilinear(tl, tr, bl, br, right_weight, bottom_weight)
 }
 
 #[inline(always)]
-fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, default: P) -> P {
-    if x < -0.5 || y < -0.5 {
-        return default;
-    }
+fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P {
+    let rx = (x + 0.5).floor() as i64;
+    let ry = (y + 0.5).floor() as i64;
 
-    let (width, height) = image.dimensions();
-
-    let rx = (x + 0.5) as u32;
-    let ry = (y + 0.5) as u32;
-
-    if rx >= width || ry >= height {
-        default
-    } else {
-        unsafe { image.unsafe_get_pixel(rx, ry) }
-    }
+    image.get_pixel_or(rx, ry, extend)
 }
 
 /// How to handle pixels whose pre-image lies between input pixels.
@@ -974,7 +961,7 @@ mod tests {
             (0f32, 0f32),
             0f32,
             Interpolation::Nearest,
-            Luma([99u8]),
+            Extension::Fill(Luma([99u8])),
         );
         assert_pixels_eq!(rotated, image);
     }
@@ -991,7 +978,7 @@ mod tests {
         let c = Projection::translate(1.0, 0.0);
         let rot = c * Projection::rotate(90f32.to_radians()) * c.invert();
 
-        let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([99u8])));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -1008,7 +995,7 @@ mod tests {
 
         let rot = c * Projection::rotate((-180f32).to_radians()) * c.invert();
 
-        let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([99u8]));
+        let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([99u8])));
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -1093,7 +1080,7 @@ mod tests {
             &image,
             &Projection::translate(1.0, 1.0),
             Interpolation::Nearest,
-            Luma([0u8]),
+            Extension::Fill(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1114,7 +1101,7 @@ mod tests {
             &image,
             &Projection::translate(1.0, -1.0),
             Interpolation::Nearest,
-            Luma([0u8]),
+            Extension::Fill(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1136,7 +1123,7 @@ mod tests {
             &image,
             &Projection::translate(5.0, 5.0),
             Interpolation::Nearest,
-            Luma([0u8]),
+            Extension::Fill(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1160,9 +1147,9 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated_nearest = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+        let translated_nearest = warp(&image, &aff, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
         assert_pixels_eq!(translated_nearest, expected);
-        let translated_bilinear = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+        let translated_bilinear = warp(&image, &aff, Interpolation::Bilinear, Extension::Fill(Luma([0u8])));
         assert_pixels_eq!(translated_bilinear, expected);
     }
 
@@ -1175,13 +1162,13 @@ mod tests {
             30, 31, 32, 33, 34;
             40, 41, 42, 43, 44);
 
-        // Expect 2 pixels each side lost due to kernel size
+        // Before 2 pixels were lost from each side lost due to kernel size
         let expected = gray_image!(
             00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00;
-            00, 00, 11, 00, 00;
-            00, 00, 00, 00, 00;
-            00, 00, 00, 00, 00);
+            00, 99, 01, 02, 03;
+            00, 10, 11, 12, 13;
+            00, 20, 21, 22, 23;
+            00, 30, 31, 32, 33);
 
         #[rustfmt::skip]
         let aff = Projection::from_matrix([
@@ -1190,7 +1177,7 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
+        let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Extension::Fill(Luma([0u8])));
         assert_pixels_eq!(translated_bicubic, expected);
     }
 
@@ -1336,7 +1323,7 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Nearest, Luma([98u8]));
+            let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([98u8])));
             black_box(rotated);
         });
     }
@@ -1347,7 +1334,7 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bilinear, Luma([98u8]));
+            let rotated = warp(&image, &rot, Interpolation::Bilinear, Extension::Fill(Luma([98u8])));
             black_box(rotated);
         });
     }
@@ -1358,7 +1345,7 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bicubic, Luma([98u8]));
+            let rotated = warp(&image, &rot, Interpolation::Bicubic, Extension::Fill(Luma([98u8])));
             black_box(rotated);
         });
     }
@@ -1378,7 +1365,7 @@ mod benches {
         let t = Projection::translate(-30.0, -30.0);
 
         b.iter(|| {
-            let translated = warp(&image, &t, Interpolation::Nearest, Luma([0u8]));
+            let translated = warp(&image, &t, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
             black_box(translated);
         });
     }
@@ -1394,7 +1381,7 @@ mod benches {
                 &image,
                 |x, y| (x - 30.0, y - 30.0),
                 Interpolation::Nearest,
-                Luma([0u8]),
+                Extension::Fill(Luma([0u8])),
                 &mut out,
             );
             black_box(out);
@@ -1413,7 +1400,7 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Nearest, Luma([0u8]));
+            let transformed = warp(&image, &aff, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
             black_box(transformed);
         });
     }
@@ -1430,7 +1417,7 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bilinear, Luma([0u8]));
+            let transformed = warp(&image, &aff, Interpolation::Bilinear, Extension::Fill(Luma([0u8])));
             black_box(transformed);
         });
     }
@@ -1447,7 +1434,7 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bicubic, Luma([0u8]));
+            let transformed = warp(&image, &aff, Interpolation::Bicubic, Extension::Fill(Luma([0u8])));
             black_box(transformed);
         });
     }
