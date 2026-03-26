@@ -21,6 +21,21 @@ fn layout_glyphs(
     let mut w = 0.0;
     let mut prev: Option<GlyphId> = None;
 
+    let mut h = 0.0_f32;
+    let mut y_above_ascent = 0.0_f32;
+
+    // Find the peak `y_above_ascent` value which above ascent across all glyphs
+    for c in text.chars() {
+        let glyph_id = font.glyph_id(c);
+        let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
+        if let Some(g) = font.outline_glyph(glyph) {
+            let bb = g.px_bounds();
+            y_above_ascent = y_above_ascent.min(bb.min.y);
+            h = h.max(bb.max.y - bb.min.y);
+        }
+    }
+    y_above_ascent = y_above_ascent.abs();
+
     for c in text.chars() {
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
@@ -30,13 +45,15 @@ fn layout_glyphs(
                 w += font.kern(glyph_id, prev);
             }
             prev = Some(glyph_id);
-            let bb = g.px_bounds();
+            let mut bb = g.px_bounds();
+            bb.min.y += y_above_ascent;
+            bb.max.y += y_above_ascent;
             f(g, bb);
         }
     }
 
     let w = w.ceil();
-    let h = font.height().ceil();
+    let h = h.ceil();
     assert!(w >= 0.0);
     assert!(h >= 0.0);
     (1 + w as u32, h as u32)
