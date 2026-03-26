@@ -286,7 +286,7 @@ impl Mul<&(f32, f32)> for &Projection {
 
 /// Rotates an image clockwise about its center.
 /// The output image has the same dimensions as the input. Output pixels
-/// whose pre-image lies outside the input image are set to `default`.
+/// whose pre-image lies outside the input image are extended according to `extend`.
 pub fn rotate_about_center<P>(
     image: &Image<P>,
     theta: f32,
@@ -310,7 +310,7 @@ where
 
 /// Rotates an image clockwise about the provided center by theta radians.
 /// The output image has the same dimensions as the input. Output pixels
-/// whose pre-image lies outside the input image are set to `default`.
+/// whose pre-image lies outside the input image are extended according to `extend`.
 pub fn rotate<P>(
     image: &Image<P>,
     center: (f32, f32),
@@ -331,7 +331,7 @@ where
 
 /// Rotates an image clockwise about its center by theta radians without cropping.
 /// The output image has dimensions calculated to fit the entire rotated image.
-/// Output pixels whose pre-image lies outside the input image are set to `default`.
+/// Output pixels whose pre-image lies outside the input image are extended according to `extend`.
 pub fn rotate_about_center_no_crop<P>(
     image: &Image<P>,
     theta: f32,
@@ -359,7 +359,7 @@ where
 }
 
 /// Rotates an image clockwise about its center by theta radians, writing to a provided output.
-/// Output pixels whose pre-image lies outside the input image are set to `default`.
+/// Output pixels whose pre-image lies outside the input image are extended according to `extend`.
 fn rotate_about_center_into<P>(
     image: &Image<P>,
     theta: f32,
@@ -385,7 +385,7 @@ fn rotate_about_center_into<P>(
 }
 
 /// Rotates an image clockwise about the provided center by theta radians, writing to a provided output.
-/// Output pixels whose pre-image lies outside the input image are set to `default`.
+/// Output pixels whose pre-image lies outside the input image are extended according to `extend`.
 fn rotate_into<P>(
     image: &Image<P>,
     center: (f32, f32),
@@ -600,7 +600,7 @@ where
 /// Applies a projective transformation to an image.
 ///
 /// The returned image has the same dimensions as `image`. Output pixels
-/// whose pre-image lies outside the input image are set to `default`.
+/// whose pre-image lies outside the input image are extended according to `extend`.
 ///
 /// The provided projection defines a mapping from locations in the input image to their
 /// corresponding location in the output image.
