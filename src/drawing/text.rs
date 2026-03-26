@@ -34,26 +34,26 @@ fn layout_glyphs(
         let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
         if let Some(g) = font.outline_glyph(glyph) {
             let bb = g.px_bounds();
-            
+
             // for correct offset
             y_above_ascent = y_above_ascent.min(bb.min.y);
             y_below_ascent = y_below_ascent.min(bb.min.y).max(0.0);
-            
+
             // for correct height
             y_min = y_min.min(bb.min.y);
             y_max = y_max.max(bb.max.y);
         }
     }
 
+    // height and remove overflow ascent
+    let h = y_max - y_min - y_below_ascent;
+
+    // select offset
     let offset_y = if y_above_ascent.is_zero() {
         y_below_ascent
     } else {
         y_above_ascent
     };
-
-    // height and remove overflow ascent
-    dbg!(y_above_ascent, y_below_ascent);
-    let h = y_max - y_min - y_below_ascent;
 
     for c in text.chars() {
         let glyph_id = font.glyph_id(c);
