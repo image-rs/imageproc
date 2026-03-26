@@ -33,7 +33,10 @@ use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
     filter::{gaussian_blur_f32, sharpen3x3},
-    geometric_transformations::{Interpolation, Projection, Extension, rotate_about_center, rotate_about_center_no_crop, warp},
+    geometric_transformations::{
+        Extension, Interpolation, Projection, rotate_about_center, rotate_about_center_no_crop,
+        warp,
+    },
     gradients,
     utils::load_image_or_panic,
 };
@@ -398,7 +401,12 @@ fn test_affine_nearest_rgb() {
             root_two_inv,  root_two_inv, -70.0,
                      0.0,           0.0,   1.0,
         ]).unwrap();
-        warp(image, &hom, Interpolation::Nearest, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Nearest,
+            Extension::Fill(Rgb::black()),
+        )
     }
     compare_to_truth(
         "elephant.png",
@@ -419,7 +427,12 @@ fn test_affine_bilinear_rgb() {
         ])
             .unwrap();
 
-        warp(image, &hom, Interpolation::Bilinear, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Bilinear,
+            Extension::Fill(Rgb::black()),
+        )
     }
     compare_to_truth_with_tolerance(
         "elephant.png",
@@ -440,7 +453,12 @@ fn test_affine_bicubic_rgb() {
             0.0, 0.0, 1.0,
         ]).unwrap();
 
-        warp(image, &hom, Interpolation::Bicubic, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Bicubic,
+            Extension::Fill(Rgb::black()),
+        )
     }
     compare_to_truth_with_tolerance(
         "elephant.png",
@@ -454,39 +472,42 @@ fn test_affine_bicubic_rgb() {
 fn test_nearest_id() {
     fn id(image: &RgbImage) -> RgbImage {
         let hom = Projection::translate(0.0, 0.0);
-        warp(image, &hom, Interpolation::Nearest, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Nearest,
+            Extension::Fill(Rgb::black()),
+        )
     }
-    compare_to_truth(
-        "elephant.png",
-        "elephant_same_nearest.png",
-        id
-    );
+    compare_to_truth("elephant.png", "elephant_same_nearest.png", id);
 }
 
 #[test]
 fn test_bilinear_id() {
     fn id(image: &RgbImage) -> RgbImage {
         let hom = Projection::translate(0.0, 0.0);
-        warp(image, &hom, Interpolation::Bilinear, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Bilinear,
+            Extension::Fill(Rgb::black()),
+        )
     }
-    compare_to_truth(
-        "elephant.png",
-        "elephant_same_bilinear.png",
-        id
-    );
+    compare_to_truth("elephant.png", "elephant_same_bilinear.png", id);
 }
 
 #[test]
 fn test_bicubic_id() {
     fn id(image: &RgbImage) -> RgbImage {
         let hom = Projection::translate(0.0, 0.0);
-        warp(image, &hom, Interpolation::Bicubic, Extension::Fill(Rgb::black()))
+        warp(
+            image,
+            &hom,
+            Interpolation::Bicubic,
+            Extension::Fill(Rgb::black()),
+        )
     }
-    compare_to_truth(
-        "elephant.png",
-        "elephant_same_bicubic.png",
-        id
-    );
+    compare_to_truth("elephant.png", "elephant_same_bicubic.png", id);
 }
 
 #[test]

@@ -291,7 +291,7 @@ pub fn rotate_about_center<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>
+    extend: Extension<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -304,7 +304,7 @@ where
         (w as f32 / 2.0, h as f32 / 2.0),
         theta,
         interpolation,
-        extend
+        extend,
     )
 }
 
@@ -316,7 +316,7 @@ pub fn rotate<P>(
     center: (f32, f32),
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>
+    extend: Extension<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -608,7 +608,7 @@ pub fn warp<P>(
     image: &Image<P>,
     projection: &Projection,
     interpolation: Interpolation,
-    extend: Extension<P>
+    extend: Extension<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -679,7 +679,7 @@ pub fn warp_with<P, F>(
     image: &Image<P>,
     mapping: F,
     interpolation: Interpolation,
-    extend: Extension<P>
+    extend: Extension<P>,
 ) -> Image<P>
 where
     F: Fn(f32, f32) -> (f32, f32) + Sync + Send,
@@ -873,7 +873,15 @@ where
         col[(row - top) as usize] = MaybeUninit::new(c);
     }
 
-    unsafe { blend_cubic(col[0].assume_init_ref(), col[1].assume_init_ref(), col[2].assume_init_ref(), col[3].assume_init_ref(), y_weight) }
+    unsafe {
+        blend_cubic(
+            col[0].assume_init_ref(),
+            col[1].assume_init_ref(),
+            col[2].assume_init_ref(),
+            col[3].assume_init_ref(),
+            y_weight,
+        )
+    }
 }
 
 fn blend_bilinear<P>(
@@ -978,7 +986,12 @@ mod tests {
         let c = Projection::translate(1.0, 0.0);
         let rot = c * Projection::rotate(90f32.to_radians()) * c.invert();
 
-        let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([99u8])));
+        let rotated = warp(
+            &image,
+            &rot,
+            Interpolation::Nearest,
+            Extension::Fill(Luma([99u8])),
+        );
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -995,7 +1008,12 @@ mod tests {
 
         let rot = c * Projection::rotate((-180f32).to_radians()) * c.invert();
 
-        let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([99u8])));
+        let rotated = warp(
+            &image,
+            &rot,
+            Interpolation::Nearest,
+            Extension::Fill(Luma([99u8])),
+        );
         assert_pixels_eq!(rotated, expected);
     }
 
@@ -1147,9 +1165,19 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated_nearest = warp(&image, &aff, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
+        let translated_nearest = warp(
+            &image,
+            &aff,
+            Interpolation::Nearest,
+            Extension::Fill(Luma([0u8])),
+        );
         assert_pixels_eq!(translated_nearest, expected);
-        let translated_bilinear = warp(&image, &aff, Interpolation::Bilinear, Extension::Fill(Luma([0u8])));
+        let translated_bilinear = warp(
+            &image,
+            &aff,
+            Interpolation::Bilinear,
+            Extension::Fill(Luma([0u8])),
+        );
         assert_pixels_eq!(translated_bilinear, expected);
     }
 
@@ -1177,7 +1205,12 @@ mod tests {
             0.0, 0.0, 1.0
         ]).unwrap();
 
-        let translated_bicubic = warp(&image, &aff, Interpolation::Bicubic, Extension::Fill(Luma([0u8])));
+        let translated_bicubic = warp(
+            &image,
+            &aff,
+            Interpolation::Bicubic,
+            Extension::Fill(Luma([0u8])),
+        );
         assert_pixels_eq!(translated_bicubic, expected);
     }
 
@@ -1323,7 +1356,12 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Nearest, Extension::Fill(Luma([98u8])));
+            let rotated = warp(
+                &image,
+                &rot,
+                Interpolation::Nearest,
+                Extension::Fill(Luma([98u8])),
+            );
             black_box(rotated);
         });
     }
@@ -1334,7 +1372,12 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bilinear, Extension::Fill(Luma([98u8])));
+            let rotated = warp(
+                &image,
+                &rot,
+                Interpolation::Bilinear,
+                Extension::Fill(Luma([98u8])),
+            );
             black_box(rotated);
         });
     }
@@ -1345,7 +1388,12 @@ mod benches {
         let c = Projection::translate(3.0, 3.0);
         let rot = c * Projection::rotate(1f32.to_degrees()) * c.invert();
         b.iter(|| {
-            let rotated = warp(&image, &rot, Interpolation::Bicubic, Extension::Fill(Luma([98u8])));
+            let rotated = warp(
+                &image,
+                &rot,
+                Interpolation::Bicubic,
+                Extension::Fill(Luma([98u8])),
+            );
             black_box(rotated);
         });
     }
@@ -1365,7 +1413,12 @@ mod benches {
         let t = Projection::translate(-30.0, -30.0);
 
         b.iter(|| {
-            let translated = warp(&image, &t, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
+            let translated = warp(
+                &image,
+                &t,
+                Interpolation::Nearest,
+                Extension::Fill(Luma([0u8])),
+            );
             black_box(translated);
         });
     }
@@ -1400,7 +1453,12 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Nearest, Extension::Fill(Luma([0u8])));
+            let transformed = warp(
+                &image,
+                &aff,
+                Interpolation::Nearest,
+                Extension::Fill(Luma([0u8])),
+            );
             black_box(transformed);
         });
     }
@@ -1417,7 +1475,12 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bilinear, Extension::Fill(Luma([0u8])));
+            let transformed = warp(
+                &image,
+                &aff,
+                Interpolation::Bilinear,
+                Extension::Fill(Luma([0u8])),
+            );
             black_box(transformed);
         });
     }
@@ -1434,7 +1497,12 @@ mod benches {
         ]).unwrap();
 
         b.iter(|| {
-            let transformed = warp(&image, &aff, Interpolation::Bicubic, Extension::Fill(Luma([0u8])));
+            let transformed = warp(
+                &image,
+                &aff,
+                Interpolation::Bicubic,
+                Extension::Fill(Luma([0u8])),
+            );
             black_box(transformed);
         });
     }

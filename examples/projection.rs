@@ -6,7 +6,7 @@
 //! `cargo run --release --example projection ./examples/empire-state-building.jpg ./tmp
 
 use image::{Rgb, error::ImageResult, open};
-use imageproc::geometric_transformations::{Interpolation, Projection, Extension, warp};
+use imageproc::geometric_transformations::{Extension, Interpolation, Projection, warp};
 use std::{env, fs, path::Path};
 
 fn main() -> ImageResult<()> {
@@ -51,8 +51,13 @@ fn main() -> ImageResult<()> {
     .save(output_dir.join("translated_inverse.png"))?;
 
     let rotate = Projection::rotate(45f32.to_radians());
-    warp(&image, &rotate, Interpolation::Bilinear, Extension::Fill(Rgb([255, 0, 0])))
-        .save(output_dir.join("rotated.png"))?;
+    warp(
+        &image,
+        &rotate,
+        Interpolation::Bilinear,
+        Extension::Fill(Rgb([255, 0, 0])),
+    )
+    .save(output_dir.join("rotated.png"))?;
 
     let rotate_then_translate = translate * rotate;
     warp(
@@ -84,8 +89,13 @@ fn main() -> ImageResult<()> {
     .save(output_dir.join("rotated_about_center.png"))?;
 
     let scale = Projection::scale(2.0, 3.0);
-    warp(&image, &scale, Interpolation::Bilinear, Extension::Fill(Rgb([255, 0, 0])))
-        .save(output_dir.join("scaled.png"))?;
+    warp(
+        &image,
+        &scale,
+        Interpolation::Bilinear,
+        Extension::Fill(Rgb([255, 0, 0])),
+    )
+    .save(output_dir.join("scaled.png"))?;
 
     Ok(())
 }
