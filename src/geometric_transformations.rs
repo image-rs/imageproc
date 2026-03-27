@@ -5,7 +5,7 @@ use crate::definitions::{Clamp, Image, ImageExtend};
 use image::Pixel;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-use std::{cmp, mem::MaybeUninit, ops::Mul};
+use std::{mem::MaybeUninit, ops::Mul};
 
 /// Image sampling behaviour used when the coordinate is out of image boundaries.
 ///
@@ -15,6 +15,8 @@ use std::{cmp, mem::MaybeUninit, ops::Mul};
 pub enum Extension<P: Pixel> {
     /// Extends the image with the provided default pixel.
     Fill(P),
+    /// Extends the image by using the nearest edge pixel.
+    Edge,
     /// Extends the image by repeating it.
     Repeat,
 }
@@ -550,10 +552,8 @@ where
 
 /// Translates the input image by t. Note that image coordinates increase from
 /// top left to bottom right. Output pixels whose pre-image are not in the input
-/// image are set to the boundary pixel in the input image nearest to their pre-image.
-// TODO: it's confusing that this has different behaviour to
-// TODO: attempting the equivalent transformation using Projection.
-pub fn translate<P>(image: &Image<P>, t: (i32, i32)) -> Image<P>
+/// image are extended according to `extend`.
+pub fn translate<P>(image: &Image<P>, t: (i32, i32), extend: Extension<P>) -> Image<P>
 where
     P: Pixel,
 {
@@ -564,32 +564,57 @@ where
     let mut out = Image::new(width, height);
 
     for y in 0..height {
-        let y_in = cmp::max(0, cmp::min(y as i32 - ty, h - 1));
-
         if tx > 0 {
-            let p_min = *image.get_pixel(0, y_in as u32);
             for x in 0..tx.min(w) {
-                out.put_pixel(x as u32, y, p_min);
+                out.put_pixel(
+                    x as u32,
+                    y,
+                    image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                );
             }
 
             if tx < w {
-                let in_base = (y_in as usize * width as usize) * num_channels;
-                let out_base = (y as usize * width as usize + (tx as usize)) * num_channels;
-                let len = (w - tx) as usize * num_channels;
-                (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);
+                if (0..h).contains(&(y as i32 - ty)) {
+                    let in_base = ((y as i32 - ty) as usize * width as usize) * num_channels;
+                    let out_base = (y as usize * width as usize + (tx as usize)) * num_channels;
+                    let len = (w - tx) as usize * num_channels;
+                    (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);
+                } else {
+                    for x in tx..w {
+                        out.put_pixel(
+                            x as u32,
+                            y,
+                            image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                        );
+                    }
+                }
             }
         } else {
-            let p_max = *image.get_pixel(width - 1, y_in as u32);
             for x in (w + tx).max(0)..w {
-                out.put_pixel(x as u32, y, p_max);
+                out.put_pixel(
+                    x as u32,
+                    y,
+                    image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                );
             }
 
             if w + tx > 0 {
-                let in_base =
-                    (y_in as usize * width as usize + (tx.unsigned_abs() as usize)) * num_channels;
-                let out_base = (y as usize * width as usize) * num_channels;
-                let len = (w + tx) as usize * num_channels;
-                (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);
+                if (0..h).contains(&(y as i32 - ty)) {
+                    let in_base = ((y as i32 - ty) as usize * width as usize
+                        + (tx.unsigned_abs() as usize))
+                        * num_channels;
+                    let out_base = (y as usize * width as usize) * num_channels;
+                    let len = (w + tx) as usize * num_channels;
+                    (*out)[out_base..][..len].copy_from_slice(&(**image)[in_base..][..len]);
+                } else {
+                    for x in 0..w + tx {
+                        out.put_pixel(
+                            x as u32,
+                            y,
+                            image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                        );
+                    }
+                }
             }
         }
     }
@@ -636,9 +661,9 @@ pub fn warp_into<P>(
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32> + Sync,
 {
     let projection = projection.invert();
-    let nn = |x, y| interpolate_nearest(image, x, y, extend);
-    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
-    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
+    let nn = |x, y| interpolate_nearest(image, x, y, &extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, &extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, &extend);
     let wp = |x, y| projection.map_projective(x, y);
     let wa = |x, y| projection.map_affine(x, y);
     let wt = |x, y| projection.map_translation(x, y);
@@ -709,9 +734,9 @@ pub fn warp_into_with<P, F>(
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let nn = |x, y| interpolate_nearest(image, x, y, extend);
-    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
-    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
+    let nn = |x, y| interpolate_nearest(image, x, y, &extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, &extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, &extend);
     use Interpolation as I;
 
     match interpolation {
@@ -846,7 +871,7 @@ where
     outp
 }
 
-fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
+fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -885,10 +910,10 @@ where
 }
 
 fn blend_bilinear<P>(
-    top_left: P,
-    top_right: P,
-    bottom_left: P,
-    bottom_right: P,
+    top_left: &P,
+    top_right: &P,
+    bottom_left: &P,
+    bottom_right: &P,
     right_weight: f32,
     bottom_weight: f32,
 ) -> P
@@ -909,7 +934,7 @@ where
     })
 }
 
-fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
+fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -928,11 +953,11 @@ where
         image.get_pixel_or(left, bottom, extend),
         image.get_pixel_or(right, bottom, extend),
     );
-    blend_bilinear(tl, tr, bl, br, right_weight, bottom_weight)
+    blend_bilinear(&tl, &tr, &bl, &br, right_weight, bottom_weight)
 }
 
 #[inline(always)]
-fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P {
+fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P {
     let rx = (x + 0.5).floor() as i64;
     let ry = (y + 0.5).floor() as i64;
 
@@ -1029,7 +1054,7 @@ mod tests {
             00, 00, 01;
             10, 10, 11);
 
-        let translated = translate(&image, (1, 1));
+        let translated = translate(&image, (1, 1), Extension::Edge);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1045,7 +1070,7 @@ mod tests {
             20, 20, 21;
             20, 20, 21);
 
-        let translated = translate(&image, (1, -1));
+        let translated = translate(&image, (1, -1), Extension::Edge);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1061,7 +1086,7 @@ mod tests {
             11, 12, 12;
             21, 22, 22);
 
-        let translated = translate(&image, (-1, 0));
+        let translated = translate(&image, (-1, 0), Extension::Edge);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1078,7 +1103,7 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = translate(&image, (5, 5));
+        let translated = translate(&image, (5, 5), Extension::Edge);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1402,7 +1427,7 @@ mod benches {
     fn bench_translate(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let translated = translate(&image, (30, 30));
+            let translated = translate(&image, (30, 30), Extension::Edge);
             black_box(translated);
         });
     }

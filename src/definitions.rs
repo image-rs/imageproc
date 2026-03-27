@@ -15,18 +15,23 @@ pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 /// Image containers that can sample outside of their boundaries.
 pub trait ImageExtend<P: Pixel> {
     /// Returns the pixel or falls back to the implementation defined by [`Extension`].
-    fn get_pixel_or(&self, x: i64, y: i64, extend: Extension<P>) -> P;
+    fn get_pixel_or(&self, x: i64, y: i64, extend: &Extension<P>) -> P;
 }
 impl<P: Pixel> ImageExtend<P> for Image<P> {
-    fn get_pixel_or(&self, x: i64, y: i64, extend: Extension<P>) -> P {
+    fn get_pixel_or(&self, x: i64, y: i64, extend: &Extension<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {
             Extension::Fill(default) => {
                 if x < 0 || x >= w as i64 || y < 0 || y >= h as i64 {
-                    default
+                    *default
                 } else {
                     *self.get_pixel(x as u32, y as u32)
                 }
+            }
+            Extension::Edge => {
+                let x = x.clamp(0, w as i64 - 1) as u32;
+                let y = y.clamp(0, h as i64 - 1) as u32;
+                *self.get_pixel(x, y)
             }
             Extension::Repeat => {
                 let x = x.rem_euclid(w as i64) as u32;
