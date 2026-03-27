@@ -921,11 +921,11 @@ where
     P: Pixel,
     P::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let top = top_left.map2(&top_right, |u, v| {
+    let top = top_left.map2(top_right, |u, v| {
         P::Subpixel::clamp((1f32 - right_weight) * u.into() + right_weight * v.into())
     });
 
-    let bottom = bottom_left.map2(&bottom_right, |u, v| {
+    let bottom = bottom_left.map2(bottom_right, |u, v| {
         P::Subpixel::clamp((1f32 - right_weight) * u.into() + right_weight * v.into())
     });
 
