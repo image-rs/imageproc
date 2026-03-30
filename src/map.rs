@@ -554,23 +554,12 @@ where
 mod tests {
     use super::*;
 
-    fn gray_test_image() -> Image<Luma<u8>> {
-        gray_image!(
-            1, 2;
-            3, 4
-        )
-    }
-
-    fn rgb_test_image() -> Image<Rgb<u8>> {
-        rgb_image!(
-            [1, 2, 3], [4, 5, 6];
-            [7, 8, 9], [10, 11, 12]
-        )
-    }
-
     #[test]
     fn test_map_subpixels_mut() {
-        let mut image = gray_test_image();
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         map_subpixels_mut(&mut image, |x| x + 1);
 
@@ -586,7 +575,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_subpixels_parallel() {
-        let image = gray_test_image();
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         let actual = map_subpixels_parallel(&image, |x| x as u16 * 2);
 
@@ -602,7 +594,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_subpixels_mut_parallel() {
-        let mut image = gray_test_image();
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         map_subpixels_mut_parallel(&mut image, |x| x * 2);
 
@@ -617,7 +612,10 @@ mod tests {
 
     #[test]
     fn test_map_pixels_mut() {
-        let mut image = rgb_test_image();
+        let mut image = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
 
         map_pixels_mut(&mut image, |p| Rgb([p[0] + 1, p[1] + 1, p[2] + 1]));
 
@@ -633,7 +631,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_pixels_parallel() {
-        let image = gray_test_image();
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         let actual = map_pixels_parallel(&image, |p| Rgb([p[0], p[0] + 10, p[0] + 20]));
 
@@ -649,7 +650,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_pixels_mut_parallel() {
-        let mut image = rgb_test_image();
+        let mut image = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
 
         map_pixels_mut_parallel(&mut image, |p| Rgb([p[0] * 2, p[1] * 2, p[2] * 2]));
 
@@ -664,7 +668,10 @@ mod tests {
 
     #[test]
     fn test_map_enumerated_pixels() {
-        let image = gray_test_image();
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         let actual = map_enumerated_pixels(&image, |x, y, p| Rgb([p[0], x as u8, y as u8]));
 
@@ -679,7 +686,10 @@ mod tests {
 
     #[test]
     fn test_map_enumerated_pixels_mut() {
-        let mut image = gray_test_image();
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         map_enumerated_pixels_mut(&mut image, |x, y, p| Luma([p[0] + x as u8 + y as u8]));
 
@@ -695,7 +705,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_enumerated_pixels_parallel() {
-        let image = gray_test_image();
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         let actual =
             map_enumerated_pixels_parallel(&image, |x, y, p| Rgb([x as u8, y as u8, p[0]]));
@@ -712,7 +725,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn test_map_enumerated_pixels_mut_parallel() {
-        let mut image = gray_test_image();
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
 
         map_enumerated_pixels_mut_parallel(&mut image, |x, y, p| Luma([p[0] + (x + y) as u8]));
 
@@ -727,7 +743,10 @@ mod tests {
 
     #[test]
     fn test_map_pixels2() {
-        let image1 = gray_test_image();
+        let image1 = gray_image!(
+            1, 2;
+            3, 4
+        );
         let image2 = gray_image!(
             10, 20;
             30, 40
@@ -746,7 +765,10 @@ mod tests {
 
     #[test]
     fn test_red_channel_round_trip_helpers() {
-        let rgb = rgb_test_image();
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
         let gray = gray_image!(
             1, 4;
             7, 10
@@ -754,7 +776,10 @@ mod tests {
 
         assert_pixels_eq!(into_red_channel(&rgb), gray);
         assert_pixels_eq!(
-            from_red_channel(&gray_test_image()),
+            from_red_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
             rgb_image!(
                 [1, 0, 0], [2, 0, 0];
                 [3, 0, 0], [4, 0, 0]
@@ -764,7 +789,10 @@ mod tests {
 
     #[test]
     fn test_green_channel_round_trip_helpers() {
-        let rgb = rgb_test_image();
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
         let gray = gray_image!(
             2, 5;
             8, 11
@@ -772,7 +800,10 @@ mod tests {
 
         assert_pixels_eq!(into_green_channel(&rgb), gray);
         assert_pixels_eq!(
-            from_green_channel(&gray_test_image()),
+            from_green_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
             rgb_image!(
                 [0, 1, 0], [0, 2, 0];
                 [0, 3, 0], [0, 4, 0]
@@ -782,7 +813,10 @@ mod tests {
 
     #[test]
     fn test_blue_channel_round_trip_helpers() {
-        let rgb = rgb_test_image();
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
         let gray = gray_image!(
             3, 6;
             9, 12
@@ -790,7 +824,10 @@ mod tests {
 
         assert_pixels_eq!(into_blue_channel(&rgb), gray);
         assert_pixels_eq!(
-            from_blue_channel(&gray_test_image()),
+            from_blue_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
             rgb_image!(
                 [0, 0, 1], [0, 0, 2];
                 [0, 0, 3], [0, 0, 4]
