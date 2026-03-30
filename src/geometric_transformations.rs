@@ -1,7 +1,7 @@
 //! Geometric transformations of images. This includes rotations, translation, and general
 //! projective transformations.
 
-use crate::definitions::{Clamp, Image, ImageExtend};
+use crate::definitions::{BoundaryAccess, Clamp, Image};
 use image::Pixel;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
@@ -569,7 +569,7 @@ where
                 out.put_pixel(
                     x as u32,
                     y,
-                    image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
                 );
             }
 
@@ -584,7 +584,11 @@ where
                         out.put_pixel(
                             x as u32,
                             y,
-                            image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                            image.get_pixel_or_extend(
+                                x as i64 - tx as i64,
+                                y as i64 - ty as i64,
+                                &extend,
+                            ),
                         );
                     }
                 }
@@ -594,7 +598,7 @@ where
                 out.put_pixel(
                     x as u32,
                     y,
-                    image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
                 );
             }
 
@@ -611,7 +615,11 @@ where
                         out.put_pixel(
                             x as u32,
                             y,
-                            image.get_pixel_or(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                            image.get_pixel_or_extend(
+                                x as i64 - tx as i64,
+                                y as i64 - ty as i64,
+                                &extend,
+                            ),
                         );
                     }
                 }
@@ -888,10 +896,10 @@ where
 
     for row in top..bottom {
         let (p0, p1, p2, p3): (P, P, P, P) = (
-            image.get_pixel_or(left, row, extend),
-            image.get_pixel_or(left + 1, row, extend),
-            image.get_pixel_or(left + 2, row, extend),
-            image.get_pixel_or(left + 3, row, extend),
+            image.get_pixel_or_extend(left, row, extend),
+            image.get_pixel_or_extend(left + 1, row, extend),
+            image.get_pixel_or_extend(left + 2, row, extend),
+            image.get_pixel_or_extend(left + 3, row, extend),
         );
 
         let c = blend_cubic(&p0, &p1, &p2, &p3, x_weight);
@@ -948,10 +956,10 @@ where
     let bottom_weight = y - top as f32;
 
     let (tl, tr, bl, br) = (
-        image.get_pixel_or(left, top, extend),
-        image.get_pixel_or(right, top, extend),
-        image.get_pixel_or(left, bottom, extend),
-        image.get_pixel_or(right, bottom, extend),
+        image.get_pixel_or_extend(left, top, extend),
+        image.get_pixel_or_extend(right, top, extend),
+        image.get_pixel_or_extend(left, bottom, extend),
+        image.get_pixel_or_extend(right, bottom, extend),
     );
     blend_bilinear(&tl, &tr, &bl, &br, right_weight, bottom_weight)
 }
@@ -961,7 +969,7 @@ fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: &Exte
     let rx = (x + 0.5).floor() as i64;
     let ry = (y + 0.5).floor() as i64;
 
-    image.get_pixel_or(rx, ry, extend)
+    image.get_pixel_or_extend(rx, ry, extend)
 }
 
 /// How to handle pixels whose pre-image lies between input pixels.

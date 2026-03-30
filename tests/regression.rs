@@ -528,7 +528,9 @@ fn test_sobel_gradients() {
 
 #[test]
 fn test_sharpen3x3() {
-    compare_to_truth("robin.png", "robin_sharpen3x3.png", sharpen3x3);
+    compare_to_truth("robin.png", "robin_sharpen3x3.png", |image| {
+        sharpen3x3(image, Extension::Edge)
+    });
 }
 
 #[test]

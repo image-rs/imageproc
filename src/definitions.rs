@@ -13,12 +13,12 @@ use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
 pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 
 /// Image containers that can sample outside of their boundaries.
-pub trait ImageExtend<P: Pixel> {
+pub trait BoundaryAccess<P: Pixel> {
     /// Returns the pixel or falls back to the implementation defined by [`Extension`].
-    fn get_pixel_or(&self, x: i64, y: i64, extend: &Extension<P>) -> P;
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: &Extension<P>) -> P;
 }
-impl<P: Pixel> ImageExtend<P> for Image<P> {
-    fn get_pixel_or(&self, x: i64, y: i64, extend: &Extension<P>) -> P {
+impl<P: Pixel> BoundaryAccess<P> for Image<P> {
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: &Extension<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {
             Extension::Fill(default) => {
