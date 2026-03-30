@@ -1843,6 +1843,148 @@ mod tests {
         );
         assert_eq!(grayscale_erode(&image, &mask), dilated);
     }
+
+    #[test]
+    fn test_dilate_mut_matches_dilate() {
+        let mut image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let expected = dilate(&image, Norm::LInf, 1);
+
+        dilate_mut(&mut image, Norm::LInf, 1);
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_erode_mut_matches_erode() {
+        let mut image = gray_image!(
+              0,   0,   0,   0,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
+              0,   0,   0,   0,   0
+        );
+        let expected = erode(&image, Norm::LInf, 1);
+
+        erode_mut(&mut image, Norm::LInf, 1);
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_open_removes_small_cross() {
+        let image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0, 255, 255, 255,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let expected = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+
+        assert_pixels_eq!(open(&image, Norm::LInf, 1), expected);
+    }
+
+    #[test]
+    fn test_open_mut_matches_open() {
+        let mut image = gray_image!(
+              0,   0,   0,   0,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
+              0, 255, 255, 255,   0;
+              0,   0,   0,   0,   0
+        );
+        let expected = open(&image, Norm::LInf, 1);
+
+        open_mut(&mut image, Norm::LInf, 1);
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_close_fills_small_hole() {
+        let image = gray_image!(
+            255, 255, 255, 255;
+            255,   0,   0, 255;
+            255,   0,   0, 255;
+            255, 255, 255, 255
+        );
+        let expected = gray_image!(
+            255, 255, 255, 255;
+            255, 255, 255, 255;
+            255, 255, 255, 255;
+            255, 255, 255, 255
+        );
+
+        assert_pixels_eq!(close(&image, Norm::LInf, 1), expected);
+    }
+
+    #[test]
+    fn test_close_mut_matches_close() {
+        let mut image = gray_image!(
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0, 255,   0,   0;
+              0,   0,   0,   0,   0;
+              0,   0,   0,   0,   0
+        );
+        let expected = close(&image, Norm::LInf, 1);
+
+        close_mut(&mut image, Norm::LInf, 1);
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_grayscale_open_expected_output() {
+        let image = gray_image!(
+          100,  99,  99,  99, 222,  99;
+           99,  99,  99, 222, 222, 222;
+           99,   7,  99,  99, 222,  99;
+            7,   7,   7,  99,  99,  99;
+           99,   7,  99,  99,  99,  99
+        );
+        let expected = gray_image!(
+           99,  99,  99,  99,  99,  99;
+           99,  99,  99,  99,  99,  99;
+            7,   7,  99,  99,  99,  99;
+            7,   7,   7,  99,  99,  99;
+            7,   7,   7,  99,  99,  99
+        );
+
+        assert_pixels_eq!(grayscale_open(&image, &Mask::square(1)), expected);
+    }
+
+    #[test]
+    fn test_grayscale_close_expected_output() {
+        let image = gray_image!(
+           50,  99,  99,  99, 222,  99;
+           99,  99,  99, 222, 222, 222;
+           99,   7,  99,  99, 222,  99;
+            7,   7,   7,  99,  99,  99;
+           99,   7,  99,  99,  99,  99
+        );
+        let expected = gray_image!(
+           99,  99,  99, 222, 222, 222;
+           99,  99,  99, 222, 222, 222;
+           99,  99,  99,  99, 222, 222;
+           99,  99,  99,  99,  99,  99;
+           99,  99,  99,  99,  99,  99
+        );
+
+        assert_pixels_eq!(grayscale_close(&image, &Mask::square(1)), expected);
+    }
 }
 
 #[cfg(not(miri))]
