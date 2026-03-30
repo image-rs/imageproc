@@ -549,3 +549,289 @@ where
 {
     map_pixels(image, |p| Rgb([C::zero(), C::zero(), p.0[0]]))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_map_subpixels_mut() {
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        map_subpixels_mut(&mut image, |x| x + 1);
+
+        assert_pixels_eq!(
+            image,
+            gray_image!(
+                2, 3;
+                4, 5
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_subpixels_parallel() {
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = map_subpixels_parallel(&image, |x| x as u16 * 2);
+
+        assert_pixels_eq!(
+            actual,
+            gray_image!(type: u16,
+                2, 4;
+                6, 8
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_subpixels_mut_parallel() {
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        map_subpixels_mut_parallel(&mut image, |x| x * 2);
+
+        assert_pixels_eq!(
+            image,
+            gray_image!(
+                2, 4;
+                6, 8
+            )
+        );
+    }
+
+    #[test]
+    fn test_map_pixels_mut() {
+        let mut image = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
+
+        map_pixels_mut(&mut image, |p| Rgb([p[0] + 1, p[1] + 1, p[2] + 1]));
+
+        assert_pixels_eq!(
+            image,
+            rgb_image!(
+                [2, 3, 4], [5, 6, 7];
+                [8, 9, 10], [11, 12, 13]
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_pixels_parallel() {
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = map_pixels_parallel(&image, |p| Rgb([p[0], p[0] + 10, p[0] + 20]));
+
+        assert_pixels_eq!(
+            actual,
+            rgb_image!(
+                [1, 11, 21], [2, 12, 22];
+                [3, 13, 23], [4, 14, 24]
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_pixels_mut_parallel() {
+        let mut image = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
+
+        map_pixels_mut_parallel(&mut image, |p| Rgb([p[0] * 2, p[1] * 2, p[2] * 2]));
+
+        assert_pixels_eq!(
+            image,
+            rgb_image!(
+                [2, 4, 6], [8, 10, 12];
+                [14, 16, 18], [20, 22, 24]
+            )
+        );
+    }
+
+    #[test]
+    fn test_map_enumerated_pixels() {
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual = map_enumerated_pixels(&image, |x, y, p| Rgb([p[0], x as u8, y as u8]));
+
+        assert_pixels_eq!(
+            actual,
+            rgb_image!(
+                [1, 0, 0], [2, 1, 0];
+                [3, 0, 1], [4, 1, 1]
+            )
+        );
+    }
+
+    #[test]
+    fn test_map_enumerated_pixels_mut() {
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        map_enumerated_pixels_mut(&mut image, |x, y, p| Luma([p[0] + x as u8 + y as u8]));
+
+        assert_pixels_eq!(
+            image,
+            gray_image!(
+                1, 3;
+                4, 6
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_enumerated_pixels_parallel() {
+        let image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        let actual =
+            map_enumerated_pixels_parallel(&image, |x, y, p| Rgb([x as u8, y as u8, p[0]]));
+
+        assert_pixels_eq!(
+            actual,
+            rgb_image!(
+                [0, 0, 1], [1, 0, 2];
+                [0, 1, 3], [1, 1, 4]
+            )
+        );
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn test_map_enumerated_pixels_mut_parallel() {
+        let mut image = gray_image!(
+            1, 2;
+            3, 4
+        );
+
+        map_enumerated_pixels_mut_parallel(&mut image, |x, y, p| Luma([p[0] + (x + y) as u8]));
+
+        assert_pixels_eq!(
+            image,
+            gray_image!(
+                1, 3;
+                4, 6
+            )
+        );
+    }
+
+    #[test]
+    fn test_map_pixels2() {
+        let image1 = gray_image!(
+            1, 2;
+            3, 4
+        );
+        let image2 = gray_image!(
+            10, 20;
+            30, 40
+        );
+
+        let actual = map_pixels2(&image1, &image2, |p, q| Luma([p[0] + q[0]]));
+
+        assert_pixels_eq!(
+            actual,
+            gray_image!(
+                11, 22;
+                33, 44
+            )
+        );
+    }
+
+    #[test]
+    fn test_red_channel_round_trip_helpers() {
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
+        let gray = gray_image!(
+            1, 4;
+            7, 10
+        );
+
+        assert_pixels_eq!(into_red_channel(&rgb), gray);
+        assert_pixels_eq!(
+            from_red_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
+            rgb_image!(
+                [1, 0, 0], [2, 0, 0];
+                [3, 0, 0], [4, 0, 0]
+            )
+        );
+    }
+
+    #[test]
+    fn test_green_channel_round_trip_helpers() {
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
+        let gray = gray_image!(
+            2, 5;
+            8, 11
+        );
+
+        assert_pixels_eq!(into_green_channel(&rgb), gray);
+        assert_pixels_eq!(
+            from_green_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
+            rgb_image!(
+                [0, 1, 0], [0, 2, 0];
+                [0, 3, 0], [0, 4, 0]
+            )
+        );
+    }
+
+    #[test]
+    fn test_blue_channel_round_trip_helpers() {
+        let rgb = rgb_image!(
+            [1, 2, 3], [4, 5, 6];
+            [7, 8, 9], [10, 11, 12]
+        );
+        let gray = gray_image!(
+            3, 6;
+            9, 12
+        );
+
+        assert_pixels_eq!(into_blue_channel(&rgb), gray);
+        assert_pixels_eq!(
+            from_blue_channel(&gray_image!(
+                1, 2;
+                3, 4
+            )),
+            rgb_image!(
+                [0, 0, 1], [0, 0, 2];
+                [0, 0, 3], [0, 0, 4]
+            )
+        );
+    }
+}
