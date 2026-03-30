@@ -1021,3 +1021,44 @@ fn test_draw_text_with_alpha() {
 
     compare_to_truth("elephant.png", "text_alpha.png", draw_text_with_alpha);
 }
+
+#[test]
+#[cfg(feature = "text")]
+fn test_draw_text_without_overflow_glyphs() {
+    use image::RgbaImage;
+
+    fn txt_img(word: &str) -> RgbaImage {
+        let mplantin = include_bytes!("data/fonts/DejaVuSans.ttf");
+        let mplantin = ab_glyph::FontArc::try_from_slice(mplantin).unwrap();
+
+        let font_size = 128.0;
+
+        let (w, h) = imageproc::drawing::text_size(font_size, &mplantin, word);
+        let mut image: DynamicImage = DynamicImage::new_rgba8(w, h);
+
+        imageproc::drawing::draw_text_mut(
+            &mut image,
+            image::Rgba([100u8, 100u8, 100u8, 255u8]),
+            0,
+            0,
+            font_size,
+            &mplantin,
+            word,
+        );
+
+        image.to_rgba8()
+    }
+
+    let words = [
+        ("ÁÄAaaa", "out"),
+        ("A", "symbol"),
+        ("Äabcpghky", "symbols"),
+        ("abcpghky", "symbols_little"),
+        ("1.", "number"),
+    ];
+
+    for (word, filename) in words {
+        let img = txt_img(word);
+        compare_to_truth_image(&img, &format!("overflow_glyph_{}.png", filename));
+    }
+}
