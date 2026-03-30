@@ -1,7 +1,6 @@
 //! Bilateral Filter and associated items.
 
 use image::{GenericImage, Pixel};
-use itertools::Itertools;
 use num::cast::AsPrimitive;
 
 use crate::definitions::Image;
@@ -44,7 +43,7 @@ where
             .map(|(c1, c2)| (f32::from(*c1) - f32::from(*c2)).powi(2))
             .sum::<f32>();
 
-        gaussian_weight(euclidean_distance_squared, self.sigma_squared)
+        fast_exp_negative(-0.5 * euclidean_distance_squared / self.sigma_squared)
     }
 }
 
@@ -111,30 +110,31 @@ where
 
     let radius = i16::from(radius);
 
-    let window_range = -radius..=radius;
-    let spatial_distance_lookup = window_range
-        .clone()
-        .cartesian_product(window_range.clone())
-        .map(|(w_y, w_x)| {
-            //The gaussian of the euclidean spatial distance
-            gaussian_weight(
-                <f32 as From<i16>>::from(w_x).powi(2) + <f32 as From<i16>>::from(w_y).powi(2),
-                spatial_sigma.powi(2),
-            )
-        })
-        .collect_vec();
+    let spatial_sigma_squared = spatial_sigma.powi(2);
+    let mut spatial_distance_lookup =
+        Vec::with_capacity(((2 * radius + 1) * (2 * radius + 1)) as usize);
+    for w_y in -radius..=radius {
+        for w_x in -radius..=radius {
+            spatial_distance_lookup.push(gaussian_weight(
+                (w_x as f32).powi(2) + (w_y as f32).powi(2),
+                spatial_sigma_squared,
+            ));
+        }
+    }
 
     let (width, height) = image.dimensions();
+    let window_len = 2 * radius + 1;
+
     let bilateral_pixel_filter = |x, y| {
         debug_assert!(image.in_bounds(x, y));
         // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
         let center_pixel = unsafe { image.unsafe_get_pixel(x, y) };
 
-        let window_len = 2 * radius + 1;
-        let weights_and_values = window_range
-            .clone()
-            .cartesian_product(window_range.clone())
-            .map(|(w_y, w_x)| {
+        let mut channel_sums = [0f32; 4];
+        let mut weight_sum = 0f32;
+
+        for w_y in -radius..=radius {
+            for w_x in -radius..=radius {
                 // these casts will always be correct due to asserts made at the beginning of the
                 // function about the image width/height
                 //
@@ -148,57 +148,56 @@ where
                 // Safety: we clamped `window_x` and `window_y` to be in bounds.
                 let window_pixel = unsafe { image.unsafe_get_pixel(window_x, window_y) };
 
-                let spatial_distance = spatial_distance_lookup
+                let spatial_weight = spatial_distance_lookup
                     [(window_len * (w_y + radius) + (w_x + radius)) as usize];
-                let color_distance = color_distance.color_distance(&center_pixel, &window_pixel);
-                let weight = spatial_distance * color_distance;
+                let color_weight = color_distance.color_distance(&center_pixel, &window_pixel);
+                let weight = spatial_weight * color_weight;
 
-                (weight, window_pixel)
-            });
+                weight_sum += weight;
+                for (i, c) in window_pixel.channels().iter().enumerate() {
+                    channel_sums[i] += weight * f32::from(*c);
+                }
+            }
+        }
 
-        weighted_average(weights_and_values)
+        let mut out_pixel = center_pixel;
+        let num_channels = P::CHANNEL_COUNT as usize;
+        let out_channels = out_pixel.channels_mut();
+        for i in 0..num_channels {
+            out_channels[i] = (channel_sums[i] / weight_sum).as_();
+        }
+        out_pixel
     };
 
     Image::from_fn(width, height, bilateral_pixel_filter)
 }
 
-fn weighted_average<P>(weights_and_values: impl Iterator<Item = (f32, P)>) -> P
-where
-    P: Pixel,
-    <P as image::Pixel>::Subpixel: 'static,
-    f32: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
-{
-    let (weights_sum, weighted_channel_sums) = weights_and_values
-        .map(|(w, v)| {
-            (
-                w,
-                v.channels().iter().map(|s| w * f32::from(*s)).collect_vec(),
-            )
-        })
-        .reduce(|(w1, channels1), (w2, channels2)| {
-            (
-                w1 + w2,
-                channels1
-                    .into_iter()
-                    .zip_eq(channels2)
-                    .map(|(c1, c2)| c1 + c2)
-                    .collect_vec(),
-            )
-        })
-        .expect("cannot find a weighted average given no weights and values");
-
-    let channel_averages = weighted_channel_sums.iter().map(|x| x / weights_sum);
-
-    *P::from_slice(
-        &channel_averages
-            .map(<f32 as AsPrimitive<P::Subpixel>>::as_)
-            .collect_vec(),
-    )
-}
-
 /// Un-normalized Gaussian Weight
 fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
     (-0.5 * x_squared / sigma_squared).exp()
+}
+
+/// Fast approximation of `exp(x)` for negative `x` using Schraudolph's method.
+///
+/// Based on: N. Schraudolph, "A Fast, Compact Approximation of the Exponential Function",
+/// Neural Computation 11(4), 1999.
+///
+/// Exploits the IEEE 754 float layout: reinterprets `a * x + b` as the bit pattern of an f32,
+/// where `a` and `b` are chosen so the exponent and mantissa fields approximate `exp(x)`.
+///
+/// Valid for `x` in roughly `[-87, 0]`. Returns 0 for `x < -87` (where true exp underflows).
+/// Maximum relative error is ~4% in the range used by the bilateral filter.
+#[inline]
+fn fast_exp_negative(x: f32) -> f32 {
+    if x < -87.0 {
+        return 0.0;
+    }
+    // 2^23 / ln(2) ≈ 12102203.0
+    const A: f32 = 12102203.0;
+    // 2^23 * 127 (IEEE 754 exponent bias), with Schraudolph's adjustment for reduced avg error
+    const B: f32 = 1065353216.0 - 486411.0;
+    let bits = ((A * x + B) as i32).max(0) as u32;
+    f32::from_bits(bits)
 }
 
 #[cfg(test)]
