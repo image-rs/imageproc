@@ -18,7 +18,7 @@ pub enum Extension<P: Pixel> {
     /// Extends the image by using the nearest edge pixel.
     Edge,
     /// Extends the image by repeating it.
-    Repeat,
+    Wrap,
 }
 
 #[derive(Copy, Clone, Debug)]

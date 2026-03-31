@@ -33,7 +33,7 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
                 let y = y.clamp(0, h as i64 - 1) as u32;
                 *self.get_pixel(x, y)
             }
-            Extension::Repeat => {
+            Extension::Wrap => {
                 let x = x.rem_euclid(w as i64) as u32;
                 let y = y.rem_euclid(h as i64) as u32;
                 *self.get_pixel(x, y)
