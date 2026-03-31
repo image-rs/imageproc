@@ -569,7 +569,7 @@ where
                 out.put_pixel(
                     x as u32,
                     y,
-                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, extend),
                 );
             }
 
@@ -587,7 +587,7 @@ where
                             image.get_pixel_or_extend(
                                 x as i64 - tx as i64,
                                 y as i64 - ty as i64,
-                                &extend,
+                                extend,
                             ),
                         );
                     }
@@ -598,7 +598,7 @@ where
                 out.put_pixel(
                     x as u32,
                     y,
-                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, &extend),
+                    image.get_pixel_or_extend(x as i64 - tx as i64, y as i64 - ty as i64, extend),
                 );
             }
 
@@ -618,7 +618,7 @@ where
                             image.get_pixel_or_extend(
                                 x as i64 - tx as i64,
                                 y as i64 - ty as i64,
-                                &extend,
+                                extend,
                             ),
                         );
                     }
@@ -669,9 +669,9 @@ pub fn warp_into<P>(
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32> + Sync,
 {
     let projection = projection.invert();
-    let nn = |x, y| interpolate_nearest(image, x, y, &extend);
-    let bl = |x, y| interpolate_bilinear(image, x, y, &extend);
-    let bc = |x, y| interpolate_bicubic(image, x, y, &extend);
+    let nn = |x, y| interpolate_nearest(image, x, y, extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
     let wp = |x, y| projection.map_projective(x, y);
     let wa = |x, y| projection.map_affine(x, y);
     let wt = |x, y| projection.map_translation(x, y);
@@ -742,9 +742,9 @@ pub fn warp_into_with<P, F>(
     <P as Pixel>::Subpixel: Send + Sync,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
-    let nn = |x, y| interpolate_nearest(image, x, y, &extend);
-    let bl = |x, y| interpolate_bilinear(image, x, y, &extend);
-    let bc = |x, y| interpolate_bicubic(image, x, y, &extend);
+    let nn = |x, y| interpolate_nearest(image, x, y, extend);
+    let bl = |x, y| interpolate_bilinear(image, x, y, extend);
+    let bc = |x, y| interpolate_bicubic(image, x, y, extend);
     use Interpolation as I;
 
     match interpolation {
@@ -879,7 +879,7 @@ where
     outp
 }
 
-fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P
+fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -895,7 +895,7 @@ where
     let mut col: [MaybeUninit<P>; 4] = [MaybeUninit::zeroed(); 4];
 
     for row in top..bottom {
-        let (p0, p1, p2, p3): (P, P, P, P) = (
+        let (p0, p1, p2, p3) = (
             image.get_pixel_or_extend(left, row, extend),
             image.get_pixel_or_extend(left + 1, row, extend),
             image.get_pixel_or_extend(left + 2, row, extend),
@@ -942,7 +942,7 @@ where
     })
 }
 
-fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P
+fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -965,7 +965,7 @@ where
 }
 
 #[inline(always)]
-fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: &Extension<P>) -> P {
+fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P {
     let rx = (x + 0.5).floor() as i64;
     let ry = (y + 0.5).floor() as i64;
 

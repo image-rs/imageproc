@@ -15,15 +15,15 @@ pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 /// Image containers that can sample outside of their boundaries.
 pub trait BoundaryAccess<P: Pixel> {
     /// Returns the pixel or falls back to the implementation defined by [`Extension`].
-    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: &Extension<P>) -> P;
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Extension<P>) -> P;
 }
 impl<P: Pixel> BoundaryAccess<P> for Image<P> {
-    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: &Extension<P>) -> P {
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Extension<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {
             Extension::Fill(default) => {
                 if x < 0 || x >= w as i64 || y < 0 || y >= h as i64 {
-                    *default
+                    default
                 } else {
                     *self.get_pixel(x as u32, y as u32)
                 }
