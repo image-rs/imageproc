@@ -12,11 +12,11 @@ use std::{mem::MaybeUninit, ops::Mul};
 /// This only applies to integer coordinates.
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug)]
-pub enum Extension<P: Pixel> {
+pub enum Border<P: Pixel> {
     /// Extends the image with the provided default pixel.
-    Fill(P),
+    Constant(P),
     /// Extends the image by using the nearest edge pixel.
-    Edge,
+    Replicate,
     /// Extends the image by repeating it.
     Wrap,
 }
@@ -293,7 +293,7 @@ pub fn rotate_about_center<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -318,7 +318,7 @@ pub fn rotate<P>(
     center: (f32, f32),
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -338,7 +338,7 @@ pub fn rotate_about_center_no_crop<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -366,7 +366,7 @@ fn rotate_about_center_into<P>(
     image: &Image<P>,
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -394,7 +394,7 @@ fn rotate_into<P>(
     out_center: (f32, f32),
     theta: f32,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -553,7 +553,7 @@ where
 /// Translates the input image by t. Note that image coordinates increase from
 /// top left to bottom right. Output pixels whose pre-image are not in the input
 /// image are extended according to `extend`.
-pub fn translate<P>(image: &Image<P>, t: (i32, i32), extend: Extension<P>) -> Image<P>
+pub fn translate<P>(image: &Image<P>, t: (i32, i32), extend: Border<P>) -> Image<P>
 where
     P: Pixel,
 {
@@ -641,7 +641,7 @@ pub fn warp<P>(
     image: &Image<P>,
     projection: &Projection,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
 ) -> Image<P>
 where
     P: Pixel + Send + Sync,
@@ -661,7 +661,7 @@ pub fn warp_into<P>(
     image: &Image<P>,
     projection: &Projection,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
     out: &mut Image<P>,
 ) where
     P: Pixel + Send + Sync,
@@ -705,14 +705,14 @@ pub fn warp_into<P>(
 ///     &image,
 ///     |x, y| (x, y + (x / 30.0).sin()),
 ///     Interpolation::Nearest,
-///     Extension::Fill(Luma([0u8]))
+///     Border::Constant(Luma([0u8]))
 /// );
 /// ```
 pub fn warp_with<P, F>(
     image: &Image<P>,
     mapping: F,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
 ) -> Image<P>
 where
     F: Fn(f32, f32) -> (f32, f32) + Sync + Send,
@@ -734,7 +734,7 @@ pub fn warp_into_with<P, F>(
     image: &Image<P>,
     mapping: F,
     interpolation: Interpolation,
-    extend: Extension<P>,
+    extend: Border<P>,
     out: &mut Image<P>,
 ) where
     F: Fn(f32, f32) -> (f32, f32) + Send + Sync,
@@ -879,7 +879,7 @@ where
     outp
 }
 
-fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
+fn interpolate_bicubic<P>(image: &Image<P>, x: f32, y: f32, extend: Border<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -942,7 +942,7 @@ where
     })
 }
 
-fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P
+fn interpolate_bilinear<P>(image: &Image<P>, x: f32, y: f32, extend: Border<P>) -> P
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
@@ -965,7 +965,7 @@ where
 }
 
 #[inline(always)]
-fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: Extension<P>) -> P {
+fn interpolate_nearest<P: Pixel>(image: &Image<P>, x: f32, y: f32, extend: Border<P>) -> P {
     let rx = (x + 0.5).floor() as i64;
     let ry = (y + 0.5).floor() as i64;
 
@@ -1002,7 +1002,7 @@ mod tests {
             (0f32, 0f32),
             0f32,
             Interpolation::Nearest,
-            Extension::Fill(Luma([99u8])),
+            Border::Constant(Luma([99u8])),
         );
         assert_pixels_eq!(rotated, image);
     }
@@ -1023,7 +1023,7 @@ mod tests {
             &image,
             &rot,
             Interpolation::Nearest,
-            Extension::Fill(Luma([99u8])),
+            Border::Constant(Luma([99u8])),
         );
         assert_pixels_eq!(rotated, expected);
     }
@@ -1045,7 +1045,7 @@ mod tests {
             &image,
             &rot,
             Interpolation::Nearest,
-            Extension::Fill(Luma([99u8])),
+            Border::Constant(Luma([99u8])),
         );
         assert_pixels_eq!(rotated, expected);
     }
@@ -1062,7 +1062,7 @@ mod tests {
             00, 00, 01;
             10, 10, 11);
 
-        let translated = translate(&image, (1, 1), Extension::Edge);
+        let translated = translate(&image, (1, 1), Border::Replicate);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1078,7 +1078,7 @@ mod tests {
             20, 20, 21;
             20, 20, 21);
 
-        let translated = translate(&image, (1, -1), Extension::Edge);
+        let translated = translate(&image, (1, -1), Border::Replicate);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1094,7 +1094,7 @@ mod tests {
             11, 12, 12;
             21, 22, 22);
 
-        let translated = translate(&image, (-1, 0), Extension::Edge);
+        let translated = translate(&image, (-1, 0), Border::Replicate);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1111,7 +1111,7 @@ mod tests {
             00, 00, 00);
 
         // Translating by more than the image width and height
-        let translated = translate(&image, (5, 5), Extension::Edge);
+        let translated = translate(&image, (5, 5), Border::Replicate);
         assert_pixels_eq!(translated, expected);
     }
 
@@ -1131,7 +1131,7 @@ mod tests {
             &image,
             &Projection::translate(1.0, 1.0),
             Interpolation::Nearest,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1152,7 +1152,7 @@ mod tests {
             &image,
             &Projection::translate(1.0, -1.0),
             Interpolation::Nearest,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1174,7 +1174,7 @@ mod tests {
             &image,
             &Projection::translate(5.0, 5.0),
             Interpolation::Nearest,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated, expected);
     }
@@ -1202,14 +1202,14 @@ mod tests {
             &image,
             &aff,
             Interpolation::Nearest,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated_nearest, expected);
         let translated_bilinear = warp(
             &image,
             &aff,
             Interpolation::Bilinear,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated_bilinear, expected);
     }
@@ -1242,7 +1242,7 @@ mod tests {
             &image,
             &aff,
             Interpolation::Bicubic,
-            Extension::Fill(Luma([0u8])),
+            Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated_bicubic, expected);
     }
@@ -1393,7 +1393,7 @@ mod benches {
                 &image,
                 &rot,
                 Interpolation::Nearest,
-                Extension::Fill(Luma([98u8])),
+                Border::Constant(Luma([98u8])),
             );
             black_box(rotated);
         });
@@ -1409,7 +1409,7 @@ mod benches {
                 &image,
                 &rot,
                 Interpolation::Bilinear,
-                Extension::Fill(Luma([98u8])),
+                Border::Constant(Luma([98u8])),
             );
             black_box(rotated);
         });
@@ -1425,7 +1425,7 @@ mod benches {
                 &image,
                 &rot,
                 Interpolation::Bicubic,
-                Extension::Fill(Luma([98u8])),
+                Border::Constant(Luma([98u8])),
             );
             black_box(rotated);
         });
@@ -1435,7 +1435,7 @@ mod benches {
     fn bench_translate(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let translated = translate(&image, (30, 30), Extension::Edge);
+            let translated = translate(&image, (30, 30), Border::Replicate);
             black_box(translated);
         });
     }
@@ -1450,7 +1450,7 @@ mod benches {
                 &image,
                 &t,
                 Interpolation::Nearest,
-                Extension::Fill(Luma([0u8])),
+                Border::Constant(Luma([0u8])),
             );
             black_box(translated);
         });
@@ -1467,7 +1467,7 @@ mod benches {
                 &image,
                 |x, y| (x - 30.0, y - 30.0),
                 Interpolation::Nearest,
-                Extension::Fill(Luma([0u8])),
+                Border::Constant(Luma([0u8])),
                 &mut out,
             );
             black_box(out);
@@ -1490,7 +1490,7 @@ mod benches {
                 &image,
                 &aff,
                 Interpolation::Nearest,
-                Extension::Fill(Luma([0u8])),
+                Border::Constant(Luma([0u8])),
             );
             black_box(transformed);
         });
@@ -1512,7 +1512,7 @@ mod benches {
                 &image,
                 &aff,
                 Interpolation::Bilinear,
-                Extension::Fill(Luma([0u8])),
+                Border::Constant(Luma([0u8])),
             );
             black_box(transformed);
         });
@@ -1534,7 +1534,7 @@ mod benches {
                 &image,
                 &aff,
                 Interpolation::Bicubic,
-                Extension::Fill(Luma([0u8])),
+                Border::Constant(Luma([0u8])),
             );
             black_box(transformed);
         });

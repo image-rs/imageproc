@@ -1,6 +1,6 @@
 //! Trait definitions and type aliases.
 
-use crate::geometric_transformations::Extension;
+use crate::geometric_transformations::Border;
 use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
@@ -14,26 +14,26 @@ pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 
 /// Image containers that can sample outside of their boundaries.
 pub trait BoundaryAccess<P: Pixel> {
-    /// Returns the pixel or falls back to the implementation defined by [`Extension`].
-    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Extension<P>) -> P;
+    /// Returns the pixel or falls back to the implementation defined by [`Border`].
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P;
 }
 impl<P: Pixel> BoundaryAccess<P> for Image<P> {
-    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Extension<P>) -> P {
+    fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {
-            Extension::Fill(default) => {
+            Border::Constant(default) => {
                 if x < 0 || x >= w as i64 || y < 0 || y >= h as i64 {
                     default
                 } else {
                     *self.get_pixel(x as u32, y as u32)
                 }
             }
-            Extension::Edge => {
+            Border::Replicate => {
                 let x = x.clamp(0, w as i64 - 1) as u32;
                 let y = y.clamp(0, h as i64 - 1) as u32;
                 *self.get_pixel(x, y)
             }
-            Extension::Wrap => {
+            Border::Wrap => {
                 let x = x.rem_euclid(w as i64) as u32;
                 let y = y.rem_euclid(h as i64) as u32;
                 *self.get_pixel(x, y)

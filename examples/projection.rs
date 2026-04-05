@@ -6,7 +6,7 @@
 //! `cargo run --release --example projection ./examples/empire-state-building.jpg ./tmp
 
 use image::{Rgb, error::ImageResult, open};
-use imageproc::geometric_transformations::{Extension, Interpolation, Projection, warp};
+use imageproc::geometric_transformations::{Border, Interpolation, Projection, warp};
 use std::{env, fs, path::Path};
 
 fn main() -> ImageResult<()> {
@@ -37,7 +37,7 @@ fn main() -> ImageResult<()> {
         &image,
         &translate,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("translated.png"))?;
 
@@ -46,7 +46,7 @@ fn main() -> ImageResult<()> {
         &image,
         &inverse_translation,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("translated_inverse.png"))?;
 
@@ -55,7 +55,7 @@ fn main() -> ImageResult<()> {
         &image,
         &rotate,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("rotated.png"))?;
 
@@ -64,7 +64,7 @@ fn main() -> ImageResult<()> {
         &image,
         &rotate_then_translate,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("rotated_then_translated.png"))?;
 
@@ -73,7 +73,7 @@ fn main() -> ImageResult<()> {
         &image,
         &translate_then_rotate,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("translated_then_rotated.png"))?;
 
@@ -84,7 +84,7 @@ fn main() -> ImageResult<()> {
         &image,
         &rotate_about_center,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("rotated_about_center.png"))?;
 
@@ -93,7 +93,7 @@ fn main() -> ImageResult<()> {
         &image,
         &scale,
         Interpolation::Bilinear,
-        Extension::Fill(Rgb([255, 0, 0])),
+        Border::Constant(Rgb([255, 0, 0])),
     )
     .save(output_dir.join("scaled.png"))?;
 
