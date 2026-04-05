@@ -402,7 +402,7 @@ fn test_affine_nearest_rgb() {
         ]).unwrap();
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Nearest,
             Border::Constant(Rgb::black()),
         )
@@ -428,7 +428,7 @@ fn test_affine_bilinear_rgb() {
 
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Bilinear,
             Border::Constant(Rgb::black()),
         )
@@ -454,7 +454,7 @@ fn test_affine_bicubic_rgb() {
 
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Bicubic,
             Border::Constant(Rgb::black()),
         )
@@ -473,7 +473,7 @@ fn test_nearest_id() {
         let hom = Projection::translate(0.0, 0.0);
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Nearest,
             Border::Constant(Rgb::black()),
         )
@@ -487,7 +487,7 @@ fn test_bilinear_id() {
         let hom = Projection::translate(0.0, 0.0);
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Bilinear,
             Border::Constant(Rgb::black()),
         )
@@ -501,7 +501,7 @@ fn test_bicubic_id() {
         let hom = Projection::translate(0.0, 0.0);
         warp(
             image,
-            &hom,
+            hom,
             Interpolation::Bicubic,
             Border::Constant(Rgb::black()),
         )

@@ -328,7 +328,7 @@ where
     let (cx, cy) = center;
     let projection =
         Projection::translate(cx, cy) * Projection::rotate(theta) * Projection::translate(-cx, -cy);
-    warp(image, &projection, interpolation, extend)
+    warp(image, projection, interpolation, extend)
 }
 
 /// Rotates an image clockwise about its center by theta radians without cropping.
@@ -407,7 +407,7 @@ fn rotate_into<P>(
         * Projection::rotate(theta)
         * Projection::translate(-cx, -cy);
 
-    warp_into(image, &projection, interpolation, extend, out);
+    warp_into(image, projection, interpolation, extend, out);
 }
 
 /// Rotates an image 90 degrees clockwise.
@@ -639,7 +639,7 @@ where
 /// corresponding location in the output image.
 pub fn warp<P>(
     image: &Image<P>,
-    projection: &Projection,
+    projection: Projection,
     interpolation: Interpolation,
     extend: Border<P>,
 ) -> Image<P>
@@ -659,7 +659,7 @@ where
 /// See the [`warp()`] documentation for more information.
 pub fn warp_into<P>(
     image: &Image<P>,
-    projection: &Projection,
+    projection: Projection,
     interpolation: Interpolation,
     extend: Border<P>,
     out: &mut Image<P>,
@@ -672,9 +672,9 @@ pub fn warp_into<P>(
     let nn = |x, y| interpolate_nearest(image, x, y, extend);
     let bl = |x, y| interpolate_bilinear(image, x, y, extend);
     let bc = |x, y| interpolate_bicubic(image, x, y, extend);
-    let wp = |x, y| projection.map_projective(x, y);
-    let wa = |x, y| projection.map_affine(x, y);
-    let wt = |x, y| projection.map_translation(x, y);
+    let wp = move |x, y| projection.map_projective(x, y);
+    let wa = move |x, y| projection.map_affine(x, y);
+    let wt = move |x, y| projection.map_translation(x, y);
     use Interpolation as I;
     use TransformationClass as TC;
 
@@ -1021,7 +1021,7 @@ mod tests {
 
         let rotated = warp(
             &image,
-            &rot,
+            rot,
             Interpolation::Nearest,
             Border::Constant(Luma([99u8])),
         );
@@ -1043,7 +1043,7 @@ mod tests {
 
         let rotated = warp(
             &image,
-            &rot,
+            rot,
             Interpolation::Nearest,
             Border::Constant(Luma([99u8])),
         );
@@ -1129,7 +1129,7 @@ mod tests {
 
         let translated = warp(
             &image,
-            &Projection::translate(1.0, 1.0),
+            Projection::translate(1.0, 1.0),
             Interpolation::Nearest,
             Border::Constant(Luma([0u8])),
         );
@@ -1150,7 +1150,7 @@ mod tests {
 
         let translated = warp(
             &image,
-            &Projection::translate(1.0, -1.0),
+            Projection::translate(1.0, -1.0),
             Interpolation::Nearest,
             Border::Constant(Luma([0u8])),
         );
@@ -1172,7 +1172,7 @@ mod tests {
         // Translating by more than the image width and height
         let translated = warp(
             &image,
-            &Projection::translate(5.0, 5.0),
+            Projection::translate(5.0, 5.0),
             Interpolation::Nearest,
             Border::Constant(Luma([0u8])),
         );
@@ -1200,14 +1200,14 @@ mod tests {
 
         let translated_nearest = warp(
             &image,
-            &aff,
+            aff,
             Interpolation::Nearest,
             Border::Constant(Luma([0u8])),
         );
         assert_pixels_eq!(translated_nearest, expected);
         let translated_bilinear = warp(
             &image,
-            &aff,
+            aff,
             Interpolation::Bilinear,
             Border::Constant(Luma([0u8])),
         );
@@ -1240,7 +1240,7 @@ mod tests {
 
         let translated_bicubic = warp(
             &image,
-            &aff,
+            aff,
             Interpolation::Bicubic,
             Border::Constant(Luma([0u8])),
         );
@@ -1391,7 +1391,7 @@ mod benches {
         b.iter(|| {
             let rotated = warp(
                 &image,
-                &rot,
+                rot,
                 Interpolation::Nearest,
                 Border::Constant(Luma([98u8])),
             );
@@ -1407,7 +1407,7 @@ mod benches {
         b.iter(|| {
             let rotated = warp(
                 &image,
-                &rot,
+                rot,
                 Interpolation::Bilinear,
                 Border::Constant(Luma([98u8])),
             );
@@ -1423,7 +1423,7 @@ mod benches {
         b.iter(|| {
             let rotated = warp(
                 &image,
-                &rot,
+                rot,
                 Interpolation::Bicubic,
                 Border::Constant(Luma([98u8])),
             );
@@ -1448,7 +1448,7 @@ mod benches {
         b.iter(|| {
             let translated = warp(
                 &image,
-                &t,
+                t,
                 Interpolation::Nearest,
                 Border::Constant(Luma([0u8])),
             );
@@ -1488,7 +1488,7 @@ mod benches {
         b.iter(|| {
             let transformed = warp(
                 &image,
-                &aff,
+                aff,
                 Interpolation::Nearest,
                 Border::Constant(Luma([0u8])),
             );
@@ -1510,7 +1510,7 @@ mod benches {
         b.iter(|| {
             let transformed = warp(
                 &image,
-                &aff,
+                aff,
                 Interpolation::Bilinear,
                 Border::Constant(Luma([0u8])),
             );
@@ -1532,7 +1532,7 @@ mod benches {
         b.iter(|| {
             let transformed = warp(
                 &image,
-                &aff,
+                aff,
                 Interpolation::Bicubic,
                 Border::Constant(Luma([0u8])),
             );

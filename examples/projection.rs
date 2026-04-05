@@ -35,7 +35,7 @@ fn main() -> ImageResult<()> {
     let translate = Projection::translate(90.0, 10.0);
     warp(
         &image,
-        &translate,
+        translate,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -44,7 +44,7 @@ fn main() -> ImageResult<()> {
     let inverse_translation = translate.invert();
     warp(
         &image,
-        &inverse_translation,
+        inverse_translation,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -53,7 +53,7 @@ fn main() -> ImageResult<()> {
     let rotate = Projection::rotate(45f32.to_radians());
     warp(
         &image,
-        &rotate,
+        rotate,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -62,7 +62,7 @@ fn main() -> ImageResult<()> {
     let rotate_then_translate = translate * rotate;
     warp(
         &image,
-        &rotate_then_translate,
+        rotate_then_translate,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -71,7 +71,7 @@ fn main() -> ImageResult<()> {
     let translate_then_rotate = rotate * translate;
     warp(
         &image,
-        &translate_then_rotate,
+        translate_then_rotate,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -82,7 +82,7 @@ fn main() -> ImageResult<()> {
         Projection::translate(cx, cy) * rotate * Projection::translate(-cx, -cy);
     warp(
         &image,
-        &rotate_about_center,
+        rotate_about_center,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
@@ -91,7 +91,7 @@ fn main() -> ImageResult<()> {
     let scale = Projection::scale(2.0, 3.0);
     warp(
         &image,
-        &scale,
+        scale,
         Interpolation::Bilinear,
         Border::Constant(Rgb([255, 0, 0])),
     )
