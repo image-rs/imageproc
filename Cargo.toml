@@ -1,6 +1,6 @@
 [package]
 name = "imageproc"
-version = "0.26.1"
+version = "0.27.0"
 authors = ["theotherphil"]
 rust-version = "1.87.0"
 edition = "2024"

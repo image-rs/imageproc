@@ -27,14 +27,15 @@ use imageproc::definitions::Image;
 use imageproc::drawing::text_size;
 use imageproc::filter::bilateral::GaussianEuclideanColorDistance;
 use imageproc::filter::bilateral_filter;
-use imageproc::geometric_transformations::rotate_about_center_no_crop;
 use imageproc::kernel::{self};
 use imageproc::rect::{Rect, Region};
 use imageproc::{
     definitions::{Clamp, HasBlack, HasWhite},
     edges::canny,
     filter::{gaussian_blur_f32, sharpen3x3},
-    geometric_transformations::{Interpolation, Projection, rotate_about_center, warp},
+    geometric_transformations::{
+        Border, Interpolation, Projection, rotate_about_center, rotate_about_center_no_crop, warp,
+    },
     gradients,
     utils::load_image_or_panic,
 };
@@ -160,7 +161,7 @@ fn test_rotate_nearest_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Nearest,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth(
@@ -177,7 +178,7 @@ fn test_rotate_no_crop_nearest_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Nearest,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth(
@@ -194,7 +195,7 @@ fn test_rotate_nearest_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Nearest,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth(
@@ -211,7 +212,7 @@ fn test_rotate_no_crop_nearest_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Nearest,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth(
@@ -234,7 +235,7 @@ fn test_rotate_bilinear_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bilinear,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -252,7 +253,7 @@ fn test_rotate_bilinear_no_crop_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bilinear,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -270,7 +271,7 @@ fn test_rotate_bilinear_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bilinear,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -288,7 +289,7 @@ fn test_rotate_no_crop_bilinear_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bilinear,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -306,7 +307,7 @@ fn test_rotate_bicubic_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bicubic,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -324,7 +325,7 @@ fn test_rotate_no_crop_bicubic_rgb() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bicubic,
-            Rgb::black(),
+            Border::Constant(Rgb::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -342,7 +343,7 @@ fn test_rotate_bicubic_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bicubic,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -360,7 +361,7 @@ fn test_rotate_no_crop_bicubic_rgba() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Bicubic,
-            Rgba::black(),
+            Border::Constant(Rgba::black()),
         )
     }
     compare_to_truth_with_tolerance(
@@ -378,7 +379,7 @@ fn test_rotate_no_crop_default_color() {
             image,
             std::f32::consts::PI / 4f32,
             Interpolation::Nearest,
-            Rgba([255, 0, 0, 255]),
+            Border::Constant(Rgba([255, 0, 0, 255])),
         )
     }
     compare_to_truth_with_tolerance(
@@ -399,7 +400,12 @@ fn test_affine_nearest_rgb() {
             root_two_inv,  root_two_inv, -70.0,
                      0.0,           0.0,   1.0,
         ]).unwrap();
-        warp(image, &hom, Interpolation::Nearest, Rgb::black())
+        warp(
+            image,
+            &hom,
+            Interpolation::Nearest,
+            Border::Constant(Rgb::black()),
+        )
     }
     compare_to_truth(
         "elephant.png",
@@ -420,7 +426,12 @@ fn test_affine_bilinear_rgb() {
         ])
             .unwrap();
 
-        warp(image, &hom, Interpolation::Bilinear, Rgb::black())
+        warp(
+            image,
+            &hom,
+            Interpolation::Bilinear,
+            Border::Constant(Rgb::black()),
+        )
     }
     compare_to_truth_with_tolerance(
         "elephant.png",
@@ -441,7 +452,12 @@ fn test_affine_bicubic_rgb() {
             0.0, 0.0, 1.0,
         ]).unwrap();
 
-        warp(image, &hom, Interpolation::Bicubic, Rgb::black())
+        warp(
+            image,
+            &hom,
+            Interpolation::Bicubic,
+            Border::Constant(Rgb::black()),
+        )
     }
     compare_to_truth_with_tolerance(
         "elephant.png",
@@ -449,6 +465,48 @@ fn test_affine_bicubic_rgb() {
         affine_bilinear,
         1,
     );
+}
+
+#[test]
+fn test_nearest_id() {
+    fn id(image: &RgbImage) -> RgbImage {
+        let hom = Projection::translate(0.0, 0.0);
+        warp(
+            image,
+            &hom,
+            Interpolation::Nearest,
+            Border::Constant(Rgb::black()),
+        )
+    }
+    compare_to_truth("elephant.png", "elephant_same_nearest.png", id);
+}
+
+#[test]
+fn test_bilinear_id() {
+    fn id(image: &RgbImage) -> RgbImage {
+        let hom = Projection::translate(0.0, 0.0);
+        warp(
+            image,
+            &hom,
+            Interpolation::Bilinear,
+            Border::Constant(Rgb::black()),
+        )
+    }
+    compare_to_truth("elephant.png", "elephant_same_bilinear.png", id);
+}
+
+#[test]
+fn test_bicubic_id() {
+    fn id(image: &RgbImage) -> RgbImage {
+        let hom = Projection::translate(0.0, 0.0);
+        warp(
+            image,
+            &hom,
+            Interpolation::Bicubic,
+            Border::Constant(Rgb::black()),
+        )
+    }
+    compare_to_truth("elephant.png", "elephant_same_bicubic.png", id);
 }
 
 #[test]
