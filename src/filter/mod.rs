@@ -11,14 +11,14 @@ pub use self::sharpen::*;
 mod box_filter;
 pub use self::box_filter::box_filter;
 
-use image::{GenericImageView, GrayImage, Luma, Pixel, Primitive};
+use image::{GrayImage, Luma, Pixel, Primitive};
 
-use crate::definitions::{Clamp, Image};
+use crate::definitions::{BoundaryAccess, Clamp, Image};
+use crate::geometric_transformations::Border;
 use crate::kernel::{self, Kernel};
 use crate::map::{ChannelMap, WithChannel};
 use num::Num;
 
-use std::cmp::{max, min};
 use std::f32;
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
@@ -41,23 +41,12 @@ where
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
     let mut acc = vec![zero; num_channels];
-    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (width as i64, height as i64);
+    let extend = Border::<P>::Replicate;
 
     for y in 0..height {
         for x in 0..width {
-            for k_y in 0..k_height {
-                let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                for k_x in 0..k_width {
-                    let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-
-                    debug_assert!(image.in_bounds(x_p, y_p));
-                    let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
-                    accumulate(&mut acc, &pixel, unsafe {
-                        kernel.get_unchecked(k_x as u32, k_y as u32)
-                    });
-                }
-            }
+            image.convolve_at(kernel, &mut acc, x, y, extend);
             let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
             for (a, c) in acc.iter_mut().zip(out_channels) {
                 *c = f(*a);
@@ -84,8 +73,8 @@ where
     assert_eq!(P::CHANNEL_COUNT, Q::CHANNEL_COUNT);
     let num_channels = P::CHANNEL_COUNT as usize;
 
-    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (image.width() as i64, image.height() as i64);
+    let extend = Border::<P>::Replicate;
 
     let out_rows: Vec<Vec<_>> = (0..height)
         .into_par_iter()
@@ -95,18 +84,7 @@ where
             let mut acc = vec![K::zero(); num_channels];
 
             for x in 0..width {
-                for k_y in 0..k_height {
-                    let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                    for k_x in 0..k_width {
-                        let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-
-                        debug_assert!(image.in_bounds(x_p, y_p));
-                        let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
-                        accumulate(&mut acc, &pixel, unsafe {
-                            kernel.get_unchecked(k_x as u32, k_y as u32)
-                        });
-                    }
-                }
+                image.convolve_at(kernel, &mut acc, x, y, extend);
                 for (a, c) in acc.iter_mut().zip(out_pixel.iter_mut()) {
                     *c = f(*a);
                     *a = K::zero();
@@ -242,69 +220,11 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_width = kernel.len() as i32;
-    let half_k = k_width / 2;
-
-    // Typically the image side will be much larger than the kernel length.
-    // In that case we can remove a lot of bounds checks for most pixels.
-    if k_width >= width as i32 {
-        for y in 0..height {
-            for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
-                    let x_unchecked = (x as i32) + i as i32 - half_k;
-                    let x_p = max(0, min(x_unchecked, width as i32 - 1)) as u32;
-                    debug_assert!(image.in_bounds(x_p, y));
-                    let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                    accumulate(&mut acc, &p, *k);
-                }
-
-                let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-            }
-        }
-
-        return out;
-    }
+    let extend = Border::Replicate;
 
     for y in 0..height {
-        // Left margin - need to check lower bound only
-        for x in 0..half_k {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = max(0, x_unchecked) as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-
-        // Neither margin - don't need bounds check on either side
-        for x in half_k..(width as i32 - half_k) {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = x_unchecked as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-
-        // Right margin - need to check upper bound only
-        for x in (width as i32 - half_k)..(width as i32) {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = min(x_unchecked, width as i32 - 1) as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
+        for x in 0..width {
+            image.convolve_horizontal_at(kernel, &mut acc, x as i64, y, extend);
             let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
@@ -329,90 +249,17 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_height = kernel.len() as i32;
-    let half_k = k_height / 2;
+    let extend = Border::Replicate;
 
-    // Typically the image side will be much larger than the kernel length.
-    // In that case we can remove a lot of bounds checks for most pixels.
-    if k_height >= height as i32 {
-        for y in 0..height {
-            for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
-                    let y_unchecked = (y as i32) + i as i32 - half_k;
-                    let y_p = max(0, min(y_unchecked, height as i32 - 1)) as u32;
-                    debug_assert!(image.in_bounds(x, y_p));
-                    let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                    accumulate(&mut acc, &p, *k);
-                }
-
-                let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-            }
-        }
-
-        return out;
-    }
-
-    // Top margin - need to check lower bound only
-    for y in 0..half_k {
+    for y in 0..height {
         for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = max(0, y_unchecked) as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-    }
-
-    // Neither margin - don't need bounds check on either side
-    for y in half_k..(height as i32 - half_k) {
-        for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = y_unchecked as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-    }
-
-    // Right margin - need to check upper bound only
-    for y in (height as i32 - half_k)..(height as i32) {
-        for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = min(y_unchecked, height as i32 - 1) as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
+            image.convolve_vertical_at(kernel, &mut acc, x, y as i64, extend);
+            let out_channels = out.get_pixel_mut(x, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
     out
-}
-
-fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
-where
-    P: Pixel,
-    P::Subpixel: Into<K>,
-    K: Num + Copy,
-{
-    acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
-        *a = *a + c.into() * weight;
-    });
 }
 
 fn clamp_and_reset<P, K>(acc: &mut [K], out_channels: &mut [P::Subpixel], zero: K)
@@ -876,7 +723,7 @@ mod benches {
     use crate::definitions::Image;
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::imageops::blur;
-    use image::{GenericImage, Luma, Rgb};
+    use image::{GenericImage, GenericImageView, Luma, Rgb};
     use test::{Bencher, black_box};
 
     #[bench]
