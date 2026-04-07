@@ -241,7 +241,7 @@ where
 
     for y in 0..height {
         for x in 0..width {
-            image.convolve_horizontal_at(kernel, &mut acc, x as i64, y, extend);
+            image.convolve_horizontal_at(kernel, &mut acc, x as i64, y as i64, extend);
             let out_channels = out.get_pixel_mut(x, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
@@ -269,7 +269,7 @@ where
 
     for y in 0..height {
         for x in 0..width {
-            image.convolve_vertical_at(kernel, &mut acc, x, y as i64, extend);
+            image.convolve_vertical_at(kernel, &mut acc, x as i64, y as i64, extend);
             let out_channels = out.get_pixel_mut(x, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
