@@ -105,9 +105,9 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
         match extend {
             Border::Constant(default) => {
                 let k_y_min = y.max(0) - y;
-                let k_y_max = (y + k_height).min(h) - y;
+                let k_y_max = ((y + k_height).min(h) - y).max(0);
                 let k_x_min = x.max(0) - x;
-                let k_x_max = (x + k_width).min(w) - x;
+                let k_x_max = ((x + k_width).min(w) - x).max(0);
                 for k_y in 0..k_y_min {
                     for k_x in 0..k_width {
                         accumulate(acc, &default, unsafe {
@@ -195,7 +195,7 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
         match extend {
             Border::Constant(default) => {
                 let k_x_min = (x.max(0) - x) as usize;
-                let k_x_max = ((x + k_width).min(w) - x) as usize;
+                let k_x_max = ((x + k_width).min(w) - x).max(0) as usize;
                 for k_x in 0..k_x_min {
                     accumulate(acc, &default, kernel[k_x]);
                 }
@@ -282,7 +282,7 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
         match extend {
             Border::Constant(default) => {
                 let k_y_min = (y.max(0) - y) as usize;
-                let k_y_max = ((y + k_height).min(h) - y) as usize;
+                let k_y_max = ((y + k_height).min(h) - y).max(0) as usize;
                 for k_y in 0..k_y_min {
                     accumulate(acc, &default, kernel[k_y]);
                 }

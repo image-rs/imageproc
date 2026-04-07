@@ -7,6 +7,7 @@
 use image::{GrayImage, open};
 use imageproc::{
     filter::filter_clamped,
+    geometric_transformations::Border,
     kernel::{self, Kernel},
     map::map_subpixels,
 };
@@ -20,8 +21,8 @@ fn save_gradients(
     name: &str,
     scale: i16,
 ) {
-    let horizontal_gradients = filter_clamped(input, horizontal_kernel);
-    let vertical_gradients = filter_clamped(input, vertical_kernel);
+    let horizontal_gradients = filter_clamped(input, horizontal_kernel, Border::Replicate);
+    let vertical_gradients = filter_clamped(input, vertical_kernel, Border::Replicate);
 
     let horizontal_scaled = map_subpixels(&horizontal_gradients, |p: i16| (p.abs() / scale) as u8);
     let vertical_scaled = map_subpixels(&vertical_gradients, |p: i16| (p.abs() / scale) as u8);

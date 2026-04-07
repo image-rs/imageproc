@@ -517,6 +517,7 @@ fn test_sobel_gradients() {
                 image,
                 kernel::SOBEL_HORIZONTAL_3X3,
                 kernel::SOBEL_VERTICAL_3X3,
+                Border::Replicate,
                 |p| p,
             ),
             <u8 as Clamp<u16>>::clamp,
@@ -527,13 +528,15 @@ fn test_sobel_gradients() {
 
 #[test]
 fn test_sharpen3x3() {
-    compare_to_truth("robin.png", "robin_sharpen3x3.png", sharpen3x3);
+    compare_to_truth("robin.png", "robin_sharpen3x3.png", |image| {
+        sharpen3x3(image, Border::Replicate)
+    });
 }
 
 #[test]
 fn test_sharpen_gaussian() {
     fn sharpen(image: &GrayImage) -> GrayImage {
-        imageproc::filter::sharpen_gaussian(image, 0.7, 7.0)
+        imageproc::filter::sharpen_gaussian(image, 0.7, 7.0, Border::Replicate)
     }
     compare_to_truth("robin.png", "robin_sharpen_gaussian.png", sharpen);
 }
@@ -562,14 +565,14 @@ fn test_canny() {
 #[test]
 fn test_gaussian_blur_stdev_3() {
     compare_to_truth("zebra.png", "zebra_gaussian_3.png", |image: &GrayImage| {
-        gaussian_blur_f32(image, 3f32)
+        gaussian_blur_f32(image, 3f32, Border::Replicate)
     });
 }
 
 #[test]
 fn test_gaussian_blur_stdev_10() {
     compare_to_truth("zebra.png", "zebra_gaussian_10.png", |image: &GrayImage| {
-        gaussian_blur_f32(image, 10f32)
+        gaussian_blur_f32(image, 10f32, Border::Replicate)
     });
 }
 

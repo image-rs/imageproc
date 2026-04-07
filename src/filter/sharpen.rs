@@ -3,6 +3,7 @@ use super::filter_clamped_parallel;
 use super::{filter_clamped, gaussian_blur_f32};
 use crate::{
     definitions::{Clamp, Image},
+    geometric_transformations::Border,
     kernel::Kernel,
     map::{map_pixels2, map_subpixels},
 };
@@ -10,16 +11,16 @@ use image::{GrayImage, Luma};
 
 /// Sharpens a grayscale image by applying a 3x3 approximation to the Laplacian.
 #[must_use = "the function does not modify the original image"]
-pub fn sharpen3x3(image: &GrayImage) -> GrayImage {
+pub fn sharpen3x3(image: &GrayImage, extend: Border<Luma<u8>>) -> GrayImage {
     let identity_minus_laplacian = Kernel::new(&[0, -1, 0, -1, 5, -1, 0, -1, 0], 3, 3);
-    filter_clamped(image, identity_minus_laplacian)
+    filter_clamped(image, identity_minus_laplacian, extend)
 }
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
 #[doc = generate_parallel_doc_comment!("sharpen3x3")]
-pub fn sharpen3x3_parallel(image: &GrayImage) -> GrayImage {
+pub fn sharpen3x3_parallel(image: &GrayImage, extend: Border<Luma<u8>>) -> GrayImage {
     let identity_minus_laplacian = Kernel::new(&[0, -1, 0, -1, 5, -1, 0, -1, 0], 3, 3);
-    filter_clamped_parallel(image, identity_minus_laplacian)
+    filter_clamped_parallel(image, identity_minus_laplacian, extend)
 }
 
 /// Sharpens a grayscale image using a Gaussian as a low-pass filter.
@@ -28,9 +29,14 @@ pub fn sharpen3x3_parallel(image: &GrayImage) -> GrayImage {
 /// * `amount` controls the level of sharpening. `output = input + amount * edges`.
 // TODO: remove unnecessary allocations, support colour images
 #[must_use = "the function does not modify the original image"]
-pub fn sharpen_gaussian(image: &GrayImage, sigma: f32, amount: f32) -> GrayImage {
+pub fn sharpen_gaussian(
+    image: &GrayImage,
+    sigma: f32,
+    amount: f32,
+    extend: Border<Luma<f32>>,
+) -> GrayImage {
     let image = map_subpixels(image, |x| x as f32);
-    let smooth: Image<Luma<f32>> = gaussian_blur_f32(&image, sigma);
+    let smooth: Image<Luma<f32>> = gaussian_blur_f32(&image, sigma, extend);
     map_pixels2(&image, &smooth, |p, q| {
         let v = (1.0 + amount) * p[0] - amount * q[0];
         Luma([<u8 as Clamp<f32>>::clamp(v)])

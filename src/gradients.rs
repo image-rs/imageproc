@@ -2,6 +2,7 @@
 
 use crate::definitions::{HasBlack, Image};
 use crate::filter::filter_clamped;
+use crate::geometric_transformations::Border;
 use crate::kernel::{
     self, Kernel, PREWITT_HORIZONTAL_3X3, PREWITT_VERTICAL_3X3, SCHARR_HORIZONTAL_3X3,
     SCHARR_VERTICAL_3X3, SOBEL_HORIZONTAL_3X3, SOBEL_VERTICAL_3X3,
@@ -16,8 +17,9 @@ pub fn gradients_grayscale(
     image: &GrayImage,
     horizontal_kernel: Kernel<i32>,
     vertical_kernel: Kernel<i32>,
+    extend: Border<Luma<u8>>,
 ) -> Image<Luma<u16>> {
-    gradients(image, horizontal_kernel, vertical_kernel, |p| p)
+    gradients(image, horizontal_kernel, vertical_kernel, extend, |p| p)
 }
 
 // TODO: Returns directions as well as magnitudes.
@@ -35,6 +37,7 @@ pub fn gradients_grayscale(
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::gradients::gradients;
+/// use imageproc::geometric_transformations::Border;
 /// use imageproc::kernel::Kernel;
 /// use imageproc::kernel;
 /// use image::Luma;
@@ -58,9 +61,10 @@ pub fn gradients_grayscale(
 ///
 /// let horizontal_kernel = kernel::SOBEL_HORIZONTAL_3X3;
 /// let vertical_kernel = kernel::SOBEL_VERTICAL_3X3;
+/// let extend = Border::Replicate;
 ///
 /// assert_pixels_eq!(
-///     gradients(&input, horizontal_kernel, vertical_kernel, |p| p),
+///     gradients(&input, horizontal_kernel, vertical_kernel, extend, |p| p),
 ///     channel_gradient
 /// );
 ///
@@ -73,7 +77,7 @@ pub fn gradients_grayscale(
 /// );
 ///
 /// assert_pixels_eq!(
-///     gradients(&input, horizontal_kernel, vertical_kernel, |p| {
+///     gradients(&input, horizontal_kernel, vertical_kernel, extend, |p| {
 ///         let mean = (p[0] + p[1] + p[2]) / 3;
 ///         Luma([mean])
 ///     }),
@@ -89,7 +93,7 @@ pub fn gradients_grayscale(
 /// );
 ///
 /// assert_pixels_eq!(
-///     gradients(&input, horizontal_kernel, vertical_kernel, |p| {
+///     gradients(&input, horizontal_kernel, vertical_kernel, extend, |p| {
 ///         let max = cmp::max(cmp::max(p[0], p[1]), p[2]);
 ///         Luma([max])
 ///     }),
@@ -100,6 +104,7 @@ pub fn gradients<P, F, Q>(
     image: &Image<P>,
     horizontal_kernel: Kernel<i32>,
     vertical_kernel: Kernel<i32>,
+    extend: Border<P>,
     f: F,
 ) -> Image<Q>
 where
@@ -108,8 +113,8 @@ where
     ChannelMap<P, u16>: HasBlack,
     F: Fn(ChannelMap<P, u16>) -> Q,
 {
-    let horizontal = filter_clamped::<_, _, i16>(image, horizontal_kernel);
-    let vertical = filter_clamped::<_, _, i16>(image, vertical_kernel);
+    let horizontal = filter_clamped::<_, _, i16>(image, horizontal_kernel, extend);
+    let vertical = filter_clamped::<_, _, i16>(image, vertical_kernel, extend);
 
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
@@ -160,55 +165,57 @@ fn gradient_magnitude(dx: f32, dy: f32) -> u16 {
 
 /// Convolves an image with the [`SOBEL_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
-pub fn horizontal_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, SOBEL_HORIZONTAL_3X3)
+pub fn horizontal_sobel(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, SOBEL_HORIZONTAL_3X3, extend)
 }
 
 /// Convolves an image with the [`SOBEL_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
-pub fn vertical_sobel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, SOBEL_VERTICAL_3X3)
+pub fn vertical_sobel(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, SOBEL_VERTICAL_3X3, extend)
 }
 
 /// Convolves an image with the [`SCHARR_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
-pub fn horizontal_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, SCHARR_HORIZONTAL_3X3)
+pub fn horizontal_scharr(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, SCHARR_HORIZONTAL_3X3, extend)
 }
 
 /// Convolves an image with the [`SCHARR_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
-pub fn vertical_scharr(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, SCHARR_VERTICAL_3X3)
+pub fn vertical_scharr(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, SCHARR_VERTICAL_3X3, extend)
 }
 
 /// Convolves an image with the [`PREWITT_HORIZONTAL_3X3`]
 /// kernel to detect horizontal gradients.
-pub fn horizontal_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, PREWITT_HORIZONTAL_3X3)
+pub fn horizontal_prewitt(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, PREWITT_HORIZONTAL_3X3, extend)
 }
 
 /// Convolves an image with the [`PREWITT_VERTICAL_3X3`]
 /// kernel to detect vertical gradients.
-pub fn vertical_prewitt(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, PREWITT_VERTICAL_3X3)
+pub fn vertical_prewitt(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, PREWITT_VERTICAL_3X3, extend)
 }
 
 /// Returns the magnitudes of gradients in an image using Sobel filters.
-pub fn sobel_gradients(image: &GrayImage) -> Image<Luma<u16>> {
+pub fn sobel_gradients(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<u16>> {
     gradients_grayscale(
         image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
+        extend,
     )
 }
 
 /// Returns the magnitudes of gradients in an image using Prewitt filters.
-pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
+pub fn prewitt_gradients(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<u16>> {
     gradients_grayscale(
         image,
         kernel::PREWITT_HORIZONTAL_3X3,
         kernel::PREWITT_VERTICAL_3X3,
+        extend,
     )
 }
 
@@ -222,6 +229,7 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::gradients::{sobel_gradient_map};
+/// use imageproc::geometric_transformations::Border;
 /// use image::Luma;
 /// use std::cmp;
 ///
@@ -241,8 +249,10 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
 /// );
 ///
+/// let extend = Border::Replicate;
+///
 /// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| p),
+///     sobel_gradient_map(&input, extend, |p| p),
 ///     channel_gradient
 /// );
 ///
@@ -255,7 +265,7 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// );
 ///
 /// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| {
+///     sobel_gradient_map(&input, extend, |p| {
 ///         let mean = (p[0] + p[1] + p[2]) / 3;
 ///         Luma([mean])
 ///     }),
@@ -271,14 +281,14 @@ pub fn prewitt_gradients(image: &GrayImage) -> Image<Luma<u16>> {
 /// );
 ///
 /// assert_pixels_eq!(
-///     sobel_gradient_map(&input, |p| {
+///     sobel_gradient_map(&input, extend, |p| {
 ///         let max = cmp::max(cmp::max(p[0], p[1]), p[2]);
 ///         Luma([max])
 ///     }),
 ///     max_gradient
 /// );
 /// # }
-pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, f: F) -> Image<Q>
+pub fn sobel_gradient_map<P, F, Q>(image: &Image<P>, extend: Border<P>, f: F) -> Image<Q>
 where
     P: Pixel<Subpixel = u8> + WithChannel<u16> + WithChannel<i16>,
     Q: Pixel,
@@ -289,6 +299,7 @@ where
         image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
+        extend,
         f,
     )
 }
@@ -312,6 +323,7 @@ mod tests {
                 &image,
                 kernel::SOBEL_HORIZONTAL_3X3,
                 kernel::SOBEL_VERTICAL_3X3,
+                Border::Replicate,
                 |p| p
             ),
             expected
@@ -327,6 +339,7 @@ mod tests {
                 &image,
                 kernel::SCHARR_HORIZONTAL_3X3,
                 kernel::SCHARR_VERTICAL_3X3,
+                Border::Replicate,
                 |p| p
             ),
             expected
@@ -342,6 +355,7 @@ mod tests {
                 &image,
                 kernel::PREWITT_HORIZONTAL_3X3,
                 kernel::PREWITT_VERTICAL_3X3,
+                Border::Replicate,
                 |p| p
             ),
             expected
@@ -357,6 +371,7 @@ mod tests {
                 &image,
                 kernel::ROBERTS_HORIZONTAL_2X2,
                 kernel::ROBERTS_VERTICAL_2X2,
+                Border::Replicate,
                 |p| p
             ),
             expected
@@ -375,7 +390,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped(&image, kernel::SOBEL_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SOBEL_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -392,7 +407,8 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped_parallel(&image, kernel::SOBEL_HORIZONTAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::SOBEL_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -408,7 +424,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped(&image, kernel::SOBEL_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SOBEL_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -425,7 +441,8 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped_parallel(&image, kernel::SOBEL_VERTICAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::SOBEL_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -441,7 +458,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped(&image, kernel::SCHARR_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SCHARR_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -458,7 +475,8 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped_parallel(&image, kernel::SCHARR_HORIZONTAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::SCHARR_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -474,7 +492,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped(&image, kernel::SCHARR_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::SCHARR_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -491,7 +509,8 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped_parallel(&image, kernel::SCHARR_VERTICAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::SCHARR_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -507,7 +526,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped(&image, kernel::PREWITT_HORIZONTAL_3X3);
+        let filtered = filter_clamped(&image, kernel::PREWITT_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -524,7 +543,8 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped_parallel(&image, kernel::PREWITT_HORIZONTAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::PREWITT_HORIZONTAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -541,7 +561,7 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped(&image, kernel::PREWITT_VERTICAL_3X3);
+        let filtered = filter_clamped(&image, kernel::PREWITT_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -558,7 +578,8 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped_parallel(&image, kernel::PREWITT_VERTICAL_3X3);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::PREWITT_VERTICAL_3X3, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -574,7 +595,7 @@ mod tests {
             1, -2, -2;
             1, -2, -2);
 
-        let filtered = filter_clamped(&image, kernel::ROBERTS_HORIZONTAL_2X2);
+        let filtered = filter_clamped(&image, kernel::ROBERTS_HORIZONTAL_2X2, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -591,7 +612,8 @@ mod tests {
             1, -2, -2;
             1, -2, -2);
 
-        let filtered = filter_clamped_parallel(&image, kernel::ROBERTS_HORIZONTAL_2X2);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::ROBERTS_HORIZONTAL_2X2, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -607,7 +629,7 @@ mod tests {
             1, 4, 4;
             1, 4, 4);
 
-        let filtered = filter_clamped(&image, kernel::ROBERTS_VERTICAL_2X2);
+        let filtered = filter_clamped(&image, kernel::ROBERTS_VERTICAL_2X2, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -624,7 +646,8 @@ mod tests {
             1, 4, 4;
             1, 4, 4);
 
-        let filtered = filter_clamped_parallel(&image, kernel::ROBERTS_VERTICAL_2X2);
+        let filtered =
+            filter_clamped_parallel(&image, kernel::ROBERTS_VERTICAL_2X2, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 }
@@ -644,6 +667,7 @@ mod benches {
                 &image,
                 kernel::SOBEL_HORIZONTAL_3X3,
                 kernel::SOBEL_VERTICAL_3X3,
+                Border::Replicate,
                 |p| p,
             );
             black_box(gradients);
