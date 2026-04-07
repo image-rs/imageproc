@@ -65,18 +65,18 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
                 if x < 0 || x >= w as i64 || y < 0 || y >= h as i64 {
                     default
                 } else {
-                    *self.get_pixel(x as u32, y as u32)
+                    unsafe { self.unsafe_get_pixel(x as u32, y as u32) }
                 }
             }
             Border::Replicate => {
                 let x = x.clamp(0, w as i64 - 1) as u32;
                 let y = y.clamp(0, h as i64 - 1) as u32;
-                *self.get_pixel(x, y)
+                unsafe { self.unsafe_get_pixel(x, y) }
             }
             Border::Wrap => {
                 let x = x.rem_euclid(w as i64) as u32;
                 let y = y.rem_euclid(h as i64) as u32;
-                *self.get_pixel(x, y)
+                unsafe { self.unsafe_get_pixel(x, y) }
             }
         }
     }
