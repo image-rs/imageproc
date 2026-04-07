@@ -22,7 +22,8 @@ use num::Num;
 use std::f32;
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
-/// at type K, and the results converted to pixel Q via f. Pads by continuity.
+/// at type K, and the results converted to pixel Q via f.
+/// Sampling outside of image boundaries is controlled by `extend`.
 ///
 /// # Panics
 /// If `P::CHANNEL_COUNT != Q::CHANNEL_COUNT`
@@ -186,7 +187,8 @@ where
 }
 
 /// Returns 2d correlation of an image with a row-major kernel. Intermediate calculations are
-/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+/// performed at type K, and the results clamped to subpixel type S.
+/// Sampling outside of image boundaries is controlled by `extend`.
 ///
 /// A parallelized version of this function exists with [`filter_clamped_parallel`] when
 /// the crate `rayon` feature is enabled.
@@ -222,8 +224,8 @@ where
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
-/// Pads by continuity. Intermediate calculations are performed at
-/// type K.
+/// Sampling outside of image boundaries is controlled by `extend`.
+/// Intermediate calculations are performed at type K.
 #[must_use = "the function does not modify the original image"]
 pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K], extend: Border<P>) -> Image<P>
 where
@@ -250,8 +252,9 @@ where
     out
 }
 
-/// Returns horizontal correlations between an image and a 1d kernel.
-/// Pads by continuity.
+/// Returns vertical correlations between an image and a 1d kernel.
+/// Sampling outside of image boundaries is controlled by `extend`.
+/// Intermediate calculations are performed at type K.
 #[must_use = "the function does not modify the original image"]
 pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K], extend: Border<P>) -> Image<P>
 where

@@ -62,6 +62,7 @@ where
 ///     define how different two pixels are based on their colors. Common examples may include simple
 ///     absolute difference for greyscale pixels or cartesian distance in the CIE-Lab color space
 ///     \[1\].
+/// * `extend` - Enum specifying how to sample pixels outside of image boundaries.
 ///
 /// This filter averages pixels based on their spatial distance as well as their color
 /// distance. Spatial distance is measured by the Gaussian function of the Euclidean distance

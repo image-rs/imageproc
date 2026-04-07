@@ -5,7 +5,8 @@ use image::Pixel;
 /// Applies a median filter of given dimensions to an image. Each output pixel is the median
 /// of the pixels in a `(2 * x_radius + 1) * (2 * y_radius + 1)` kernel of pixels in the input image.
 ///
-/// Pads by continuity. Performs O(max(x_radius, y_radius)) operations per pixel.
+/// Sampling outside of image boundaries is controlled by `extend`.
+/// Performs O(max(x_radius, y_radius)) operations per pixel.
 ///
 /// # Examples
 /// ```
@@ -34,6 +35,9 @@ use image::Pixel;
 /// //   9 |   9   100    11 |  11
 /// //      -----------------
 /// //   9     9   100    11    11
+/// //
+/// // Here we choose `Border<P>` corresponding to it:
+/// let extend = Border::Replicate;
 ///
 /// let filtered = gray_image!(
 ///     2,  3,  3;
@@ -41,7 +45,7 @@ use image::Pixel;
 ///     9, 11, 11
 /// );
 ///
-/// assert_pixels_eq!(median_filter(&image, 1, 1, Border::Replicate), filtered);
+/// assert_pixels_eq!(median_filter(&image, 1, 1, extend), filtered);
 /// # }
 /// ```
 ///
@@ -323,7 +327,7 @@ impl HistSet {
         }
     }
 
-    /// Safety: requires pixel.channels.len() <= self.data.len()
+    /// Safety: requires P::CHANNEL_COUNT <= self.data.len()
     unsafe fn incr<P: Pixel<Subpixel = u8>>(&mut self, pixel: P) {
         let channels = pixel.channels();
         unsafe {
@@ -335,7 +339,7 @@ impl HistSet {
         }
     }
 
-    /// Safety: requires pixel.channels.len() <= self.data.len()
+    /// Safety: requires P::CHANNEL_COUNT <= self.data.len()
     unsafe fn decr<P: Pixel<Subpixel = u8>>(&mut self, pixel: P) {
         let channels = pixel.channels();
         unsafe {
@@ -347,7 +351,7 @@ impl HistSet {
         }
     }
 
-    /// Safety: requires pixel.channels.len() <= self.data.len()
+    /// Safety: requires P::CHANNEL_COUNT <= self.data.len()
     unsafe fn set_to_median<P: Pixel<Subpixel = u8>>(&self, pixel: &mut P) {
         let channels = pixel.channels_mut();
         unsafe {

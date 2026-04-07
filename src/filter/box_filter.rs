@@ -9,8 +9,7 @@ use crate::integral_image::{column_running_sum, row_running_sum};
 /// sum to one. i.e. each output pixel is the unweighted mean of
 /// a rectangular region surrounding its corresponding input pixel.
 /// We handle locations where the kernel would extend past the image's
-/// boundary by treating the image as if its boundary pixels were
-/// repeated indefinitely.
+/// boundary according to `extend`.
 // TODO: for small kernels we probably want to do the convolution
 // TODO: directly instead of using an integral image.
 // TODO: more formats!

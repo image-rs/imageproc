@@ -249,6 +249,7 @@ pub fn prewitt_gradients(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<L
 ///     [ 4,  0,  8], [ 8,  0,  8], [ 4,  0,  8]
 /// );
 ///
+/// // Padding by continuity.
 /// let extend = Border::Replicate;
 ///
 /// assert_pixels_eq!(

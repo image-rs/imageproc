@@ -317,7 +317,7 @@ pub fn variance(
 }
 
 /// Computes the running sum of one row of image, padded
-/// at the beginning and end. The padding is by continuity.
+/// at the beginning and end. Padding method is controlled by `extend`.
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
 ///
@@ -388,7 +388,7 @@ pub fn row_running_sum(
 }
 
 /// Computes the running sum of one column of image, padded
-/// at the top and bottom. The padding is by continuity.
+/// at the top and bottom. Padding method is controlled by `extend`.
 /// Takes a reference to buffer so that this can be reused
 /// for all columns in an image.
 ///
