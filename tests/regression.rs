@@ -1032,7 +1032,13 @@ fn test_hough_line_detection() {
 #[test]
 fn test_bilateral_filter() {
     fn filter(image: &GrayImage) -> GrayImage {
-        bilateral_filter(image, 2, 10.0, GaussianEuclideanColorDistance::new(10.0))
+        bilateral_filter(
+            image,
+            2,
+            10.0,
+            GaussianEuclideanColorDistance::new(10.0),
+            Border::Replicate,
+        )
     }
 
     compare_to_truth_with_tolerance("lumaphant.png", "lumaphant_bilateral.png", filter, 1)

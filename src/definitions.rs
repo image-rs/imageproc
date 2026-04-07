@@ -57,7 +57,7 @@ pub trait BoundaryAccess<P: Pixel> {
     ) where
         P::Subpixel: Into<K>;
 }
-impl<P: Pixel> BoundaryAccess<P> for Image<P> {
+impl<P: Pixel, I: GenericImageView<Pixel = P>> BoundaryAccess<P> for I {
     fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {

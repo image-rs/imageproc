@@ -4,7 +4,8 @@ use image::{GenericImage, Pixel};
 use itertools::Itertools;
 use num::cast::AsPrimitive;
 
-use crate::definitions::Image;
+use crate::definitions::{BoundaryAccess, Image};
+use crate::geometric_transformations::Border;
 
 /// A trait which provides a distance metric between two pixels based on their colors.
 ///
@@ -83,11 +84,12 @@ where
 ///
 /// ```
 /// use imageproc::filter::bilateral::{bilateral_filter, GaussianEuclideanColorDistance};
+/// use imageproc::geometric_transformations::Border;
 /// use imageproc::utils::gray_bench_image;
 ///
 /// let image = gray_bench_image(50, 50);
 ///
-/// let filtered = bilateral_filter(&image, 2, 3., GaussianEuclideanColorDistance::new(10.0));
+/// let filtered = bilateral_filter(&image, 2, 3., GaussianEuclideanColorDistance::new(10.0), Border::Replicate);
 /// ```
 #[must_use = "the function does not modify the original image"]
 #[allow(clippy::doc_overindented_list_items)]
@@ -96,6 +98,7 @@ pub fn bilateral_filter<I, P, C>(
     radius: u8,
     spatial_sigma: f32,
     color_distance: C,
+    extend: Border<P>,
 ) -> Image<P>
 where
     I: GenericImage<Pixel = P>,
@@ -135,18 +138,8 @@ where
             .clone()
             .cartesian_product(window_range.clone())
             .map(|(w_y, w_x)| {
-                // these casts will always be correct due to asserts made at the beginning of the
-                // function about the image width/height
-                //
-                // the subtraction will also never overflow due to the `is_empty()` assert
-                let window_y = (i32::from(w_y) + (y as i32)).clamp(0, (height as i32) - 1);
-                let window_x = (i32::from(w_x) + (x as i32)).clamp(0, (width as i32) - 1);
-
-                let (window_y, window_x) = (window_y as u32, window_x as u32);
-
-                debug_assert!(image.in_bounds(window_x, window_y));
-                // Safety: we clamped `window_x` and `window_y` to be in bounds.
-                let window_pixel = unsafe { image.unsafe_get_pixel(window_x, window_y) };
+                let window_pixel =
+                    image.get_pixel_or_extend(x as i64 + w_x as i64, y as i64 + w_y as i64, extend);
 
                 let spatial_distance = spatial_distance_lookup
                     [(window_len * (w_y + radius) + (w_x + radius)) as usize];
@@ -212,7 +205,13 @@ mod tests {
             1, 2, 3;
             4, 5, 6;
             7, 8, 9);
-        let actual = bilateral_filter(&image, 1, 3.0, GaussianEuclideanColorDistance::new(10.0));
+        let actual = bilateral_filter(
+            &image,
+            1,
+            3.0,
+            GaussianEuclideanColorDistance::new(10.0),
+            Border::Replicate,
+        );
 
         let expect = gray_image!(
             2, 2, 3;
@@ -240,7 +239,7 @@ mod proptests {
             color_sigma in any::<f32>(),
             spatial_sigma in any::<f32>(),
         ) {
-            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
+            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma), Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
@@ -251,7 +250,7 @@ mod proptests {
             color_sigma in any::<f32>(),
             spatial_sigma in any::<f32>(),
         ) {
-            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
+            let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma), Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
@@ -268,8 +267,13 @@ mod benches {
     fn bench_bilateral_filter_greyscale(b: &mut Bencher) {
         let image = gray_bench_image(100, 100);
         b.iter(|| {
-            let filtered =
-                bilateral_filter(&image, 5, 3., GaussianEuclideanColorDistance::new(10.0));
+            let filtered = bilateral_filter(
+                &image,
+                5,
+                3.,
+                GaussianEuclideanColorDistance::new(10.0),
+                Border::Replicate,
+            );
             black_box(filtered);
         });
     }
@@ -278,8 +282,13 @@ mod benches {
     fn bench_bilateral_filter_rgb(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let filtered =
-                bilateral_filter(&image, 5, 3., GaussianEuclideanColorDistance::new(10.0));
+            let filtered = bilateral_filter(
+                &image,
+                5,
+                3.,
+                GaussianEuclideanColorDistance::new(10.0),
+                Border::Replicate,
+            );
             black_box(filtered);
         });
     }
