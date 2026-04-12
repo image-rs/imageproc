@@ -23,7 +23,8 @@ where
     /// 2. If `width * height != data.len() as u32`.
     pub const fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
-        assert!(width * height == data.len() as u32);
+        // Widen to u64 to prevent u32 overflow from bypassing the assertion.
+        assert!(width as u64 * height as u64 == data.len() as u64);
         Kernel {
             data,
             width,
@@ -90,3 +91,17 @@ pub const ROBERTS_VERTICAL_2X2: Kernel<'static, i32> = Kernel::new(&[0, 1, -1, -
 
 /// The laplacian 3x3 kernel.
 pub const LAPLACIAN_3X3: Kernel<'static, i16> = Kernel::new(&[0, 1, 0, 1, -4, 1, 0, 1, 0], 3, 3);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn kernel_new_rejects_overflowing_dimensions() {
+        // 2 * 2_147_483_649 overflows u32 to 2, matching data.len().
+        // The widened u64 check must catch this.
+        let data = [0.0f32; 2];
+        let _ = Kernel::new(&data, 2, 2_147_483_649);
+    }
+}
