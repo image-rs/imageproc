@@ -185,17 +185,24 @@ fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
 /// Exploits the IEEE 754 float layout: reinterprets `a * x + b` as the bit pattern of an f32,
 /// where `a` and `b` are chosen so the exponent and mantissa fields approximate `exp(x)`.
 ///
-/// Valid for `x` in roughly `[-87, 0]`. Returns 0 for `x < -87` (where true exp underflows).
+/// Valid for negative values of `x`. Returns 0 for `x < -87` (where true exp underflows anyway).
 /// Maximum relative error is ~4% in the range used by the bilateral filter.
 #[inline]
 fn fast_exp_negative(x: f32) -> f32 {
-    if x < -87.0 {
-        return 0.0;
-    }
     // 2^23 / ln(2) ≈ 12102203.0
     const A: f32 = 12102203.0;
     // 2^23 * 127 (IEEE 754 exponent bias), with Schraudolph's adjustment for reduced avg error
     const B: f32 = 1065353216.0 - 486411.0;
+
+    // Casting explanation:
+    // - A * x + B is a positive float for x in [-87, 0], and fits in the positive range of i32.
+    // - x < -87 → A * x + B is negative but still fits in i32. `exp` underflows to 0, we clamp.
+    // - x << -87 → A * x + B exceeds i32::MIN but we saturate to i32::MIN per rust saturating-cast
+    //     rules, then clamp to 0.
+    // - x = -INF → A * x + B exceeds i32::MIN but we saturate to i32::MIN per rust saturating-cast
+    //     rules, then clamp to 0.
+    // - x = NaN → A * x + B is NaN, which saturates to 0 per rust saturating-cast rules, then
+    //     clamp to 0.
     let bits = ((A * x + B) as i32).max(0) as u32;
     f32::from_bits(bits)
 }
@@ -219,6 +226,63 @@ mod tests {
             6, 7, 7);
 
         assert_pixels_eq!(actual, expect);
+    }
+
+    /// Exhaustively walks every representable f32 in [-87.0, 0.0] using
+    /// `next_up`, comparing `fast_exp_negative(x)` against `x.exp()`.
+    /// Reports max/mean relative error and the x at which max occurs.
+    ///
+    /// ~1.12B iterations -> several seconds. Opt in with `cargo test -- --ignored`.
+    #[ignore = "exhaustive sweep over ~1.12B f32 values; run with --ignored"]
+    #[cfg_attr(miri, ignore = "slow")]
+    #[test]
+    fn fast_exp_negative_accuracy_sweep() {
+        let mut x = -87.0_f32;
+        let end = 0.0_f32;
+
+        let mut max_rel_err = 0.0_f32;
+        let mut max_rel_at = 0.0_f32;
+        let mut sum_rel_err = 0.0_f64; // f64 to avoid summation drift over 1B terms
+        let mut max_abs_err = 0.0_f32;
+        let mut count_rel: u64 = 0;
+        let mut count_total: u64 = 0;
+
+        while x <= end {
+            let approx = fast_exp_negative(x);
+            let truth = x.exp();
+            let abs_err = (approx - truth).abs();
+            if abs_err > max_abs_err {
+                max_abs_err = abs_err;
+            }
+            // Only score relative error where the true value is a normal float;
+            // in the subnormal tail near x = -87 both values collapse toward 0
+            // and relative error is not meaningful.
+            if truth >= f32::MIN_POSITIVE {
+                let rel = abs_err / truth;
+                if rel > max_rel_err {
+                    max_rel_err = rel;
+                    max_rel_at = x;
+                }
+                sum_rel_err += rel as f64;
+                count_rel += 1;
+            }
+            count_total += 1;
+            x = x.next_up();
+        }
+
+        let mean_rel_err = sum_rel_err / count_rel as f64;
+        println!(
+            "fast_exp_negative sweep: {count_total} samples ({count_rel} scored) \
+             max_rel_err={max_rel_err:e} at x={max_rel_at} \
+             mean_rel_err={mean_rel_err:e} max_abs_err={max_abs_err:e}"
+        );
+
+        // Schraudolph's bias-shifted approximation is documented at ~4% peak
+        // relative error. Allow a little headroom but catch real regressions.
+        assert!(
+            max_rel_err < 0.04,
+            "max relative error {max_rel_err} exceeded 4% threshold at x={max_rel_at}"
+        );
     }
 }
 
