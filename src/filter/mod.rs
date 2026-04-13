@@ -11,22 +11,28 @@ pub use self::sharpen::*;
 mod box_filter;
 pub use self::box_filter::box_filter;
 
-use image::{GenericImageView, GrayImage, Luma, Pixel, Primitive};
+use image::{GrayImage, Luma, Pixel, Primitive};
 
-use crate::definitions::{Clamp, Image};
+use crate::definitions::{BoundaryAccess, Clamp, Image};
+use crate::geometric_transformations::Border;
 use crate::kernel::{self, Kernel};
 use crate::map::{ChannelMap, WithChannel};
 use num::Num;
 
-use std::cmp::{max, min};
 use std::f32;
 
 /// Returns 2d correlation of an image. Intermediate calculations are performed
-/// at type K, and the results converted to pixel Q via f. Pads by continuity.
+/// at type K, and the results converted to pixel Q via f.
+/// Sampling outside of image boundaries is controlled by `extend`.
 ///
 /// # Panics
 /// If `P::CHANNEL_COUNT != Q::CHANNEL_COUNT`
-pub fn filter<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, mut f: F) -> Image<Q>
+pub fn filter<P, K, F, Q>(
+    image: &Image<P>,
+    kernel: Kernel<K>,
+    extend: Border<P>,
+    mut f: F,
+) -> Image<Q>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K>,
@@ -41,23 +47,11 @@ where
     let (width, height) = image.dimensions();
     let mut out = Image::<Q>::new(width, height);
     let mut acc = vec![zero; num_channels];
-    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (width as i64, height as i64);
 
     for y in 0..height {
         for x in 0..width {
-            for k_y in 0..k_height {
-                let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                for k_x in 0..k_width {
-                    let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-
-                    debug_assert!(image.in_bounds(x_p, y_p));
-                    let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
-                    accumulate(&mut acc, &pixel, unsafe {
-                        kernel.get_unchecked(k_x as u32, k_y as u32)
-                    });
-                }
-            }
+            image.convolve_at(kernel, &mut acc, x, y, extend);
             let out_channels = out.get_pixel_mut(x as u32, y as u32).channels_mut();
             for (a, c) in acc.iter_mut().zip(out_channels) {
                 *c = f(*a);
@@ -70,7 +64,12 @@ where
 
 #[cfg(feature = "rayon")]
 #[doc = generate_parallel_doc_comment!("filter")]
-pub fn filter_parallel<P, K, F, Q>(image: &Image<P>, kernel: Kernel<K>, f: F) -> Image<Q>
+pub fn filter_parallel<P, K, F, Q>(
+    image: &Image<P>,
+    kernel: Kernel<K>,
+    extend: Border<P>,
+    f: F,
+) -> Image<Q>
 where
     P: Pixel + Sync,
     P::Subpixel: Into<K> + Sync,
@@ -84,7 +83,6 @@ where
     assert_eq!(P::CHANNEL_COUNT, Q::CHANNEL_COUNT);
     let num_channels = P::CHANNEL_COUNT as usize;
 
-    let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
     let (width, height) = (image.width() as i64, image.height() as i64);
 
     let out_rows: Vec<Vec<_>> = (0..height)
@@ -95,18 +93,7 @@ where
             let mut acc = vec![K::zero(); num_channels];
 
             for x in 0..width {
-                for k_y in 0..k_height {
-                    let y_p = min(height - 1, max(0, y + k_y - k_height / 2)) as u32;
-                    for k_x in 0..k_width {
-                        let x_p = min(width - 1, max(0, x + k_x - k_width / 2)) as u32;
-
-                        debug_assert!(image.in_bounds(x_p, y_p));
-                        let pixel = unsafe { image.unsafe_get_pixel(x_p, y_p) };
-                        accumulate(&mut acc, &pixel, unsafe {
-                            kernel.get_unchecked(k_x as u32, k_y as u32)
-                        });
-                    }
-                }
+                image.convolve_at(kernel, &mut acc, x, y, extend);
                 for (a, c) in acc.iter_mut().zip(out_pixel.iter_mut()) {
                     *c = f(*a);
                     *a = K::zero();
@@ -153,20 +140,25 @@ fn gaussian_kernel_f32(sigma: f32) -> Vec<f32> {
 /// Panics if `sigma <= 0.0`.
 // TODO: Integer type kernel, approximations via repeated box filter.
 #[must_use = "the function does not modify the original image"]
-pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32) -> Image<P>
+pub fn gaussian_blur_f32<P>(image: &Image<P>, sigma: f32, extend: Border<P>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<f32> + Clamp<f32>,
 {
     assert!(sigma > 0.0, "sigma must be > 0.0");
     let kernel = gaussian_kernel_f32(sigma);
-    separable_filter_equal(image, &kernel)
+    separable_filter_equal(image, &kernel, extend)
 }
 
 /// Returns 2d correlation of view with the outer product of the 1d
 /// kernels `h_kernel` and `v_kernel`.
 #[must_use = "the function does not modify the original image"]
-pub fn separable_filter<P, K>(image: &Image<P>, h_kernel: &[K], v_kernel: &[K]) -> Image<P>
+pub fn separable_filter<P, K>(
+    image: &Image<P>,
+    h_kernel: &[K],
+    v_kernel: &[K],
+    extend: Border<P>,
+) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
@@ -178,35 +170,40 @@ where
         "the two 1D kernels must be the same length"
     );
 
-    let h = horizontal_filter(image, h_kernel);
-    vertical_filter(&h, v_kernel)
+    let h = horizontal_filter(image, h_kernel, extend);
+    vertical_filter(&h, v_kernel, extend)
 }
 
 /// Returns 2d correlation of an image with the outer product of the 1d
 /// kernel filter with itself.
 #[must_use = "the function does not modify the original image"]
-pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn separable_filter_equal<P, K>(image: &Image<P>, kernel: &[K], extend: Border<P>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
     K: Num + Copy,
 {
-    separable_filter(image, kernel, kernel)
+    separable_filter(image, kernel, kernel, extend)
 }
 
 /// Returns 2d correlation of an image with a row-major kernel. Intermediate calculations are
-/// performed at type K, and the results clamped to subpixel type S. Pads by continuity.
+/// performed at type K, and the results clamped to subpixel type S.
+/// Sampling outside of image boundaries is controlled by `extend`.
 ///
 /// A parallelized version of this function exists with [`filter_clamped_parallel`] when
 /// the crate `rayon` feature is enabled.
-pub fn filter_clamped<P, K, S>(image: &Image<P>, kernel: Kernel<K>) -> Image<ChannelMap<P, S>>
+pub fn filter_clamped<P, K, S>(
+    image: &Image<P>,
+    kernel: Kernel<K>,
+    extend: Border<P>,
+) -> Image<ChannelMap<P, S>>
 where
     P: WithChannel<S>,
     P::Subpixel: Into<K>,
     K: Num + Copy + From<<P as image::Pixel>::Subpixel>,
     S: Clamp<K> + Primitive,
 {
-    filter(image, kernel, S::clamp)
+    filter(image, kernel, extend, S::clamp)
 }
 
 #[cfg(feature = "rayon")]
@@ -214,6 +211,7 @@ where
 pub fn filter_clamped_parallel<P, K, S>(
     image: &Image<P>,
     kernel: Kernel<K>,
+    extend: Border<P>,
 ) -> Image<ChannelMap<P, S>>
 where
     P: Sync + WithChannel<S>,
@@ -222,14 +220,14 @@ where
     K: Num + Copy + From<<P as image::Pixel>::Subpixel> + Sync,
     S: Clamp<K> + Primitive + Send,
 {
-    filter_parallel(image, kernel, S::clamp)
+    filter_parallel(image, kernel, extend, S::clamp)
 }
 
 /// Returns horizontal correlations between an image and a 1d kernel.
-/// Pads by continuity. Intermediate calculations are performed at
-/// type K.
+/// Sampling outside of image boundaries is controlled by `extend`.
+/// Intermediate calculations are performed at type K.
 #[must_use = "the function does not modify the original image"]
-pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn horizontal_filter<P, K>(image: &Image<P>, kernel: &[K], extend: Border<P>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
@@ -242,70 +240,11 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_width = kernel.len() as i32;
-    let half_k = k_width / 2;
-
-    // Typically the image side will be much larger than the kernel length.
-    // In that case we can remove a lot of bounds checks for most pixels.
-    if k_width >= width as i32 {
-        for y in 0..height {
-            for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
-                    let x_unchecked = (x as i32) + i as i32 - half_k;
-                    let x_p = max(0, min(x_unchecked, width as i32 - 1)) as u32;
-                    debug_assert!(image.in_bounds(x_p, y));
-                    let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                    accumulate(&mut acc, &p, *k);
-                }
-
-                let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-            }
-        }
-
-        return out;
-    }
 
     for y in 0..height {
-        // Left margin - need to check lower bound only
-        for x in 0..half_k {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = max(0, x_unchecked) as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-
-        // Neither margin - don't need bounds check on either side
-        for x in half_k..(width as i32 - half_k) {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = x_unchecked as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-
-        // Right margin - need to check upper bound only
-        for x in (width as i32 - half_k)..(width as i32) {
-            for (i, k) in kernel.iter().enumerate() {
-                let x_unchecked = x + i as i32 - half_k;
-                let x_p = min(x_unchecked, width as i32 - 1) as u32;
-                debug_assert!(image.in_bounds(x_p, y));
-                let p = unsafe { image.unsafe_get_pixel(x_p, y) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x as u32, y).channels_mut();
+        for x in 0..width {
+            image.convolve_horizontal_at(kernel, &mut acc, x as i64, y as i64, extend);
+            let out_channels = out.get_pixel_mut(x, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
@@ -313,10 +252,11 @@ where
     out
 }
 
-/// Returns horizontal correlations between an image and a 1d kernel.
-/// Pads by continuity.
+/// Returns vertical correlations between an image and a 1d kernel.
+/// Sampling outside of image boundaries is controlled by `extend`.
+/// Intermediate calculations are performed at type K.
 #[must_use = "the function does not modify the original image"]
-pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K]) -> Image<P>
+pub fn vertical_filter<P, K>(image: &Image<P>, kernel: &[K], extend: Border<P>) -> Image<P>
 where
     P: Pixel,
     <P as Pixel>::Subpixel: Into<K> + Clamp<K>,
@@ -329,90 +269,16 @@ where
     let mut out = Image::<P>::new(width, height);
     let zero = K::zero();
     let mut acc = vec![zero; P::CHANNEL_COUNT as usize];
-    let k_height = kernel.len() as i32;
-    let half_k = k_height / 2;
 
-    // Typically the image side will be much larger than the kernel length.
-    // In that case we can remove a lot of bounds checks for most pixels.
-    if k_height >= height as i32 {
-        for y in 0..height {
-            for x in 0..width {
-                for (i, k) in kernel.iter().enumerate() {
-                    let y_unchecked = (y as i32) + i as i32 - half_k;
-                    let y_p = max(0, min(y_unchecked, height as i32 - 1)) as u32;
-                    debug_assert!(image.in_bounds(x, y_p));
-                    let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                    accumulate(&mut acc, &p, *k);
-                }
-
-                let out_channels = out.get_pixel_mut(x, y).channels_mut();
-                clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-            }
-        }
-
-        return out;
-    }
-
-    // Top margin - need to check lower bound only
-    for y in 0..half_k {
+    for y in 0..height {
         for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = max(0, y_unchecked) as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-    }
-
-    // Neither margin - don't need bounds check on either side
-    for y in half_k..(height as i32 - half_k) {
-        for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = y_unchecked as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
-            clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
-        }
-    }
-
-    // Right margin - need to check upper bound only
-    for y in (height as i32 - half_k)..(height as i32) {
-        for x in 0..width {
-            for (i, k) in kernel.iter().enumerate() {
-                let y_unchecked = y + i as i32 - half_k;
-                let y_p = min(y_unchecked, height as i32 - 1) as u32;
-                debug_assert!(image.in_bounds(x, y_p));
-                let p = unsafe { image.unsafe_get_pixel(x, y_p) };
-                accumulate(&mut acc, &p, *k);
-            }
-
-            let out_channels = out.get_pixel_mut(x, y as u32).channels_mut();
+            image.convolve_vertical_at(kernel, &mut acc, x as i64, y as i64, extend);
+            let out_channels = out.get_pixel_mut(x, y).channels_mut();
             clamp_and_reset::<P, K>(&mut acc, out_channels, zero);
         }
     }
 
     out
-}
-
-fn accumulate<P, K>(acc: &mut [K], pixel: &P, weight: K)
-where
-    P: Pixel,
-    P::Subpixel: Into<K>,
-    K: Num + Copy,
-{
-    acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
-        *a = *a + c.into() * weight;
-    });
 }
 
 fn clamp_and_reset<P, K>(acc: &mut [K], out_channels: &mut [P::Subpixel], zero: K)
@@ -437,15 +303,15 @@ where
 /// 0, 1, 0
 /// ```
 #[must_use = "the function does not modify the original image"]
-pub fn laplacian_filter(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped(image, kernel::LAPLACIAN_3X3)
+pub fn laplacian_filter(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped(image, kernel::LAPLACIAN_3X3, extend)
 }
 
 #[must_use = "the function does not modify the original image"]
 #[cfg(feature = "rayon")]
 #[doc = generate_parallel_doc_comment!("laplacian_filter")]
-pub fn laplacian_filter_parallel(image: &GrayImage) -> Image<Luma<i16>> {
-    filter_clamped_parallel(image, kernel::LAPLACIAN_3X3)
+pub fn laplacian_filter_parallel(image: &GrayImage, extend: Border<Luma<u8>>) -> Image<Luma<i16>> {
+    filter_clamped_parallel(image, kernel::LAPLACIAN_3X3, extend)
 }
 
 #[cfg(test)]
@@ -471,8 +337,8 @@ mod tests {
             0, 1, 0
         ], 3, 3);
 
-        let actual = laplacian_filter(&image);
-        let expected = filter_clamped::<_, _, i16>(&image, laplacian);
+        let actual = laplacian_filter(&image, Border::Replicate);
+        let expected = filter_clamped::<_, _, i16>(&image, laplacian, Border::Replicate);
         assert_eq!(actual.as_ref(), expected.as_ref());
     }
 
@@ -490,7 +356,7 @@ mod tests {
             6, 7, 7);
 
         let kernel = [1f32 / 3f32; 3];
-        let filtered = separable_filter_equal(&image, &kernel);
+        let filtered = separable_filter_equal(&image, &kernel, Border::Replicate);
 
         assert_pixels_eq!(filtered, expected);
     }
@@ -508,7 +374,7 @@ mod tests {
             57, 63, 69);
 
         let kernel = [1i32; 3];
-        let filtered = separable_filter_equal(&image, &kernel);
+        let filtered = separable_filter_equal(&image, &kernel, Border::Replicate);
 
         assert_pixels_eq!(filtered, expected);
     }
@@ -590,7 +456,7 @@ mod tests {
                                 (0..kernel_length).map(|i| i as f32 % 1.35).collect();
 
                             let expected = $reference_impl(&image, &kernel);
-                            let actual = $under_test(&image, &kernel);
+                            let actual = $under_test(&image, &kernel, Border::Replicate);
 
                             assert_pixels_eq!(actual, expected);
                         }
@@ -625,7 +491,7 @@ mod tests {
             2, 2, 2);
 
         let kernel = [1f32 / 3f32; 3];
-        let filtered = horizontal_filter(&image, &kernel);
+        let filtered = horizontal_filter(&image, &kernel, Border::Replicate);
 
         assert_pixels_eq!(filtered, expected);
     }
@@ -638,7 +504,7 @@ mod tests {
             1, 4, 1);
 
         let kernel = [1f32 / 10f32; 10];
-        black_box(horizontal_filter(&image, &kernel));
+        black_box(horizontal_filter(&image, &kernel, Border::Replicate));
     }
     #[test]
     fn test_vertical_filter() {
@@ -653,7 +519,7 @@ mod tests {
             2, 5, 2);
 
         let kernel = [1f32 / 3f32; 3];
-        let filtered = vertical_filter(&image, &kernel);
+        let filtered = vertical_filter(&image, &kernel, Border::Replicate);
 
         assert_pixels_eq!(filtered, expected);
     }
@@ -666,7 +532,7 @@ mod tests {
             1, 4, 1);
 
         let kernel = [1f32 / 10f32; 10];
-        black_box(vertical_filter(&image, &kernel));
+        black_box(vertical_filter(&image, &kernel, Border::Replicate));
     }
     #[test]
     fn test_filter_clamped_with_results_outside_input_channel_range() {
@@ -688,7 +554,7 @@ mod tests {
             -4, -8, -4
         );
 
-        let filtered = filter_clamped(&image, kernel);
+        let filtered = filter_clamped(&image, kernel, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -713,7 +579,7 @@ mod tests {
             -4, -8, -4
         );
 
-        let filtered = filter_clamped_parallel(&image, kernel);
+        let filtered = filter_clamped_parallel(&image, kernel, Border::Replicate);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -732,7 +598,7 @@ mod tests {
 
         let k = &[1u8, 2u8];
         let kernel = Kernel::new(k, 2, 1);
-        let filtered = filter(&image, kernel, |x| x);
+        let filtered = filter(&image, kernel, Border::Replicate, |x| x);
 
         let expected = gray_image!(
              9,  7;
@@ -747,7 +613,7 @@ mod tests {
 
         let k = &[2u8];
         let kernel = Kernel::new(k, 1, 1);
-        let filtered = filter(&image, kernel, |x| x);
+        let filtered = filter(&image, kernel, Border::Replicate, |x| x);
 
         let expected = gray_image!();
         assert_pixels_eq!(filtered, expected);
@@ -766,7 +632,8 @@ mod tests {
             0.1, 0.2, 0.1
         ];
         let kernel = Kernel::new(k, 3, 3);
-        let filtered: Image<Luma<u8>> = filter(&image, kernel, <u8 as Clamp<f32>>::clamp);
+        let filtered: Image<Luma<u8>> =
+            filter(&image, kernel, Border::Replicate, <u8 as Clamp<f32>>::clamp);
 
         let expected = gray_image!(
             11,  7;
@@ -782,7 +649,7 @@ mod tests {
             4, 5, 6;
             7, 8, 9
         );
-        let _ = gaussian_blur_f32(&image, 0.0);
+        let _ = gaussian_blur_f32(&image, 0.0, Border::Replicate);
     }
 
     #[test]
@@ -793,21 +660,21 @@ mod tests {
             4, 5, 6;
             7, 8, 9
         );
-        let _ = gaussian_blur_f32(&image, -0.5);
+        let _ = gaussian_blur_f32(&image, -0.5, Border::Replicate);
     }
 
     #[cfg_attr(miri, ignore = "assert fails")]
     #[test]
     fn test_gaussian_on_u8_white_idempotent() {
         let image = Image::<Luma<u8>>::from_pixel(12, 12, Luma([255]));
-        let image2 = gaussian_blur_f32(&image, 6f32);
+        let image2 = gaussian_blur_f32(&image, 6f32, Border::Replicate);
         assert_pixels_eq_within!(image2, image, 0);
     }
 
     #[test]
     fn test_gaussian_on_f32_white_idempotent() {
         let image = Image::<Luma<f32>>::from_pixel(12, 12, Luma([1.0]));
-        let image2 = gaussian_blur_f32(&image, 6f32);
+        let image2 = gaussian_blur_f32(&image, 6f32, Border::Replicate);
         assert_pixels_eq_within!(image2, image, 1e-6);
     }
 }
@@ -825,7 +692,7 @@ mod proptests {
             img in arbitrary_image::<Luma<u8>>(0..20, 0..20),
             sigma in (0.0..150f32).prop_filter("contract", |&x| x > 0.0),
         ) {
-            let out = gaussian_blur_f32(&img, sigma);
+            let out = gaussian_blur_f32(&img, sigma, Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
@@ -835,7 +702,7 @@ mod proptests {
             ker in arbitrary_image::<Luma<f32>>(1..20, 1..20),
         ) {
             let kernel = Kernel::new(&ker, ker.width(), ker.height());
-            let out: Image<Luma<f32>> = filter(&img, kernel, |x| {
+            let out: Image<Luma<f32>> = filter(&img, kernel, Border::Replicate, |x| {
                 x
             });
             prop_assert_eq!(out.dimensions(), img.dimensions());
@@ -846,7 +713,7 @@ mod proptests {
             img in arbitrary_image::<Luma<f32>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
-            let out = horizontal_filter(&img, &ker);
+            let out = horizontal_filter(&img, &ker, Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
@@ -855,7 +722,7 @@ mod proptests {
             img in arbitrary_image::<Luma<f32>>(0..50, 0..50),
             ker in proptest::collection::vec(any::<f32>(), 0..50),
         ) {
-            let out = vertical_filter(&img, &ker);
+            let out = vertical_filter(&img, &ker, Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
 
@@ -863,7 +730,7 @@ mod proptests {
         fn proptest_laplacian_filter(
             img in arbitrary_image::<Luma<u8>>(0..120, 0..120),
         ) {
-            let out = laplacian_filter(&img);
+            let out = laplacian_filter(&img, Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
@@ -876,7 +743,7 @@ mod benches {
     use crate::definitions::Image;
     use crate::utils::{gray_bench_image, rgb_bench_image};
     use image::imageops::blur;
-    use image::{GenericImage, Luma, Rgb};
+    use image::{GenericImage, GenericImageView, Luma, Rgb};
     use test::{Bencher, black_box};
 
     #[bench]
@@ -885,7 +752,7 @@ mod benches {
         let h_kernel = [1f32 / 5f32; 5];
         let v_kernel = [0.1f32, 0.4f32, 0.3f32, 0.1f32, 0.1f32];
         b.iter(|| {
-            let filtered = separable_filter(&image, &h_kernel, &v_kernel);
+            let filtered = separable_filter(&image, &h_kernel, &v_kernel, Border::Replicate);
             black_box(filtered);
         });
     }
@@ -895,7 +762,7 @@ mod benches {
         let image = gray_bench_image(500, 500);
         let kernel = [1f32 / 5f32; 5];
         b.iter(|| {
-            let filtered = horizontal_filter(&image, &kernel);
+            let filtered = horizontal_filter(&image, &kernel, Border::Replicate);
             black_box(filtered);
         });
     }
@@ -905,7 +772,7 @@ mod benches {
         let image = gray_bench_image(500, 500);
         let kernel = [1f32 / 5f32; 5];
         b.iter(|| {
-            let filtered = vertical_filter(&image, &kernel);
+            let filtered = vertical_filter(&image, &kernel, Border::Replicate);
             black_box(filtered);
         });
     }
@@ -954,7 +821,8 @@ mod benches {
                 let kernel: Vec<i32> = (0..$kernel_size * $kernel_size).collect();
                 let kernel = Kernel::new(&kernel, $kernel_size, $kernel_size);
                 b.iter(|| {
-                    let filtered: Image<Luma<i16>> = $function_name::<_, _, i16>(&image, kernel);
+                    let filtered: Image<Luma<i16>> =
+                        $function_name::<_, _, i16>(&image, kernel, Border::Replicate);
                     black_box(filtered);
                 });
             }
@@ -968,7 +836,8 @@ mod benches {
                 let kernel: Vec<i32> = (0..$kernel_size * $kernel_size).collect();
                 let kernel = Kernel::new(&kernel, $kernel_size, $kernel_size);
                 b.iter(|| {
-                    let filtered: Image<Rgb<i16>> = $function_name::<_, _, i16>(&image, kernel);
+                    let filtered: Image<Rgb<i16>> =
+                        $function_name::<_, _, i16>(&image, kernel, Border::Replicate);
                     black_box(filtered);
                 });
             }
@@ -1075,7 +944,7 @@ mod benches {
     fn bench_gaussian_f32_stdev_1(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let blurred = gaussian_blur_f32(&image, 1f32);
+            let blurred = gaussian_blur_f32(&image, 1f32, Border::Replicate);
             black_box(blurred);
         });
     }
@@ -1084,7 +953,7 @@ mod benches {
     fn bench_gaussian_f32_stdev_3(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let blurred = gaussian_blur_f32(&image, 3f32);
+            let blurred = gaussian_blur_f32(&image, 3f32, Border::Replicate);
             black_box(blurred);
         });
     }
@@ -1093,7 +962,7 @@ mod benches {
     fn bench_gaussian_f32_stdev_10(b: &mut Bencher) {
         let image = rgb_bench_image(100, 100);
         b.iter(|| {
-            let blurred = gaussian_blur_f32(&image, 10f32);
+            let blurred = gaussian_blur_f32(&image, 10f32, Border::Replicate);
             black_box(blurred);
         });
     }

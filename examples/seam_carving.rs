@@ -1,5 +1,6 @@
 use image::{GrayImage, Luma, Pixel, open};
 use imageproc::definitions::Clamp;
+use imageproc::geometric_transformations::Border;
 use imageproc::gradients::gradients;
 use imageproc::kernel;
 use imageproc::map::map_pixels;
@@ -64,6 +65,7 @@ fn main() {
         &input_image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
+        Border::Replicate,
         |p| {
             let mean = (p[0] + p[1] + p[2]) / 3;
             Luma([mean as u32])

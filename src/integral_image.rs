@@ -1,7 +1,8 @@
 //! Functions for computing [integral images](https://en.wikipedia.org/wiki/Summed_area_table)
 //! and running sums of rows and columns.
 
-use crate::definitions::Image;
+use crate::definitions::{BoundaryAccess, Image};
+use crate::geometric_transformations::Border;
 use crate::map::{ChannelMap, WithChannel};
 use image::{GenericImageView, GrayImage, Luma, Pixel, Primitive, Rgb, Rgba};
 use std::ops::AddAssign;
@@ -316,7 +317,7 @@ pub fn variance(
 }
 
 /// Computes the running sum of one row of image, padded
-/// at the beginning and end. The padding is by continuity.
+/// at the beginning and end. Padding method is controlled by `extend`.
 /// Takes a reference to buffer so that this can be reused
 /// for all rows in an image.
 ///
@@ -332,6 +333,7 @@ pub fn variance(
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::integral_image::row_running_sum;
+/// use imageproc::geometric_transformations::Border;
 ///
 /// let image = gray_image!(
 ///     1, 2, 3;
@@ -339,13 +341,19 @@ pub fn variance(
 ///
 /// // Buffer has length two greater than image width, hence padding of 1
 /// let mut buffer = [0; 5];
-/// row_running_sum(&image, 0, &mut buffer, 1);
+/// row_running_sum(&image, 0, &mut buffer, 1, Border::Replicate);
 ///
 /// // The image is padded by continuity on either side
 /// assert_eq!(buffer, [1, 2, 4, 7, 10]);
 /// # }
 /// ```
-pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding: u32) {
+pub fn row_running_sum(
+    image: &GrayImage,
+    row: u32,
+    buffer: &mut [u32],
+    padding: u32,
+    extend: Border<Luma<u8>>,
+) {
     // TODO: faster, more formats
     let (width, height) = image.dimensions();
     let (width, padding) = (width as usize, padding as usize);
@@ -360,27 +368,27 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
     assert!(width > 0, "image is empty");
 
     let row_data = &(**image)[width * row as usize..][..width];
-    let first = row_data[0] as u32;
-    let last = row_data[width - 1] as u32;
+    //let first = row_data[0] as u32;
+    //let last = row_data[width - 1] as u32;
 
     let mut sum = 0;
 
-    for b in &mut buffer[..padding] {
-        sum += first;
+    for (i, b) in &mut buffer[..padding].iter_mut().enumerate() {
+        sum += image.get_pixel_or_extend(-(i as i64), row as i64, extend)[0] as u32;
         *b = sum;
     }
     for (b, p) in buffer[padding..].iter_mut().zip(row_data) {
         sum += *p as u32;
         *b = sum;
     }
-    for b in &mut buffer[padding + width..] {
-        sum += last;
+    for (i, b) in &mut buffer[padding + width..].iter_mut().enumerate() {
+        sum += image.get_pixel_or_extend((width + i) as i64, row as i64, extend)[0] as u32;
         *b = sum;
     }
 }
 
 /// Computes the running sum of one column of image, padded
-/// at the top and bottom. The padding is by continuity.
+/// at the top and bottom. Padding method is controlled by `extend`.
 /// Takes a reference to buffer so that this can be reused
 /// for all columns in an image.
 ///
@@ -396,6 +404,7 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 /// # extern crate imageproc;
 /// # fn main() {
 /// use imageproc::integral_image::column_running_sum;
+/// use imageproc::geometric_transformations::Border;
 ///
 /// let image = gray_image!(
 ///     1, 4;
@@ -404,13 +413,19 @@ pub fn row_running_sum(image: &GrayImage, row: u32, buffer: &mut [u32], padding:
 ///
 /// // Buffer has length two greater than image height, hence padding of 1
 /// let mut buffer = [0; 5];
-/// column_running_sum(&image, 0, &mut buffer, 1);
+/// column_running_sum(&image, 0, &mut buffer, 1, Border::Replicate);
 ///
 /// // The image is padded by continuity on top and bottom
 /// assert_eq!(buffer, [1, 2, 4, 7, 10]);
 /// # }
 /// ```
-pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], padding: u32) {
+pub fn column_running_sum(
+    image: &GrayImage,
+    column: u32,
+    buffer: &mut [u32],
+    padding: u32,
+    extend: Border<Luma<u8>>,
+) {
     // TODO: faster, more formats
 
     assert!(image.height() > 0, "image is empty");
@@ -438,12 +453,12 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
     debug_assert_eq!(height, middle.len(),);
     debug_assert_eq!(padding, tail.len());
 
-    let first = image.get_pixel(column, 0)[0] as u32;
-    let last = image.get_pixel(column, image.height() - 1)[0] as u32;
+    //let first = image.get_pixel(column, 0)[0] as u32;
+    //let last = image.get_pixel(column, image.height() - 1)[0] as u32;
 
     let mut sum = 0;
-    for b in head {
-        sum += first;
+    for (i, b) in head.iter_mut().enumerate() {
+        sum += image.get_pixel_or_extend(column as i64, -(i as i64), extend)[0] as u32;
         *b = sum;
     }
     for (y, b) in (0..image.height()).zip(middle) {
@@ -456,8 +471,8 @@ pub fn column_running_sum(image: &GrayImage, column: u32, buffer: &mut [u32], pa
         sum += unsafe { image.unsafe_get_pixel(column, y) }[0] as u32;
         *b = sum;
     }
-    for b in tail {
-        sum += last;
+    for (i, b) in tail.iter_mut().enumerate() {
+        sum += image.get_pixel_or_extend(column as i64, (height + i) as i64, extend)[0] as u32;
         *b = sum;
     }
 }
@@ -556,7 +571,7 @@ mod tests {
     fn test_column_running_sum() {
         let get_column_running_sum = |image: &GrayImage, column, padding| -> Vec<u32> {
             let mut buffer = vec![0u32; (image.height() + 2 * padding) as usize];
-            column_running_sum(image, column, &mut buffer, padding);
+            column_running_sum(image, column, &mut buffer, padding, Border::Replicate);
             buffer
         };
 
@@ -632,7 +647,7 @@ mod proptests {
                 actual.fill(0);
                 expected.fill(0);
 
-                column_running_sum(&image, col, &mut actual, padding);
+                column_running_sum(&image, col, &mut actual, padding, Border::Replicate);
                 column_running_sum_reference(&image, col, &mut expected, padding);
                 prop_assert_eq!(&actual, &expected);
             }
@@ -709,7 +724,7 @@ mod benches {
         let image = gray_bench_image(1000, 1);
         let mut buffer = [0; 1010];
         b.iter(|| {
-            row_running_sum(&image, 0, &mut buffer, 5);
+            row_running_sum(&image, 0, &mut buffer, 5, Border::Replicate);
         });
     }
 
@@ -718,7 +733,7 @@ mod benches {
         let image = gray_bench_image(100, 1000);
         let mut buffer = [0; 1010];
         b.iter(|| {
-            column_running_sum(&image, 0, &mut buffer, 5);
+            column_running_sum(&image, 0, &mut buffer, 5, Border::Replicate);
         });
     }
 }

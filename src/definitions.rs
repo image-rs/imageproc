@@ -1,7 +1,9 @@
 //! Trait definitions and type aliases.
 
 use crate::geometric_transformations::Border;
-use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
+use crate::kernel::Kernel;
+use image::{GenericImageView, ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
+use num::Num;
 
 /// An `ImageBuffer` containing Pixels of type P with storage `Vec<P::Subpixel>`.
 /// Most operations in this library only support inputs of type `Image`, rather
@@ -16,8 +18,44 @@ pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 pub trait BoundaryAccess<P: Pixel> {
     /// Returns the pixel or falls back to the implementation defined by [`Border`].
     fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P;
+    /// Computes convolution with the specified kernel, accumulating into `acc`.
+    /// The coordinate points to the location where the center of the kernel is matched.
+    /// It is assumed that `acc` is filled with `K::zero()`.
+    fn convolve_at<K: Copy + Num>(
+        &self,
+        kernel: Kernel<K>,
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>;
+    /// Computes convolution with the specified horizontal kernel, accumulating into `acc`.
+    /// The coordinate points to the location where the center of the kernel is matched.
+    /// It is assumed that `acc` is filled with `K::zero()`.
+    fn convolve_horizontal_at<K: Copy + Num>(
+        &self,
+        kernel: &[K],
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>;
+    /// Computes convolution with the specified vertical kernel, accumulating into `acc`.
+    /// The coordinate points to the location where the center of the kernel is matched.
+    /// It is assumed that `acc` is filled with `K::zero()`.
+    fn convolve_vertical_at<K: Copy + Num>(
+        &self,
+        kernel: &[K],
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>;
 }
-impl<P: Pixel> BoundaryAccess<P> for Image<P> {
+impl<P: Pixel, I: GenericImageView<Pixel = P>> BoundaryAccess<P> for I {
     fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P {
         let (w, h) = self.dimensions();
         match extend {
@@ -25,18 +63,309 @@ impl<P: Pixel> BoundaryAccess<P> for Image<P> {
                 if x < 0 || x >= w as i64 || y < 0 || y >= h as i64 {
                     default
                 } else {
-                    *self.get_pixel(x as u32, y as u32)
+                    unsafe { self.unsafe_get_pixel(x as u32, y as u32) }
                 }
             }
             Border::Replicate => {
                 let x = x.clamp(0, w as i64 - 1) as u32;
                 let y = y.clamp(0, h as i64 - 1) as u32;
-                *self.get_pixel(x, y)
+                unsafe { self.unsafe_get_pixel(x, y) }
             }
             Border::Wrap => {
                 let x = x.rem_euclid(w as i64) as u32;
                 let y = y.rem_euclid(h as i64) as u32;
-                *self.get_pixel(x, y)
+                unsafe { self.unsafe_get_pixel(x, y) }
+            }
+        }
+    }
+    fn convolve_at<K: Copy + Num>(
+        &self,
+        kernel: Kernel<K>,
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>,
+    {
+        fn accumulate<P: Pixel, K: Copy + Num>(acc: &mut [K], pixel: &P, weight: K)
+        where
+            P::Subpixel: Into<K>,
+        {
+            acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
+                *a = *a + c.into() * weight;
+            });
+        }
+        let (w, h) = self.dimensions();
+        let (w, h) = (w as i64, h as i64);
+        let (k_width, k_height) = (kernel.width as i64, kernel.height as i64);
+        let (x, y) = (x - k_width / 2, y - k_height / 2);
+        match extend {
+            Border::Constant(default) => {
+                let k_y_min = y.max(0) - y;
+                let k_y_max = ((y + k_height).min(h) - y).max(0);
+                let k_x_min = x.max(0) - x;
+                let k_x_max = ((x + k_width).min(w) - x).max(0);
+                for k_y in 0..k_y_min {
+                    for k_x in 0..k_width {
+                        accumulate(acc, &default, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                }
+                for k_y in k_y_min..k_y_max {
+                    for k_x in 0..k_x_min {
+                        accumulate(acc, &default, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                    // pixels intersecting with the kernel
+                    for k_x in k_x_min..k_x_max {
+                        let pixel =
+                            unsafe { self.unsafe_get_pixel((x + k_x) as u32, (y + k_y) as u32) };
+                        accumulate(acc, &pixel, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                    for k_x in k_x_max..k_width {
+                        accumulate(acc, &default, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                }
+                for k_y in k_y_max..k_height {
+                    for k_x in 0..k_width {
+                        accumulate(acc, &default, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                }
+            }
+            Border::Replicate => {
+                for k_y in 0..k_height {
+                    let y_p = (y + k_y).clamp(0, h - 1) as u32;
+                    for k_x in 0..k_width {
+                        let x_p = (x + k_x).clamp(0, w - 1) as u32;
+                        let pixel = unsafe { self.unsafe_get_pixel(x_p, y_p) };
+                        accumulate(acc, &pixel, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                }
+            }
+            Border::Wrap => {
+                for k_y in 0..k_height {
+                    let y_p = (y + k_y).rem_euclid(h) as u32;
+                    for k_x in 0..k_width {
+                        let x_p = (x + k_x).rem_euclid(w) as u32;
+                        let pixel = unsafe { self.unsafe_get_pixel(x_p, y_p) };
+                        accumulate(acc, &pixel, unsafe {
+                            kernel.get_unchecked(k_x as u32, k_y as u32)
+                        });
+                    }
+                }
+            }
+        }
+    }
+    fn convolve_horizontal_at<K: Copy + Num>(
+        &self,
+        kernel: &[K],
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>,
+    {
+        fn accumulate<P: Pixel, K: Copy + Num>(acc: &mut [K], pixel: &P, weight: K)
+        where
+            P::Subpixel: Into<K>,
+        {
+            acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
+                *a = *a + c.into() * weight;
+            });
+        }
+        let (w, h) = self.dimensions();
+        let (w, h) = (w as i64, h as i64);
+        let k_width = kernel.len() as i64;
+        let x = x - k_width / 2;
+        let check_left = x < 0;
+        let check_right = x + k_width >= w;
+        match extend {
+            Border::Constant(default) => {
+                if (0..h).contains(&y) {
+                    let k_x_min = (x.max(0) - x) as usize;
+                    let k_x_max = ((x + k_width).min(w) - x).max(0) as usize;
+                    for k_x in 0..k_x_min {
+                        accumulate(acc, &default, kernel[k_x]);
+                    }
+                    // pixels intersecting with the kernel
+                    for k_x in k_x_min..k_x_max {
+                        let pixel =
+                            unsafe { self.unsafe_get_pixel((x + k_x as i64) as u32, y as u32) };
+                        accumulate(acc, &pixel, kernel[k_x]);
+                    }
+                    for k_x in k_x_max..k_width as usize {
+                        accumulate(acc, &default, kernel[k_x]);
+                    }
+                } else {
+                    for k_x in 0..k_width as usize {
+                        accumulate(acc, &default, kernel[k_x]);
+                    }
+                }
+            }
+            Border::Replicate => {
+                let y = y.clamp(0, h - 1) as u32;
+                match (check_left, check_right) {
+                    (false, false) => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (false, true) => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64).min(w - 1) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (true, false) => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64).max(0) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (true, true) => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64).clamp(0, w - 1) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                }
+            }
+            Border::Wrap => {
+                let y = y.rem_euclid(h) as u32;
+                match (check_left, check_right) {
+                    (false, false) => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    _ => {
+                        for (k_x, &k) in kernel.iter().enumerate() {
+                            let x_p = (x + k_x as i64).rem_euclid(w) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x_p, y) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fn convolve_vertical_at<K: Copy + Num>(
+        &self,
+        kernel: &[K],
+        acc: &mut [K],
+        x: i64,
+        y: i64,
+        extend: Border<P>,
+    ) where
+        P::Subpixel: Into<K>,
+    {
+        fn accumulate<P: Pixel, K: Copy + Num>(acc: &mut [K], pixel: &P, weight: K)
+        where
+            P::Subpixel: Into<K>,
+        {
+            acc.iter_mut().zip(pixel.channels()).for_each(|(a, &c)| {
+                *a = *a + c.into() * weight;
+            });
+        }
+        let (w, h) = self.dimensions();
+        let (w, h) = (w as i64, h as i64);
+        let k_height = kernel.len() as i64;
+        let y = y - k_height / 2;
+        let check_up = y < 0;
+        let check_down = y + k_height >= h;
+        match extend {
+            Border::Constant(default) => {
+                if (0..w).contains(&x) {
+                    let k_y_min = (y.max(0) - y) as usize;
+                    let k_y_max = ((y + k_height).min(h) - y).max(0) as usize;
+                    for k_y in 0..k_y_min {
+                        accumulate(acc, &default, kernel[k_y]);
+                    }
+                    // pixels intersecting with the kernel
+                    for k_y in k_y_min..k_y_max {
+                        let pixel =
+                            unsafe { self.unsafe_get_pixel(x as u32, (y + k_y as i64) as u32) };
+                        accumulate(acc, &pixel, kernel[k_y]);
+                    }
+                    for k_y in k_y_max..k_height as usize {
+                        accumulate(acc, &default, kernel[k_y]);
+                    }
+                } else {
+                    for k_y in 0..k_height as usize {
+                        accumulate(acc, &default, kernel[k_y]);
+                    }
+                }
+            }
+            Border::Replicate => {
+                let x = x.clamp(0, w - 1) as u32;
+                match (check_up, check_down) {
+                    (false, false) => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (false, true) => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64).min(h - 1) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (true, false) => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64).max(0) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    (true, true) => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64).clamp(0, h - 1) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                }
+            }
+            Border::Wrap => {
+                let x = x.rem_euclid(w) as u32;
+                match (check_up, check_down) {
+                    (false, false) => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                    _ => {
+                        for (k_y, &k) in kernel.iter().enumerate() {
+                            let y_p = (y + k_y as i64).rem_euclid(h) as u32;
+                            let pixel = unsafe { self.unsafe_get_pixel(x, y_p) };
+                            accumulate(acc, &pixel, k);
+                        }
+                    }
+                }
             }
         }
     }

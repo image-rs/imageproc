@@ -1,22 +1,25 @@
 use image::{GenericImage, GenericImageView, GrayImage, Luma};
 
-use crate::{
-    definitions::Image,
-    integral_image::{column_running_sum, row_running_sum},
-};
+use crate::definitions::Image;
+use crate::geometric_transformations::Border;
+use crate::integral_image::{column_running_sum, row_running_sum};
 
 /// Convolves an 8bpp grayscale image with a kernel of width (2 * `x_radius` + 1)
 /// and height (2 * `y_radius` + 1) whose entries are equal and
 /// sum to one. i.e. each output pixel is the unweighted mean of
 /// a rectangular region surrounding its corresponding input pixel.
 /// We handle locations where the kernel would extend past the image's
-/// boundary by treating the image as if its boundary pixels were
-/// repeated indefinitely.
+/// boundary according to `extend`.
 // TODO: for small kernels we probably want to do the convolution
 // TODO: directly instead of using an integral image.
 // TODO: more formats!
 #[must_use = "the function does not modify the original image"]
-pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma<u8>> {
+pub fn box_filter(
+    image: &GrayImage,
+    x_radius: u32,
+    y_radius: u32,
+    extend: Border<Luma<u8>>,
+) -> Image<Luma<u8>> {
     let (width, height) = image.dimensions();
     let mut out = Image::new(width, height);
     if width == 0 || height == 0 {
@@ -28,7 +31,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
 
     let mut row_buffer = vec![0; (width + 2 * x_radius) as usize];
     for y in 0..height {
-        row_running_sum(image, y, &mut row_buffer, x_radius);
+        row_running_sum(image, y, &mut row_buffer, x_radius, extend);
         let val = row_buffer[(2 * x_radius) as usize] / kernel_width;
         unsafe {
             debug_assert!(out.in_bounds(0, y));
@@ -49,7 +52,7 @@ pub fn box_filter(image: &GrayImage, x_radius: u32, y_radius: u32) -> Image<Luma
 
     let mut col_buffer = vec![0; (height + 2 * y_radius) as usize];
     for x in 0..width {
-        column_running_sum(&out, x, &mut col_buffer, y_radius);
+        column_running_sum(&out, x, &mut col_buffer, y_radius, extend);
         let val = col_buffer[(2 * y_radius) as usize] / kernel_height;
         unsafe {
             debug_assert!(out.in_bounds(x, 0));
@@ -76,9 +79,9 @@ mod tests {
 
     #[test]
     fn test_box_filter_handles_empty_images() {
-        let _ = box_filter(&GrayImage::new(0, 0), 3, 3);
-        let _ = box_filter(&GrayImage::new(1, 0), 3, 3);
-        let _ = box_filter(&GrayImage::new(0, 1), 3, 3);
+        let _ = box_filter(&GrayImage::new(0, 0), 3, 3, Border::Replicate);
+        let _ = box_filter(&GrayImage::new(1, 0), 3, 3, Border::Replicate);
+        let _ = box_filter(&GrayImage::new(0, 1), 3, 3, Border::Replicate);
     }
 
     #[test]
@@ -97,7 +100,7 @@ mod tests {
             4, 5, 5;
             6, 7, 7);
 
-        assert_pixels_eq!(box_filter(&image, 1, 1), expected);
+        assert_pixels_eq!(box_filter(&image, 1, 1, Border::Replicate), expected);
     }
 }
 
@@ -115,7 +118,7 @@ mod proptests {
             x_radius in 0..100u32,
             y_radius in 0..100u32,
         ) {
-            let out = box_filter(&img, x_radius, y_radius);
+            let out = box_filter(&img, x_radius, y_radius, Border::Replicate);
             prop_assert_eq!(out.dimensions(), img.dimensions());
         }
     }
@@ -132,7 +135,7 @@ mod benches {
     fn bench_box_filter(b: &mut Bencher) {
         let image = gray_bench_image(500, 500);
         b.iter(|| {
-            let filtered = box_filter(&image, 7, 7);
+            let filtered = box_filter(&image, 7, 7, Border::Replicate);
             black_box(filtered);
         });
     }

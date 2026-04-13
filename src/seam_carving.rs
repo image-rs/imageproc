@@ -4,6 +4,7 @@
 //! [seam carving]: https://en.wikipedia.org/wiki/Seam_carving
 
 use crate::definitions::{HasBlack, Image};
+use crate::geometric_transformations::Border;
 use crate::gradients::gradients;
 use crate::kernel::{self};
 use crate::map::{WithChannel, map_pixels};
@@ -59,6 +60,7 @@ where
         image,
         kernel::SOBEL_HORIZONTAL_3X3,
         kernel::SOBEL_VERTICAL_3X3,
+        Border::Replicate,
         |p| {
             let gradient_sum: u16 = p.channels().iter().sum();
             let gradient_mean: u16 = gradient_sum / P::CHANNEL_COUNT as u16;

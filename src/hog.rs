@@ -3,6 +3,7 @@
 
 use crate::definitions::{Clamp, Image};
 use crate::filter::filter_clamped;
+use crate::geometric_transformations::Border;
 use crate::kernel::{self};
 use crate::math::l2_norm;
 use image::{GenericImage, GrayImage, Luma};
@@ -193,7 +194,7 @@ pub fn hog(image: &GrayImage, options: HogOptions) -> Result<Vec<f32>, String> {
     match HogSpec::from_options(image.width(), image.height(), options) {
         Err(e) => Err(e),
         Ok(spec) => {
-            let mut grid: Array3d<f32> = cell_histograms(image, spec);
+            let mut grid: Array3d<f32> = cell_histograms(image, spec, Border::Replicate);
             let grid_view = grid.view_mut();
             let descriptor = hog_descriptor_from_hist_grid(grid_view, spec);
             Ok(descriptor)
@@ -253,14 +254,14 @@ fn copy<T: Copy>(from: &[T], to: &mut [T]) {
 
 /// Computes orientation histograms for each cell of an image. Assumes that
 /// the provided dimensions are valid.
-pub fn cell_histograms(image: &GrayImage, spec: HogSpec) -> Array3d<f32> {
+pub fn cell_histograms(image: &GrayImage, spec: HogSpec, extend: Border<Luma<u8>>) -> Array3d<f32> {
     let (width, height) = image.dimensions();
     let mut grid = Array3d::new(spec.cell_grid_lengths());
     let cell_area = spec.cell_area() as f32;
     let cell_side = spec.options.cell_side as f32;
 
-    let horizontal = filter_clamped::<_, _, i32>(image, kernel::SOBEL_HORIZONTAL_3X3);
-    let vertical = filter_clamped::<_, _, i32>(image, kernel::SOBEL_VERTICAL_3X3);
+    let horizontal = filter_clamped::<_, _, i32>(image, kernel::SOBEL_HORIZONTAL_3X3, extend);
+    let vertical = filter_clamped::<_, _, i32>(image, kernel::SOBEL_VERTICAL_3X3, extend);
     let interval = orientation_bin_width(spec.options);
     let range = direction_range(spec.options);
 
@@ -553,7 +554,7 @@ mod tests {
             block_stride: 2,
         };
         let expected = "Invalid HoG options: block stride 2 does not evenly divide (cells wide 7 - block side 4), \
-			block stride 2 does not evenly divide (cells high 7 - block side 4)";
+            block stride 2 does not evenly divide (cells high 7 - block side 4)";
         assert_eq!(
             HogSpec::from_options(21, 21, opts),
             Err(expected.to_owned())
@@ -659,9 +660,9 @@ mod tests {
     #[test]
     fn test_direction_interpolation_within_bounds() {
         let image = gray_image!(
-			2, 1, 0;
-			2, 1, 0;
-			2, 1, 0);
+            2, 1, 0;
+            2, 1, 0;
+            2, 1, 0);
 
         let opts_signed = HogOptions {
             orientations: 8,

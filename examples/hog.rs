@@ -2,6 +2,7 @@
 
 use image::open;
 use imageproc::definitions::Image;
+use imageproc::geometric_transformations::Border;
 use imageproc::hog::*;
 use std::env;
 use std::path::Path;
@@ -43,7 +44,7 @@ fn create_hog_image(input: &Path, signed: bool) {
     cropped.save(input.with_file_name("cropped.png")).unwrap();
 
     let spec = HogSpec::from_options(cropped_width, cropped_height, opts).unwrap();
-    let mut hist = cell_histograms(&cropped, spec);
+    let mut hist = cell_histograms(&cropped, spec, Border::Replicate);
 
     let star_side = 20;
     let hog = render_hist_grid(star_side, &hist.view_mut(), signed);

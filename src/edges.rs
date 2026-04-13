@@ -2,6 +2,7 @@
 
 use crate::definitions::{HasBlack, HasWhite, Image};
 use crate::filter::{filter_clamped, gaussian_blur_f32};
+use crate::geometric_transformations::Border;
 use crate::kernel::{self};
 use image::{GenericImageView, GrayImage, Luma};
 use std::f32;
@@ -32,11 +33,11 @@ pub fn canny(image: &GrayImage, low_threshold: f32, high_threshold: f32) -> Gray
     // Heavily based on the implementation proposed by wikipedia.
     // 1. Gaussian blur.
     const SIGMA: f32 = 1.4;
-    let blurred = gaussian_blur_f32(image, SIGMA);
+    let blurred = gaussian_blur_f32(image, SIGMA, Border::Replicate);
 
     // 2. Intensity of gradients.
-    let gx = filter_clamped(&blurred, kernel::SOBEL_HORIZONTAL_3X3);
-    let gy = filter_clamped(&blurred, kernel::SOBEL_VERTICAL_3X3);
+    let gx = filter_clamped(&blurred, kernel::SOBEL_HORIZONTAL_3X3, Border::Replicate);
+    let gy = filter_clamped(&blurred, kernel::SOBEL_VERTICAL_3X3, Border::Replicate);
     let g: Vec<f32> = gx
         .iter()
         .zip(gy.iter())

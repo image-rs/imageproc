@@ -1,7 +1,10 @@
 use std::env;
 
 use image::open;
-use imageproc::filter::{bilateral::GaussianEuclideanColorDistance, bilateral_filter};
+use imageproc::{
+    filter::{bilateral::GaussianEuclideanColorDistance, bilateral_filter},
+    geometric_transformations::Border,
+};
 
 fn main() {
     if env::args().len() != 2 {
@@ -25,12 +28,14 @@ fn main() {
         radius,
         spatial_sigma,
         GaussianEuclideanColorDistance::new(color_sigma),
+        Border::Replicate,
     );
     let bilateral_color = bilateral_filter(
         &image_color,
         radius,
         spatial_sigma,
         GaussianEuclideanColorDistance::new(color_sigma),
+        Border::Replicate,
     );
 
     bilateral_grey.save("bilateral_grey.png").unwrap();
