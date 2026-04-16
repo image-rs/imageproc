@@ -20,10 +20,19 @@ pub struct GaussianEuclideanColorDistance {
     sigma_squared: f32,
 }
 impl GaussianEuclideanColorDistance {
-    /// Creates a new [`GaussianEuclideanColorDistance`] using a given sigma value.
+    /// Creates a new [`GaussianEuclideanColorDistance`] using a given sigma value, which
+    /// must be positive.
     ///
     /// Internally, this is stored as sigma squared for performance.
+    ///
+    /// # Panics
+    ///
+    /// 1. If `sigma <= 0`
     pub fn new(sigma: f32) -> Self {
+        assert!(
+            sigma > 0.0,
+            "GaussianEuclideanColorDistance sigma must be positive"
+        );
         GaussianEuclideanColorDistance {
             sigma_squared: sigma.powi(2),
         }
@@ -55,7 +64,7 @@ where
 /// * `radius` - The radius of the kernel used for the filtering. 0 -> 1x1, 1 -> 3x3, 2 -> 5x5, 3
 ///     -> 7x7, etc..
 /// * `spatial_sigma` - Standard deviation for euclidean spatial distance. A larger value results in
-///     averaging of pixels with larger spatial distances.
+///     averaging of pixels with larger spatial distances. Must be positive.
 /// * `color_distance` - A type which implements [`ColorDistance`]. This defines the metric used to
 ///     define how different two pixels are based on their colors. Common examples may include simple
 ///     absolute difference for greyscale pixels or cartesian distance in the CIE-Lab color space
@@ -77,6 +86,7 @@ where
 /// 2. If `image.height() > i32::MAX as u32`.
 /// 3. If `image.width() == 0`
 /// 4. If `image.height() == 0`
+/// 5. If `spatial_sigma <= 0`
 ///
 /// # Examples
 ///
@@ -112,6 +122,7 @@ where
     assert!(!image.height() > i32::MAX as u32);
     assert_ne!(image.width(), 0);
     assert_ne!(image.height(), 0);
+    assert!(spatial_sigma > 0.0, "spatial_sigma must be positive");
 
     let radius = i16::from(radius);
 
@@ -302,13 +313,16 @@ mod proptests {
     use image::Rgb;
     use proptest::prelude::*;
 
+    // Avoid small values which can cause NaNs in the filter calculations, which trigger assertions
+    const SIGMA_RANGE: std::ops::Range<f32> = 1e-12..1e32;
+
     proptest! {
         #[test]
         fn proptest_bilateral_filter_greyscale(
             img in arbitrary_image::<Luma<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            color_sigma in any::<f32>(),
-            spatial_sigma in any::<f32>(),
+            color_sigma in SIGMA_RANGE,
+            spatial_sigma in SIGMA_RANGE,
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             prop_assert_eq!(out.dimensions(), img.dimensions());
@@ -318,8 +332,8 @@ mod proptests {
         fn proptest_bilateral_filter_rgb(
             img in arbitrary_image::<Rgb<u8>>(1..40, 1..40),
             radius in 0..5u8,
-            color_sigma in any::<f32>(),
-            spatial_sigma in any::<f32>(),
+            color_sigma in SIGMA_RANGE,
+            spatial_sigma in SIGMA_RANGE,
         ) {
             let out = bilateral_filter(&img, radius, spatial_sigma, GaussianEuclideanColorDistance::new(color_sigma));
             prop_assert_eq!(out.dimensions(), img.dimensions());
