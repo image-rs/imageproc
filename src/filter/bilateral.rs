@@ -103,6 +103,11 @@ where
     <P as image::Pixel>::Subpixel: 'static,
     f32: From<P::Subpixel> + AsPrimitive<P::Subpixel>,
 {
+    const MAX_CHANNELS: usize = 4;
+    assert!(
+        P::CHANNEL_COUNT as usize <= MAX_CHANNELS,
+        "bilateral_filter only supports up to 4 channel images"
+    );
     assert!(!image.width() > i32::MAX as u32);
     assert!(!image.height() > i32::MAX as u32);
     assert_ne!(image.width(), 0);
@@ -130,7 +135,7 @@ where
         // Safety: `Image::from_fn` yields `col` in [0, width) and `row` in [0, height).
         let center_pixel = unsafe { image.unsafe_get_pixel(x, y) };
 
-        let mut channel_sums = [0f32; 4];
+        let mut channel_sums = [0f32; MAX_CHANNELS];
         let mut weight_sum = 0f32;
 
         for w_y in -radius..=radius {
