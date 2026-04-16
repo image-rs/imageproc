@@ -194,6 +194,8 @@ fn gaussian_weight(x_squared: f32, sigma_squared: f32) -> f32 {
 /// Maximum relative error is ~4% in the range used by the bilateral filter.
 #[inline]
 fn fast_exp_negative(x: f32) -> f32 {
+    debug_assert!(x <= 0.0, "fast_exp_negative only valid for negative inputs");
+
     // 2^23 / ln(2) ≈ 12102203.0
     const A: f32 = 12102203.0;
     // 2^23 * 127 (IEEE 754 exponent bias), with Schraudolph's adjustment for reduced avg error
