@@ -316,6 +316,78 @@ mod tests {
         let integral_image: Image<Luma<u32>> = integral_image(&image);
         assert_eq!(local_pixel_average(&integral_image, 3, 3, 2), 117);
     }
+
+    // `brief()` accepts user-supplied `TestPair`s with public
+    // `u32` fields and adds their coordinates into the patch top-left
+    // without checking them, in `brief_impl`
+    // (src/binary_descriptors/brief.rs:172-179):
+    //
+    //     let p0 = Point {
+    //         x: test_pair.p0.x + patch_top_left.x + 1,
+    //         y: test_pair.p0.y + patch_top_left.y + 1,
+    //     };
+    //     ...
+    //     local_pixel_average(integral_image, p0.x, p0.y, 2)
+    //
+    // In release the additions wrap. `local_pixel_average`
+    // (src/binary_descriptors/brief.rs:70-109) then does:
+    //
+    //     let y_min = y.saturating_sub(radius);
+    //     let x_min = x.saturating_sub(radius);
+    //     let y_max = u32::min(y + radius + 1, integral_image.height() - 1);
+    //     let x_max = u32::min(x + radius + 1, integral_image.width() - 1);
+    //     let pixel_area = (y_max - y_min) * (x_max - x_min);
+    //     if pixel_area == 0 { return 0; }
+    //     let (..) = unsafe {
+    //         (
+    //             integral_image.unsafe_get_pixel(x_max, y_max)[0],
+    //             integral_image.unsafe_get_pixel(x_min, y_min)[0],
+    //             ...
+    //         )
+    //     };
+    //
+    // Pick `test_pair.p0 = (u32::MAX - 5, u32::MAX - 5)` and a valid
+    // keypoint at (16, 16) in a 35 × 35 image (BRIEF_PATCH_RADIUS = 15, so
+    // any keypoint with `BRIEF_PATCH_RADIUS < x < width - BRIEF_PATCH_RADIUS`
+    // is accepted). `patch_top_left = (1, 1)`. Then
+    //     p0.x = (u32::MAX - 5) + 1 + 1 = u32::MAX - 3   (no wrap)
+    //     p0.y = u32::MAX - 3
+    // In `local_pixel_average(integral_image, u32::MAX - 3, u32::MAX - 3, 2)`:
+    //     x_min = (u32::MAX - 3) - 2 = u32::MAX - 5      (huge)
+    //     x_max = min((u32::MAX - 3) + 2 + 1, 35) = min(0, 35) = 0
+    //                                                    (wraps in release)
+    // With `x_max = 0` and `x_min = u32::MAX - 5`, the subtraction
+    // `x_max - x_min` wraps to 6, `pixel_area = 6 * 6 = 36`, the early
+    // `pixel_area == 0` return is bypassed, and `unsafe_get_pixel(x_min,
+    // y_min)` reads memory far past the end of the integral image's
+    // backing buffer.
+    //
+    // Requires `--release` to disable the overflow check on the additions.
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn brief_with_adversarial_test_pair_reads_oob() {
+        // 35 × 35 image is the smallest that satisfies BRIEF's "keypoint
+        // must be at least 17 pixels from any edge" check.
+        let img = GrayImage::from_pixel(35, 35, Luma([0u8]));
+
+        // A perfectly valid keypoint, well away from the edge.
+        let keypoints = vec![Point::new(17u32, 17u32)];
+
+        // 128 attacker-controlled test pairs. Adding `u32::MAX - 5` to the
+        // patch top-left + 1 = 2 gives `u32::MAX - 3`, which then drives
+        // `local_pixel_average` past the end of the 36 × 36 integral image.
+        let mut pairs = Vec::with_capacity(128);
+        for _ in 0..128 {
+            pairs.push(TestPair {
+                p0: Point::new(u32::MAX - 5, u32::MAX - 5),
+                p1: Point::new(0, 0),
+            });
+        }
+
+        // Public, safe entry point.
+        let _ = brief(&img, &keypoints, 128, Some(&pairs));
+    }
 }
 
 #[cfg(not(miri))]
