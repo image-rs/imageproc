@@ -73,13 +73,19 @@ fn local_pixel_average(integral_image: &Image<Luma<u32>>, x: u32, y: u32, radius
     }
     let y_min = y.saturating_sub(radius);
     let x_min = x.saturating_sub(radius);
-    let y_max = u32::min(y + radius + 1, integral_image.height() - 1);
-    let x_max = u32::min(x + radius + 1, integral_image.width() - 1);
+    let y_max = u32::min(
+        y.saturating_add(radius).saturating_add(1),
+        integral_image.height().saturating_sub(1),
+    );
+    let x_max = u32::min(
+        x.saturating_add(radius).saturating_add(1),
+        integral_image.width().saturating_sub(1),
+    );
 
-    let pixel_area = (y_max - y_min) * (x_max - x_min);
-    if pixel_area == 0 {
+    if y_max <= y_min || x_max <= x_min {
         return 0;
     }
+    let pixel_area = (y_max - y_min) * (x_max - x_min);
 
     // UNSAFETY JUSTIFICATION
     //
@@ -127,6 +133,19 @@ pub(crate) fn brief_impl(
             length,
             test_pairs.len()
         ));
+    }
+
+    for (i, tp) in test_pairs.iter().enumerate() {
+        if tp.p0.x >= BRIEF_PATCH_DIAMETER
+            || tp.p0.y >= BRIEF_PATCH_DIAMETER
+            || tp.p1.x >= BRIEF_PATCH_DIAMETER
+            || tp.p1.y >= BRIEF_PATCH_DIAMETER
+        {
+            return Err(format!(
+                "Test pair {} has coordinates outside the {}x{} patch: p0=({}, {}), p1=({}, {})",
+                i, BRIEF_PATCH_DIAMETER, BRIEF_PATCH_DIAMETER, tp.p0.x, tp.p0.y, tp.p1.x, tp.p1.y
+            ));
+        }
     }
 
     let mut descriptors: Vec<BriefDescriptor> = Vec::with_capacity(keypoints.len());
@@ -385,8 +404,9 @@ mod tests {
             });
         }
 
-        // Public, safe entry point.
-        let _ = brief(&img, &keypoints, 128, Some(&pairs));
+        // Public, safe entry point — must reject the out-of-range test pairs.
+        let result = brief(&img, &keypoints, 128, Some(&pairs));
+        assert!(result.is_err());
     }
 }
 
