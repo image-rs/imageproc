@@ -45,9 +45,13 @@ jobs:
       # https://twitter.com/jonhoo/status/1571290371124260865
       - name: cargo test --locked
         run: cargo test --locked --all-features --all-targets
+        env:
+          PROPTEST_RNG_SEED: 0
       # https://github.com/rust-lang/cargo/issues/6669
       - name: cargo test --doc
         run: cargo test --locked --all-features --doc
+        env:
+          PROPTEST_RNG_SEED: 0
   direct-minimal:
     needs: vars
     strategy:
@@ -67,6 +71,8 @@ jobs:
         run: cargo update -Zdirect-minimal-versions
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
+        env:
+          PROPTEST_RNG_SEED: 0
   os-check:
     # run cargo test on mac and windows
     needs: vars
@@ -101,5 +107,9 @@ jobs:
         run: cargo generate-lockfile
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
+        env:
+          PROPTEST_RNG_SEED: 0
       - name: cargo test --doc
         run: cargo test --locked --all-features --doc
+        env:
+          PROPTEST_RNG_SEED: 0
