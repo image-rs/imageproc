@@ -633,9 +633,9 @@ where
     let mut col: [P; 4] = [default, default, default, default];
 
     let (width, height) = image.dimensions();
-    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
-        default
-    } else {
+    // Use positive checks so that NaN coordinates are correctly rejected
+    // (NaN comparisons always return false).
+    if left >= 0f32 && right < width as f32 && top >= 0f32 && bottom < height as f32 {
         for row in top as u32..bottom as u32 {
             let (p0, p1, p2, p3): (P, P, P, P) = unsafe {
                 (
@@ -651,6 +651,8 @@ where
         }
 
         blend_cubic(&col[0], &col[1], &col[2], &col[3], y_weight)
+    } else {
+        default
     }
 }
 
@@ -693,10 +695,10 @@ where
     let bottom_weight = y - top;
 
     // default if out of bound
+    // Use positive checks so that NaN coordinates are correctly rejected
+    // (NaN comparisons always return false).
     let (width, height) = image.dimensions();
-    if left < 0f32 || right >= width as f32 || top < 0f32 || bottom >= height as f32 {
-        default
-    } else {
+    if left >= 0f32 && right < width as f32 && top >= 0f32 && bottom < height as f32 {
         let (tl, tr, bl, br) = unsafe {
             (
                 image.unsafe_get_pixel(left as u32, top as u32),
@@ -706,6 +708,8 @@ where
             )
         };
         blend_bilinear(tl, tr, bl, br, right_weight, bottom_weight)
+    } else {
+        default
     }
 }
 
