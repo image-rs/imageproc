@@ -40,6 +40,8 @@ jobs:
         run: cargo generate-lockfile
       - name: cargo test --locked
         run: cargo test --locked --all-features --all-targets
+        env:
+          PROPTEST_RNG_SEED: 0
   # https://twitter.com/alcuadrado/status/1571291687837732873
   update:
     # This action checks that updating the dependencies of this crate to the latest available that
@@ -72,4 +74,5 @@ jobs:
         if: hashFiles('Cargo.lock') != ''
         run: cargo test --locked --all-features --all-targets
         env:
+          PROPTEST_RNG_SEED: 0
           RUSTFLAGS: -D deprecated

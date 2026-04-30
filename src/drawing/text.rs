@@ -126,16 +126,10 @@ mod proptests {
     use ab_glyph::FontRef;
     use image::Luma;
     use proptest::prelude::*;
-    use proptest::test_runner::RngSeed;
 
     const FONT_BYTES: &[u8] = include_bytes!("../../tests/data/fonts/DejaVuSans.ttf");
 
     proptest! {
-        #![proptest_config(ProptestConfig {
-            rng_seed: RngSeed::Fixed(0),
-            ..ProptestConfig::default()
-        })]
-
         #[test]
         fn proptest_text_size(
             img in arbitrary_image_with::<Luma<u8>>(Just(0), 0..=100, 0..=100),
