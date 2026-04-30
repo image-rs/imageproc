@@ -148,4 +148,28 @@ mod tests {
 
         assert_pixels_eq!(draw_cross(&image, Luma([9u8]), 5, 0), expected);
     }
+
+    #[test]
+    fn test_draw_cross_mut() {
+        let background = 1u8;
+        let cross = 2u8;
+        let size = 7u32;
+        let center = 3;
+
+        let mut image = GrayImage::from_pixel(size, size, Luma([background]));
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            background, background, background, background, background, background, background;
+            background, background, background, background, background, background, background;
+            background, background, background, cross, background, background, background;
+            background, background, cross, cross, cross, background, background;
+            background, background, background, cross, background, background, background;
+            background, background, background, background, background, background, background;
+            background, background, background, background, background, background, background);
+
+        draw_cross_mut(&mut image, Luma([cross]), center, center);
+
+        assert_pixels_eq!(image, expected);
+    }
 }

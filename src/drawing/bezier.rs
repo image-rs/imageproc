@@ -117,3 +117,36 @@ mod benches {
         (0.0, 500.0)
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::draw_cubic_bezier_curve;
+    use image::{GrayImage, Luma};
+
+    #[test]
+    fn test_draw_cubic_bezier_curve_linear_control_points() {
+        let background = 1u8;
+        let curve = 9u8;
+        let size = 5u32;
+
+        let image = GrayImage::from_pixel(size, size, Luma([background]));
+
+        let expected = gray_image!(
+            curve, background, background, background, background;
+            background, curve, background, background, background;
+            background, background, curve, background, background;
+            background, background, background, curve, background;
+            background, background, background, background, curve);
+
+        let actual = draw_cubic_bezier_curve(
+            &image,
+            (0.0, 0.0),
+            (4.0, 4.0),
+            (1.0, 1.0),
+            (3.0, 3.0),
+            Luma([curve]),
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+}

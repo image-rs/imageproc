@@ -69,3 +69,34 @@ where
     let (width, height) = image.dimensions();
     x < width && y < height && *image.get_pixel(x, y) == target_pixel
 }
+
+#[cfg(test)]
+mod tests {
+    use super::flood_fill;
+    use image::Luma;
+
+    #[test]
+    fn test_flood_fill() {
+        let border = 0u8;
+        let region = 1u8;
+        let filled = 2u8;
+
+        let image = gray_image!(
+            border, border, border, border, border;
+            border, region, region, region, border;
+            border, region, border, region, border;
+            border, region, region, region, border;
+            border, border, border, border, border);
+
+        let expected = gray_image!(
+            border, border, border, border, border;
+            border, filled, filled, filled, border;
+            border, filled, border, filled, border;
+            border, filled, filled, filled, border;
+            border, border, border, border, border);
+
+        let actual = flood_fill(&image, 1, 1, Luma([filled]));
+
+        assert_pixels_eq!(actual, expected);
+    }
+}
