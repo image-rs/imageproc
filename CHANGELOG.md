@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.26.2]
+
+Bug fixes:
+* Fixed out-of-bounds read in interpolation functions (`interpolate_bilinear`, `interpolate_bicubic`) when NaN coordinates bypass bounds checks.
+* Fixed u32 overflow in `Kernel::new` dimension check that could allow constructing a kernel with mismatched dimensions.
+* Fixed out-of-bounds read in `brief()` when user-supplied test pairs have coordinates outside the patch, and hardened `local_pixel_average` against overflow.
+
 ## [0.26.1] - 2026-02-28
 
 [0.26.1]: https://github.com/image-rs/imageproc/releases/tag/v0.26.1

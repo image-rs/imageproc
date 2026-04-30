@@ -23,7 +23,8 @@ where
     /// 2. If `width * height != data.len() as u32`.
     pub const fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
-        assert!(width * height == data.len() as u32);
+        // Widen to u64 to prevent u32 overflow from bypassing the assertion.
+        assert!(width as u64 * height as u64 == data.len() as u64);
         Kernel {
             data,
             width,
