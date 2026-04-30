@@ -400,6 +400,7 @@ mod tests {
     fn test_step() {
         assert_eq!((0u32..5).step_by(4).collect::<Vec<u32>>(), vec![0, 4]);
         assert_eq!((0u32..4).step_by(4).collect::<Vec<u32>>(), vec![0]);
-        assert_eq!((4u32..4).step_by(4).collect::<Vec<u32>>(), vec![]);
+        let empty: Vec<u32> = vec![];
+        assert_eq!((4u32..4).step_by(4).collect::<Vec<u32>>(), empty);
     }
 }
