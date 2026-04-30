@@ -76,15 +76,21 @@ fn local_pixel_average(
     if radius == 0 {
         return 0;
     }
-    let y_min = if y < radius { 0 } else { y - radius };
-    let x_min = if x < radius { 0 } else { x - radius };
-    let y_max = u32::min(y + radius + 1, integral_image.height() - 1);
-    let x_max = u32::min(x + radius + 1, integral_image.width() - 1);
+    let y_min = y.saturating_sub(radius);
+    let x_min = x.saturating_sub(radius);
+    let y_max = u32::min(
+        y.saturating_add(radius).saturating_add(1),
+        integral_image.height().saturating_sub(1),
+    );
+    let x_max = u32::min(
+        x.saturating_add(radius).saturating_add(1),
+        integral_image.width().saturating_sub(1),
+    );
 
-    let pixel_area = (y_max - y_min) * (x_max - x_min);
-    if pixel_area == 0 {
+    if y_max <= y_min || x_max <= x_min {
         return 0;
     }
+    let pixel_area = (y_max - y_min) * (x_max - x_min);
 
     // UNSAFETY JUSTIFICATION
     //
@@ -132,6 +138,19 @@ pub(crate) fn brief_impl(
             length,
             test_pairs.len()
         ));
+    }
+
+    for (i, tp) in test_pairs.iter().enumerate() {
+        if tp.p0.x >= BRIEF_PATCH_DIAMETER
+            || tp.p0.y >= BRIEF_PATCH_DIAMETER
+            || tp.p1.x >= BRIEF_PATCH_DIAMETER
+            || tp.p1.y >= BRIEF_PATCH_DIAMETER
+        {
+            return Err(format!(
+                "Test pair {} has coordinates outside the {}x{} patch: p0=({}, {}), p1=({}, {})",
+                i, BRIEF_PATCH_DIAMETER, BRIEF_PATCH_DIAMETER, tp.p0.x, tp.p0.y, tp.p1.x, tp.p1.y
+            ));
+        }
     }
 
     let mut descriptors: Vec<BriefDescriptor> = Vec::with_capacity(keypoints.len());
@@ -320,6 +339,25 @@ mod tests {
         );
         let integral_image: ImageBuffer<Luma<u32>, Vec<u32>> = integral_image(&image);
         assert_eq!(local_pixel_average(&integral_image, 3, 3, 2), 117);
+    }
+
+    #[test]
+    fn brief_with_adversarial_test_pair_reads_oob() {
+        let img = GrayImage::from_pixel(35, 35, Luma([0u8]));
+
+        let keypoints = vec![Point::new(17u32, 17u32)];
+
+        let mut pairs = Vec::with_capacity(128);
+        for _ in 0..128 {
+            pairs.push(TestPair {
+                p0: Point::new(u32::MAX - 5, u32::MAX - 5),
+                p1: Point::new(0, 0),
+            });
+        }
+
+        // Public, safe entry point — must reject the out-of-range test pairs.
+        let result = brief(&img, &keypoints, 128, Some(&pairs));
+        assert!(result.is_err());
     }
 }
 

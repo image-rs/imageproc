@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.25.1]
+
+Bug fixes:
+* Fixed out-of-bounds read in interpolation functions (`interpolate_bilinear`, `interpolate_bicubic`) when NaN coordinates bypass bounds checks.
+* Fixed u32 overflow in `Kernel::new` dimension check that could allow constructing a kernel with mismatched dimensions.
+* Fixed out-of-bounds read in `brief()` when user-supplied test pairs have coordinates outside the patch, and hardened `local_pixel_average` against overflow.
+* Fixed compilation on recent rustc versions due to a type inference regression in tests.
+
 ## [0.25.0] - 2024-05-19
 
 New features:

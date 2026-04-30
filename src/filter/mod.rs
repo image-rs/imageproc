@@ -218,10 +218,11 @@ impl<'a, K: Num + Copy + 'a> Kernel<'a, K> {
     /// If `width == 0 || height == 0`.
     pub fn new(data: &'a [K], width: u32, height: u32) -> Kernel<'a, K> {
         assert!(width > 0 && height > 0, "width and height must be non-zero");
+        // Widen to u64 to prevent u32 overflow from bypassing the assertion.
         assert!(
-            width * height == data.len() as u32,
+            width as u64 * height as u64 == data.len() as u64,
             "Invalid kernel len: expecting {}, found {}",
-            width * height,
+            width as u64 * height as u64,
             data.len()
         );
         Kernel {
@@ -939,6 +940,15 @@ mod tests {
         let image = ImageBuffer::<Luma<f32>, Vec<f32>>::from_pixel(12, 12, Luma([1.0]));
         let image2 = gaussian_blur_f32(&image, 6f32);
         assert_pixels_eq_within!(image2, image, 1e-6);
+    }
+
+    #[test]
+    #[should_panic]
+    fn kernel_new_rejects_overflowing_dimensions() {
+        // 2 * 2_147_483_649 overflows u32 to 2, matching data.len().
+        // The widened u64 check must catch this.
+        let data = [0.0f32; 2];
+        let _ = Kernel::new(&data, 2, 2_147_483_649);
     }
 }
 
