@@ -483,6 +483,20 @@ mod tests {
     }
 
     #[test]
+    fn test_integral_squared_image_gray() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6);
+
+        let expected = gray_image!(type: u32,
+            0,  0,  0,  0;
+            0,  1,  5, 14;
+            0, 17, 46, 91);
+
+        assert_pixels_eq!(integral_squared_image::<_, u32>(&image), expected);
+    }
+
+    #[test]
     fn test_integral_image_rgb() {
         let image = rgb_image!(
             [1, 11, 21], [2, 12, 22], [3, 13, 23];
