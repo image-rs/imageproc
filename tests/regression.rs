@@ -582,6 +582,16 @@ fn test_adaptive_threshold() {
 }
 
 #[test]
+fn test_kapur_threshold() {
+    use imageproc::contrast::{kapur_level, threshold};
+    fn kapur_threshold(image: &GrayImage) -> GrayImage {
+        let level = kapur_level(image);
+        threshold(image, level, ThresholdType::Binary)
+    }
+    compare_to_truth("zebra.png", "zebra_kapur.png", kapur_threshold);
+}
+
+#[test]
 fn test_otsu_threshold() {
     use imageproc::contrast::{otsu_level, threshold};
     fn otsu_threshold(image: &GrayImage) -> GrayImage {
