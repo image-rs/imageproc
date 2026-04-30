@@ -1015,8 +1015,8 @@ fn test_draw_text_outside_bounds() {
     let newline_offset = scale * 1.2;
     let (x, y) = (50, 100);
     for i in 0..16 {
-        let y_with_offset = y + (i as f32 * newline_offset) as i32;
-        imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y_with_offset, scale, &font, text);
+        let y_mod = y + (i as f32 * newline_offset) as i32;
+        imageproc::drawing::draw_text_mut(&mut img, Luma::white(), x, y_mod, scale, &font, text);
     }
 }
 
