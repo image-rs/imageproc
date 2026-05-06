@@ -496,6 +496,37 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn find_contours_with_threshold_test() {
+        let test_image = gray_image!(type: u8,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
+            1, 1, 1, 2, 2, 2, 2, 2, 1, 1;
+            1, 1, 2, 3, 3, 3, 2, 2, 1, 1;
+            1, 1, 2, 3, 4, 4, 3, 2, 1, 1;
+            1, 1, 2, 2, 3, 3, 3, 2, 1, 1;
+            1, 1, 2, 2, 2, 2, 2, 1, 1, 1;
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+        );
+        let contours = find_contours_with_threshold::<i32>(&test_image, 2);
+        check_contour(
+            &contours[0],
+            BorderType::Outer,
+            None,
+            &[
+                Point::new(3, 4),
+                Point::new(3, 4),
+                Point::new(4, 5),
+                Point::new(5, 5),
+                Point::new(6, 5),
+                Point::new(6, 4),
+                Point::new(5, 3),
+                Point::new(4, 3),
+            ],
+        );
+    }
 }
 
 #[cfg(not(miri))]
