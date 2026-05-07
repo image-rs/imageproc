@@ -588,6 +588,57 @@ mod tests {
         }
         assert_pixels_eq!(left, expected);
     }
+
+    #[test]
+    fn test_draw_line_segment_mut() {
+        let background = 1u8;
+        let line = 6u8;
+        let size = 5u32;
+
+        let mut image = GrayImage::from_pixel(size, size, Luma([background]));
+
+        let expected = gray_image!(
+            background, background, background, background, background;
+            background, line, background, background, background;
+            background, background, line, background, background;
+            background, background, background, line, background;
+            background, background, background, background, background);
+
+        draw_line_segment_mut(&mut image, (1.0, 1.0), (3.0, 3.0), Luma([line]));
+
+        assert_pixels_eq!(image, expected);
+    }
+
+    #[test]
+    fn test_plotter_plot_respects_bounds_and_blend() {
+        let background = 1u8;
+        let written = 9u8;
+        let ignored_weight_zero = 8u8;
+        let ignored_out_of_bounds = 5u8;
+        let size = 3u32;
+
+        let mut image = GrayImage::from_pixel(size, size, Luma([background]));
+        let blend = |line: Luma<u8>, original: Luma<u8>, weight: f32| {
+            if weight > 0.0 { line } else { original }
+        };
+
+        let mut plotter = Plotter {
+            image: &mut image,
+            transform: |x, y| (x, y),
+            blend,
+        };
+
+        plotter.plot(1, 1, Luma([written]), 1.0);
+        plotter.plot(-1, 1, Luma([ignored_out_of_bounds]), 1.0);
+        plotter.plot(2, 2, Luma([ignored_weight_zero]), 0.0);
+
+        let expected = gray_image!(
+            background, background, background;
+            background, written, background;
+            background, background, background);
+
+        assert_pixels_eq!(image, expected);
+    }
 }
 
 #[cfg(not(miri))]
