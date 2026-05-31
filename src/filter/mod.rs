@@ -694,6 +694,41 @@ mod tests {
 
     #[test]
     #[cfg(feature = "rayon")]
+    fn test_filter_parallel_matches_filter() {
+        let image = gray_image!(
+            3, 2, 1;
+            6, 5, 4;
+            9, 8, 7);
+
+        #[rustfmt::skip]
+        let kernel = Kernel::new(&[
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1,
+        ], 3, 3);
+
+        let expected: Image<Luma<i16>> = filter(&image, kernel, <i16 as Clamp<i32>>::clamp);
+        let actual: Image<Luma<i16>> = filter_parallel(&image, kernel, <i16 as Clamp<i32>>::clamp);
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_laplacian_filter_parallel_matches_laplacian_filter() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
+
+        let expected = laplacian_filter(&image);
+        let actual = laplacian_filter_parallel(&image);
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
     fn test_filter_clamped_parallel_with_results_outside_input_channel_range() {
         #[rustfmt::skip]
             let kernel: Kernel<i32> = Kernel::new(&[
@@ -865,6 +900,35 @@ mod proptests {
         ) {
             let out = laplacian_filter(&img);
             prop_assert_eq!(out.dimensions(), img.dimensions());
+        }
+
+        #[test]
+        #[cfg(feature = "rayon")]
+        fn proptest_filter_parallel_matches_filter(
+            img in arbitrary_image::<Luma<u8>>(0..30, 0..30),
+        ) {
+            #[rustfmt::skip]
+            let kernel = Kernel::new(&[
+                -1, 0, 1,
+                -2, 0, 2,
+                -1, 0, 1,
+            ], 3, 3);
+
+            let expected: Image<Luma<i16>> = filter(&img, kernel, <i16 as Clamp<i32>>::clamp);
+            let actual: Image<Luma<i16>> = filter_parallel(&img, kernel, <i16 as Clamp<i32>>::clamp);
+
+            prop_assert_eq!(actual, expected);
+        }
+
+        #[test]
+        #[cfg(feature = "rayon")]
+        fn proptest_laplacian_filter_parallel_matches_laplacian_filter(
+            img in arbitrary_image::<Luma<u8>>(0..30, 0..30),
+        ) {
+            let expected = laplacian_filter(&img);
+            let actual = laplacian_filter_parallel(&img);
+
+            prop_assert_eq!(actual, expected);
         }
     }
 }

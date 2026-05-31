@@ -36,3 +36,43 @@ pub fn sharpen_gaussian(image: &GrayImage, sigma: f32, amount: f32) -> GrayImage
         Luma([<u8 as Clamp<f32>>::clamp(v)])
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    fn test_sharpen3x3_parallel_matches_sharpen3x3() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9);
+
+        let expected = sharpen3x3(&image);
+        let actual = sharpen3x3_parallel(&image);
+
+        assert_pixels_eq!(actual, expected);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        #[cfg(feature = "rayon")]
+        fn proptest_sharpen3x3_parallel_matches_sharpen3x3(
+            img in arbitrary_image::<Luma<u8>>(0..30, 0..30),
+        ) {
+            let expected = sharpen3x3(&img);
+            let actual = sharpen3x3_parallel(&img);
+
+            prop_assert_eq!(actual, expected);
+        }
+    }
+}
