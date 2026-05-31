@@ -110,6 +110,30 @@ mod tests {
     use super::DisjointSetForest;
 
     #[test]
+    fn test_root() {
+        let mut forest = DisjointSetForest {
+            count: 4,
+            parent: vec![1, 3, 2, 3],
+            tree_size: vec![1, 2, 1, 3],
+        };
+
+        assert_eq!(forest.root(0), 3);
+        assert_eq!(forest.parent[0], 3);
+    }
+
+    #[test]
+    fn test_find() {
+        let mut forest = DisjointSetForest {
+            count: 4,
+            parent: vec![0, 0, 2, 2],
+            tree_size: vec![2, 1, 2, 1],
+        };
+
+        assert!(forest.find(0, 1));
+        assert!(!forest.find(0, 2));
+    }
+
+    #[test]
     fn test_trees() {
         //    3         4
         //    |        /  \
@@ -173,6 +197,33 @@ mod tests {
         //                             0, 1, 2, 3, 4, 5
         assert_eq!(forest.parent, vec![1, 1, 1, 1, 0, 5]);
         assert_eq!(forest.num_trees(), 2);
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::DisjointSetForest;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn proptest_root_of_singleton_is_self(
+            (count, i) in (1usize..32).prop_flat_map(|count| (Just(count), 0..count))
+        ) {
+            let mut forest = DisjointSetForest::new(count);
+
+            prop_assert_eq!(forest.root(i), i);
+        }
+
+        #[test]
+        fn proptest_find_in_singleton_forest_matches_index_equality(
+            (count, i, j) in (1usize..32).prop_flat_map(|count| (Just(count), 0..count, 0..count))
+        ) {
+            let mut forest = DisjointSetForest::new(count);
+
+            prop_assert_eq!(forest.find(i, j), i == j);
+        }
     }
 }
 
