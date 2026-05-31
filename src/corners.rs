@@ -533,6 +533,28 @@ mod tests {
     }
 
     #[test]
+    fn test_corners_fast12() {
+        let threshold = 8;
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 00, 00, 00, 10, 10);
+
+        assert_eq!(
+            corners_fast12(&image, threshold),
+            vec![Corner {
+                x: 3,
+                y: 3,
+                score: 9.0
+            }]
+        );
+    }
+
+    #[test]
     fn test_is_corner_fast12_12_noncontiguous() {
         let image = gray_image!(
             10, 10, 00, 00, 00, 10, 10;
@@ -604,6 +626,28 @@ mod tests {
             00, 00, 00, 00, 00, 00, 00);
 
         assert!(is_corner_fast9(&image, 8, 3, 3));
+    }
+
+    #[test]
+    fn test_corners_fast9() {
+        let threshold = 8;
+        let image = gray_image!(
+            10, 10, 00, 00, 00, 10, 10;
+            10, 00, 10, 10, 10, 00, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            00, 10, 10, 10, 10, 10, 10;
+            10, 00, 10, 10, 10, 10, 10;
+            10, 10, 10, 10, 10, 10, 10);
+
+        assert_eq!(
+            corners_fast9(&image, threshold),
+            vec![Corner {
+                x: 3,
+                y: 3,
+                score: 9.0
+            }]
+        );
     }
 
     #[cfg_attr(miri, ignore = "assert_eq fails")]
