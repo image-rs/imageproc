@@ -765,6 +765,10 @@ where
     Fi: Fn(f32, f32) -> P + Send + Sync,
 {
     let width = out.width();
+    if width == 0 {
+        return;
+    }
+
     let raw_out = out.as_mut();
     let pitch = P::CHANNEL_COUNT as usize * width as usize;
 
@@ -1372,6 +1376,300 @@ mod tests {
 
         let p = Projection::from_control_points(from, to);
         p.unwrap();
+    }
+}
+
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use crate::proptest_utils::arbitrary_image;
+    use image::GenericImageView;
+    use image::{GrayImage, Luma};
+    use proptest::prelude::*;
+
+    const EPS: f32 = 1e-3;
+
+    fn assert_point_close(actual: (f32, f32), expected: (f32, f32)) -> Result<(), TestCaseError> {
+        prop_assert!((actual.0 - expected.0).abs() <= EPS);
+        prop_assert!((actual.1 - expected.1).abs() <= EPS);
+        Ok(())
+    }
+
+    proptest! {
+        #[test]
+        fn proptest_projection_from_matrix_translation(
+            tx in -20.0f32..20.0,
+            ty in -20.0f32..20.0,
+            x in -20.0f32..20.0,
+            y in -20.0f32..20.0,
+        ) {
+            #[rustfmt::skip]
+            let projection = Projection::from_matrix([
+                1.0, 0.0, tx,
+                0.0, 1.0, ty,
+                0.0, 0.0, 1.0,
+            ]).unwrap();
+
+            assert_point_close(projection * (x, y), (x + tx, y + ty))?;
+        }
+
+        #[test]
+        fn proptest_projection_and_then_matches_sequential_application(
+            tx in -20.0f32..20.0,
+            ty in -20.0f32..20.0,
+            sx in 0.5f32..4.0,
+            sy in 0.5f32..4.0,
+            x in -20.0f32..20.0,
+            y in -20.0f32..20.0,
+        ) {
+            let first = Projection::translate(tx, ty);
+            let second = Projection::scale(sx, sy);
+            let projection = first.and_then(second);
+
+            assert_point_close(projection * (x, y), second * (first * (x, y)))?;
+        }
+
+        #[test]
+        fn proptest_projection_translate_offsets_points(
+            tx in -20.0f32..20.0,
+            ty in -20.0f32..20.0,
+            x in -20.0f32..20.0,
+            y in -20.0f32..20.0,
+        ) {
+            assert_point_close(Projection::translate(tx, ty) * (x, y), (x + tx, y + ty))?;
+        }
+
+        #[test]
+        fn proptest_projection_rotate_zero_is_identity(x in -20.0f32..20.0, y in -20.0f32..20.0) {
+            assert_point_close(Projection::rotate(0.0) * (x, y), (x, y))?;
+        }
+
+        #[test]
+        fn proptest_projection_scale_scales_points(
+            sx in 0.5f32..4.0,
+            sy in 0.5f32..4.0,
+            x in -20.0f32..20.0,
+            y in -20.0f32..20.0,
+        ) {
+            assert_point_close(Projection::scale(sx, sy) * (x, y), (sx * x, sy * y))?;
+        }
+
+        #[test]
+        fn proptest_projection_invert_round_trips_translation(
+            tx in -20.0f32..20.0,
+            ty in -20.0f32..20.0,
+            x in -20.0f32..20.0,
+            y in -20.0f32..20.0,
+        ) {
+            let projection = Projection::translate(tx, ty);
+
+            assert_point_close(projection.invert() * (projection * (x, y)), (x, y))?;
+        }
+
+        #[test]
+        fn proptest_projection_from_control_points_translation(
+            tx in -20.0f32..20.0,
+            ty in -20.0f32..20.0,
+            x in 0.0f32..10.0,
+            y in 0.0f32..10.0,
+        ) {
+            let from = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
+            let to = [(tx, ty), (10.0 + tx, ty), (10.0 + tx, 10.0 + ty), (tx, 10.0 + ty)];
+            let projection = Projection::from_control_points(from, to).unwrap();
+
+            assert_point_close(projection * (x, y), (x + tx, y + ty))?;
+        }
+
+        #[test]
+        fn proptest_rotate_about_center_zero_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate_about_center(
+                &img,
+                0.0,
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate_zero_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate(
+                &img,
+                (0.0, 0.0),
+                0.0,
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate_about_center_no_crop_zero_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate_about_center_no_crop(
+                &img,
+                0.0,
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate90_four_times_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate90(&rotate90(&rotate90(&rotate90(&img))));
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate270_four_times_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate270(&rotate270(&rotate270(&rotate270(&img))));
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate180_twice_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let rotated = rotate180(&rotate180(&img));
+
+            prop_assert_eq!(rotated, img);
+        }
+
+        #[test]
+        fn proptest_rotate180_mut_matches_rotate180(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let expected = rotate180(&img);
+            let mut actual = img.clone();
+            rotate180_mut(&mut actual);
+
+            prop_assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn proptest_translate_zero_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let translated = translate(&img, (0, 0), Border::Constant(Luma([0])));
+
+            prop_assert_eq!(translated, img);
+        }
+
+        #[test]
+        fn proptest_translate_constant_matches_coordinate_mapping(
+            img in arbitrary_image::<Luma<u8>>(0..8, 0..8),
+            tx in -10i32..10,
+            ty in -10i32..10,
+        ) {
+            let default = Luma([251]);
+            let translated = translate(&img, (tx, ty), Border::Constant(default));
+            let (width, height) = img.dimensions();
+
+            prop_assert_eq!(translated.dimensions(), img.dimensions());
+
+            for y in 0..height {
+                for x in 0..width {
+                    let src_x = x as i64 - tx as i64;
+                    let src_y = y as i64 - ty as i64;
+                    let expected = if src_x >= 0
+                        && src_y >= 0
+                        && img.in_bounds(src_x as u32, src_y as u32)
+                    {
+                        *img.get_pixel(src_x as u32, src_y as u32)
+                    } else {
+                        default
+                    };
+
+                    prop_assert_eq!(*translated.get_pixel(x, y), expected);
+                }
+            }
+        }
+
+        #[test]
+        fn proptest_translate_replicate_matches_coordinate_mapping(
+            img in arbitrary_image::<Luma<u8>>(1..8, 1..8),
+            tx in -10i32..10,
+            ty in -10i32..10,
+        ) {
+            let translated = translate(&img, (tx, ty), Border::Replicate);
+            let (width, height) = img.dimensions();
+
+            prop_assert_eq!(translated.dimensions(), img.dimensions());
+
+            for y in 0..height {
+                for x in 0..width {
+                    let src_x = (x as i64 - tx as i64).clamp(0, width as i64 - 1) as u32;
+                    let src_y = (y as i64 - ty as i64).clamp(0, height as i64 - 1) as u32;
+
+                    prop_assert_eq!(*translated.get_pixel(x, y), *img.get_pixel(src_x, src_y));
+                }
+            }
+        }
+
+        #[test]
+        fn proptest_warp_identity_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let warped = warp(
+                &img,
+                Projection::translate(0.0, 0.0),
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+
+            prop_assert_eq!(warped, img);
+        }
+
+        #[test]
+        fn proptest_warp_into_matches_warp(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let projection = Projection::translate(0.0, 0.0);
+            let expected = warp(
+                &img,
+                projection,
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+            let mut actual = GrayImage::new(img.width(), img.height());
+            warp_into(
+                &img,
+                projection,
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+                &mut actual,
+            );
+
+            prop_assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn proptest_warp_with_identity_is_identity(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let warped = warp_with(
+                &img,
+                |x, y| (x, y),
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+
+            prop_assert_eq!(warped, img);
+        }
+
+        #[test]
+        fn proptest_warp_into_with_matches_warp_with(img in arbitrary_image::<Luma<u8>>(0..8, 0..8)) {
+            let expected = warp_with(
+                &img,
+                |x, y| (x, y),
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+            );
+            let mut actual = GrayImage::new(img.width(), img.height());
+            warp_into_with(
+                &img,
+                |x, y| (x, y),
+                Interpolation::Nearest,
+                Border::Constant(Luma([0])),
+                &mut actual,
+            );
+
+            prop_assert_eq!(actual, expected);
+        }
     }
 }
 
