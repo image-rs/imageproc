@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.27.0] - 2026-06-02
+
+[0.27.0]: https://github.com/image-rs/imageproc/releases/tag/v0.27.0
+
+Bug fixes:
+* Fix out-of-bounds reads in BRIEF by @Shnatsel in https://github.com/image-rs/imageproc/pull/778
+* Fix u32 overflow in Kernel::new dimension check by @paolobarbolini in https://github.com/image-rs/imageproc/pull/777
+
+Breaking changes:
+* Rework of interpolation boundary behaviour by @Quickmarble in https://github.com/image-rs/imageproc/pull/769
+* `warp*()` functions: pass Projection by value by @Quickmarble in https://github.com/image-rs/imageproc/pull/773
+
+Performance improvements:
+* Bilateral speedup by @CattleProdigy in https://github.com/image-rs/imageproc/pull/766
+
 ## [0.26.1] - 2026-02-28
 
 [0.26.1]: https://github.com/image-rs/imageproc/releases/tag/v0.26.1
