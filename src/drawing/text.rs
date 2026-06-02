@@ -1,4 +1,5 @@
 use image::{GenericImage, Pixel};
+use num::Zero;
 use std::f32;
 
 use crate::definitions::{Clamp, Image};
@@ -21,6 +22,39 @@ fn layout_glyphs(
     let mut w = 0.0;
     let mut prev: Option<GlyphId> = None;
 
+    let mut y_max = 0.0_f32;
+    let mut y_min = 0.0_f32;
+    let mut y_above_ascent = 0.0_f32;
+    let mut y_below_ascent = f32::MAX;
+
+    // Find the peak `y_above_ascent` value which above ascent across all glyphs
+    // And the minimum `y_below_ascent` value which below ascent across all glyphs
+    for c in text.chars() {
+        let glyph_id = font.glyph_id(c);
+        let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
+        if let Some(g) = font.outline_glyph(glyph) {
+            let bb = g.px_bounds();
+
+            // for correct offset
+            y_above_ascent = y_above_ascent.min(bb.min.y);
+            y_below_ascent = y_below_ascent.min(bb.min.y).max(0.0);
+
+            // for correct height
+            y_min = y_min.min(bb.min.y);
+            y_max = y_max.max(bb.max.y);
+        }
+    }
+
+    // height and remove overflow ascent
+    let h = y_max - y_min - y_below_ascent;
+
+    // select offset
+    let offset_y = if y_above_ascent.is_zero() {
+        y_below_ascent
+    } else {
+        y_above_ascent
+    };
+
     for c in text.chars() {
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
@@ -30,13 +64,15 @@ fn layout_glyphs(
                 w += font.kern(glyph_id, prev);
             }
             prev = Some(glyph_id);
-            let bb = g.px_bounds();
+            let mut bb = g.px_bounds();
+            bb.min.y -= offset_y;
+            bb.max.y -= offset_y;
             f(g, bb);
         }
     }
 
     let w = w.ceil();
-    let h = font.height().ceil();
+    let h = h.ceil();
     assert!(w >= 0.0);
     assert!(h >= 0.0);
     (1 + w as u32, h as u32)
