@@ -13,7 +13,7 @@ use image::{ImageBuffer, Luma, LumaA, Pixel, Rgb, Rgba};
 pub type Image<P> = ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>;
 
 /// Image containers that can sample outside of their boundaries.
-pub trait BoundaryAccess<P: Pixel> {
+pub(crate) trait BoundaryAccess<P: Pixel> {
     /// Returns the pixel or falls back to the implementation defined by [`Border`].
     fn get_pixel_or_extend(&self, x: i64, y: i64, extend: Border<P>) -> P;
 }
