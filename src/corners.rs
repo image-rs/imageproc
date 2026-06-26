@@ -177,9 +177,17 @@ pub fn oriented_fast(
     seed: Option<u64>,
 ) -> Vec<OrientedFastCorner> {
     let (width, height) = image.dimensions();
-    let (min_x, max_x) = (edge_radius, width - edge_radius);
-    let (min_y, max_y) = (edge_radius, height - edge_radius);
+    let (min_x, max_x) = (edge_radius, width.saturating_sub(edge_radius));
+    let (min_y, max_y) = (edge_radius, height.saturating_sub(edge_radius));
     let mut corners = vec![];
+
+    // If `edge_radius` is large enough that the excluded border covers the whole
+    // image, there is no interior to search and no corners can be found. Returning
+    // early also avoids underflow in the loop bounds below and an empty-range panic
+    // in `Uniform::new` (which requires `low < high`).
+    if min_x >= max_x || min_y >= max_y {
+        return vec![];
+    }
 
     let local_threshold = if let Some(t) = threshold {
         t
@@ -210,8 +218,8 @@ pub fn oriented_fast(
     };
 
     // Iterate over every pixel in the image and find potential corners.
-    for y in edge_radius..height - edge_radius {
-        for x in edge_radius..width - edge_radius {
+    for y in min_y..max_y {
+        for x in min_x..max_x {
             if is_corner_fast9(image, local_threshold, x, y) {
                 let score = fast_corner_score(image, local_threshold, x, y, Fast::Nine);
                 corners.push(Corner::new(x, y, score as f32));
@@ -699,6 +707,24 @@ mod tests {
 
         let score = fast_corner_score(&image, 9, 3, 3, Fast::Nine);
         assert_eq!(score, 9);
+    }
+
+    // Regression test: an `edge_radius` larger than the image dimensions must not
+    // cause `width - edge_radius` / `height - edge_radius` to underflow. Before the
+    // fix this panicked with "attempt to subtract with overflow" in debug builds
+    // (and produced a near-infinite loop / `Uniform::new` panic in release builds).
+    #[test]
+    fn test_oriented_fast_edge_radius_exceeds_dimensions() {
+        let image = GrayImage::new(10, 10);
+
+        // edge_radius (20) > both width and height (10). The whole image is within
+        // the excluded border, so no corners can be found and the result is empty.
+        let corners = oriented_fast(&image, Some(0), 1, 20, Some(0));
+        assert!(corners.is_empty());
+
+        // edge_radius exactly equal to a dimension leaves an empty interior too.
+        let corners = oriented_fast(&image, Some(0), 1, 10, Some(0));
+        assert!(corners.is_empty());
     }
 }
 
