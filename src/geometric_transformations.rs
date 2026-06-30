@@ -1055,6 +1055,63 @@ mod tests {
     }
 
     #[test]
+    fn test_rotate180_even_dimensions() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 13);
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            13, 12, 11, 10;
+            03, 02, 01, 00);
+
+        assert_pixels_eq!(rotate180(&image), expected);
+    }
+
+    #[test]
+    fn test_rotate180_odd_dimensions() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            22, 21, 20;
+            12, 11, 10;
+            02, 01, 00);
+
+        assert_pixels_eq!(rotate180(&image), expected);
+    }
+
+    #[test]
+    fn test_rotate180_mut_matches_rotate180() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02, 03, 04);
+        let expected = rotate180(&image);
+        let mut actual = image.clone();
+
+        rotate180_mut(&mut actual);
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_rotate180_empty_image() {
+        let width = 0;
+        let height = 3;
+        let pixels = vec![];
+        let image = Image::<Luma<u8>>::from_vec(width, height, pixels).unwrap();
+        let rotated = rotate180(&image);
+
+        assert_eq!(rotated.dimensions(), image.dimensions());
+        assert!(rotated.is_empty());
+    }
+
+    #[test]
     fn test_translate_positive_x_positive_y() {
         let image = gray_image!(
             00, 01, 02;
