@@ -660,6 +660,81 @@ mod tests {
         let c = 0b10011001;
         assert_eq!(UNIFORM_REPRESENTATIVE_2[c], 0b10101010);
     }
+
+    #[test]
+    fn test_min_shift_returns_smallest_rotation() {
+        let min_byte = u8::MIN;
+        let max_byte = u8::MAX;
+        let rotation_count = 8;
+
+        for byte in min_byte..=max_byte {
+            let expected = (0..rotation_count)
+                .map(|shift| byte.rotate_right(shift))
+                .min()
+                .unwrap();
+
+            assert_eq!(min_shift(byte), expected);
+        }
+    }
+
+    #[test]
+    fn test_min_shift_is_rotation_invariant() {
+        let min_byte = u8::MIN;
+        let max_byte = u8::MAX;
+        let rotation_count = 8;
+
+        for byte in min_byte..=max_byte {
+            let expected = min_shift(byte);
+
+            for shift in 0..rotation_count {
+                assert_eq!(min_shift(byte.rotate_right(shift)), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_count_transitions_is_rotation_invariant() {
+        let min_byte = u8::MIN;
+        let max_byte = u8::MAX;
+        let rotation_count = 8;
+
+        for byte in min_byte..=max_byte {
+            let expected = count_transitions(byte);
+
+            for shift in 0..rotation_count {
+                assert_eq!(count_transitions(byte.rotate_right(shift)), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_count_transitions_is_even() {
+        let min_byte = u8::MIN;
+        let max_byte = u8::MAX;
+        let even_divisor = 2;
+
+        for byte in min_byte..=max_byte {
+            assert_eq!(count_transitions(byte) % even_divisor, 0);
+        }
+    }
+
+    #[test]
+    fn test_uniform_representative_2_matches_helpers() {
+        let min_byte = u8::MIN;
+        let max_byte = u8::MAX;
+        let uniform_transition_limit = 2;
+        let non_uniform_representative = 0b10101010;
+
+        for byte in min_byte..=max_byte {
+            let expected = if count_transitions(byte) <= uniform_transition_limit {
+                min_shift(byte)
+            } else {
+                non_uniform_representative
+            };
+
+            assert_eq!(UNIFORM_REPRESENTATIVE_2[byte as usize], expected);
+        }
+    }
 }
 
 #[cfg(not(miri))]
