@@ -187,6 +187,97 @@ pub fn draw_vertical_seams(image: &GrayImage, seams: &[VerticalSeam]) -> Image<R
     out
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_remove_vertical_seam_left_edge() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 13;
+            20, 21, 22, 23);
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            01, 02, 03;
+            11, 12, 13;
+            21, 22, 23);
+
+        let seam = VerticalSeam(vec![0, 0, 0]);
+
+        assert_pixels_eq!(remove_vertical_seam(&image, &seam), expected);
+    }
+
+    #[test]
+    fn test_remove_vertical_seam_right_edge() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 13;
+            20, 21, 22, 23);
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            00, 01, 02;
+            10, 11, 12;
+            20, 21, 22);
+
+        let seam = VerticalSeam(vec![3, 3, 3]);
+
+        assert_pixels_eq!(remove_vertical_seam(&image, &seam), expected);
+    }
+
+    #[test]
+    fn test_remove_vertical_seam_zig_zag() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01, 02, 03;
+            10, 11, 12, 13;
+            20, 21, 22, 23);
+
+        #[rustfmt::skip]
+        let expected = gray_image!(
+            01, 02, 03;
+            10, 12, 13;
+            20, 21, 23);
+
+        let seam = VerticalSeam(vec![2, 1, 0]);
+
+        assert_pixels_eq!(remove_vertical_seam(&image, &seam), expected);
+    }
+
+    #[test]
+    fn test_remove_vertical_seam_single_column() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00;
+            10;
+            20);
+
+        let seam = VerticalSeam(vec![0, 0, 0]);
+        let carved = remove_vertical_seam(&image, &seam);
+
+        assert_eq!(carved.dimensions(), (0, 3));
+        assert!(carved.is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "seam length does not match image height")]
+    fn test_remove_vertical_seam_rejects_wrong_seam_length() {
+        #[rustfmt::skip]
+        let image = gray_image!(
+            00, 01;
+            10, 11;
+            20, 21);
+
+        let seam = VerticalSeam(vec![0, 0]);
+
+        remove_vertical_seam(&image, &seam);
+    }
+}
+
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
