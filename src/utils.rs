@@ -78,6 +78,17 @@ use std::{fmt, fmt::Write};
 ///     4, 5, 6]).unwrap();
 ///
 /// assert_pixels_eq!(image_i16, expected_i16);
+///
+/// // A trailing semicolon after the final row is also accepted.
+/// let with_trailing = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6;);
+///
+/// let without_trailing = gray_image!(
+///     1, 2, 3;
+///     4, 5, 6);
+///
+/// assert_pixels_eq!(with_trailing, without_trailing);
 /// # }
 /// ```
 #[macro_export]
@@ -96,11 +107,11 @@ macro_rules! gray_image {
         }
     };
     // Non-empty image of default channel type u8
-    ($( $( $x: expr ),*);*) => {
+    ($( $( $x: expr ),+);* $(;)?) => {
         gray_image!(type: u8, $( $( $x ),*);*)
     };
     // Non-empty image of given channel type
-    (type: $channel_type:ty, $( $( $x: expr ),*);*) => {
+    (type: $channel_type:ty, $( $( $x: expr ),+);* $(;)?) => {
         {
             use image::Luma;
             use $crate::definitions::Image;
@@ -201,11 +212,11 @@ macro_rules! rgb_image {
         }
     };
     // Non-empty image of default channel type u8
-    ($( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+    ($( $( [$r: expr, $g: expr, $b: expr]),+);* $(;)?) => {
         rgb_image!(type: u8, $( $( [$r, $g, $b]),*);*)
     };
     // Non-empty image of given channel type
-    (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr]),*);*) => {
+    (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr]),+);* $(;)?) => {
         {
             use image::Rgb;
             use $crate::definitions::Image;
@@ -306,11 +317,11 @@ macro_rules! rgba_image {
         }
     };
     // Non-empty image of default channel type u8
-    ($( $( [$r: expr, $g: expr, $b: expr, $a:expr]),*);*) => {
+    ($( $( [$r: expr, $g: expr, $b: expr, $a:expr]),+);* $(;)?) => {
         rgba_image!(type: u8, $( $( [$r, $g, $b, $a]),*);*)
     };
     // Non-empty image of given channel type
-    (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr, $a: expr]),*);*) => {
+    (type: $channel_type:ty, $( $( [$r: expr, $g: expr, $b: expr, $a: expr]),+);* $(;)?) => {
         {
             use image::Rgba;
             use $crate::definitions::Image;
@@ -759,5 +770,46 @@ mod tests {
     fn test_pixel_diff_summary_handles_1x1_image() {
         let summary = pixel_diff_summary(&gray_image!(1), &gray_image!(0));
         assert_eq!(&summary.unwrap()[0..19], "pixels do not match");
+    }
+
+    #[test]
+    fn gray_image_allows_trailing_semicolon() {
+        let with_trailing = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.;
+            7., 8., 9.;);
+
+        let without_trailing = gray_image!(type: f32,
+            1., 2., 3.;
+            4., 5., 6.;
+            7., 8., 9.);
+
+        assert_pixels_eq!(with_trailing, without_trailing);
+    }
+
+    #[test]
+    fn rgb_image_allows_trailing_semicolon() {
+        let with_trailing = rgb_image!(
+            [1, 2, 3], [ 4,  5,  6];
+            [7, 8, 9], [10, 11, 12];);
+
+        let without_trailing = rgb_image!(
+            [1, 2, 3], [ 4,  5,  6];
+            [7, 8, 9], [10, 11, 12]);
+
+        assert_pixels_eq!(with_trailing, without_trailing);
+    }
+
+    #[test]
+    fn rgba_image_allows_trailing_semicolon() {
+        let with_trailing = rgba_image!(
+            [1, 2, 3, 10], [ 4,  5,  6, 20];
+            [7, 8, 9, 30], [10, 11, 12, 40];);
+
+        let without_trailing = rgba_image!(
+            [1, 2, 3, 10], [ 4,  5,  6, 20];
+            [7, 8, 9, 30], [10, 11, 12, 40]);
+
+        assert_pixels_eq!(with_trailing, without_trailing);
     }
 }
