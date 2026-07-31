@@ -545,6 +545,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri's emulated sqrt is imprecise")]
     fn test_gradients_grayscale_with_sobel_kernels() {
         let image = gray_image!(
             3, 2, 1;
@@ -567,6 +568,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri's emulated sqrt is imprecise")]
     fn test_prewitt_gradients() {
         let image = gray_image!(
             3, 2, 1;
@@ -583,6 +585,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri's emulated sqrt is imprecise")]
     fn test_sobel_gradient_map_applies_mapping_function() {
         let image = gray_image!(
             3, 2, 1;
