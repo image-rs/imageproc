@@ -375,7 +375,7 @@ mod tests {
             -4, -8, -4;
             -4, -8, -4);
 
-        let filtered = filter_clamped(&image, kernel::SOBEL_HORIZONTAL_3X3);
+        let filtered = horizontal_sobel(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -408,7 +408,7 @@ mod tests {
             -8, -8, -8;
             -4, -4, -4);
 
-        let filtered = filter_clamped(&image, kernel::SOBEL_VERTICAL_3X3);
+        let filtered = vertical_sobel(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -441,7 +441,7 @@ mod tests {
             -16, -32, -16;
             -16, -32, -16);
 
-        let filtered = filter_clamped(&image, kernel::SCHARR_HORIZONTAL_3X3);
+        let filtered = horizontal_scharr(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -474,7 +474,7 @@ mod tests {
             -32, -32, -32;
             -16, -16, -16);
 
-        let filtered = filter_clamped(&image, kernel::SCHARR_VERTICAL_3X3);
+        let filtered = vertical_scharr(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -507,7 +507,7 @@ mod tests {
             -3, -6, -3;
             -3, -6, -3);
 
-        let filtered = filter_clamped(&image, kernel::PREWITT_HORIZONTAL_3X3);
+        let filtered = horizontal_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
     }
 
@@ -529,7 +529,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "rayon")]
     fn test_vertical_prewitt_gradient_image() {
         let image = gray_image!(
             3, 6, 9;
@@ -541,8 +540,64 @@ mod tests {
             -6, -6, -6;
             -3, -3, -3);
 
-        let filtered = filter_clamped(&image, kernel::PREWITT_VERTICAL_3X3);
+        let filtered = vertical_prewitt(&image);
         assert_pixels_eq!(filtered, expected);
+    }
+
+    #[test]
+    fn test_gradients_grayscale_with_sobel_kernels() {
+        let image = gray_image!(
+            3, 2, 1;
+            3, 2, 1;
+            3, 2, 1
+        );
+        let expected = gray_image!(type: u16,
+            4, 8, 4;
+            4, 8, 4;
+            4, 8, 4
+        );
+
+        let actual = gradients_grayscale(
+            &image,
+            kernel::SOBEL_HORIZONTAL_3X3,
+            kernel::SOBEL_VERTICAL_3X3,
+        );
+
+        assert_pixels_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_prewitt_gradients() {
+        let image = gray_image!(
+            3, 2, 1;
+            3, 2, 1;
+            3, 2, 1
+        );
+        let expected = gray_image!(type: u16,
+            3, 6, 3;
+            3, 6, 3;
+            3, 6, 3
+        );
+
+        assert_pixels_eq!(prewitt_gradients(&image), expected);
+    }
+
+    #[test]
+    fn test_sobel_gradient_map_applies_mapping_function() {
+        let image = gray_image!(
+            3, 2, 1;
+            3, 2, 1;
+            3, 2, 1
+        );
+        let expected = gray_image!(type: u16,
+            5, 9, 5;
+            5, 9, 5;
+            5, 9, 5
+        );
+
+        let actual = sobel_gradient_map(&image, |pixel| Luma([pixel[0] + 1]));
+
+        assert_pixels_eq!(actual, expected);
     }
 
     #[test]
