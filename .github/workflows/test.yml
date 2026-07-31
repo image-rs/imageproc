@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - uses: ./.github/actions/install-sdl2
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -63,6 +64,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - uses: ./.github/actions/install-sdl2
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -93,11 +95,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Setup cmake
-        if: matrix.os == 'macos-15'
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.6.0'
+      - uses: ./.github/actions/install-sdl2
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:

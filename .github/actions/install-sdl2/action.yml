@@ -1,0 +1,27 @@
+name: Install SDL2
+description: Install the system SDL2 library used by the display-window feature
+
+runs:
+  using: composite
+  steps:
+    - name: Install SDL2 on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes libsdl2-dev
+
+    - name: Install SDL2 on macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install sdl2
+        echo "LIBRARY_PATH=$(brew --prefix sdl2)/lib${LIBRARY_PATH:+:$LIBRARY_PATH}" >> "$GITHUB_ENV"
+
+    - name: Install SDL2 on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        vcpkg install sdl2:x64-windows
+        "LIB=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Append
+        "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Append

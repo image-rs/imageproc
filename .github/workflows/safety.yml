@@ -24,11 +24,8 @@ jobs:
       - name: Install nightly
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-10-21        
-      - run: |
-            sudo apt update
-            sudo apt install libsdl2-2.0-0 -y
-        name: Install sdl2
+          toolchain: nightly-2025-10-21
+      - uses: ./.github/actions/install-sdl2
       - run: |
             # to get the symbolizer for debug symbol resolution
             sudo apt install llvm

@@ -53,9 +53,20 @@ always be faster - we recommend benchmarking for your specific use-case.
 ### Optional Features
 
 - `display-window`: enables the displaying of images (using `imageproc::window`) with
-  [sdl2](https://github.com/Rust-SDL2/rust-sdl2)
+  [sdl2](https://github.com/Rust-SDL2/rust-sdl2). SDL2 must be installed on the system before
+  building with this feature. For example:
+
+  ```shell
+  # Ubuntu/Debian
+  sudo apt install libsdl2-dev
+
+  # macOS
+  brew install sdl2
+  ```
+
+  On Windows, install SDL2 and ensure its library directory is available to the linker and its DLL
+  directory is included in `PATH`.
 
 ## How to contribute
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
-

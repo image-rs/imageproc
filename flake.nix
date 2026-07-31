@@ -52,6 +52,7 @@
               ]
               ++ (with pkgs; [
                 git
+                SDL2
               ]);
           };
         };
