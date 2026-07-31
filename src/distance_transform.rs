@@ -460,6 +460,48 @@ mod tests {
         assert_pixels_eq!(distances, expected);
     }
 
+    #[test]
+    fn test_distance_transform_mut_for_each_norm() {
+        let input = gray_image!(
+            0, 0, 0;
+            0, 7, 0;
+            0, 0, 0
+        );
+
+        let cases = [
+            (
+                Norm::L1,
+                gray_image!(
+                    2, 1, 2;
+                    1, 0, 1;
+                    2, 1, 2
+                ),
+            ),
+            (
+                Norm::L2,
+                gray_image!(
+                    2, 1, 2;
+                    1, 0, 1;
+                    2, 1, 2
+                ),
+            ),
+            (
+                Norm::LInf,
+                gray_image!(
+                    1, 1, 1;
+                    1, 0, 1;
+                    1, 1, 1
+                ),
+            ),
+        ];
+
+        for (norm, expected) in cases {
+            let mut actual = input.clone();
+            distance_transform_mut(&mut actual, norm);
+            assert_pixels_eq!(actual, expected);
+        }
+    }
+
     // Simple implementation of 1d distance transform which performs an
     // exhaustive search. Used to valid the more complicated lower-envelope
     // implementation against.
