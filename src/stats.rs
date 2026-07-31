@@ -319,6 +319,24 @@ mod tests {
     }
 
     #[test]
+    fn test_percentile_boundaries_and_repeated_values() {
+        let image = gray_image!(1u8, 1u8, 2u8, 4u8);
+
+        assert_eq!(percentile(&image, 0), 0);
+        assert_eq!(percentile(&image, 25), 1);
+        assert_eq!(percentile(&image, 50), 1);
+        assert_eq!(percentile(&image, 51), 2);
+        assert_eq!(percentile(&image, 100), 4);
+    }
+
+    #[test]
+    #[should_panic(expected = "requested percentile must be <= 100")]
+    fn test_percentile_rejects_values_above_one_hundred() {
+        let image = gray_image!(1u8, 2u8, 3u8);
+        let _ = percentile(&image, 101);
+    }
+
+    #[test]
     fn test_root_mean_squared_error_grayscale() {
         let left = gray_image!(
             1, 2, 3;
@@ -340,6 +358,35 @@ mod tests {
         let rms = root_mean_squared_error(&left, &right);
         let expected = (114f64 / 6f64).sqrt();
         assert_eq!(rms, expected);
+    }
+
+    #[test]
+    fn test_peak_signal_to_noise_ratio_for_known_error() {
+        let original = gray_image!(0u8, 10u8, 20u8, 30u8);
+        let noisy = gray_image!(1u8, 11u8, 21u8, 31u8);
+
+        let psnr = peak_signal_to_noise_ratio(&original, &noisy);
+        let expected = 20f64 * 255f64.log10();
+
+        assert_approx_eq!(psnr, expected, 1e-12);
+    }
+
+    #[test]
+    fn test_peak_signal_to_noise_ratio_of_identical_images_is_infinite() {
+        let image = rgb_image!([1u8, 2u8, 3u8], [4u8, 5u8, 6u8]);
+
+        let psnr = peak_signal_to_noise_ratio(&image, &image);
+
+        assert!(psnr.is_infinite());
+        assert!(psnr.is_sign_positive());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_peak_signal_to_noise_ratio_rejects_mismatched_dimensions() {
+        let original = gray_image!(1u8, 2u8);
+        let noisy = gray_image!(1u8; 2u8);
+        let _ = peak_signal_to_noise_ratio(&original, &noisy);
     }
 
     #[test]
