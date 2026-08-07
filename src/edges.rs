@@ -114,12 +114,14 @@ fn non_maximum_suppression(
 fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Image<Luma<u8>> {
     let max_brightness = Luma::white();
     let min_brightness = Luma::black();
+    let width = input.width();
+    let height = input.height();
     // Init output image as all black.
-    let mut out = Image::from_pixel(input.width(), input.height(), min_brightness);
+    let mut out = Image::from_pixel(width, height, min_brightness);
     // Stack. Possible optimization: Use previously allocated memory, i.e. gx.
-    let mut edges = Vec::with_capacity(((input.width() * input.height()) / 2) as usize);
-    for y in 1..input.height() - 1 {
-        for x in 1..input.width() - 1 {
+    let mut edges = Vec::with_capacity(((width * height) / 2) as usize);
+    for y in 1..height.saturating_sub(1) {
+        for x in 1..width.saturating_sub(1) {
             let inp_pix = *input.get_pixel(x, y);
             let out_pix = *out.get_pixel(x, y);
             // If the edge strength is higher than high_thresh, mark it as an edge.
@@ -128,21 +130,29 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
                 edges.push((x, y));
                 // Track neighbors until no neighbor is >= low_thresh.
                 while let Some((nx, ny)) = edges.pop() {
+                    // Neighbors of (nx, ny). Checked arithmetic avoids underflow when
+                    // low_thresh is 0 and the search reaches the image border.
                     let neighbor_indices = [
-                        (nx + 1, ny),
-                        (nx + 1, ny + 1),
-                        (nx, ny + 1),
-                        (nx - 1, ny - 1),
-                        (nx - 1, ny),
-                        (nx - 1, ny + 1),
+                        (nx.checked_add(1), Some(ny)),
+                        (nx.checked_add(1), ny.checked_add(1)),
+                        (Some(nx), ny.checked_add(1)),
+                        (nx.checked_sub(1), ny.checked_sub(1)),
+                        (nx.checked_sub(1), Some(ny)),
+                        (nx.checked_sub(1), ny.checked_add(1)),
                     ];
 
-                    for neighbor_idx in &neighbor_indices {
-                        let in_neighbor = *input.get_pixel(neighbor_idx.0, neighbor_idx.1);
-                        let out_neighbor = *out.get_pixel(neighbor_idx.0, neighbor_idx.1);
+                    for &(ox, oy) in &neighbor_indices {
+                        let (Some(x), Some(y)) = (ox, oy) else {
+                            continue;
+                        };
+                        if x >= width || y >= height {
+                            continue;
+                        }
+                        let in_neighbor = *input.get_pixel(x, y);
+                        let out_neighbor = *out.get_pixel(x, y);
                         if in_neighbor[0] >= low_thresh && out_neighbor[0] == 0 {
-                            out.put_pixel(neighbor_idx.0, neighbor_idx.1, max_brightness);
-                            edges.push((neighbor_idx.0, neighbor_idx.1));
+                            out.put_pixel(x, y, max_brightness);
+                            edges.push((x, y));
                         }
                     }
                 }
@@ -150,6 +160,45 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::canny;
+    use crate::definitions::HasWhite;
+    use crate::drawing::draw_filled_rect_mut;
+    use crate::rect::Rect;
+    use image::{GrayImage, Luma};
+
+    /// Regression test for https://github.com/image-rs/imageproc/issues/705
+    ///
+    /// With both thresholds at 0.0 every non-suppressed gradient is treated as a strong
+    /// edge and hysteresis walks to the image border. Neighbor coordinates used to be
+    /// computed with wrapping `u32` subtraction, which panicked on overflow.
+    #[test]
+    fn canny_zero_thresholds_does_not_panic() {
+        let image = GrayImage::new(10, 10);
+        let edges = canny(&image, 0.0, 0.0);
+        assert_eq!(edges.dimensions(), (10, 10));
+    }
+
+    #[test]
+    fn canny_zero_thresholds_on_non_uniform_image() {
+        let mut image = GrayImage::new(32, 32);
+        draw_filled_rect_mut(&mut image, Rect::at(8, 8).of_size(16, 16), Luma::white());
+        let edges = canny(&image, 0.0, 0.0);
+        assert_eq!(edges.dimensions(), (32, 32));
+        // A non-uniform image should produce at least one edge pixel.
+        assert!(edges.iter().any(|&p| p > 0));
+    }
+
+    #[test]
+    fn canny_low_threshold_zero_does_not_panic() {
+        let mut image = GrayImage::new(32, 32);
+        draw_filled_rect_mut(&mut image, Rect::at(8, 8).of_size(16, 16), Luma::white());
+        let edges = canny(&image, 0.0, 50.0);
+        assert_eq!(edges.dimensions(), (32, 32));
+    }
 }
 
 #[cfg(not(miri))]
