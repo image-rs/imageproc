@@ -426,37 +426,33 @@ pub fn match_histogram_mut(image: &mut GrayImage, target: &GrayImage) {
     }
 }
 
-/// `l = histogram_lut(s, t)` is chosen so that `target_histc[l[i]] / sum(target_histc)`
-/// is as close as possible to `source_histc[i] / sum(source_histc)`.
+/// Builds a lookup table for histogram matching via the discrete inverse CDF.
+///
+/// For each source gray level `i`, `lut[i]` is the smallest target gray level `y` such that
+/// `target_histc[y] / target_histc[255] >= source_histc[i] / source_histc[255]`.
+///
+/// Using the inverse CDF (rather than nearest CDF value) avoids mapping into empty bins
+/// immediately before jumps in the target cumulative histogram.
 fn histogram_lut(source_histc: &[u32; 256], target_histc: &[u32; 256]) -> [usize; 256] {
-    let source_total = source_histc[255] as f32;
-    let target_total = target_histc[255] as f32;
+    let source_total = source_histc[255] as u64;
+    let target_total = target_histc[255] as u64;
 
     let mut lut = [0usize; 256];
+
+    if source_total == 0 || target_total == 0 {
+        return lut;
+    }
+
     let mut y = 0usize;
-    let mut prev_target_fraction = 0f32;
 
     for s in 0..256 {
-        let source_fraction = source_histc[s] as f32 / source_total;
-        let mut target_fraction = target_histc[y] as f32 / target_total;
-
-        while source_fraction > target_fraction && y < 255 {
+        let source_cum = source_histc[s] as u64;
+        // Find the smallest y with target_cdf[y] >= source_cdf[s], compared in integer arithmetic:
+        // target_histc[y] * source_total >= source_cum * target_total
+        while y < 255 && (target_histc[y] as u64) * source_total < source_cum * target_total {
             y += 1;
-            prev_target_fraction = target_fraction;
-            target_fraction = target_histc[y] as f32 / target_total;
         }
-
-        if y == 0 {
-            lut[s] = y;
-        } else {
-            let prev_dist = f32::abs(prev_target_fraction - source_fraction);
-            let dist = f32::abs(target_fraction - source_fraction);
-            if prev_dist < dist {
-                lut[s] = y - 1;
-            } else {
-                lut[s] = y;
-            }
-        }
+        lut[s] = y;
     }
 
     lut
@@ -570,23 +566,30 @@ mod tests {
         let lut = histogram_lut(&grad_histc, &step_histc);
         let mut expected = [0usize; 256];
 
-        // No black pixels in either image
+        // Inverse CDF: map onto the target levels where the CDF jumps (30 and 130),
+        // not the empty bins immediately before those jumps.
         expected[0] = 0;
 
-        for i in 1..64 {
-            expected[i] = 29;
-        }
-        for i in 64..128 {
+        for i in 1..128 {
             expected[i] = 30;
         }
-        for i in 128..192 {
-            expected[i] = 129;
-        }
-        for i in 192..256 {
+        for i in 128..256 {
             expected[i] = 130;
         }
 
         assert_eq!(&lut[0..256], &expected[0..256]);
+    }
+
+    #[test]
+    fn test_match_histogram_mut_maps_to_target_levels() {
+        // Regression test for https://github.com/image-rs/imageproc/issues/783
+        let mut input_image = gray_image!(type: u8, 0, 1, 2, 3, 4, 5, 6, 7);
+        let target_image = gray_image!(type: u8, 30, 130, 30, 130);
+
+        match_histogram_mut(&mut input_image, &target_image);
+
+        let expected = gray_image!(type: u8, 30, 30, 30, 30, 130, 130, 130, 130);
+        assert_pixels_eq!(input_image, expected);
     }
 
     fn constant_image(width: u32, height: u32, intensity: u8) -> GrayImage {
