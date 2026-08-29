@@ -1002,6 +1002,62 @@ mod tests {
     use image::Luma;
 
     #[test]
+    fn projection_and_then_applies_projections_in_order() {
+        let translation = Projection::translate(2.0, 3.0);
+        let scaling = Projection::scale(2.0, 4.0);
+        let point = (1.0, 2.0);
+        let expected = (6.0, 20.0);
+
+        let projection = translation.and_then(scaling);
+
+        assert_eq!(projection * point, expected);
+    }
+
+    #[test]
+    fn warp_into_writes_transformed_pixels_to_output() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
+        let border_value = 99;
+        let expected = gray_image!(
+            99, 00, 01;
+            99, 10, 11);
+        let projection = Projection::translate(1.0, 0.0);
+        let mut output = image.clone();
+
+        warp_into(
+            &image,
+            projection,
+            Interpolation::Nearest,
+            Border::Constant(Luma([border_value])),
+            &mut output,
+        );
+
+        assert_pixels_eq!(output, expected);
+    }
+
+    #[test]
+    fn warp_with_uses_mapping_to_find_source_pixels() {
+        let image = gray_image!(
+            00, 01, 02;
+            10, 11, 12);
+        let border_value = 99;
+        let expected = gray_image!(
+            01, 02, 99;
+            11, 12, 99);
+        let horizontal_offset = 1.0;
+
+        let warped = warp_with(
+            &image,
+            |x, y| (x + horizontal_offset, y),
+            Interpolation::Nearest,
+            Border::Constant(Luma([border_value])),
+        );
+
+        assert_pixels_eq!(warped, expected);
+    }
+
+    #[test]
     fn test_rotate_nearest_zero_radians() {
         let image = gray_image!(
             00, 01, 02;
