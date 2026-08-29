@@ -60,6 +60,53 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{GrayImage, Luma};
+
+    #[test]
+    fn gaussian_noise_is_reproducible() {
+        let width = 16;
+        let height = 16;
+        let intensity = 128;
+        let mean = 10.0;
+        let stddev = 5.0;
+        let seed = 42;
+        let image = GrayImage::from_pixel(width, height, Luma([intensity]));
+        let original = image.clone();
+
+        let first = gaussian_noise(&image, mean, stddev, seed);
+        let second = gaussian_noise(&image, mean, stddev, seed);
+
+        assert_eq!(first, second);
+        assert_ne!(first, image);
+        assert_eq!(image, original);
+    }
+
+    #[test]
+    fn salt_and_pepper_noise_respects_boundary_rates() {
+        let width = 16;
+        let height = 16;
+        let intensity = 128;
+        let seed = 42;
+        let image = GrayImage::from_pixel(width, height, Luma([intensity]));
+        let original = image.clone();
+        let unchanged_rate = 0.0;
+        let replace_all_rate = 1.0;
+
+        let unchanged = salt_and_pepper_noise(&image, unchanged_rate, seed);
+        let replaced = salt_and_pepper_noise(&image, replace_all_rate, seed);
+
+        assert_eq!(unchanged, image);
+        assert!(replaced.pixels().all(|pixel| {
+            let value = pixel[0];
+            value == u8::MIN || value == u8::MAX
+        }));
+        assert_eq!(image, original);
+    }
+}
+
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
