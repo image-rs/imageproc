@@ -17,6 +17,14 @@ Testing this crate requires the `nightly` toolchain due to using the unstable
 cargo +nightly test
 ```
 
+To generate a local HTML coverage report, run:
+
+```sh
+nix develop --command cargo tarpaulin --engine llvm --all-features --out Html
+```
+
+Open `tarpaulin-report.html` in a browser to inspect the report.
+
 ## Reporting issues
 
 Before reporting an issue on the [issue

@@ -51,6 +51,7 @@
                 rustNightly
               ]
               ++ (with pkgs; [
+                cargo-tarpaulin
                 git
                 SDL2
               ]);

@@ -4,6 +4,7 @@
 [![doc-badge]][doc-link]
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/image-rs/imageproc/blob/main/LICENSE)
 [![Dependency status](https://deps.rs/repo/github/image-rs/imageproc/status.svg)](https://deps.rs/repo/github/image-rs/imageproc)
+[![Coverage Status](https://coveralls.io/repos/github/image-rs/imageproc/badge.svg?branch=main)](https://coveralls.io/github/image-rs/imageproc?branch=main)
 
 An image processing library, based on the
 [`image`](https://github.com/image-rs/image) library.
