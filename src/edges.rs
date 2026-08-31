@@ -60,8 +60,8 @@ fn non_maximum_suppression(
 ) -> Image<Luma<f32>> {
     const RADIANS_TO_DEGREES: f32 = 180f32 / f32::consts::PI;
     let mut out = Image::from_pixel(g.width(), g.height(), Luma([0.0]));
-    for y in 1..g.height() - 1 {
-        for x in 1..g.width() - 1 {
+    for y in 1..g.height().saturating_sub(1) {
+        for x in 1..g.width().saturating_sub(1) {
             let x_gradient = gx[(x, y)][0] as f32;
             let y_gradient = gy[(x, y)][0] as f32;
             let mut angle = (y_gradient).atan2(x_gradient) * RADIANS_TO_DEGREES;
@@ -118,8 +118,8 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
     let mut out = Image::from_pixel(input.width(), input.height(), min_brightness);
     // Stack. Possible optimization: Use previously allocated memory, i.e. gx.
     let mut edges = Vec::with_capacity(((input.width() * input.height()) / 2) as usize);
-    for y in 1..input.height() - 1 {
-        for x in 1..input.width() - 1 {
+    for y in 1..input.height().saturating_sub(1){
+        for x in 1..input.width().saturating_sub(1){
             let inp_pix = *input.get_pixel(x, y);
             let out_pix = *out.get_pixel(x, y);
             // If the edge strength is higher than high_thresh, mark it as an edge.
@@ -129,9 +129,11 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
                 // Track neighbors until no neighbor is >= low_thresh.
                 while let Some((nx, ny)) = edges.pop() {
                     let neighbor_indices = [
+                        (nx + 1, ny - 1),
                         (nx + 1, ny),
                         (nx + 1, ny + 1),
                         (nx, ny + 1),
+                        (nx, ny - 1),
                         (nx - 1, ny - 1),
                         (nx - 1, ny),
                         (nx - 1, ny + 1),
@@ -142,6 +144,13 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
                         let out_neighbor = *out.get_pixel(neighbor_idx.0, neighbor_idx.1);
                         if in_neighbor[0] >= low_thresh && out_neighbor[0] == 0 {
                             out.put_pixel(neighbor_idx.0, neighbor_idx.1, max_brightness);
+                            if neighbor_idx.0 == 0
+                                || neighbor_idx.0 >= input.width() - 1
+                                || neighbor_idx.1 == 0
+                                || neighbor_idx.1 >= input.height() - 1
+                            {
+                                continue;
+                            }
                             edges.push((neighbor_idx.0, neighbor_idx.1));
                         }
                     }
@@ -152,6 +161,32 @@ fn hysteresis(input: &Image<Luma<f32>>, low_thresh: f32, high_thresh: f32) -> Im
     out
 }
 
+#[cfg(not(miri))]
+#[cfg(test)]
+mod proptests {
+    use super::canny;
+    use crate::proptest_utils::arbitrary_image;
+    use image::Luma;
+    use proptest::prelude::{prop, *};
+
+    proptest! {
+        #[test]
+        fn proptest_hysteresis_thresholds(
+            img in arbitrary_image::<Luma<u8>>(0..100, 0..100),
+            low in 0f32..1000f32,
+            high in 0f32..1000f32,
+        ) {
+            let (low_thresh, high_thresh) = if low <= high {
+                (low, high)
+            } else {
+                (high, low)
+            };
+            let out = canny(&img, low_thresh, high_thresh);
+            assert_eq!(out.dimensions(), img.dimensions());
+        }
+    
+    }
+}
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
