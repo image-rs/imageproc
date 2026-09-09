@@ -23,13 +23,13 @@ fn layout_glyphs(
 
     for c in text.chars() {
         let glyph_id = font.glyph_id(c);
+        if let Some(prev) = prev {
+            w += font.kern(prev, glyph_id);
+        }
         let glyph = glyph_id.with_scale_and_position(scale, point(w, font.ascent()));
         w += font.h_advance(glyph_id);
+        prev = Some(glyph_id);
         if let Some(g) = font.outline_glyph(glyph) {
-            if let Some(prev) = prev {
-                w += font.kern(glyph_id, prev);
-            }
-            prev = Some(glyph_id);
             let bb = g.px_bounds();
             f(g, bb);
         }
@@ -113,6 +113,47 @@ pub fn draw_text_mut<C>(
             }
         })
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ab_glyph::FontRef;
+
+    const FONT_BYTES: &[u8] = include_bytes!("../../tests/data/fonts/DejaVuSans.ttf");
+
+    fn glyph_xs(font: &FontRef, scale: f32, text: &str) -> Vec<f32> {
+        let mut xs = Vec::new();
+        layout_glyphs(scale, font, text, |g, _| {
+            xs.push(g.glyph().position.x);
+        });
+        xs
+    }
+
+    #[test]
+    fn layout_glyphs_kerns_before_positioning() {
+        let font = FontRef::try_from_slice(FONT_BYTES).unwrap();
+        let scale = 60.0f32;
+        let scaled = font.as_scaled(scale);
+        let a = scaled.glyph_id('A');
+        let v = scaled.glyph_id('V');
+        let space = scaled.glyph_id(' ');
+
+        let av = glyph_xs(&font, scale, "AV");
+        assert_eq!(av.len(), 2);
+        assert_eq!(av[0], 0.0);
+        assert_approx_eq!(av[1], scaled.h_advance(a) + scaled.kern(a, v), 1e-3);
+
+        // Spaces have no outline, but must still update prev so V is not kerned against A.
+        let a_space_v = glyph_xs(&font, scale, "A V");
+        assert_eq!(a_space_v.len(), 2);
+        let expected_v = scaled.h_advance(a)
+            + scaled.kern(a, space)
+            + scaled.h_advance(space)
+            + scaled.kern(space, v);
+        assert_approx_eq!(a_space_v[1], expected_v, 1e-3);
+        assert!((a_space_v[1] - av[1]).abs() > 1.0);
+    }
 }
 
 #[cfg(not(miri))]
