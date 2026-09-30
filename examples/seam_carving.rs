@@ -1,23 +1,36 @@
-use image::{GrayImage, Luma, Pixel, open};
-use imageproc::definitions::Clamp;
-use imageproc::gradients::gradients;
-use imageproc::kernel;
-use imageproc::map::map_pixels;
-use imageproc::seam_carving::*;
+//! Example usages of the seam carving functionality
+
+use imageproc::{
+    geometric_transformations::{rotate90, rotate270},
+    seam_carving::*,
+};
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::process::exit;
 
 fn main() {
-    if env::args().len() != 3 {
-        panic!(
-            "Please enter an input file and a target directory. For example:
-    cargo run --release --example seam_carving PATH_TO_IMAGE temp"
-        );
+    if env::args().len() < 3 {
+        println!("Usage: cargo run --release --example seam_carving <path_to_image> <output_dir> [num_seams_to_remove] [only_shrink]
+Example:
+cargo run --release --example seam_carving tests/data/elephant.png ./output 25
+
+<path_to_image> The path to the source image.
+<output_dir> The directory in which the resulting images will be output.
+[num_seams_to_remove] Optional: the number of seams to remove from the given image. Defaults to 50
+[only_shrink] Optional: specifies if the example should only run the shrink operation or the full suite of example functions with annotated images in the output.");
+        exit(1);
     }
 
-    let input_path = env::args().nth(1).unwrap();
-    let output_dir = env::args().nth(2).unwrap();
+    let mut args = env::args().skip(1);
+
+    let input_path = args.next().expect("path argument should exist");
+    let output_dir = args.next().expect("output argument should exist");
+    let seams_to_remove = args
+        .next()
+        .map_or(Ok(50usize), |n| n.parse())
+        .expect("must be a valid number");
+    let only_shrink = args.next().is_some_and(|s| s == "true");
 
     let input_path = Path::new(&input_path);
     let output_dir = Path::new(&output_dir);
@@ -30,53 +43,48 @@ fn main() {
         panic!("Input file does not exist");
     }
 
-    // Load image and convert to grayscale
-    let input_image = open(input_path)
+    let input = image::open(input_path)
         .unwrap_or_else(|_| panic!("Could not load image at {:?}", input_path))
-        .to_rgb8();
+        .into_rgba8();
 
-    // Save original image in output directory
-    let original_path = output_dir.join("original.png");
-    input_image.save(&original_path).unwrap();
+    // If all you need to do is shrink, without caring about the seams themselves, use shrink_width directly.
+    if only_shrink {
+        let target_width = input.width() - (seams_to_remove as u32);
+        let shrunk = shrink_width(&input, target_width);
 
-    // We will reduce the image width by this amount, removing one seam at a time.
-    let seams_to_remove = 300;
+        shrunk.save(&output_dir.join("shrunk.png")).unwrap();
+    } else {
+        let vertical_seams = find_vertical_seams(&input);
 
-    let mut shrunk = input_image.clone();
-    let mut seams = Vec::new();
+        let shrunk = remove_vertical_seams(&input, &vertical_seams, seams_to_remove);
 
-    // Record each removed seam so that we can draw them on the original image later.
-    for i in 0..seams_to_remove {
-        println!("Removing seam {}", i);
-        let vertical_seam = find_vertical_seam(&shrunk);
-        shrunk = remove_vertical_seam(&shrunk, &vertical_seam);
-        seams.push(vertical_seam);
+        let lowest_energy = vertical_seams
+            .seam_energies()
+            .iter()
+            .min()
+            .expect("the image must contain at least one seam");
+
+        println!("Lowest seam energy: {lowest_energy}");
+
+        // Draw annotated original showing all lowest-energy seams
+        let annotated_by_energy =
+            draw_vertical_seams_by_energy(&input, &vertical_seams, seams_to_remove);
+
+        annotated_by_energy
+            .save(&output_dir.join("annotated_seams_by_energy.png"))
+            .unwrap();
+
+        // Save the image we shrunk the width of before
+        shrunk.save(&output_dir.join("shrunk.png")).unwrap();
+
+        // Shrink both dimensions and save
+        let shrunk_once = shrink_width(&input, input.width() - seams_to_remove as u32);
+        let rotated = rotate90(&shrunk_once);
+        let carved_height = shrink_width(&rotated, input.height() - seams_to_remove as u32);
+        let shrunk_both = rotate270(&carved_height);
+
+        shrunk_both
+            .save(&output_dir.join("shrunk_both.png"))
+            .unwrap();
     }
-
-    // Draw the seams on the original image.
-    let gray_image = map_pixels(&input_image, |p| p.to_luma());
-    let annotated = draw_vertical_seams(&gray_image, &seams);
-    let annotated_path = output_dir.join("annotated.png");
-    annotated.save(&annotated_path).unwrap();
-
-    // Draw the seams on the gradient magnitude image.
-    let gradients = gradients(
-        &input_image,
-        kernel::SOBEL_HORIZONTAL_3X3,
-        kernel::SOBEL_VERTICAL_3X3,
-        |p| {
-            let mean = (p[0] + p[1] + p[2]) / 3;
-            Luma([mean as u32])
-        },
-    );
-    let clamped_gradients: GrayImage = map_pixels(&gradients, |p| Luma([Clamp::clamp(p[0])]));
-    let annotated_gradients = draw_vertical_seams(&clamped_gradients, &seams);
-    let gradients_path = output_dir.join("gradients.png");
-    clamped_gradients.save(&gradients_path).unwrap();
-    let annotated_gradients_path = output_dir.join("annotated_gradients.png");
-    annotated_gradients.save(&annotated_gradients_path).unwrap();
-
-    // Save the shrunk image.
-    let shrunk_path = output_dir.join("shrunk.png");
-    shrunk.save(&shrunk_path).unwrap();
 }
