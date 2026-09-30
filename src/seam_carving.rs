@@ -665,10 +665,10 @@ where
             .zip(should_stay[1..].iter_mut());
 
         for ((current_a, current_m_next), stay) in row_data {
-            let stay_dp = dp_im1 + D::from(current_a * current_m_next);
+            let stay_dp = dp_im1 + D::from(current_a) * D::from(current_m_next);
             let swap_dp = dp_im2
-                + D::from(current_a * previous_m_next)
-                + D::from(previous_a * current_m_next);
+                + D::from(current_a) * D::from(previous_m_next)
+                + D::from(previous_a) * D::from(current_m_next);
 
             dp_im2 = dp_im1;
 
@@ -1075,6 +1075,15 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
+    fn energy_empty_images_preserve_dimensions() {
+        for (width, height) in [(0, 0), (0, 3), (3, 0)] {
+            let energy = compute_energy(&GrayImage::new(width, height));
+            assert_eq!(energy.dimensions(), (width, height));
+            assert!(energy.is_empty());
+        }
+    }
+
+    #[test]
     fn energy_uniform_image_is_zero() {
         // A completely uniform image has no gradient anywhere.
         let width = 4u32;
@@ -1182,6 +1191,78 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
+    fn cumulative_energy_u32_height_limit() {
+        assert!(m_fits_u32(0));
+        // Maximum per-pixel energy is 510. These heights straddle u32::MAX.
+        assert!(m_fits_u32(8_421_504));
+        assert!(!m_fits_u32(8_421_505));
+        assert!(!m_fits_u32(20_000_000));
+    }
+
+    #[test]
+    fn dp_energy_u64_dimension_limit() {
+        assert!(dp_fits_u64(2, 0));
+        assert!(dp_fits_u64(2, 1));
+        // For two columns the worst-case DP cost exceeds u64 at this height.
+        assert!(dp_fits_u64(2, 11_909_805));
+        assert!(!dp_fits_u64(2, 11_909_806));
+        assert!(!dp_fits_u64(2, 20_000_000));
+    }
+
+    #[test]
+    fn cumulative_energy_with_u64_costs() {
+        let energy = gray_image!(type: u16,
+            1, 100, 10;
+            100, 1, 10
+        );
+        let expected = gray_image!(type: u64,
+            2, 101, 11;
+            100, 1, 10
+        );
+
+        assert_pixels_eq!(
+            compute_bottom_up_min_cumulative_energy::<u64>(&energy),
+            expected
+        );
+    }
+
+    #[test]
+    fn vertical_seams_with_wider_cost_types() {
+        let energy = gray_image!(type: u16,
+            1, 100, 10;
+            100, 1, 10
+        );
+        let m32 = compute_bottom_up_min_cumulative_energy::<u32>(&energy);
+        let m64 = compute_bottom_up_min_cumulative_energy::<u64>(&energy);
+
+        for seams in [
+            compute_vertical_seams::<u64, u64>(&energy, &m64),
+            compute_vertical_seams::<u32, u128>(&energy, &m32),
+            compute_vertical_seams::<u64, u128>(&energy, &m64),
+        ] {
+            assert_eq!(seams.seam_energies(), &[2, 200, 20]);
+            assert_eq!(seams.get_seam(0).0, vec![1, 0]);
+            assert_eq!(seams.get_seam(1).0, vec![0, 1]);
+            assert_eq!(seams.get_seam(2).0, vec![2, 2]);
+        }
+    }
+
+    #[test]
+    fn vertical_seams_handle_large_cumulative_costs() {
+        let energy = gray_image!(type: u16, 510, 510; 510, 510);
+        // Inject large cumulative costs to exercise the wide DP arithmetic
+        // without allocating a multi-million-row image.
+        let large_cost = u64::MAX / 510 + 1;
+        let cumulative = ImageBuffer::from_pixel(2, 2, Luma([large_cost]));
+
+        let seams = compute_vertical_seams::<u64, u128>(&energy, &cumulative);
+
+        assert_eq!(seams.seam_energies(), &[1020, 1020]);
+        assert_eq!(seams.get_seam(0).0, vec![0, 0]);
+        assert_eq!(seams.get_seam(1).0, vec![1, 1]);
+    }
+
+    #[test]
     fn cumulative_energy_single_row() {
         // With height=1 there is no DP to do; output equals the energy row.
         let energy: ImageBuffer<Luma<u16>, Vec<u16>> =
@@ -1237,6 +1318,18 @@ mod tests {
         let seams = find_vertical_seams(&img);
 
         assert_eq!(seams.to_vec().len(), width as usize);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn find_vertical_seam_returns_lowest_energy_path() {
+        let img = gray_image!(
+            0, 0, 255;
+            0, 0, 255;
+            0, 0, 255
+        );
+
+        assert_eq!(find_vertical_seam(&img).0, vec![0, 0, 0]);
     }
 
     #[test]
@@ -1546,6 +1639,106 @@ mod tests {
                 Rgb([expected_col_3, expected_col_3, expected_col_3])
             );
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // draw_vertical_seams_by_energy
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn draw_seams_by_energy_zero_count_converts_image_to_rgba() {
+        let img = gray_image!(10, 20; 30, 40);
+        let seams = find_vertical_seams(&img);
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 0);
+
+        let expected = rgba_image!(
+            [10, 10, 10, 255], [20, 20, 20, 255];
+            [30, 30, 30, 255], [40, 40, 40, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_equal_energies_are_green() {
+        let img = GrayImage::from_pixel(2, 2, Luma([50]));
+        let seams = find_vertical_seams(&img);
+        let expected = ImageBuffer::from_pixel(2, 2, Rgba([0, 255, 0, 255]));
+
+        for count in [2, 5] {
+            let drawn = draw_vertical_seams_by_energy(&img, &seams, count);
+            assert_pixels_eq!(drawn, expected);
+        }
+    }
+
+    #[test]
+    fn draw_seams_by_energy_colors_selected_energy_range() {
+        let img = rgba_image!(
+            [10, 20, 30, 40],
+            [50, 60, 70, 80],
+            [90, 100, 110, 120],
+            [130, 140, 150, 160]
+        );
+        let seams = VerticalSeams {
+            deltas: vec![],
+            seam_energies: vec![80, 20, 40, 60],
+            width: 4,
+            height: 1,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 3);
+
+        // Scale colors over the selected energies (20..=60), preserving the
+        // unselected pixel's color and alpha.
+        let expected = rgba_image!(
+            [10, 20, 30, 40],
+            [0, 255, 0, 255],
+            [255, 255, 0, 255],
+            [255, 0, 0, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_single_selected_seam_is_green() {
+        let img = gray_image!(10, 20, 30);
+        let seams = VerticalSeams {
+            deltas: vec![],
+            seam_energies: vec![30, 10, 20],
+            width: 3,
+            height: 1,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 1);
+
+        let expected = rgba_image!([10, 10, 10, 255], [0, 255, 0, 255], [30, 30, 30, 255]);
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_colors_follow_seam_paths() {
+        let img = gray_image!(
+            10, 20, 30;
+            40, 50, 60;
+            70, 80, 90
+        );
+        let seams = VerticalSeams {
+            deltas: vec![1, -1, 0, 0, 1, -1],
+            seam_energies: vec![10, 30, 90],
+            width: 3,
+            height: 3,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 2);
+
+        // The green seam follows columns 0 -> 1 -> 2, while the red seam
+        // follows 1 -> 0 -> 0. Colors stay with their seams after crossing.
+        let expected = rgba_image!(
+            [0, 255, 0, 255], [255, 0, 0, 255], [30, 30, 30, 255];
+            [255, 0, 0, 255], [0, 255, 0, 255], [60, 60, 60, 255];
+            [255, 0, 0, 255], [80, 80, 80, 255], [0, 255, 0, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
     }
 
     // -------------------------------------------------------------------------
