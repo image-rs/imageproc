@@ -133,6 +133,111 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
     matches
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{binary_descriptors::brief::BriefDescriptor, corners::Corner};
+
+    fn descriptor(bits: u128, x: u32) -> BriefDescriptor {
+        BriefDescriptor {
+            bits: vec![bits],
+            corner: Corner::new(x, 0, 0.0),
+        }
+    }
+
+    fn assert_descriptors_match(
+        d1: &[BriefDescriptor],
+        d2: &[BriefDescriptor],
+        threshold: u32,
+        seed: Option<u64>,
+        expected_indices: &[(usize, usize)],
+    ) {
+        let actual: Vec<_> = match_binary_descriptors(d1, d2, threshold, seed)
+            .iter()
+            .map(|(query, candidate)| (query.position(), candidate.position()))
+            .collect();
+        let expected: Vec<_> = expected_indices
+            .iter()
+            .map(|&(i, j)| (d1[i].position(), d2[j].position()))
+            .collect();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_empty_inputs() {
+        let descriptors = [descriptor(0, 0)];
+        for seed in [Some(0), None] {
+            assert_descriptors_match(&[], &[], 1, seed, &[]);
+            assert_descriptors_match(&descriptors, &[], 1, seed, &[]);
+            assert_descriptors_match(&[], &descriptors, 1, seed, &[]);
+        }
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_strict_threshold() {
+        let d1 = [descriptor(0, 0)];
+        let d2 = [descriptor(0b111, 1)];
+        // Singleton inputs use no hash bits, so the candidate is always examined.
+        for threshold in [0, 2, 3] {
+            assert_descriptors_match(&d1, &d2, threshold, Some(0), &[]);
+        }
+        for threshold in [4, u32::MAX] {
+            assert_descriptors_match(&d1, &d2, threshold, Some(0), &[(0, 0)]);
+        }
+        assert_descriptors_match(&d1, &d1, 0, Some(0), &[]);
+        assert_descriptors_match(&d1, &d1, 1, Some(0), &[(0, 0)]);
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_exact_matches() {
+        let d1 = [descriptor(0, 0), descriptor(u128::MAX, 1)];
+        let d2 = [descriptor(u128::MAX, 2), descriptor(0, 3)];
+        for seed in 0..16 {
+            assert_descriptors_match(&d1, &d2, 1, Some(seed), &[(0, 1), (1, 0)]);
+        }
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_lowest_distance() {
+        let d1 = [descriptor(0, 0)];
+        let d2 = [descriptor(1, 1), descriptor(0, 2)];
+        for seed in 0..16 {
+            assert_descriptors_match(&d1, &d2, 2, Some(seed), &[(0, 1)]);
+        }
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_no_hash_candidates() {
+        let d1 = [descriptor(0, 0)];
+        let d2 = [descriptor(u128::MAX, 1), descriptor(u128::MAX, 2)];
+        // Every sampled bit differs, so no bucket can contain a candidate,
+        // even though the threshold would accept its Hamming distance.
+        assert_descriptors_match(&d1, &d2, u32::MAX, Some(0), &[]);
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_shared_match() {
+        let d1 = [descriptor(0, 0), descriptor(0, 1)];
+        let d2 = [descriptor(0, 2), descriptor(u128::MAX, 3)];
+        assert_descriptors_match(&d1, &d2, 1, Some(0), &[(0, 0), (1, 0)]);
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_pair_order_with_longer_first_input() {
+        let d1 = [descriptor(u128::MAX, 0), descriptor(0, 1)];
+        let d2 = [descriptor(0, 2)];
+        assert_descriptors_match(&d1, &d2, 1, Some(0), &[(1, 0)]);
+    }
+
+    #[test]
+    fn test_match_binary_descriptors_without_seed() {
+        let d1 = [descriptor(0, 0), descriptor(u128::MAX, 1)];
+        let d2 = [descriptor(u128::MAX, 2), descriptor(0, 3)];
+        // Exact matches share every sampled bit regardless of the random seed.
+        assert_descriptors_match(&d1, &d2, 1, None, &[(0, 1), (1, 0)]);
+    }
+}
+
 #[cfg(not(miri))]
 #[cfg(test)]
 mod benches {
