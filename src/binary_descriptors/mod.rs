@@ -74,7 +74,7 @@ pub fn match_binary_descriptors<'a, T: BinaryDescriptor>(
     let l = 3;
     // k grows as the log of the database size
     // this keeps bucket size roughly constant
-    let k = (database.len() as f32).log2() as i32;
+    let k = database.len().ilog2();
     let mut hash_tables = Vec::with_capacity(l);
     for _ in 0..l {
         // choose k random bits (not necessarily unique)
@@ -209,10 +209,12 @@ mod tests {
     #[test]
     fn test_match_binary_descriptors_no_hash_candidates() {
         let d1 = [descriptor(0, 0)];
-        let d2 = [descriptor(u128::MAX, 1), descriptor(u128::MAX, 2)];
         // Every sampled bit differs, so no bucket can contain a candidate,
         // even though the threshold would accept its Hamming distance.
-        assert_descriptors_match(&d1, &d2, u32::MAX, Some(0), &[]);
+        for size in [2, 3, 4, 7, 8, 9] {
+            let d2: Vec<_> = (0..size).map(|x| descriptor(u128::MAX, x + 1)).collect();
+            assert_descriptors_match(&d1, &d2, u32::MAX, Some(0), &[]);
+        }
     }
 
     #[test]
