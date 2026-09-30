@@ -1549,6 +1549,106 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
+    // draw_vertical_seams_by_energy
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn draw_seams_by_energy_zero_count_converts_image_to_rgba() {
+        let img = gray_image!(10, 20; 30, 40);
+        let seams = find_vertical_seams(&img);
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 0);
+
+        let expected = rgba_image!(
+            [10, 10, 10, 255], [20, 20, 20, 255];
+            [30, 30, 30, 255], [40, 40, 40, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_equal_energies_are_green() {
+        let img = GrayImage::from_pixel(2, 2, Luma([50]));
+        let seams = find_vertical_seams(&img);
+        let expected = ImageBuffer::from_pixel(2, 2, Rgba([0, 255, 0, 255]));
+
+        for count in [2, 5] {
+            let drawn = draw_vertical_seams_by_energy(&img, &seams, count);
+            assert_pixels_eq!(drawn, expected);
+        }
+    }
+
+    #[test]
+    fn draw_seams_by_energy_colors_selected_energy_range() {
+        let img = rgba_image!(
+            [10, 20, 30, 40],
+            [50, 60, 70, 80],
+            [90, 100, 110, 120],
+            [130, 140, 150, 160]
+        );
+        let seams = VerticalSeams {
+            deltas: vec![],
+            seam_energies: vec![80, 20, 40, 60],
+            width: 4,
+            height: 1,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 3);
+
+        // Scale colors over the selected energies (20..=60), preserving the
+        // unselected pixel's color and alpha.
+        let expected = rgba_image!(
+            [10, 20, 30, 40],
+            [0, 255, 0, 255],
+            [255, 255, 0, 255],
+            [255, 0, 0, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_single_selected_seam_is_green() {
+        let img = gray_image!(10, 20, 30);
+        let seams = VerticalSeams {
+            deltas: vec![],
+            seam_energies: vec![30, 10, 20],
+            width: 3,
+            height: 1,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 1);
+
+        let expected = rgba_image!([10, 10, 10, 255], [0, 255, 0, 255], [30, 30, 30, 255]);
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    #[test]
+    fn draw_seams_by_energy_colors_follow_seam_paths() {
+        let img = gray_image!(
+            10, 20, 30;
+            40, 50, 60;
+            70, 80, 90
+        );
+        let seams = VerticalSeams {
+            deltas: vec![1, -1, 0, 0, 1, -1],
+            seam_energies: vec![10, 30, 90],
+            width: 3,
+            height: 3,
+        };
+
+        let drawn = draw_vertical_seams_by_energy(&img, &seams, 2);
+
+        // The green seam follows columns 0 -> 1 -> 2, while the red seam
+        // follows 1 -> 0 -> 0. Colors stay with their seams after crossing.
+        let expected = rgba_image!(
+            [0, 255, 0, 255], [255, 0, 0, 255], [30, 30, 30, 255];
+            [255, 0, 0, 255], [0, 255, 0, 255], [60, 60, 60, 255];
+            [255, 0, 0, 255], [80, 80, 80, 255], [0, 255, 0, 255]
+        );
+        assert_pixels_eq!(drawn, expected);
+    }
+
+    // -------------------------------------------------------------------------
     // Edge case tests for minimum dimension images
     // -------------------------------------------------------------------------
 
