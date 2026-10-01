@@ -361,7 +361,7 @@ where
 
     let (width, height) = image1.dimensions();
 
-    let mut data = Vec::with_capacity(width as usize * height as usize * Q::CHANNEL_COUNT as usize);
+    let mut data = Vec::with_capacity(width as usize * height as usize * R::CHANNEL_COUNT as usize);
 
     for (pixel1, pixel2) in image1.pixels().zip(image2.pixels()) {
         data.extend_from_slice(f(*pixel1, *pixel2).channels());
