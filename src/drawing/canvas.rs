@@ -1,4 +1,4 @@
-use image::{GenericImage, GenericImageView, Pixel};
+use image::{GenericImage, GenericImageView, Luma, Pixel};
 
 /// A surface for drawing on - many drawing functions in this
 /// library are generic over a `Canvas` to allow the user to
@@ -71,6 +71,9 @@ pub trait Canvas {
     /// should be within `dimensions` - if not then panicking
     /// is a valid implementation behaviour.
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel);
+
+    /// Consumes the canvas and returns the underlying image.
+    fn into_image(self) -> impl GenericImage;
 }
 
 impl<I> Canvas for I
@@ -90,6 +93,10 @@ where
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
         self.put_pixel(x, y, color)
     }
+
+    fn into_image(self) -> impl GenericImage {
+        self
+    }
 }
 
 /// A canvas that blends pixels when drawing.
@@ -98,7 +105,7 @@ where
 /// for an example using this type.
 pub struct Blend<I>(pub I);
 
-impl<I: GenericImage> Canvas for Blend<I> {
+impl<I: Canvas> Canvas for Blend<I> {
     type Pixel = I::Pixel;
 
     fn dimensions(&self) -> (u32, u32) {
@@ -112,6 +119,51 @@ impl<I: GenericImage> Canvas for Blend<I> {
     fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
         let mut pix = self.0.get_pixel(x, y);
         pix.blend(&color);
-        self.0.put_pixel(x, y, pix);
+        self.0.draw_pixel(x, y, pix);
+    }
+
+    fn into_image(self) -> impl GenericImage {
+        self.0.into_image()
+    }
+}
+
+/// A canvas that only draws pixels where a mask is non-zero.
+pub struct Masked<I, M> {
+    /// A canvas to draw on.
+    pub inner: I,
+    /// A mask image where non-zero pixels allow drawing.
+    pub mask: M,
+}
+
+impl<I: Canvas, M: Canvas> Masked<I, M> {
+    /// Create a new masked canvas.
+    ///
+    /// # Panics
+    /// If the dimensions of the inner canvas and mask do not match.
+    pub fn new(inner: I, mask: M) -> Self {
+        assert_eq!(inner.dimensions(), mask.dimensions());
+        Masked { inner, mask }
+    }
+}
+
+impl<I: Canvas, M: GenericImage<Pixel = Luma<u8>>> Canvas for Masked<I, M> {
+    type Pixel = I::Pixel;
+
+    fn dimensions(&self) -> (u32, u32) {
+        self.inner.dimensions()
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        self.inner.get_pixel(x, y)
+    }
+
+    fn draw_pixel(&mut self, x: u32, y: u32, color: Self::Pixel) {
+        if self.mask.get_pixel(x, y).0[0] != 0 {
+            self.inner.draw_pixel(x, y, color);
+        }
+    }
+
+    fn into_image(self) -> impl GenericImage {
+        self.inner.into_image()
     }
 }
