@@ -407,12 +407,24 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
         return output;
     }
 
+    const INTERIOR_DIST: u16 = 2;
+
+    let last_x = w - 1;
+    let last_y = h - 1;
+
     // Degenerate cases
     if w == 1 {
         energy.iter_mut().enumerate().for_each(|(y, e)| {
             let y_up = y.saturating_sub(1);
-            let y_down = (y + 1).min(h - 1);
-            *e = intensity[y_down].abs_diff(intensity[y_up]) as u16;
+            let y_down = (y + 1).min(last_y);
+            let is_corner = y == 0 || y == last_y;
+            let energy = intensity[y_down].abs_diff(intensity[y_up]) as u16;
+
+            if is_corner {
+                *e = energy;
+            } else {
+                *e = energy / INTERIOR_DIST;
+            }
         });
 
         return output;
@@ -421,8 +433,15 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
     if h == 1 {
         energy.iter_mut().enumerate().for_each(|(x, e)| {
             let x_left = x.saturating_sub(1);
-            let x_right = (x + 1).min(w - 1);
-            *e = intensity[x_right].abs_diff(intensity[x_left]) as u16;
+            let x_right = (x + 1).min(last_x);
+            let is_corner = x == 0 || x == last_x;
+            let energy = intensity[x_left].abs_diff(intensity[x_right]) as u16;
+
+            if is_corner {
+                *e = energy;
+            } else {
+                *e = energy / INTERIOR_DIST;
+            }
         });
 
         return output;
@@ -436,12 +455,18 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
 
         out.iter_mut().enumerate().for_each(|(x, dst)| {
             let x_left = x.saturating_sub(1);
-            let x_right = (x + 1).min(w - 1);
+            let x_right = (x + 1).min(last_x);
+            let is_corner = x == 0 || x == last_x;
 
-            let dx = row0[x_right].abs_diff(row0[x_left]) as u16;
+            let mut dx = row0[x_right].abs_diff(row0[x_left]) as u16;
             // Symmetric clamp: treat the row above as identical to row 0,
             // so dy = |row1[x] - row0[x]|.
             let dy = row1[x].abs_diff(row0[x]) as u16;
+
+            if !is_corner {
+                dx /= INTERIOR_DIST;
+            }
+
             *dst = dx + dy;
         });
     }
@@ -456,17 +481,22 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
 
         out.iter_mut().enumerate().for_each(|(x, dst)| {
             let x_left = x.saturating_sub(1);
-            let x_right = (x + 1).min(w - 1);
+            let x_right = (x + 1).min(last_x);
 
-            let dx = row[x_right].abs_diff(row[x_left]) as u16;
+            let is_corner = x == 0 || x == last_x;
+
+            let mut dx = row[x_right].abs_diff(row[x_left]) as u16;
             // Symmetric clamp: treat the row below as identical to the bottom row,
             // so dy = |row[x] - row_up[x]|.
             let dy = row[x].abs_diff(row_up[x]) as u16;
+
+            if !is_corner {
+                dx /= INTERIOR_DIST;
+            }
+
             *dst = dx + dy;
         });
     }
-
-    const INTERIOR_X_DIST: u16 = 2;
 
     energy[w..(h - 1) * w]
         .chunks_mut(w)
@@ -481,17 +511,17 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             // Edge pixels use clamped central differences.
             let left_dy = row_down[0].abs_diff(row_up[0]) as u16;
             let left_dx = row[1].abs_diff(row[0]) as u16;
-            row_energy[0] = left_dx + left_dy;
+            row_energy[0] = left_dx + (left_dy / INTERIOR_DIST);
 
-            for x in 1..w - 1 {
+            for x in 1..last_x {
                 let dx = row[x + 1].abs_diff(row[x - 1]) as u16;
                 let dy = row_down[x].abs_diff(row_up[x]) as u16;
-                row_energy[x] = (dx + dy) / INTERIOR_X_DIST;
+                row_energy[x] = (dx + dy) / INTERIOR_DIST;
             }
 
-            let dy = row_down[w - 1].abs_diff(row_up[w - 1]) as u16;
-            let dx = row[w - 1].abs_diff(row[w - 2]) as u16;
-            row_energy[w - 1] = dx + dy;
+            let right_dy = row_down[last_x].abs_diff(row_up[last_x]) as u16;
+            let right_dx = row[last_x].abs_diff(row[w - 2]) as u16;
+            row_energy[last_x] = right_dx + (right_dy / INTERIOR_DIST);
         });
 
     output
@@ -1101,24 +1131,24 @@ mod tests {
     fn energy_single_column() {
         // w=1 degenerate path: only dy, no dx.
         // pixels top-to-bottom: 0, 100, 200
-        // dy at y=0: |100 - 0|   = 100  (clamped: y_up = 0, y_down = 1)
-        // dy at y=1: |200 - 0|   = 200  (y_up=0, y_down=2)
-        // dy at y=2: |200 - 100| = 100  (y_up=1, y_down=2 clamped)
+        // dy at y=0: |100 - 0|     = 100  (clamped: y_up = 0, y_down = 1)
+        // dy at y=1: |200 - 0| / 2 = 100  (y_up=0, y_down=2)
+        // dy at y=2: |200 - 100|   = 100  (y_up=1, y_down=2 clamped)
         let intensity = gray_image!(0; 100; 200);
         let energy = compute_energy(&intensity);
-        assert_eq!(energy.as_raw(), &vec![100u16, 200u16, 100u16]);
+        assert_eq!(energy.as_raw(), &vec![100u16, 100u16, 100u16]);
     }
 
     #[test]
     fn energy_single_row() {
         // h=1 degenerate path: only dx, no dy.
         // pixels left-to-right: 0, 100, 200
-        // dx at x=0: |100 -   0| = 100  (clamped left)
-        // dx at x=1: |200 -   0| = 200  (central)
-        // dx at x=2: |200 - 100| = 100  (clamped right)
+        // dx at x=0: |100 -   0|     = 100  (clamped left)
+        // dx at x=1: |200 -   0| / 2 = 100  (central)
+        // dx at x=2: |200 - 100|     = 100  (clamped right)
         let intensity = gray_image!(0, 100, 200);
         let energy = compute_energy(&intensity);
-        assert_eq!(energy.as_raw(), &vec![100u16, 200u16, 100u16]);
+        assert_eq!(energy.as_raw(), &vec![100u16, 100u16, 100u16]);
     }
 
     #[test]
@@ -1129,19 +1159,19 @@ mod tests {
         //   0  64 128
         //
         // Row 0 (top):   dy = |row1[x] - row0[x]|, dx = clamped central on row0
-        //   x=0: dx=|64-0|=64,   dy=|0-0|=0     => 64
-        //   x=1: dx=|128-0|=128, dy=|0-64|=64   => 192
-        //   x=2: dx=|128-64|=64, dy=|0-128|=128 => 192
+        //   x=0: dx=|64-0|   =64,   dy=|0-0|=0   => 64
+        //   x=1: dx=|128-0|/2=64,  dy=|0-64|=64  => 128
+        //   x=2: dx=|128-64| =64, dy=|0-128|=128 => 192
         //
-        // Row 1 (middle): row1 = [0,0,0], full central diff
-        //   x=0: dx=|row1[1]-row1[0]|=0, dy=|row2[0]-row0[0]|=0 => 0
-        //   x=1: dx=|row1[2]-row1[0]|=0, dy=|row2[1]-row0[1]|=0 => 0
-        //   x=2: dx=|row1[2]-row1[1]|=0, dy=|row2[2]-row0[2]|=0 => 0
+        // Row 1 (middle): row1 = [0,0,0]
+        //   x=0: dx=|row1[1]-row1[0]|  =0, dy=|row2[0]-row0[0]|/2=0 => 0
+        //   x=1: dx=|row1[2]-row1[0]|/2=0, dy=|row2[1]-row0[1]|/2=0 => 0
+        //   x=2: dx=|row1[2]-row1[1]|  =0, dy=|row2[2]-row0[2]|/2=0 => 0
         //
         // Row 2 (bottom): dy = |row2[x] - row1[x]|, dx = clamped central on row2
-        //   x=0: dx=|64-0|=64,   dy=|0-0|=0    => 64
-        //   x=1: dx=|128-0|=128, dy=|64-0|=64  => 192
-        //   x=2: dx=|128-64|=64, dy=|128-0|=128 => 192
+        //   x=0: dx=|64-0|   =64,   dy=|0-0|=0   => 64
+        //   x=1: dx=|128-0|/2=64,  dy=|64-0|=64  => 128
+        //   x=2: dx=|128-64| =64, dy=|128-0|=128 => 192
         let intensity = gray_image!(
             0, 64, 128;
             0, 0, 0;
@@ -1152,9 +1182,9 @@ mod tests {
 
         #[rustfmt::skip]
         let expected: Vec<u16> = vec![
-             64, 192, 192,
-              0,   0,   0,
-             64, 192, 192,
+             64, 128, 192,
+              0,   0,  0,
+             64, 128, 192,
         ];
         assert_eq!(energy.as_raw(), &expected);
     }
@@ -1166,9 +1196,9 @@ mod tests {
         //  64  64  64
         // 128 128 128
         //
-        // Row 0 (top):    dy=|64-0|=64,   dx=0 everywhere => 64
-        // Row 1 (middle): dy=|128-0|=128, dx=0             => 128
-        // Row 2 (bottom): dy=|128-64|=64, dx=0             => 64
+        // Row 0 (top):    dy=|64-0|   =64, dx=0 everywhere => 64
+        // Row 1 (middle): dy=|128-0|/2=64, dx=0            => 64
+        // Row 2 (bottom): dy=|128-64| =64, dx=0            => 64
         let intensity = gray_image!(
             0, 0, 0;
             64, 64, 64;
@@ -1179,9 +1209,9 @@ mod tests {
 
         #[rustfmt::skip]
         let expected: Vec<u16> = vec![
-             64,  64,  64,
-            128,  64, 128,
-             64,  64,  64,
+            64, 64, 64,
+            64, 64, 64,
+            64, 64, 64,
         ];
         assert_eq!(energy.as_raw(), &expected);
     }
