@@ -453,22 +453,23 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
         let row1 = &intensity[w..2 * w];
         let out = &mut energy[0..w];
 
-        out.iter_mut().enumerate().for_each(|(x, dst)| {
-            let x_left = x.saturating_sub(1);
-            let x_right = (x + 1).min(last_x);
-            let is_corner = x == 0 || x == last_x;
+        out[0] = row0[1].abs_diff(row0[0]) as u16
+            + row1[0].abs_diff(row0[0]) as u16;
 
-            let mut dx = row0[x_right].abs_diff(row0[x_left]) as u16;
+        for x in 1..last_x {
+            let x_left = x - 1;
+            let x_right = x + 1;
+
+            let dx = (row0[x_right].abs_diff(row0[x_left]) as u16) / INTERIOR_DIST;
             // Symmetric clamp: treat the row above as identical to row 0,
             // so dy = |row1[x] - row0[x]|.
             let dy = row1[x].abs_diff(row0[x]) as u16;
 
-            if !is_corner {
-                dx /= INTERIOR_DIST;
-            }
+            out[x] = dx + dy;
+        }
 
-            *dst = dx + dy;
-        });
+        out[last_x] = row0[last_x].abs_diff(row0[last_x - 1]) as u16
+            + row1[last_x].abs_diff(row0[last_x]) as u16;
     }
 
     // Bottom row
@@ -479,23 +480,23 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
 
         let out = &mut energy[y * w..(y + 1) * w];
 
-        out.iter_mut().enumerate().for_each(|(x, dst)| {
-            let x_left = x.saturating_sub(1);
-            let x_right = (x + 1).min(last_x);
+        out[0] = row[1].abs_diff(row[0]) as u16
+            + row[0].abs_diff(row_up[0]) as u16;
 
-            let is_corner = x == 0 || x == last_x;
+        for x in 1..last_x {
+            let x_left = x - 1;
+            let x_right = x + 1;
 
-            let mut dx = row[x_right].abs_diff(row[x_left]) as u16;
+            let dx = (row[x_right].abs_diff(row[x_left]) as u16) / INTERIOR_DIST;
             // Symmetric clamp: treat the row below as identical to the bottom row,
             // so dy = |row[x] - row_up[x]|.
             let dy = row[x].abs_diff(row_up[x]) as u16;
 
-            if !is_corner {
-                dx /= INTERIOR_DIST;
-            }
+            out[x] = dx + dy;
+        }
 
-            *dst = dx + dy;
-        });
+        out[last_x] = row[last_x].abs_diff(row[last_x - 1]) as u16
+            + row[last_x].abs_diff(row_up[last_x]) as u16;
     }
 
     energy[w..(h - 1) * w]
