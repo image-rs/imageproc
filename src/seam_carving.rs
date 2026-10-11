@@ -453,8 +453,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
         let row1 = &intensity[w..2 * w];
         let out = &mut energy[0..w];
 
-        out[0] = row0[1].abs_diff(row0[0]) as u16
-            + row1[0].abs_diff(row0[0]) as u16;
+        out[0] = row0[1].abs_diff(row0[0]) as u16 + row1[0].abs_diff(row0[0]) as u16;
 
         for x in 1..last_x {
             let x_left = x - 1;
@@ -480,8 +479,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
 
         let out = &mut energy[y * w..(y + 1) * w];
 
-        out[0] = row[1].abs_diff(row[0]) as u16
-            + row[0].abs_diff(row_up[0]) as u16;
+        out[0] = row[1].abs_diff(row[0]) as u16 + row[0].abs_diff(row_up[0]) as u16;
 
         for x in 1..last_x {
             let x_left = x - 1;
