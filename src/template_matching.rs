@@ -847,8 +847,7 @@ mod benches {
                 let image = gray_bench_image($s, $s);
                 let template = gray_bench_image($t, $t);
                 b.iter(|| {
-                    let result =
-                        match_template(&image, &template, MatchTemplateMethod::SumOfSquaredErrors);
+                    let result = match_template(&image, &template, $m);
                     black_box(result);
                 })
             }
@@ -899,12 +898,7 @@ mod benches {
                 let template = gray_bench_image($t, $t);
                 let mask = gray_bench_image($t, $t);
                 b.iter(|| {
-                    let result = match_template_with_mask(
-                        &image,
-                        &template,
-                        MatchTemplateMethod::SumOfSquaredErrors,
-                        &mask,
-                    );
+                    let result = match_template_with_mask(&image, &template, $m, &mask);
                     black_box(result);
                 })
             }
