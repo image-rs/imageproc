@@ -407,7 +407,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
         return output;
     }
 
-    const INTERIOR_DIST: u16 = 2;
+    const CENTRAL_DIFF_DIST: u16 = 2;
 
     let last_x = w - 1;
     let last_y = h - 1;
@@ -423,7 +423,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             if is_corner {
                 *e = energy;
             } else {
-                *e = energy / INTERIOR_DIST;
+                *e = energy / CENTRAL_DIFF_DIST;
             }
         });
 
@@ -440,7 +440,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             if is_corner {
                 *e = energy;
             } else {
-                *e = energy / INTERIOR_DIST;
+                *e = energy / CENTRAL_DIFF_DIST;
             }
         });
 
@@ -459,7 +459,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             let x_left = x - 1;
             let x_right = x + 1;
 
-            let dx = (row0[x_right].abs_diff(row0[x_left]) as u16) / INTERIOR_DIST;
+            let dx = (row0[x_right].abs_diff(row0[x_left]) as u16) / CENTRAL_DIFF_DIST;
             // Symmetric clamp: treat the row above as identical to row 0,
             // so dy = |row1[x] - row0[x]|.
             let dy = row1[x].abs_diff(row0[x]) as u16;
@@ -485,7 +485,7 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             let x_left = x - 1;
             let x_right = x + 1;
 
-            let dx = (row[x_right].abs_diff(row[x_left]) as u16) / INTERIOR_DIST;
+            let dx = (row[x_right].abs_diff(row[x_left]) as u16) / CENTRAL_DIFF_DIST;
             // Symmetric clamp: treat the row below as identical to the bottom row,
             // so dy = |row[x] - row_up[x]|.
             let dy = row[x].abs_diff(row_up[x]) as u16;
@@ -510,17 +510,17 @@ fn compute_energy(intensity: &Image<Luma<u8>>) -> Image<Luma<u16>> {
             // Edge pixels use clamped central differences.
             let left_dy = row_down[0].abs_diff(row_up[0]) as u16;
             let left_dx = row[1].abs_diff(row[0]) as u16;
-            row_energy[0] = left_dx + (left_dy / INTERIOR_DIST);
+            row_energy[0] = left_dx + (left_dy / CENTRAL_DIFF_DIST);
 
             for x in 1..last_x {
                 let dx = row[x + 1].abs_diff(row[x - 1]) as u16;
                 let dy = row_down[x].abs_diff(row_up[x]) as u16;
-                row_energy[x] = (dx + dy) / INTERIOR_DIST;
+                row_energy[x] = (dx + dy) / CENTRAL_DIFF_DIST;
             }
 
             let right_dy = row_down[last_x].abs_diff(row_up[last_x]) as u16;
             let right_dx = row[last_x].abs_diff(row[w - 2]) as u16;
-            row_energy[last_x] = right_dx + (right_dy / INTERIOR_DIST);
+            row_energy[last_x] = right_dx + (right_dy / CENTRAL_DIFF_DIST);
         });
 
     output
