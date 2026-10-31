@@ -25,15 +25,15 @@ where
     // the (2r + 1) * (2r + 1) search once per r * r grid cell (as opposed to once
     // per pixel in the naive implementation of this algorithm).
 
-    for y in (0..height).step_by(radius as usize + 1) {
-        for x in (0..width).step_by(radius as usize + 1) {
+    for y in (0..height).step_by((radius as usize).saturating_add(1)) {
+        for x in (0..width).step_by((radius as usize).saturating_add(1)) {
             let mut best_x = x;
             let mut best_y = y;
             let mut mi = image.get_pixel(x, y)[0];
 
             // These mins are necessary for when radius > min(width, height)
-            for cy in y..cmp::min(height, y + radius + 1) {
-                for cx in x..cmp::min(width, x + radius + 1) {
+            for cy in y..cmp::min(height, y.saturating_add(radius).saturating_add(1)) {
+                for cx in x..cmp::min(width, x.saturating_add(radius).saturating_add(1)) {
                     let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
                     if ci < mi {
                         continue;
@@ -48,13 +48,13 @@ where
 
             let x0 = best_x.saturating_sub(radius);
             let x1 = x;
-            let x2 = cmp::min(width, x + radius + 1);
-            let x3 = cmp::min(width, best_x + radius + 1);
+            let x2 = cmp::min(width, x.saturating_add(radius).saturating_add(1));
+            let x3 = cmp::min(width, best_x.saturating_add(radius).saturating_add(1));
 
             let y0 = best_y.saturating_sub(radius);
             let y1 = y;
-            let y2 = cmp::min(height, y + radius + 1);
-            let y3 = cmp::min(height, best_y + radius + 1);
+            let y2 = cmp::min(height, y.saturating_add(radius).saturating_add(1));
+            let y3 = cmp::min(height, best_y.saturating_add(radius).saturating_add(1));
 
             // Above initial r * r block
             let mut failed = contains_greater_value(image, best_x, best_y, mi, y0, y1, x0, x3);
@@ -114,15 +114,13 @@ where
 {
     let mut ordered_ts = ts.to_vec();
     ordered_ts.sort_by_key(|&c| (c.y(), c.x()));
-    let height = match ordered_ts.last() {
-        Some(t) => t.y(),
-        None => 0,
-    };
 
-    let mut ts_by_row = vec![vec![]; (height + 1) as usize];
-    for t in &ordered_ts {
-        ts_by_row[t.y() as usize].push(t);
-    }
+    // One entry per distinct y: (y, slice of ordered_ts in that row).
+    // Stored sparsely so that memory use is independent of coordinate values.
+    let rows: Vec<(u32, &[T])> = ordered_ts
+        .chunk_by(|a, b| a.y() == b.y())
+        .map(|row| (row[0].y(), row))
+        .collect();
 
     let mut max_ts = vec![];
     for t in &ordered_ts {
@@ -130,24 +128,28 @@ where
         let cy = t.y();
         let cs = t.score();
 
+        let x_lower = cx.saturating_sub(radius);
+        let x_upper = cx.saturating_add(radius);
+        let y_lower = cy.saturating_sub(radius);
+        let y_upper = cy.saturating_add(radius);
+
+        let first_row = rows.partition_point(|&(y, _)| y < y_lower);
+
         let mut is_max = true;
-        let row_lower = cy.saturating_sub(radius);
-        let row_upper = if cy + radius + 1 > height {
-            height
-        } else {
-            cy + radius + 1
-        };
-        for y in row_lower..row_upper {
-            for c in &ts_by_row[y as usize] {
-                if c.x() + radius < cx {
+        'rows: for &(y, row) in &rows[first_row..] {
+            if y > y_upper {
+                break;
+            }
+            for c in row {
+                if c.x() < x_lower {
                     continue;
                 }
-                if c.x() > cx + radius {
+                if c.x() > x_upper {
                     break;
                 }
                 if c.score() > cs {
                     is_max = false;
-                    break;
+                    break 'rows;
                 }
                 if c.score() < cs {
                     continue;
@@ -155,11 +157,8 @@ where
                 // Break tiebreaks lexicographically
                 if (c.y(), c.x()) < (cy, cx) {
                     is_max = false;
-                    break;
+                    break 'rows;
                 }
-            }
-            if !is_max {
-                break;
             }
         }
 
@@ -269,6 +268,229 @@ mod tests {
         assert!(s.width() == 3);
     }
 
+    #[test]
+    fn test_local_maxima_empty() {
+        let ts: Vec<T> = vec![];
+        assert_eq!(local_maxima(&ts, 3), vec![]);
+    }
+
+    #[test]
+    fn test_local_maxima_single() {
+        let ts = vec![T::new(4, 7, 1f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+        assert_eq!(local_maxima(&ts, 0), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_radius_zero_keeps_all() {
+        let ts = vec![
+            T::new(0, 0, 1f32),
+            T::new(1, 0, 2f32),
+            T::new(0, 1, 3f32),
+            T::new(1, 1, 4f32),
+        ];
+        assert_eq!(local_maxima(&ts, 0), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_output_is_sorted_by_row_then_column() {
+        let ts = vec![
+            T::new(20, 10, 1f32),
+            T::new(0, 10, 1f32),
+            T::new(10, 0, 1f32),
+        ];
+        let expected = vec![
+            T::new(10, 0, 1f32),
+            T::new(0, 10, 1f32),
+            T::new(20, 10, 1f32),
+        ];
+        assert_eq!(local_maxima(&ts, 2), expected);
+    }
+
+    #[test]
+    fn test_local_maxima_distance_at_radius_boundary() {
+        // Exactly radius apart: the weaker one is suppressed.
+        let ts = vec![T::new(0, 0, 1f32), T::new(3, 0, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(3, 0, 2f32)]);
+        // radius + 1 apart: both survive.
+        let ts = vec![T::new(0, 0, 1f32), T::new(4, 0, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+        // Same, diagonally (square neighbourhood, not circular).
+        let ts = vec![T::new(0, 0, 1f32), T::new(3, 3, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(3, 3, 2f32)]);
+        let ts = vec![T::new(0, 0, 1f32), T::new(4, 3, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_stronger_on_left() {
+        let ts = vec![T::new(0, 0, 5f32), T::new(2, 0, 1f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(0, 0, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_stronger_in_last_row() {
+        // The stronger item is in the last row, which must not be skipped.
+        let ts = vec![T::new(0, 0, 1f32), T::new(0, 1, 5f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(0, 1, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_tie_in_last_row() {
+        // Tie: the lexicographically earlier (row-major) item wins.
+        let ts = vec![T::new(1, 0, 5f32), T::new(0, 1, 5f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(1, 0, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_ignores_far_columns_in_same_row() {
+        // Items in a neighbouring row but outside the column window must not
+        // suppress, regardless of score.
+        let ts = vec![
+            T::new(0, 1, 100f32),
+            T::new(10, 0, 1f32),
+            T::new(20, 1, 100f32),
+        ];
+        assert_eq!(local_maxima(&ts, 3), ts_sorted(&ts));
+    }
+
+    fn ts_sorted(ts: &[T]) -> Vec<T> {
+        let mut v = ts.to_vec();
+        v.sort_by_key(|t| (t.y, t.x));
+        v
+    }
+
+    #[test]
+    fn test_local_maxima_huge_radius() {
+        let ts = vec![
+            T::new(0, 0, 1f32),
+            T::new(u32::MAX - 1, 5, 3f32),
+            T::new(7, u32::MAX - 1, 2f32),
+        ];
+        assert_eq!(
+            local_maxima(&ts, u32::MAX),
+            vec![T::new(u32::MAX - 1, 5, 3f32)]
+        );
+    }
+
+    /// Reference implementation of local_maxima.
+    pub fn local_maxima_reference(ts: &[T], radius: u32) -> Vec<T> {
+        let mut out: Vec<T> = ts
+            .iter()
+            .filter(|t| {
+                ts.iter().all(|c| {
+                    let near = c.x.abs_diff(t.x) <= radius && c.y.abs_diff(t.y) <= radius;
+                    !near || c.score < t.score || (c.score == t.score && (c.y, c.x) >= (t.y, t.x))
+                })
+            })
+            .copied()
+            .collect();
+        out.sort_by_key(|t| (t.y, t.x));
+        out
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_empty() {
+        let image = GrayImage::new(0, 0);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (0, 0));
+        let image = GrayImage::new(0, 5);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (0, 5));
+        let image = GrayImage::new(5, 0);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (5, 0));
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_single_pixel() {
+        let image = GrayImage::from_pixel(1, 1, Luma([7u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 0), image);
+        assert_pixels_eq!(suppress_non_maximum(&image, 4), image);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_radius_zero_is_identity() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            9, 8, 7);
+        assert_pixels_eq!(suppress_non_maximum(&image, 0), image);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_constant_image() {
+        // All ties: any pixel with an equal neighbour at lesser (x, y)
+        // is suppressed, so only the origin survives.
+        let image = GrayImage::from_pixel(5, 5, Luma([3u8]));
+        let mut expected = GrayImage::new(5, 5);
+        expected.put_pixel(0, 0, Luma([3u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_single_peak() {
+        let image = gray_image!(
+            1, 2, 3, 2, 1;
+            2, 3, 4, 3, 2;
+            3, 4, 9, 4, 3;
+            2, 3, 4, 3, 2;
+            1, 2, 3, 2, 1);
+        let mut expected = GrayImage::new(5, 5);
+        expected.put_pixel(2, 2, Luma([9u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 2), expected);
+        assert_pixels_eq!(suppress_non_maximum(&image, 10), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_neighbour_in_each_direction() {
+        // With radius 2 the grid cell starting at (3, 3) spans 3..6. Its
+        // maximum at (4, 4) has neighbourhood 2..7, so a larger value can lie
+        // above, left, right or below the cell (or in a corner).
+        for &(x, y) in &[(4u32, 2u32), (2, 4), (6, 4), (4, 6), (6, 6), (2, 2)] {
+            let mut image = GrayImage::from_pixel(9, 9, Luma([1u8]));
+            image.put_pixel(4, 4, Luma([5u8]));
+            image.put_pixel(x, y, Luma([9u8]));
+            let out = suppress_non_maximum(&image, 2);
+            assert_eq!(out.get_pixel(4, 4)[0], 0, "beaten by ({}, {})", x, y);
+            assert_eq!(out.get_pixel(x, y)[0], 9);
+            assert_eq!(out, suppress_non_maximum_reference(&image, 2));
+        }
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_tie_outside_block() {
+        // Equal value outside the r * r block but inside the neighbourhood:
+        // the earlier one in (x, y) order wins.
+        let mut image = GrayImage::new(4, 4);
+        image.put_pixel(1, 1, Luma([5u8]));
+        image.put_pixel(2, 0, Luma([5u8]));
+        let mut expected = GrayImage::new(4, 4);
+        expected.put_pixel(1, 1, Luma([5u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+        assert_eq!(expected, suppress_non_maximum_reference(&image, 1));
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_u16() {
+        let mut image: Image<Luma<u16>> = Image::new(6, 6);
+        image.put_pixel(1, 1, Luma([1000u16]));
+        image.put_pixel(4, 4, Luma([60000u16]));
+        image.put_pixel(2, 2, Luma([500u16]));
+        let mut expected: Image<Luma<u16>> = Image::new(6, 6);
+        expected.put_pixel(1, 1, Luma([1000u16]));
+        expected.put_pixel(4, 4, Luma([60000u16]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_huge_radius() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 9, 6;
+            7, 8, 5);
+        let mut expected = GrayImage::new(3, 3);
+        expected.put_pixel(1, 1, Luma([9u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, u32::MAX), expected);
+    }
+
     /// Reference implementation of suppress_non_maximum. Used to validate
     /// the (presumably faster) actual implementation.
     pub fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
@@ -331,8 +553,8 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod proptests {
-    use super::suppress_non_maximum;
-    use super::tests::suppress_non_maximum_reference;
+    use super::tests::{T, local_maxima_reference, suppress_non_maximum_reference};
+    use super::{local_maxima, suppress_non_maximum};
     use crate::proptest_utils::arbitrary_image;
     use image::Luma;
     use proptest::prelude::*;
@@ -344,6 +566,31 @@ mod proptests {
             let actual = suppress_non_maximum(&image, 3);
 
             prop_assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn test_suppress_non_maximum_matches_reference_any_radius(
+            image in arbitrary_image::<Luma<u8>>(0..12, 0..12),
+            radius in 0u32..8,
+        ) {
+            let expected = suppress_non_maximum_reference(&image, radius);
+            let actual = suppress_non_maximum(&image, radius);
+            prop_assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn test_local_maxima_matches_reference_implementation(
+            points in proptest::collection::vec((0u32..12, 0u32..12, 0u8..4), 0..30),
+            radius in 0u32..6,
+        ) {
+            // Deduplicate positions; scores drawn from a small range to force ties.
+            let mut seen = std::collections::HashSet::new();
+            let ts: Vec<T> = points
+                .into_iter()
+                .filter(|&(x, y, _)| seen.insert((x, y)))
+                .map(|(x, y, s)| T::new(x, y, s as f32))
+                .collect();
+            prop_assert_eq!(local_maxima(&ts, radius), local_maxima_reference(&ts, radius));
         }
     }
 }
