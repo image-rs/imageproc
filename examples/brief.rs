@@ -25,9 +25,9 @@ use std::{env, path::Path};
 
 fn filter_edge_keypoints(keypoint: &Corner, height: u32, width: u32, radius: u32) -> bool {
     keypoint.x >= radius
-        && keypoint.x <= width - radius
+        && keypoint.x < width - radius
         && keypoint.y >= radius
-        && keypoint.y <= height - radius
+        && keypoint.y < height - radius
 }
 
 fn main() -> ImageResult<()> {
