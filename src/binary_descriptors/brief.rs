@@ -149,20 +149,21 @@ pub(crate) fn brief_impl(
     }
 
     let mut descriptors: Vec<BriefDescriptor> = Vec::with_capacity(keypoints.len());
-    let (width, height) = (integral_image.width(), integral_image.height());
+    // the integral image has an extra row and column of zeros at the top-left
+    let (width, height) = (integral_image.width() - 1, integral_image.height() - 1);
+    // minimum number of pixels between a keypoint and each image edge
+    let margin = BRIEF_PATCH_RADIUS + 1;
 
     for keypoint in keypoints {
         // if the keypoint is too close to the edge, return an error
-        if keypoint.x <= BRIEF_PATCH_RADIUS
-            || keypoint.x + BRIEF_PATCH_RADIUS >= width
-            || keypoint.y <= BRIEF_PATCH_RADIUS
-            || keypoint.y + BRIEF_PATCH_RADIUS >= height
+        if keypoint.x < margin
+            || keypoint.x.saturating_add(margin) >= width
+            || keypoint.y < margin
+            || keypoint.y.saturating_add(margin) >= height
         {
             return Err(format!(
-                "Found keypoint within {} px of image edge: ({}, {})",
-                BRIEF_PATCH_RADIUS + 1,
-                keypoint.x,
-                keypoint.y
+                "Found keypoint less than {} px from image edge: ({}, {})",
+                margin, keypoint.x, keypoint.y
             ));
         }
 
@@ -189,12 +190,12 @@ pub(crate) fn brief_impl(
             }
 
             let p0 = Point {
-                x: test_pair.p0.x + patch_top_left.x + 1,
-                y: test_pair.p0.y + patch_top_left.y + 1,
+                x: test_pair.p0.x + patch_top_left.x,
+                y: test_pair.p0.y + patch_top_left.y,
             };
             let p1 = Point {
-                x: test_pair.p1.x + patch_top_left.x + 1,
-                y: test_pair.p1.y + patch_top_left.y + 1,
+                x: test_pair.p1.x + patch_top_left.x,
+                y: test_pair.p1.y + patch_top_left.y,
             };
 
             // if p0 < p1, then record true for this test; otherwise, record false
@@ -215,8 +216,10 @@ pub(crate) fn brief_impl(
 ///
 /// Returns a tuple containing a vector of `BriefDescriptor` and a vector of
 /// `TestPair`. All returned descriptors are based on the same `TestPair` set.
-/// Patches are 31x31 pixels, so keypoints must be at least 17 pixels from any
-/// edge. If any keypoints are too close to an edge, returns an error.
+/// Patches are 31x31 pixels centred on the keypoints, and there must be at
+/// least 16 pixels between each keypoint and every image edge (i.e.
+/// `16 <= x < width - 16` and `16 <= y < height - 16`). If any keypoints are
+/// too close to an edge, returns an error.
 ///
 /// `length` must be a multiple of 128 bits. Returns an error otherwise.
 ///
@@ -592,22 +595,24 @@ mod tests {
 
     #[test]
     fn test_brief_keypoint_edge_distance() {
-        // Keypoints are checked against the integral image dimensions, which
-        // are one larger than the image, so in a 32x32 image the accepted
-        // range is 16..=17 along each axis.
-        let image = GrayImage::new(32, 32);
         let pairs = neutral_pairs(128);
-        for kp in [Point::new(16, 16), Point::new(17, 17)] {
-            assert!(brief(&image, &[kp], 128, Some(&pairs)).is_ok());
-        }
+        // keypoints need 16 px to every edge, so a 32x32 image admits none
+        let image = GrayImage::new(32, 32);
+        assert!(brief(&image, &[Point::new(16, 16)], 128, Some(&pairs)).is_err());
+
+        // 33x33 is the smallest image that admits a keypoint, at (16, 16)
+        let image = GrayImage::new(33, 33);
+        assert!(brief(&image, &[Point::new(16, 16)], 128, Some(&pairs)).is_ok());
 
         for kp in [
             Point::new(15, 16),
             Point::new(16, 15),
-            Point::new(18, 16),
-            Point::new(16, 18),
+            Point::new(17, 16),
+            Point::new(16, 17),
             Point::new(0, 0),
             Point::new(100, 100),
+            Point::new(u32::MAX, 16),
+            Point::new(16, u32::MAX),
         ] {
             let err = brief(&image, &[kp], 128, Some(&pairs)).err().unwrap();
             assert!(err.contains("image edge"), "{err}");
@@ -694,6 +699,31 @@ mod tests {
                 .collect();
             assert_eq!(set_bits.len(), 1, "test pair {i} set bits {set_bits:?}");
             assert!(seen.insert(set_bits[0]), "bit {} reused", set_bits[0]);
+        }
+    }
+
+    #[test]
+    fn test_brief_patch_is_centred_on_keypoint() {
+        // Intensity grows with the distance from column 20 and row 20, so the
+        // image is symmetric around the keypoint (20, 20). Test points that
+        // mirror each other through the patch centre must compare equal.
+        let image = GrayImage::from_fn(41, 41, |x, y| {
+            Luma([(x.abs_diff(20) * 6 + y.abs_diff(20) * 2) as u8])
+        });
+        let keypoints = [Point::new(20, 20)];
+        let c = BRIEF_PATCH_RADIUS;
+        for d in [3, 6, 10] {
+            for p in [
+                pair(c - d, c, c + d, c),
+                pair(c + d, c, c - d, c),
+                pair(c, c - d, c, c + d),
+                pair(c, c + d, c, c - d),
+            ] {
+                let mut pairs = neutral_pairs(128);
+                pairs[0] = p;
+                let (desc, _) = brief(&image, &keypoints, 128, Some(&pairs)).unwrap();
+                assert_eq!(desc[0].bits, vec![0], "{p:?}");
+            }
         }
     }
 
