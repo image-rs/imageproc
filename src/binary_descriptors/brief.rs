@@ -198,10 +198,10 @@ pub(crate) fn brief_impl(
             };
 
             // if p0 < p1, then record true for this test; otherwise, record false
+            descriptor_chunk <<= 1;
             descriptor_chunk += (local_pixel_average(integral_image, p0.x, p0.y, 2)
                 < local_pixel_average(integral_image, p1.x, p1.y, 2))
                 as u128;
-            descriptor_chunk <<= 1;
         }
         // save the final chunk too
         descriptor.bits.push(descriptor_chunk);
@@ -407,6 +407,308 @@ mod tests {
         // Public, safe entry point — must reject the out-of-range test pairs.
         let result = brief(&img, &keypoints, 128, Some(&pairs));
         assert!(result.is_err());
+    }
+
+    fn pair(x0: u32, y0: u32, x1: u32, y1: u32) -> TestPair {
+        TestPair {
+            p0: Point::new(x0, y0),
+            p1: Point::new(x1, y1),
+        }
+    }
+
+    /// Image whose intensity increases from left to right.
+    fn horizontal_gradient(width: u32, height: u32) -> GrayImage {
+        GrayImage::from_fn(width, height, |x, _| Luma([(x * 6) as u8]))
+    }
+
+    /// Test pairs comparing two pixels of equal intensity, so every bit is 0.
+    fn neutral_pairs(n: usize) -> Vec<TestPair> {
+        vec![pair(15, 15, 15, 15); n]
+    }
+
+    #[test]
+    fn test_get_size() {
+        let mut d = BriefDescriptor {
+            bits: vec![0],
+            corner: Corner::new(0, 0, 0.),
+        };
+        assert_eq!(d.get_size(), 128);
+        d.bits = vec![0; 4];
+        assert_eq!(d.get_size(), 512);
+    }
+
+    #[test]
+    fn test_position() {
+        let d = BriefDescriptor {
+            bits: vec![0],
+            corner: Corner::new(7, 11, 0.5),
+        };
+        assert_eq!(d.position(), Point::new(7, 11));
+    }
+
+    #[test]
+    fn test_hamming_distance_identical_and_opposite() {
+        let d1 = BriefDescriptor {
+            bits: vec![0x1234, u128::MAX],
+            corner: Corner::new(0, 0, 0.),
+        };
+        let d2 = BriefDescriptor {
+            bits: vec![!0x1234, 0],
+            corner: Corner::new(0, 0, 0.),
+        };
+        assert_eq!(d1.hamming_distance(&d1), 0);
+        assert_eq!(d1.hamming_distance(&d2), 256);
+        assert_eq!(d2.hamming_distance(&d1), 256);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_hamming_distance_panics_on_unequal_sizes() {
+        let d1 = BriefDescriptor {
+            bits: vec![0],
+            corner: Corner::new(0, 0, 0.),
+        };
+        let d2 = BriefDescriptor {
+            bits: vec![0, 0],
+            corner: Corner::new(0, 0, 0.),
+        };
+        d1.hamming_distance(&d2);
+    }
+
+    #[test]
+    fn test_get_bit_subset_order_and_chunks() {
+        let d = BriefDescriptor {
+            // bit 0 and bit 127 of chunk 0 set; bit 1 of chunk 1 (index 129) set
+            bits: vec![1 | (1 << 127), 0b10],
+            corner: Corner::new(0, 0, 0.),
+        };
+        assert_eq!(d.get_bit_subset(&[]), 0);
+        // first requested bit ends up as the most significant bit of the result
+        assert_eq!(d.get_bit_subset(&[0, 1]), 0b10);
+        assert_eq!(d.get_bit_subset(&[1, 0]), 0b01);
+        assert_eq!(d.get_bit_subset(&[127, 128, 129]), 0b101);
+        // repeated indices are allowed
+        assert_eq!(d.get_bit_subset(&[129, 129, 2]), 0b110);
+    }
+
+    #[test]
+    fn test_get_bit_subset_max_length() {
+        let d = BriefDescriptor {
+            bits: vec![u128::MAX],
+            corner: Corner::new(0, 0, 0.),
+        };
+        let bits: Vec<u32> = (0..128).collect();
+        assert_eq!(d.get_bit_subset(&bits), u128::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected = "Can't extract more than 128 bits")]
+    fn test_get_bit_subset_panics_on_too_many_bits() {
+        let d = BriefDescriptor {
+            bits: vec![0],
+            corner: Corner::new(0, 0, 0.),
+        };
+        d.get_bit_subset(&[0; 129]);
+    }
+
+    #[test]
+    fn test_local_pixel_average_zero_radius() {
+        let image = GrayImage::from_pixel(5, 5, Luma([200]));
+        let integral_image: Image<Luma<u32>> = integral_image(&image);
+        assert_eq!(local_pixel_average(&integral_image, 2, 2, 0), 0);
+    }
+
+    #[test]
+    fn test_local_pixel_average_clipped_at_borders() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9
+        );
+        let integral_image: Image<Luma<u32>> = integral_image(&image);
+        // window clipped to the top-left 2x2 block: (1 + 2 + 4 + 5) / 4
+        assert_eq!(local_pixel_average(&integral_image, 0, 0, 1), 3);
+        // window clipped to the bottom-right 2x2 block: (5 + 6 + 8 + 9) / 4
+        assert_eq!(local_pixel_average(&integral_image, 2, 2, 1), 7);
+        // window covering the whole image: 45 / 9
+        assert_eq!(local_pixel_average(&integral_image, 1, 1, 10), 5);
+    }
+
+    #[test]
+    fn test_local_pixel_average_uniform_image() {
+        let image = GrayImage::from_pixel(10, 10, Luma([77]));
+        let integral_image: Image<Luma<u32>> = integral_image(&image);
+        for (x, y) in [(0, 0), (5, 5), (9, 9), (100, 100)] {
+            let avg = local_pixel_average(&integral_image, x, y, 2);
+            assert!(
+                avg == 77 || avg == 0,
+                "unexpected average {avg} at ({x}, {y})"
+            );
+        }
+        assert_eq!(local_pixel_average(&integral_image, 5, 5, 2), 77);
+    }
+
+    #[test]
+    fn test_brief_rejects_length_not_multiple_of_128() {
+        let image = GrayImage::new(40, 40);
+        let keypoints = [Point::new(20, 20)];
+        for length in [1, 64, 129, 255] {
+            let result = brief(&image, &keypoints, length, Some(&neutral_pairs(length)));
+            assert!(result.err().unwrap().contains("multiple of 128"));
+        }
+    }
+
+    #[test]
+    fn test_brief_rejects_mismatched_test_pairs() {
+        let image = GrayImage::new(40, 40);
+        let keypoints = [Point::new(20, 20)];
+        for n in [0, 127, 129, 256] {
+            let result = brief(&image, &keypoints, 128, Some(&neutral_pairs(n)));
+            assert!(result.err().unwrap().contains("number of test pairs"));
+        }
+    }
+
+    #[test]
+    fn test_brief_rejects_test_pair_outside_patch() {
+        let image = GrayImage::new(40, 40);
+        let keypoints = [Point::new(20, 20)];
+        let d = BRIEF_PATCH_DIAMETER;
+        for bad in [
+            pair(d, 0, 0, 0),
+            pair(0, d, 0, 0),
+            pair(0, 0, d, 0),
+            pair(0, 0, 0, d),
+        ] {
+            let mut pairs = neutral_pairs(128);
+            pairs[42] = bad;
+            let err = brief(&image, &keypoints, 128, Some(&pairs)).err().unwrap();
+            assert!(err.contains("Test pair 42"), "{err}");
+        }
+        // the largest in-patch coordinate is accepted
+        let mut pairs = neutral_pairs(128);
+        pairs[0] = pair(d - 1, d - 1, d - 1, d - 1);
+        assert!(brief(&image, &keypoints, 128, Some(&pairs)).is_ok());
+    }
+
+    #[test]
+    fn test_brief_keypoint_edge_distance() {
+        // Keypoints are checked against the integral image dimensions, which
+        // are one larger than the image, so in a 32x32 image the accepted
+        // range is 16..=17 along each axis.
+        let image = GrayImage::new(32, 32);
+        let pairs = neutral_pairs(128);
+        for kp in [Point::new(16, 16), Point::new(17, 17)] {
+            assert!(brief(&image, &[kp], 128, Some(&pairs)).is_ok());
+        }
+
+        for kp in [
+            Point::new(15, 16),
+            Point::new(16, 15),
+            Point::new(18, 16),
+            Point::new(16, 18),
+            Point::new(0, 0),
+            Point::new(100, 100),
+        ] {
+            let err = brief(&image, &[kp], 128, Some(&pairs)).err().unwrap();
+            assert!(err.contains("image edge"), "{err}");
+        }
+
+        // a single bad keypoint fails the whole call
+        let image = GrayImage::new(64, 64);
+        let keypoints = [Point::new(30, 30), Point::new(5, 30)];
+        assert!(brief(&image, &keypoints, 128, Some(&pairs)).is_err());
+    }
+
+    #[test]
+    fn test_brief_generated_test_pairs() {
+        let image = horizontal_gradient(64, 64);
+        let keypoints = [Point::new(20, 20), Point::new(40, 30)];
+        for length in [128, 256, 512] {
+            let (descriptors, pairs) = brief(&image, &keypoints, length, None).unwrap();
+            assert_eq!(pairs.len(), length);
+            for tp in &pairs {
+                for p in [tp.p0, tp.p1] {
+                    assert!(p.x < BRIEF_PATCH_DIAMETER && p.y < BRIEF_PATCH_DIAMETER);
+                }
+            }
+            assert_eq!(descriptors.len(), keypoints.len());
+            for (d, kp) in descriptors.iter().zip(keypoints) {
+                assert_eq!(d.get_size() as usize, length);
+                assert_eq!(d.position(), kp);
+            }
+
+            // reusing the returned test pairs reproduces the descriptors
+            let (again, same_pairs) = brief(&image, &keypoints, length, Some(&pairs)).unwrap();
+            assert!(again == descriptors);
+            assert_eq!(same_pairs, pairs);
+        }
+    }
+
+    #[test]
+    fn test_brief_no_keypoints() {
+        let image = GrayImage::new(40, 40);
+        let (descriptors, pairs) = brief(&image, &[], 128, None).unwrap();
+        assert!(descriptors.is_empty());
+        assert_eq!(pairs.len(), 128);
+    }
+
+    #[test]
+    fn test_brief_uniform_image_has_no_set_bits() {
+        let image = GrayImage::from_pixel(50, 50, Luma([128]));
+        let keypoints = [Point::new(20, 20), Point::new(25, 30)];
+        let (descriptors, _) = brief(&image, &keypoints, 256, None).unwrap();
+        for d in descriptors {
+            assert_eq!(d.bits, vec![0, 0]);
+        }
+    }
+
+    #[test]
+    fn test_brief_intensity_comparison() {
+        let image = horizontal_gradient(40, 40);
+        let keypoints = [Point::new(20, 20)];
+
+        // p0 darker than p1 sets a bit
+        let mut pairs = neutral_pairs(128);
+        pairs[3] = pair(5, 15, 25, 15);
+        let (d, _) = brief(&image, &keypoints, 128, Some(&pairs)).unwrap();
+        assert_eq!(d[0].bits[0].count_ones(), 1);
+
+        // p0 brighter than p1 does not
+        pairs[3] = pair(25, 15, 5, 15);
+        let (d, _) = brief(&image, &keypoints, 128, Some(&pairs)).unwrap();
+        assert_eq!(d[0].bits[0], 0);
+    }
+
+    #[test]
+    fn test_brief_every_test_pair_sets_a_distinct_bit() {
+        let image = horizontal_gradient(40, 40);
+        let keypoints = [Point::new(20, 20)];
+        let length = 256;
+        let mut seen = std::collections::HashSet::new();
+        for i in 0..length {
+            let mut pairs = neutral_pairs(length);
+            pairs[i] = pair(5, 15, 25, 15);
+            let (d, _) = brief(&image, &keypoints, length, Some(&pairs)).unwrap();
+            let set_bits: Vec<u32> = (0..length as u32)
+                .filter(|&b| d[0].get_bit_subset(&[b]) == 1)
+                .collect();
+            assert_eq!(set_bits.len(), 1, "test pair {i} set bits {set_bits:?}");
+            assert!(seen.insert(set_bits[0]), "bit {} reused", set_bits[0]);
+        }
+    }
+
+    #[test]
+    fn test_brief_translation_invariance() {
+        // the same pattern placed at two locations yields identical descriptors
+        let pattern = horizontal_gradient(40, 40);
+        let mut image = GrayImage::new(120, 60);
+        image::imageops::replace(&mut image, &pattern, 0, 0);
+        image::imageops::replace(&mut image, &pattern, 70, 10);
+
+        let keypoints = [Point::new(20, 20), Point::new(90, 30)];
+        let (d, _) = brief(&image, &keypoints, 256, None).unwrap();
+        assert_eq!(d[0].hamming_distance(&d[1]), 0);
+        assert!(d[0].bits.iter().any(|&c| c != 0));
     }
 }
 
