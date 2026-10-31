@@ -269,6 +269,205 @@ mod tests {
         assert!(s.width() == 3);
     }
 
+    #[test]
+    fn test_local_maxima_empty() {
+        let ts: Vec<T> = vec![];
+        assert_eq!(local_maxima(&ts, 3), vec![]);
+    }
+
+    #[test]
+    fn test_local_maxima_single() {
+        let ts = vec![T::new(4, 7, 1f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+        assert_eq!(local_maxima(&ts, 0), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_radius_zero_keeps_all() {
+        let ts = vec![
+            T::new(0, 0, 1f32),
+            T::new(1, 0, 2f32),
+            T::new(0, 1, 3f32),
+            T::new(1, 1, 4f32),
+        ];
+        assert_eq!(local_maxima(&ts, 0), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_output_is_sorted_by_row_then_column() {
+        let ts = vec![
+            T::new(20, 10, 1f32),
+            T::new(0, 10, 1f32),
+            T::new(10, 0, 1f32),
+        ];
+        let expected = vec![
+            T::new(10, 0, 1f32),
+            T::new(0, 10, 1f32),
+            T::new(20, 10, 1f32),
+        ];
+        assert_eq!(local_maxima(&ts, 2), expected);
+    }
+
+    #[test]
+    fn test_local_maxima_distance_at_radius_boundary() {
+        // Exactly radius apart: the weaker one is suppressed.
+        let ts = vec![T::new(0, 0, 1f32), T::new(3, 0, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(3, 0, 2f32)]);
+        // radius + 1 apart: both survive.
+        let ts = vec![T::new(0, 0, 1f32), T::new(4, 0, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+        // Same, diagonally (square neighbourhood, not circular).
+        let ts = vec![T::new(0, 0, 1f32), T::new(3, 3, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(3, 3, 2f32)]);
+        let ts = vec![T::new(0, 0, 1f32), T::new(4, 3, 2f32)];
+        assert_eq!(local_maxima(&ts, 3), ts);
+    }
+
+    #[test]
+    fn test_local_maxima_stronger_on_left() {
+        let ts = vec![T::new(0, 0, 5f32), T::new(2, 0, 1f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(0, 0, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_stronger_in_last_row() {
+        // The stronger item is in the last row, which must not be skipped.
+        let ts = vec![T::new(0, 0, 1f32), T::new(0, 1, 5f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(0, 1, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_tie_in_last_row() {
+        // Tie: the lexicographically earlier (row-major) item wins.
+        let ts = vec![T::new(1, 0, 5f32), T::new(0, 1, 5f32)];
+        assert_eq!(local_maxima(&ts, 3), vec![T::new(1, 0, 5f32)]);
+    }
+
+    #[test]
+    fn test_local_maxima_ignores_far_columns_in_same_row() {
+        // Items in a neighbouring row but outside the column window must not
+        // suppress, regardless of score.
+        let ts = vec![
+            T::new(0, 1, 100f32),
+            T::new(10, 0, 1f32),
+            T::new(20, 1, 100f32),
+        ];
+        assert_eq!(local_maxima(&ts, 3), ts_sorted(&ts));
+    }
+
+    fn ts_sorted(ts: &[T]) -> Vec<T> {
+        let mut v = ts.to_vec();
+        v.sort_by_key(|t| (t.y, t.x));
+        v
+    }
+
+    /// Reference implementation of local_maxima.
+    pub fn local_maxima_reference(ts: &[T], radius: u32) -> Vec<T> {
+        let mut out: Vec<T> = ts
+            .iter()
+            .filter(|t| {
+                ts.iter().all(|c| {
+                    let near = c.x.abs_diff(t.x) <= radius && c.y.abs_diff(t.y) <= radius;
+                    !near || c.score < t.score || (c.score == t.score && (c.y, c.x) >= (t.y, t.x))
+                })
+            })
+            .copied()
+            .collect();
+        out.sort_by_key(|t| (t.y, t.x));
+        out
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_empty() {
+        let image = GrayImage::new(0, 0);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (0, 0));
+        let image = GrayImage::new(0, 5);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (0, 5));
+        let image = GrayImage::new(5, 0);
+        assert_eq!(suppress_non_maximum(&image, 3).dimensions(), (5, 0));
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_single_pixel() {
+        let image = GrayImage::from_pixel(1, 1, Luma([7u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 0), image);
+        assert_pixels_eq!(suppress_non_maximum(&image, 4), image);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_radius_zero_is_identity() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 5, 6;
+            9, 8, 7);
+        assert_pixels_eq!(suppress_non_maximum(&image, 0), image);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_constant_image() {
+        // All ties: any pixel with an equal neighbour at lesser (x, y)
+        // is suppressed, so only the origin survives.
+        let image = GrayImage::from_pixel(5, 5, Luma([3u8]));
+        let mut expected = GrayImage::new(5, 5);
+        expected.put_pixel(0, 0, Luma([3u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_single_peak() {
+        let image = gray_image!(
+            1, 2, 3, 2, 1;
+            2, 3, 4, 3, 2;
+            3, 4, 9, 4, 3;
+            2, 3, 4, 3, 2;
+            1, 2, 3, 2, 1);
+        let mut expected = GrayImage::new(5, 5);
+        expected.put_pixel(2, 2, Luma([9u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 2), expected);
+        assert_pixels_eq!(suppress_non_maximum(&image, 10), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_neighbour_in_each_direction() {
+        // With radius 2 the grid cell starting at (3, 3) spans 3..6. Its
+        // maximum at (4, 4) has neighbourhood 2..7, so a larger value can lie
+        // above, left, right or below the cell (or in a corner).
+        for &(x, y) in &[(4u32, 2u32), (2, 4), (6, 4), (4, 6), (6, 6), (2, 2)] {
+            let mut image = GrayImage::from_pixel(9, 9, Luma([1u8]));
+            image.put_pixel(4, 4, Luma([5u8]));
+            image.put_pixel(x, y, Luma([9u8]));
+            let out = suppress_non_maximum(&image, 2);
+            assert_eq!(out.get_pixel(4, 4)[0], 0, "beaten by ({}, {})", x, y);
+            assert_eq!(out.get_pixel(x, y)[0], 9);
+            assert_eq!(out, suppress_non_maximum_reference(&image, 2));
+        }
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_tie_outside_block() {
+        // Equal value outside the r * r block but inside the neighbourhood:
+        // the earlier one in (x, y) order wins.
+        let mut image = GrayImage::new(4, 4);
+        image.put_pixel(1, 1, Luma([5u8]));
+        image.put_pixel(2, 0, Luma([5u8]));
+        let mut expected = GrayImage::new(4, 4);
+        expected.put_pixel(1, 1, Luma([5u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+        assert_eq!(expected, suppress_non_maximum_reference(&image, 1));
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_u16() {
+        let mut image: Image<Luma<u16>> = Image::new(6, 6);
+        image.put_pixel(1, 1, Luma([1000u16]));
+        image.put_pixel(4, 4, Luma([60000u16]));
+        image.put_pixel(2, 2, Luma([500u16]));
+        let mut expected: Image<Luma<u16>> = Image::new(6, 6);
+        expected.put_pixel(1, 1, Luma([1000u16]));
+        expected.put_pixel(4, 4, Luma([60000u16]));
+        assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+    }
+
     /// Reference implementation of suppress_non_maximum. Used to validate
     /// the (presumably faster) actual implementation.
     pub fn suppress_non_maximum_reference<I, C>(image: &I, radius: u32) -> Image<Luma<C>>
@@ -331,8 +530,8 @@ mod tests {
 #[cfg(not(miri))]
 #[cfg(test)]
 mod proptests {
-    use super::suppress_non_maximum;
-    use super::tests::suppress_non_maximum_reference;
+    use super::tests::{T, local_maxima_reference, suppress_non_maximum_reference};
+    use super::{local_maxima, suppress_non_maximum};
     use crate::proptest_utils::arbitrary_image;
     use image::Luma;
     use proptest::prelude::*;
@@ -344,6 +543,31 @@ mod proptests {
             let actual = suppress_non_maximum(&image, 3);
 
             prop_assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn test_suppress_non_maximum_matches_reference_any_radius(
+            image in arbitrary_image::<Luma<u8>>(0..12, 0..12),
+            radius in 0u32..8,
+        ) {
+            let expected = suppress_non_maximum_reference(&image, radius);
+            let actual = suppress_non_maximum(&image, radius);
+            prop_assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn test_local_maxima_matches_reference_implementation(
+            points in proptest::collection::vec((0u32..12, 0u32..12, 0u8..4), 0..30),
+            radius in 0u32..6,
+        ) {
+            // Deduplicate positions; scores drawn from a small range to force ties.
+            let mut seen = std::collections::HashSet::new();
+            let ts: Vec<T> = points
+                .into_iter()
+                .filter(|&(x, y, _)| seen.insert((x, y)))
+                .map(|(x, y, s)| T::new(x, y, s as f32))
+                .collect();
+            prop_assert_eq!(local_maxima(&ts, radius), local_maxima_reference(&ts, radius));
         }
     }
 }
