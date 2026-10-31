@@ -25,15 +25,15 @@ where
     // the (2r + 1) * (2r + 1) search once per r * r grid cell (as opposed to once
     // per pixel in the naive implementation of this algorithm).
 
-    for y in (0..height).step_by(radius as usize + 1) {
-        for x in (0..width).step_by(radius as usize + 1) {
+    for y in (0..height).step_by((radius as usize).saturating_add(1)) {
+        for x in (0..width).step_by((radius as usize).saturating_add(1)) {
             let mut best_x = x;
             let mut best_y = y;
             let mut mi = image.get_pixel(x, y)[0];
 
             // These mins are necessary for when radius > min(width, height)
-            for cy in y..cmp::min(height, y + radius + 1) {
-                for cx in x..cmp::min(width, x + radius + 1) {
+            for cy in y..cmp::min(height, y.saturating_add(radius).saturating_add(1)) {
+                for cx in x..cmp::min(width, x.saturating_add(radius).saturating_add(1)) {
                     let ci = unsafe { image.unsafe_get_pixel(cx, cy)[0] };
                     if ci < mi {
                         continue;
@@ -48,13 +48,13 @@ where
 
             let x0 = best_x.saturating_sub(radius);
             let x1 = x;
-            let x2 = cmp::min(width, x + radius + 1);
-            let x3 = cmp::min(width, best_x + radius + 1);
+            let x2 = cmp::min(width, x.saturating_add(radius).saturating_add(1));
+            let x3 = cmp::min(width, best_x.saturating_add(radius).saturating_add(1));
 
             let y0 = best_y.saturating_sub(radius);
             let y1 = y;
-            let y2 = cmp::min(height, y + radius + 1);
-            let y3 = cmp::min(height, best_y + radius + 1);
+            let y2 = cmp::min(height, y.saturating_add(radius).saturating_add(1));
+            let y3 = cmp::min(height, best_y.saturating_add(radius).saturating_add(1));
 
             // Above initial r * r block
             let mut failed = contains_greater_value(image, best_x, best_y, mi, y0, y1, x0, x3);
@@ -114,15 +114,13 @@ where
 {
     let mut ordered_ts = ts.to_vec();
     ordered_ts.sort_by_key(|&c| (c.y(), c.x()));
-    let height = match ordered_ts.last() {
-        Some(t) => t.y(),
-        None => 0,
-    };
 
-    let mut ts_by_row = vec![vec![]; (height + 1) as usize];
-    for t in &ordered_ts {
-        ts_by_row[t.y() as usize].push(t);
-    }
+    // One entry per distinct y: (y, slice of ordered_ts in that row).
+    // Stored sparsely so that memory use is independent of coordinate values.
+    let rows: Vec<(u32, &[T])> = ordered_ts
+        .chunk_by(|a, b| a.y() == b.y())
+        .map(|row| (row[0].y(), row))
+        .collect();
 
     let mut max_ts = vec![];
     for t in &ordered_ts {
@@ -130,24 +128,28 @@ where
         let cy = t.y();
         let cs = t.score();
 
+        let x_lower = cx.saturating_sub(radius);
+        let x_upper = cx.saturating_add(radius);
+        let y_lower = cy.saturating_sub(radius);
+        let y_upper = cy.saturating_add(radius);
+
+        let first_row = rows.partition_point(|&(y, _)| y < y_lower);
+
         let mut is_max = true;
-        let row_lower = cy.saturating_sub(radius);
-        let row_upper = if cy + radius + 1 > height {
-            height
-        } else {
-            cy + radius + 1
-        };
-        for y in row_lower..row_upper {
-            for c in &ts_by_row[y as usize] {
-                if c.x() + radius < cx {
+        'rows: for &(y, row) in &rows[first_row..] {
+            if y > y_upper {
+                break;
+            }
+            for c in row {
+                if c.x() < x_lower {
                     continue;
                 }
-                if c.x() > cx + radius {
+                if c.x() > x_upper {
                     break;
                 }
                 if c.score() > cs {
                     is_max = false;
-                    break;
+                    break 'rows;
                 }
                 if c.score() < cs {
                     continue;
@@ -155,11 +157,8 @@ where
                 // Break tiebreaks lexicographically
                 if (c.y(), c.x()) < (cy, cx) {
                     is_max = false;
-                    break;
+                    break 'rows;
                 }
-            }
-            if !is_max {
-                break;
             }
         }
 
@@ -361,6 +360,19 @@ mod tests {
         v
     }
 
+    #[test]
+    fn test_local_maxima_huge_radius() {
+        let ts = vec![
+            T::new(0, 0, 1f32),
+            T::new(u32::MAX - 1, 5, 3f32),
+            T::new(7, u32::MAX - 1, 2f32),
+        ];
+        assert_eq!(
+            local_maxima(&ts, u32::MAX),
+            vec![T::new(u32::MAX - 1, 5, 3f32)]
+        );
+    }
+
     /// Reference implementation of local_maxima.
     pub fn local_maxima_reference(ts: &[T], radius: u32) -> Vec<T> {
         let mut out: Vec<T> = ts
@@ -466,6 +478,17 @@ mod tests {
         expected.put_pixel(1, 1, Luma([1000u16]));
         expected.put_pixel(4, 4, Luma([60000u16]));
         assert_pixels_eq!(suppress_non_maximum(&image, 1), expected);
+    }
+
+    #[test]
+    fn test_suppress_non_maximum_huge_radius() {
+        let image = gray_image!(
+            1, 2, 3;
+            4, 9, 6;
+            7, 8, 5);
+        let mut expected = GrayImage::new(3, 3);
+        expected.put_pixel(1, 1, Luma([9u8]));
+        assert_pixels_eq!(suppress_non_maximum(&image, u32::MAX), expected);
     }
 
     /// Reference implementation of suppress_non_maximum. Used to validate
