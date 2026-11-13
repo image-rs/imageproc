@@ -14,6 +14,7 @@ use sdl2::{
     surface::Surface,
     video::{Window, WindowContext},
 };
+use std::cmp::min;
 
 /// Displays the provided RGBA image in a new window.
 ///
@@ -23,15 +24,19 @@ pub fn display_image<I>(title: &str, image: &I, window_width: u32, window_height
 where
     I: GenericImageView + ConvertBuffer<RgbaImage>,
 {
-    display_multiple_images(title, &[image], window_width, window_height);
+    display_multiple_images(&[title], &[image], window_width, window_height);
 }
 
 /// Displays the provided RGBA images in new windows.
 ///
 /// The minimum window width or height is 150 pixels - input values less than this
 /// will be rounded up to the minimum.
-pub fn display_multiple_images<I>(title: &str, images: &[&I], window_width: u32, window_height: u32)
-where
+pub fn display_multiple_images<I>(
+    titles: &[&str],
+    images: &[&I],
+    window_width: u32,
+    window_height: u32,
+) where
     I: GenericImageView + ConvertBuffer<RgbaImage>,
 {
     if images.is_empty() {
@@ -49,7 +54,12 @@ where
 
     let mut windows: Vec<Window> = Vec::with_capacity(images.len());
     let mut window_visibility: Vec<bool> = Vec::with_capacity(images.len());
-    for _ in 0..images.len() {
+    for i in 0..images.len() {
+        let title = if titles.is_empty() {
+            ""
+        } else {
+            titles[min(i, titles.len() - 1)]
+        };
         let mut window = video_subsystem
             .window(title, window_width, window_height)
             .resizable()
