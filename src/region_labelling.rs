@@ -141,7 +141,9 @@ where
         return out;
     }
 
-    let mut forest = DisjointSetForest::new(image_size);
+    // Provisional labels start at 1 and reach image_size when every pixel
+    // starts a component of its own, so they need image_size + 1 slots.
+    let mut forest = DisjointSetForest::new(image_size + 1);
     let mut adj_labels = [0u32; 4];
     let mut next_label = 1;
 
@@ -216,7 +218,7 @@ where
     }
 
     // Make components start at 1
-    let mut output_labels = vec![0u32; image_size];
+    let mut output_labels = vec![0u32; image_size + 1];
     let mut count = 1;
 
     unsafe {
@@ -303,6 +305,26 @@ mod tests {
         let components = connected_components(&image, Four, Luma::black());
         let max_component = components.pixels().map(|p| p[0]).max();
         assert_eq!(max_component, Some(450u32));
+    }
+
+    // Every pixel starts a component of its own, so the last provisional
+    // label equals the number of pixels.
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+    fn test_connected_components_one_pixel_per_component() {
+        let image = gray_image!(255);
+        let expected = gray_image!(type: u32, 1);
+        let labelled = connected_components(&image, Eight, Luma::black());
+        assert_pixels_eq!(labelled, expected);
+
+        let image = gray_image!(
+            1, 2;
+            2, 1);
+        let expected = gray_image!(type: u32,
+            1, 2;
+            3, 4);
+        let labelled = connected_components(&image, Four, Luma::black());
+        assert_pixels_eq!(labelled, expected);
     }
 }
 
